@@ -32,8 +32,8 @@ pub trait Section: Copy + Eq + Hash {
     fn length(self, table: &Self::Table) -> usize;
 
     /// Which other `Section`s are false against `(Row::rounds(_), self)`
-    fn falseness<'t>(self, table: &'t Self::Table) -> &'t [(Row, Self)];
+    fn falseness(self, table: &Self::Table) -> &[(Row, Self)];
 
     /// Which `Section`s and transpositions are directly reachable from a given `Section`
-    fn expand<'t>(self, table: &'t Self::Table) -> &'t [(String, Row, Self)];
+    fn expand(self, table: &Self::Table) -> &[(String, Row, Self)];
 }

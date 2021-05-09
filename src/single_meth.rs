@@ -39,12 +39,12 @@ impl engine::Section for Section {
     }
 
     #[inline(always)]
-    fn falseness<'t>(self, table: &'t Self::Table) -> &'t [(Row, Self)] {
+    fn falseness(self, table: &Self::Table) -> &[(Row, Self)] {
         table.falseness[self.ind].as_slice()
     }
 
     #[inline(always)]
-    fn expand<'t>(self, table: &'t Self::Table) -> &'t [(String, Row, Self)] {
+    fn expand(self, table: &Self::Table) -> &[(String, Row, Self)] {
         table.next_nodes[self.ind].as_slice()
     }
 }
@@ -89,7 +89,7 @@ impl Table {
                         .collect_vec();
                     rows_by_fixed_bell_indices
                         .entry(fixed_bell_inds)
-                        .or_insert(Vec::new())
+                        .or_insert_with(Vec::new)
                         .push(r);
                 }
                 // Return this grouping so it can be combined to generate the falseness table
