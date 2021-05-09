@@ -13,7 +13,7 @@ impl<S> Node<S> {
     }
 }
 
-pub trait Section: Copy + Clone + Eq + Hash {
+pub trait Section: Copy + Eq + Hash {
     type Table;
 
     /// The [`Stage`] of this `Section` type.  All the instances must share the same [`Stage`], so
@@ -32,5 +32,5 @@ pub trait Section: Copy + Clone + Eq + Hash {
     fn length(&self) -> usize;
 
     /// Which other `Section`s are false against `(Row::rounds(_), self)`
-    fn falseness<'t>(&self, tables: &'t Self::Table) -> &'t [(Row, Self)];
+    fn falseness<'t>(&self, table: &'t Self::Table) -> &'t [(Row, Self)];
 }
