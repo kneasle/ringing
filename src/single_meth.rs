@@ -4,19 +4,66 @@ use std::{
 };
 
 use itertools::Itertools;
-use proj_core::{Bell, Method, Row};
+use proj_core::{Bell, Method, Row, Stage};
 
-pub struct SingleMethodTable {
-    pub falseness: Vec<Vec<(usize, Row)>>,
-    pub lengths: Vec<usize>,
+use crate::engine;
+
+/// A section of a course of a single method
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct Section {
+    ind: usize,
 }
 
-impl SingleMethodTable {
+impl Section {
+    const fn new(ind: usize) -> Self {
+        Section { ind }
+    }
+}
+
+impl engine::Section for Section {
+    type Table = Table;
+
+    #[inline(always)]
+    fn stage(table: &Self::Table) -> Stage {
+        table.stage
+    }
+
+    #[inline(always)]
+    fn start() -> Self {
+        Self::new(0)
+    }
+
+    #[inline(always)]
+    fn length(self, table: &Self::Table) -> usize {
+        table.lengths[self.ind]
+    }
+
+    #[inline(always)]
+    fn falseness<'t>(self, table: &'t Self::Table) -> &'t [(Row, Self)] {
+        table.falseness[self.ind].as_slice()
+    }
+
+    #[inline(always)]
+    fn expand<'t>(self, table: &'t Self::Table) -> &'t [(String, Row, Self)] {
+        table.next_nodes[self.ind].as_slice()
+    }
+}
+
+/// The persistent state table for a single method
+pub struct Table {
+    pub falseness: Vec<Vec<(Row, Section)>>,
+    next_nodes: Vec<Vec<(String, Row, Section)>>,
+    lengths: Vec<usize>,
+    stage: Stage,
+}
+
+impl Table {
     pub fn new(
         method: &Method,
         ranges: &[Range<usize>],
         fixed_bells: &[Bell],
-    ) -> SingleMethodTable {
+        next_nodes: &[Vec<(&str, Row, usize)>],
+    ) -> Table {
         // Generate the plain course of the given method upfront
         let plain_course = method.plain_course();
         let lead_len = method.lead_len();
@@ -87,14 +134,23 @@ impl SingleMethodTable {
 
         // Convert the hash table into a jagged 2D array, indexed by the first element of the tuple
         // (so that the lookups we want to do are faster).
-        let mut final_table: Vec<Vec<(usize, Row)>> = vec![Vec::new(); ranges.len()];
+        let mut final_table: Vec<Vec<(Row, Section)>> = vec![Vec::new(); ranges.len()];
         for (i, j, r) in falseness_map {
-            final_table[i].push((j, r));
+            final_table[i].push((r, Section::new(j)));
         }
 
-        SingleMethodTable {
+        Table {
             falseness: final_table,
             lengths: ranges.iter().map(|r| r.len() * method.lead_len()).collect(),
+            stage: method.stage(),
+            next_nodes: next_nodes
+                .iter()
+                .map(|vs| {
+                    vs.iter()
+                        .map(|(s, r, i)| (String::from(*s), r.clone(), Section::new(*i)))
+                        .collect()
+                })
+                .collect(),
         }
     }
 }
