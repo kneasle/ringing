@@ -1,12 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
+    fmt::{Display, Formatter},
     ops::Range,
 };
 
 use itertools::Itertools;
 use proj_core::{Bell, Method, Row, Stage};
 
-use crate::engine;
+use crate::engine::{self, Node};
 
 /// A section of a course of a single method
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -17,6 +18,12 @@ pub struct Section {
 impl Section {
     const fn new(ind: usize) -> Self {
         Section { ind }
+    }
+}
+
+impl Display for Section {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.ind)
     }
 }
 
@@ -31,6 +38,11 @@ impl engine::Section for Section {
     #[inline(always)]
     fn start() -> Self {
         Self::new(0)
+    }
+
+    #[inline(always)]
+    fn is_end(node: &Node<Self>) -> bool {
+        node.row.is_rounds() && node.section.ind == 0
     }
 
     #[inline(always)]
@@ -50,8 +62,9 @@ impl engine::Section for Section {
 }
 
 /// The persistent state table for a single method
+#[derive(Debug, Clone)]
 pub struct Table {
-    pub falseness: Vec<Vec<(Row, Section)>>,
+    falseness: Vec<Vec<(Row, Section)>>,
     next_nodes: Vec<Vec<(String, Row, Section)>>,
     lengths: Vec<usize>,
     stage: Stage,
@@ -124,9 +137,11 @@ impl Table {
                         // then
                         //      the range `i1` of the plain course
                         //    is false against
-                        //      the range `i2` of `r1.transposition_to(r2)`
-                        let r1_to_r2 = unsafe { r1.tranposition_to_unchecked(r2) };
-                        falseness_map.insert((i1, i2, r1_to_r2));
+                        //      the range `i2` of `r2.tranposition_to(r1)`
+                        //
+                        //  (i.e. we find `X` where `X * r2 == r1`)
+                        let false_course = unsafe { r2.tranposition_to_unchecked(r1) };
+                        falseness_map.insert((i1, i2, false_course));
                     }
                 }
             }
@@ -138,6 +153,11 @@ impl Table {
         for (i, j, r) in falseness_map {
             final_table[i].push((r, Section::new(j)));
         }
+
+        // Sort the falseness tables
+        final_table
+            .iter_mut()
+            .for_each(|v| v.sort_by(|a, b| (a.1.ind, &a.0).cmp(&(b.1.ind, &b.0))));
 
         Table {
             falseness: final_table,
@@ -151,6 +171,15 @@ impl Table {
                         .collect()
                 })
                 .collect(),
+        }
+    }
+
+    pub fn print_falseness(&self) {
+        for (i, secs) in self.falseness.iter().enumerate() {
+            println!("{}", i);
+            for (r, sec) in secs {
+                println!("   {}: {}", sec.ind, r);
+            }
         }
     }
 }
