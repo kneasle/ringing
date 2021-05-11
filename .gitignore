@@ -1,1 +1,4 @@
 /target
+
+# Ignore all callgrind files
+**/callgrind*

@@ -6,9 +6,31 @@ use std::{
 
 use proj_core::{Row, Stage};
 
+/* DEBUG PRINT SETTINGS */
+
 const DBG_PRINT: bool = false;
 const DBG_NODE_TABLE: bool = false;
 
+/// Acts the same as `println!` if `DBG_PRINT = true`, but otherwise gets removed by the compiler
+macro_rules! dbg_println {
+    ($( $args: tt )*) => {
+        if DBG_PRINT {
+            println!($( $args )*);
+        }
+    };
+}
+
+/// Acts the same as `print!` if `DBG_PRINT = true`, but otherwise gets removed by the compiler
+macro_rules! dbg_print {
+    ($( $args: tt )*) => {
+        if DBG_PRINT {
+            print!($( $args )*);
+        }
+    };
+}
+
+/// Trait that describes the smallest atomic chunk of a composition.  This trait is used by the
+/// [`Engine`] to customise generic tree search.
 pub trait Section: Display + Debug + Copy + Eq + Hash {
     type Table: Debug;
 
@@ -36,11 +58,14 @@ pub trait Section: Display + Debug + Copy + Eq + Hash {
     /// Which `Section`s and transpositions are directly reachable from a given `Section`
     fn expand(self, table: &Self::Table) -> &[(String, Row, Self)];
 
+    /// Build a composition out of these `Section`s
     fn compose(table: &Self::Table, desired_len: Range<usize>) {
         Engine::<Self>::new(table, desired_len).compose()
     }
 }
 
+/// A single node of the composition - this is a [`Section`] (usually some part of the plain
+/// course), along with a [`Row`] which describes which course the [`Section`] refers to.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Node<S> {
     pub row: Row,
@@ -59,13 +84,14 @@ impl<S: Section> Display for Node<S> {
     }
 }
 
+/// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
 pub struct Engine<'t, S: Section> {
     nodes: Vec<Node<S>>,
     table: &'t S::Table,
     desired_len: Range<usize>,
     comp_string: String,
-    nodes_expanded: usize,
+    nodes_considered: usize,
 }
 
 impl<'t, S: Section> Engine<'t, S> {
@@ -75,36 +101,22 @@ impl<'t, S: Section> Engine<'t, S> {
             table,
             desired_len,
             comp_string: String::new(),
-            nodes_expanded: 0,
+            nodes_considered: 0,
         }
     }
 
     fn compose(&mut self) {
         self.recursive_compose(S::start_node(&self.table), 0, 0);
 
-        println!("{} nodes expanded", self.nodes_expanded);
+        println!("{} nodes considered", self.nodes_considered);
     }
 
     fn recursive_compose(&mut self, node: Node<S>, len: usize, depth: usize) {
-        macro_rules! dbg_println {
-            ($( $args: tt )*) => {
-                if DBG_PRINT {
-                    println!($( $args )*);
-                }
-            };
-        }
-
-        macro_rules! dbg_print {
-            ($( $args: tt )*) => {
-                if DBG_PRINT {
-                    print!($( $args )*);
-                }
-            };
-        }
-
         dbg_print!("Considering {}...", self.comp_string);
 
-        self.nodes_expanded += 1;
+        self.nodes_considered += 1;
+
+        /* CHECK THAT THE NEW NODE IS VALID */
 
         // Check if we've found a valid composition
         if S::is_end(&node) && self.desired_len.contains(&len) {
@@ -137,6 +149,8 @@ impl<'t, S: Section> Engine<'t, S> {
                 println!("{}|{}", n.section, n.row);
             }
         }
+
+        /* IF THE NEW NODE IS VALID, ADD IT TO THE COMPOSITION AND EXPAND ITS BRANCH */
 
         // Now add this to the engine's comp
         self.nodes.push(node.clone());
