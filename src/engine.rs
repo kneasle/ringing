@@ -4,7 +4,14 @@ use std::{
     ops::Range,
 };
 
+use crate::set::Set;
 use proj_core::{Row, Stage};
+
+/// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
+/// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic
+/// performance).  However, this is left as a simple switch in order to get the best performance
+/// for all cases.
+type _Set<T> = crate::set::VecSet<T>;
 
 /* DEBUG PRINT SETTINGS */
 
@@ -87,7 +94,7 @@ impl<S: Section> Display for Node<S> {
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
 pub struct Engine<'t, S: Section> {
-    nodes: Vec<Node<S>>,
+    nodes: _Set<Node<S>>,
     table: &'t S::Table,
     desired_len: Range<usize>,
     comp_string: String,
@@ -97,7 +104,7 @@ pub struct Engine<'t, S: Section> {
 impl<'t, S: Section> Engine<'t, S> {
     fn new(table: &'t S::Table, desired_len: Range<usize>) -> Self {
         Engine {
-            nodes: Vec::new(),
+            nodes: _Set::empty(),
             table,
             desired_len,
             comp_string: String::new(),
@@ -153,7 +160,7 @@ impl<'t, S: Section> Engine<'t, S> {
         /* IF THE NEW NODE IS VALID, ADD IT TO THE COMPOSITION AND EXPAND ITS BRANCH */
 
         // Now add this to the engine's comp
-        self.nodes.push(node.clone());
+        self.nodes.add(node.clone());
 
         // Expand this in all possible ways
         for (name, transposition, section) in node.section.expand(&self.table) {
@@ -172,6 +179,6 @@ impl<'t, S: Section> Engine<'t, S> {
         }
 
         // Return the engine to the state before this node was added
-        self.nodes.pop();
+        self.nodes.remove_last(&node);
     }
 }

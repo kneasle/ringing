@@ -1,4 +1,5 @@
 mod engine;
+mod set;
 mod single_meth;
 
 use proj_core::{Bell, Method, PnBlock, Row, Stage};
