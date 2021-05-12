@@ -10,8 +10,16 @@ use proj_core::{place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, R
 use crate::engine::{self, Node};
 
 /// 4ths place calls for MAJOR
-pub static NEAR_CALLS_MAJOR: &[(&str, char, &str)] =
-    &[("14", '-', "LIBFVMWH"), ("1234", 's', "LBTFVMWH")];
+pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
+    let (bob_pos, single_pos) = match stage {
+        Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
+        Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
+        Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
+        _ => unimplemented!(),
+    };
+
+    vec![("14", '-', bob_pos), ("1234", 's', single_pos)]
+}
 
 /// A tuple of values which represent the transition between two segments
 type Transition = (Call, Row, usize);
@@ -496,7 +504,7 @@ mod tests {
                 Stage::MAJOR,
                 "-38-14-1258-36-14-58-16-78,12",
                 "178",
-                NEAR_CALLS_MAJOR,
+                &near_calls(Stage::MAJOR),
                 "LBTFVMWH",
             ),
             &[0..63, 64..95, 96..127, 128..223, 160..223],
@@ -533,7 +541,7 @@ mod tests {
                 Stage::MAJOR,
                 "-58-14.58-58.36.14-14.58-14-18,18",
                 "178",
-                NEAR_CALLS_MAJOR,
+                &near_calls(Stage::MAJOR),
                 "LIBMFHVW",
             ),
             &[0..31, 32..63, 64..127, 128..223, 192..223],
@@ -558,6 +566,42 @@ mod tests {
                     (None, 'W', "12345678", 0),
                     (Some('-'), 'W', "15243678", 4),
                     (Some('s'), 'W', "15342678", 4),
+                ],
+            ],
+        );
+    }
+
+    #[test]
+    fn region_gen_bristol_12() {
+        test_range_gen(
+            RangeGenInput::new(
+                Stage::MAXIMUS,
+                "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T",
+                "17890ET",
+                &near_calls(Stage::MAXIMUS),
+                "LIB?F??M?HVW",
+            ),
+            &[0..143, 144..335, 192..335, 336..527],
+            &[
+                vec![
+                    (None, 'M', "1234567890ET", 1),
+                    (Some('-'), 'M', "1436527890ET", 3),
+                    (Some('s'), 'M', "1634527890ET", 3),
+                ],
+                vec![
+                    (None, 'H', "1234567890ET", 3),
+                    (Some('-'), 'H', "1423567890ET", 0),
+                    (Some('s'), 'H', "1243567890ET", 0),
+                ],
+                vec![
+                    (None, 'H', "1234567890ET", 3),
+                    (Some('-'), 'H', "1423567890ET", 0),
+                    (Some('s'), 'H', "1243567890ET", 0),
+                ],
+                vec![
+                    (None, 'W', "1234567890ET", 0),
+                    (Some('-'), 'W', "1524367890ET", 2),
+                    (Some('s'), 'W', "1534267890ET", 2),
                 ],
             ],
         );
