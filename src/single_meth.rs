@@ -5,13 +5,31 @@ use std::{
 };
 
 use itertools::Itertools;
-use proj_core::{
-    place_not::PnBlockParseError, AnnotBlock, Bell, Method, PlaceNot, PnBlock, Row, Stage,
-};
+use proj_core::{place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, Row, Stage};
 
 use crate::engine::{self, Node};
 
-type Transition = (String, Row, usize);
+/// A tuple of values which represent the transition between two segments
+type Transition = (Call, Row, usize);
+
+/// A compact representation of a call
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Call {
+    call: Option<char>,
+    position: char,
+}
+
+impl Call {
+    fn new(call: Option<char>, position: char) -> Self {
+        Call { call, position }
+    }
+}
+
+impl Display for Call {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.call.unwrap_or('p'), self.position)
+    }
+}
 
 /// A section of a course of a single method
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -33,6 +51,7 @@ impl Display for Section {
 
 impl engine::Section for Section {
     type Table = Table;
+    type Call = Call;
 
     #[inline(always)]
     fn stage(table: &Self::Table) -> Stage {
@@ -60,8 +79,22 @@ impl engine::Section for Section {
     }
 
     #[inline(always)]
-    fn expand(self, table: &Self::Table) -> &[(String, Row, Self)] {
+    fn expand(self, table: &Self::Table) -> &[(Self::Call, Row, Self)] {
         table.next_nodes[self.ind].as_slice()
+    }
+
+    fn comp_string(calls: &[Self::Call]) -> String {
+        calls
+            .iter()
+            .map(|Call { call, position }| match call {
+                // Plain leads don't get displayed
+                None => String::new(),
+                // Bobs are implicit
+                Some('-') => format!("{}", position),
+                // Any other call is written out in full
+                Some(name) => format!("{}{}", name, position),
+            })
+            .join("")
     }
 }
 
@@ -69,7 +102,7 @@ impl engine::Section for Section {
 #[derive(Debug, Clone)]
 pub struct Table {
     falseness: Vec<Vec<(Row, Section)>>,
-    next_nodes: Vec<Vec<(String, Row, Section)>>,
+    next_nodes: Vec<Vec<(Call, Row, Section)>>,
     lengths: Vec<usize>,
     stage: Stage,
 }
@@ -165,7 +198,7 @@ impl Table {
         /* Generate a map of which calls preserve fixed bells, and what course jump occurs as a
          * result of those calls. */
 
-        let mut call_jumps = Vec::<(usize, usize, Row, String)>::new();
+        let mut call_jumps = Vec::<(usize, usize, Row, Call)>::new();
         for (pn, call_name, calling_positions) in &calls {
             // Test this call at every lead end and check that it keeps the fixed bells in plain
             // coursing order
@@ -181,11 +214,15 @@ impl Table {
                 {
                     let tenor_place = new_lh.place_of(tenor).unwrap();
                     let call_pos = calling_positions.chars().nth(tenor_place).unwrap();
-                    let call_string = format!("{}{}", call_name, call_pos);
                     // This unsafety is OK because all the rows & pns are parsed within this
                     // function, which is provided a single Stage
                     let new_course_head = unsafe { pc_lh.tranposition_to_unchecked(&new_lh) };
-                    call_jumps.push((lead_end_ind, lh_ind, new_course_head, call_string));
+                    call_jumps.push((
+                        lead_end_ind,
+                        lh_ind,
+                        new_course_head,
+                        Call::new(Some(*call_name), call_pos),
+                    ));
                 }
             }
         }

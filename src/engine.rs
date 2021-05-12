@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::set::Set;
+use itertools::Itertools;
 use proj_core::{Row, Stage};
 
 /// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
@@ -40,6 +41,7 @@ macro_rules! dbg_print {
 /// [`Engine`] to customise generic tree search.
 pub trait Section: Display + Debug + Copy + Eq + Hash {
     type Table: Debug;
+    type Call: Copy + Debug + Display;
 
     /// The [`Stage`] of this `Section` type.  All the instances must share the same [`Stage`], so
     /// this has no `self` parameter.
@@ -63,12 +65,15 @@ pub trait Section: Display + Debug + Copy + Eq + Hash {
     fn falseness(self, table: &Self::Table) -> &[(Row, Self)];
 
     /// Which `Section`s and transpositions are directly reachable from a given `Section`
-    fn expand(self, table: &Self::Table) -> &[(String, Row, Self)];
+    fn expand(self, table: &Self::Table) -> &[(Self::Call, Row, Self)];
 
     /// Build a composition out of these `Section`s
     fn compose(table: &Self::Table, desired_len: Range<usize>) {
         Engine::<Self>::new(table, desired_len).compose()
     }
+
+    /// Write a list of calls in a human-readable format
+    fn comp_string(calls: &[Self::Call]) -> String;
 }
 
 /// A single node of the composition - this is a [`Section`] (usually some part of the plain
@@ -97,7 +102,7 @@ pub struct Engine<'t, S: Section> {
     nodes: _Set<Node<S>>,
     table: &'t S::Table,
     desired_len: Range<usize>,
-    comp_string: String,
+    calls: Vec<S::Call>,
     nodes_considered: usize,
 }
 
@@ -107,7 +112,7 @@ impl<'t, S: Section> Engine<'t, S> {
             nodes: _Set::empty(),
             table,
             desired_len,
-            comp_string: String::new(),
+            calls: Vec::new(),
             nodes_considered: 0,
         }
     }
@@ -119,7 +124,10 @@ impl<'t, S: Section> Engine<'t, S> {
     }
 
     fn recursive_compose(&mut self, node: Node<S>, len: usize, depth: usize) {
-        dbg_print!("Considering {}...", self.comp_string);
+        dbg_print!(
+            "Considering {}...",
+            self.calls.iter().map(S::Call::to_string).join("")
+        );
 
         self.nodes_considered += 1;
 
@@ -127,7 +135,7 @@ impl<'t, S: Section> Engine<'t, S> {
 
         // Check if we've found a valid composition
         if S::is_end(&node) && self.desired_len.contains(&len) {
-            println!("FOUND COMP! (len {}): {}", len, self.comp_string);
+            println!("FOUND COMP! (len {}): {}", len, S::comp_string(&self.calls));
             return;
         }
 
@@ -165,7 +173,7 @@ impl<'t, S: Section> Engine<'t, S> {
         // Expand this in all possible ways
         for (name, transposition, section) in node.section.expand(&self.table) {
             // Add the new name to the composition string
-            self.comp_string.push_str(name);
+            self.calls.push(*name);
 
             self.recursive_compose(
                 Node::new(unsafe { node.row.mul_unchecked(transposition) }, *section),
@@ -173,9 +181,8 @@ impl<'t, S: Section> Engine<'t, S> {
                 depth + 1,
             );
 
-            // Revert the composition string
-            self.comp_string
-                .truncate(self.comp_string.len() - name.len());
+            // Pop the call that we've explored
+            self.calls.pop();
         }
 
         // Return the engine to the state before this node was added
