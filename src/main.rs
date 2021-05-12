@@ -11,7 +11,7 @@ fn yorkshire() -> single_meth::Table {
         Stage::ROYAL,
         "x30x14x50x16x1270x38x14x50x16x90,12",
         // Fix the treble and all the tenors
-        &['1', '7', '8', '9', '0'],
+        "17890",
         &[("14", '-', "LIBFVXSMWH"), ("1234", 's', "LBTFVXSMWH")],
         "LBTFVXSMWH",
     )
@@ -22,7 +22,7 @@ fn main() {
     let table = single_meth::Table::from_place_not(
         Stage::MAJOR,
         "-38-14-1258-36-14-58-16-78,12",
-        &['1', '7', '8'],
+        "178",
         &single_meth::NEAR_CALLS_MAJOR[..1],
         "LBTFVMWH",
     )

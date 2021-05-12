@@ -115,7 +115,7 @@ impl Table {
     pub fn from_place_not(
         stage: Stage,
         method_pn: &str,
-        fixed_bell_chars: &[char],
+        fixed_bell_chars: &str,
         call_pns: &[(&str, char, &str)],
         plain_lead_calling_positions: &str,
     ) -> Result<Table, PnBlockParseError> {
@@ -141,7 +141,7 @@ impl Table {
     fn ranges_from_place_not(
         stage: Stage,
         method_pn: &str,
-        fixed_bell_chars: &[char],
+        fixed_bell_chars: &str,
         call_pns: &[(&str, char, &str)],
         plain_lead_calling_positions: &str,
     ) -> Result<
@@ -161,8 +161,8 @@ impl Table {
 
         let method = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage)?);
         let fixed_bells = fixed_bell_chars
-            .iter()
-            .map(|c| Bell::from_name(*c).unwrap())
+            .chars()
+            .map(|c| Bell::from_name(c).unwrap())
             .collect_vec();
         let calls = call_pns
             .iter()
@@ -281,7 +281,7 @@ impl Table {
                 let plain_calling_pos = plain_lead_calling_positions
                     .chars()
                     .nth(plain_lead_tenor_place)
-                    .unwrap();
+                    .expect("Plain calling position string is shorter than stage");
 
                 // Each call which starts at the last row of this range could cause a call
                 let mut ts = vec![(
@@ -427,7 +427,7 @@ mod tests {
     struct RangeGenInput<'a> {
         stage: Stage,
         method_pn: &'a str,
-        fixed_bell_chars: &'a [char],
+        fixed_bell_chars: &'a str,
         call_pns: &'a [(&'a str, char, &'a str)],
         plain_lead_calling_positions: &'a str,
     }
@@ -436,7 +436,7 @@ mod tests {
         fn new(
             stage: Stage,
             method_pn: &'a str,
-            fixed_bell_chars: &'a [char],
+            fixed_bell_chars: &'a str,
             call_pns: &'a [(&'a str, char, &'a str)],
             plain_lead_calling_positions: &'a str,
         ) -> Self {
@@ -495,7 +495,7 @@ mod tests {
             RangeGenInput::new(
                 Stage::MAJOR,
                 "-38-14-1258-36-14-58-16-78,12",
-                &['1', '7', '8'],
+                "178",
                 NEAR_CALLS_MAJOR,
                 "LBTFVMWH",
             ),
@@ -532,7 +532,7 @@ mod tests {
             RangeGenInput::new(
                 Stage::MAJOR,
                 "-58-14.58-58.36.14-14.58-14-18,18",
-                &['1', '7', '8'],
+                "178",
                 NEAR_CALLS_MAJOR,
                 "LIBMFHVW",
             ),
