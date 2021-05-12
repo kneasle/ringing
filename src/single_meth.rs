@@ -9,7 +9,7 @@ use proj_core::{place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, R
 
 use crate::engine::{self, Node};
 
-/// 4ths place calls for MAJOR
+/// 4ths place calls for any [`Stage`]
 pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
     let (bob_pos, single_pos) = match stage {
         Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
@@ -19,6 +19,18 @@ pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
     };
 
     vec![("14", '-', bob_pos), ("1234", 's', single_pos)]
+}
+
+/// (n-2)nds place calls for any [`Stage`]
+pub fn far_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
+    let (bob_pos, single_pos, bob, single) = match stage {
+        Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
+        Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
+        Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
+        _ => unimplemented!(),
+    };
+
+    vec![(bob, '-', bob_pos), (single, 's', single_pos)]
 }
 
 /// A tuple of values which represent the transition between two segments
@@ -259,7 +271,7 @@ impl Table {
         // Calculate the ranges.  Each of `range_starts` corresponds to a unique range, which ends
         // at the first range_end which is encountered (wrapping round the end of the course if
         // needed).
-        let ranges = range_starts
+        let mut ranges = range_starts
             .iter()
             .map(|&start| {
                 let range_end_ind = range_ends.binary_search(&start).unwrap_err();
@@ -267,6 +279,13 @@ impl Table {
                 start..end
             })
             .collect_vec();
+
+        // Rotate the sections so that the start of the course appears in section #0 (e.g. if we're
+        // using far calls in an nths place method).
+        if ranges[0].start != 0 {
+            let r = ranges.pop().unwrap();
+            ranges.insert(0, r);
+        }
 
         /* Use the parsed call data to generate which ranges can be joined together. */
 
@@ -322,25 +341,42 @@ impl Table {
         plain_course_rows: Vec<Row>,
         fixed_bells: &[Bell],
         ranges: &[Range<usize>],
-        next_nodes: Vec<Vec<Transition>>,
+        transitions: Vec<Vec<Transition>>,
     ) -> Table {
         /* Group rows in each range by the locations of the fixed bells.  By the definition of
          * fixed bells, we only consider falseness between rows which have the fixed bells in the
          * same places. */
         type FalsenessMap<'a> = HashMap<Vec<usize>, Vec<&'a Row>>;
 
+        // Calculate the correct range lengths (handling ranges which wrap round the end of the
+        // course)
+        let plain_course_len = plain_course_rows.len() - 1;
+        let range_lengths = ranges
+            .iter()
+            .map(|r| (r.end + plain_course_len + 1 - r.start) % plain_course_len)
+            .collect_vec();
+
         let grouped_rows: Vec<FalsenessMap> = ranges
             .iter()
-            .map(|lead_range| {
+            .zip(range_lengths.iter())
+            .map(|(range, len)| {
                 // Group all the rows by the indices of the fixed bells
-                let mut rows_by_fixed_bell_indices: FalsenessMap =
-                    HashMap::with_capacity(lead_range.len());
-                for r in &plain_course_rows[lead_range.clone()] {
-                    let fixed_bell_inds = get_bell_inds(fixed_bells, r);
-                    rows_by_fixed_bell_indices
-                        .entry(fixed_bell_inds)
-                        .or_insert_with(Vec::new)
-                        .push(r);
+                let mut rows_by_fixed_bell_indices: FalsenessMap = HashMap::with_capacity(*len);
+
+                // Correctly handle ranges which wrap round the end of a course
+                let ranges = if range.start < range.end {
+                    vec![range.clone()]
+                } else {
+                    vec![range.start..plain_course_rows.len() - 1, 0..range.end]
+                };
+                for range in ranges {
+                    for r in &plain_course_rows[range.start..range.end + 1] {
+                        let fixed_bell_inds = get_bell_inds(fixed_bells, r);
+                        rows_by_fixed_bell_indices
+                            .entry(fixed_bell_inds)
+                            .or_insert_with(Vec::new)
+                            .push(r);
+                    }
                 }
                 // Return this grouping so it can be combined to generate the falseness table
                 rows_by_fixed_bell_indices
@@ -400,9 +436,9 @@ impl Table {
             falseness: final_table,
             // The `+ 1` corrects for the fact that we are using inclusive ranges (i.e. the first
             // lead of surprise major will be represented as 0..31 not 0..32).
-            lengths: ranges.iter().map(|r| r.len() + 1).collect(),
+            lengths: range_lengths,
             stage,
-            next_nodes: next_nodes
+            next_nodes: transitions
                 .into_iter()
                 .map(|vs| {
                     vs.into_iter()
@@ -602,6 +638,37 @@ mod tests {
                     (None, 'W', "1234567890ET", 0),
                     (Some('-'), 'W', "1524367890ET", 2),
                     (Some('s'), 'W', "1534267890ET", 2),
+                ],
+            ],
+        );
+    }
+
+    #[test]
+    fn region_gen_bristol_royal_far_calls() {
+        test_range_gen(
+            RangeGenInput::new(
+                Stage::ROYAL,
+                "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
+                "17890",
+                &far_calls(Stage::ROYAL),
+                "LIO?VM?HVW",
+            ),
+            &[200..119, 120..159, 160..199],
+            &[
+                vec![
+                    (None, 'V', "1234567890", 1),
+                    (Some('-'), 'V', "1632547890", 1),
+                    (Some('s'), 'V', "1634527890", 1),
+                ],
+                vec![
+                    (None, 'O', "1234567890", 2),
+                    (Some('-'), 'O', "1342567890", 2),
+                    (Some('s'), 'O', "1243567890", 2),
+                ],
+                vec![
+                    (None, 'I', "1234567890", 0),
+                    (Some('-'), 'I', "1354267890", 0),
+                    (Some('s'), 'I', "1534267890", 0),
                 ],
             ],
         );

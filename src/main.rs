@@ -20,11 +20,11 @@ fn yorkshire() -> single_meth::Table {
 
 fn main() {
     let table = single_meth::Table::from_place_not(
-        Stage::MAJOR,
-        "-38-14-1258-36-14-58-16-78,12",
-        "178",
-        &single_meth::NEAR_CALLS_MAJOR[..1],
-        "LBTFVMWH",
+        Stage::ROYAL,
+        "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
+        "17890",
+        &single_meth::far_calls(Stage::ROYAL),
+        "LIO?VM?HVW",
     )
     .unwrap();
 
