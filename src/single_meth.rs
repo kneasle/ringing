@@ -158,6 +158,7 @@ impl Table {
 
     /// A helper function to generate the ranges & transitions for a given method and calls.  This
     /// is made into a helper function so it can be easily tested in isolation.
+    #[allow(clippy::type_complexity)]
     fn ranges_from_place_not(
         stage: Stage,
         method_pn: &str,
@@ -321,7 +322,7 @@ impl Table {
                         .iter()
                         .filter(|(from, ..)| *from == range.end)
                         .map(|(_from, to, course_head, name)| {
-                            (name.clone(), course_head.clone(), range_index_by_start[to])
+                            (*name, course_head.clone(), range_index_by_start[to])
                         }),
                 );
                 ts

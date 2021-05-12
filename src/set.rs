@@ -47,7 +47,7 @@ impl<'a, T> IntoIterator for &'a VecSet<T> {
 
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        (&self.vec).into_iter()
+        self.vec.iter()
     }
 }
 
@@ -86,6 +86,6 @@ impl<'a, T> IntoIterator for &'a HashSet<T> {
 
     #[inline(always)]
     fn into_iter(self) -> Self::IntoIter {
-        (&self.set).into_iter()
+        self.set.iter()
     }
 }
