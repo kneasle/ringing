@@ -1,0 +1,4 @@
+commit d1beca3:
+- All bobs-only tenors together peals of Cambs 8:
+  - VecSet: 858.51s
+  - HashSet: 575.40s
