@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
-    ops::Range,
+    ops::{Range, RangeInclusive},
 };
 
 use crate::set::Set;
@@ -68,8 +68,8 @@ pub trait Section: Display + Debug + Copy + Eq + Hash {
     fn expand(self, table: &Self::Table) -> &[(Self::Call, Row, Self)];
 
     /// Build a composition out of these `Section`s
-    fn compose(table: &Self::Table, desired_len: Range<usize>) {
-        Engine::<Self>::new(table, desired_len).compose()
+    fn compose(table: &Self::Table, desired_len: RangeInclusive<usize>) {
+        Engine::<Self>::new(table, *desired_len.start()..*desired_len.end() + 1).compose()
     }
 
     /// Write a list of calls in a human-readable format

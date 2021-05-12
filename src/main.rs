@@ -29,5 +29,5 @@ fn main() {
     .unwrap();
 
     // table.print_falseness();
-    single_meth::Section::compose(&table, 5000..5185);
+    single_meth::Section::compose(&table, 5000..=5184);
 }
