@@ -6,18 +6,6 @@ use proj_core::Stage;
 
 use engine::Section;
 
-fn cooktown() -> single_meth::Table {
-    single_meth::Table::from_place_not(
-        Stage::MAJOR,
-        "-38-14-1256-18-12-58-16-78,12",
-        // Fix the treble and all the tenors
-        &['1', '7', '8'],
-        &[("14", '-', "LIBFVMWH"), ("1234", 's', "LBTFVMWH")],
-        "LBTFVMWH",
-    )
-    .unwrap()
-}
-
 fn yorkshire() -> single_meth::Table {
     single_meth::Table::from_place_not(
         Stage::ROYAL,
@@ -31,8 +19,15 @@ fn yorkshire() -> single_meth::Table {
 }
 
 fn main() {
-    let table = cooktown();
+    let table = single_meth::Table::from_place_not(
+        Stage::MAJOR,
+        "-58-14.58-58.36.14-14.58-14-18,18",
+        &['1', '7', '8'],
+        single_meth::NEAR_CALLS_MAJOR,
+        "LIBMFHVW",
+    )
+    .unwrap();
 
     // table.print_falseness();
-    single_meth::Section::compose(&table, 1250..1300);
+    single_meth::Section::compose(&table, 5000..5185);
 }

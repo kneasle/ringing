@@ -9,6 +9,10 @@ use proj_core::{place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, R
 
 use crate::engine::{self, Node};
 
+/// 4ths place calls for MAJOR
+pub static NEAR_CALLS_MAJOR: &[(&str, char, &str)] =
+    &[("14", '-', "LIBFVMWH"), ("1234", 's', "LBTFVMWH")];
+
 /// A tuple of values which represent the transition between two segments
 type Transition = (Call, Row, usize);
 
@@ -414,4 +418,148 @@ impl Table {
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]
 fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
     bells.iter().map(|b| r.place_of(*b).unwrap()).collect_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct RangeGenInput<'a> {
+        stage: Stage,
+        method_pn: &'a str,
+        fixed_bell_chars: &'a [char],
+        call_pns: &'a [(&'a str, char, &'a str)],
+        plain_lead_calling_positions: &'a str,
+    }
+
+    impl<'a> RangeGenInput<'a> {
+        fn new(
+            stage: Stage,
+            method_pn: &'a str,
+            fixed_bell_chars: &'a [char],
+            call_pns: &'a [(&'a str, char, &'a str)],
+            plain_lead_calling_positions: &'a str,
+        ) -> Self {
+            Self {
+                stage,
+                method_pn,
+                fixed_bell_chars,
+                call_pns,
+                plain_lead_calling_positions,
+            }
+        }
+    }
+
+    /// Helper function to test a single method's table generation (used to reduce the amount of
+    /// code used for the test specifications).
+    fn test_range_gen(
+        input: RangeGenInput<'_>,
+        exp_ranges: &[Range<usize>],
+        exp_transitions: &[Vec<(Option<char>, char, &str, usize)>],
+    ) {
+        // Parse the transitions into the expected format
+        let parsed_transitions: Vec<Vec<Transition>> = exp_transitions
+            .iter()
+            .map(|xs| {
+                xs.iter()
+                    .map(|(c_name, c_pos, ch, next_seg)| {
+                        (
+                            Call::new(*c_name, *c_pos),
+                            Row::parse_with_stage(ch, input.stage).unwrap(),
+                            *next_seg,
+                        )
+                    })
+                    .collect_vec()
+            })
+            .collect_vec();
+
+        // Generate the regions
+        let (_pc, _fixed_bells, ranges, transitions) = Table::ranges_from_place_not(
+            input.stage,
+            input.method_pn,
+            input.fixed_bell_chars,
+            input.call_pns,
+            input.plain_lead_calling_positions,
+        )
+        .unwrap();
+
+        // Test the output
+        assert_eq!(ranges, exp_ranges);
+        assert_eq!(transitions, parsed_transitions);
+    }
+
+    #[test]
+    fn region_gen_cambs_8() {
+        test_range_gen(
+            // "-38-14-1256-18-12-58-16-78,12", // Cooktown
+            RangeGenInput::new(
+                Stage::MAJOR,
+                "-38-14-1258-36-14-58-16-78,12",
+                &['1', '7', '8'],
+                NEAR_CALLS_MAJOR,
+                "LBTFVMWH",
+            ),
+            &[0..63, 64..95, 96..127, 128..223, 160..223],
+            &[
+                vec![(None, 'B', "12345678", 1), (Some('-'), 'B', "13526478", 4)],
+                vec![
+                    (None, 'M', "12345678", 2),
+                    (Some('-'), 'M', "14365278", 2),
+                    (Some('s'), 'M', "16345278", 2),
+                ],
+                vec![
+                    (None, 'W', "12345678", 3),
+                    (Some('-'), 'W', "15243678", 3),
+                    (Some('s'), 'W', "15342678", 3),
+                ],
+                vec![
+                    (None, 'H', "12345678", 0),
+                    (Some('-'), 'H', "14235678", 0),
+                    (Some('s'), 'H', "12435678", 0),
+                ],
+                vec![
+                    (None, 'H', "12345678", 0),
+                    (Some('-'), 'H', "14235678", 0),
+                    (Some('s'), 'H', "12435678", 0),
+                ],
+            ],
+        );
+    }
+
+    #[test]
+    fn region_gen_bristol_8() {
+        test_range_gen(
+            RangeGenInput::new(
+                Stage::MAJOR,
+                "-58-14.58-58.36.14-14.58-14-18,18",
+                &['1', '7', '8'],
+                NEAR_CALLS_MAJOR,
+                "LIBMFHVW",
+            ),
+            &[0..31, 32..63, 64..127, 128..223, 192..223],
+            &[
+                vec![
+                    (None, 'H', "12345678", 1),
+                    (Some('-'), 'H', "14235678", 0),
+                    (Some('s'), 'H', "12435678", 0),
+                ],
+                vec![
+                    (None, 'M', "12345678", 2),
+                    (Some('-'), 'M', "14365278", 1),
+                    (Some('s'), 'M', "16345278", 1),
+                ],
+                vec![(None, 'B', "12345678", 3), (Some('-'), 'B', "13526478", 3)],
+                vec![
+                    (None, 'W', "12345678", 0),
+                    (Some('-'), 'W', "15243678", 4),
+                    (Some('s'), 'W', "15342678", 4),
+                ],
+                vec![
+                    (None, 'W', "12345678", 0),
+                    (Some('-'), 'W', "15243678", 4),
+                    (Some('s'), 'W', "15342678", 4),
+                ],
+            ],
+        );
+    }
 }
