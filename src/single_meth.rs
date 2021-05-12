@@ -5,9 +5,13 @@ use std::{
 };
 
 use itertools::Itertools;
-use proj_core::{Bell, Method, Row, Stage};
+use proj_core::{
+    place_not::PnBlockParseError, AnnotBlock, Bell, Method, PlaceNot, PnBlock, Row, Stage,
+};
 
 use crate::engine::{self, Node};
+
+type Transition = (String, Row, usize);
 
 /// A section of a course of a single method
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -71,16 +75,206 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn new(
-        method: &Method,
-        ranges: &[Range<usize>],
-        fixed_bells: &[Bell],
-        next_nodes: &[Vec<(&str, Row, usize)>],
-    ) -> Table {
-        // Generate the plain course of the given method upfront
+    pub fn from_place_not(
+        stage: Stage,
+        method_pn: &str,
+        fixed_bell_chars: &[char],
+        call_pns: &[(&str, char, &str)],
+        plain_lead_calling_positions: &str,
+    ) -> Result<Table, PnBlockParseError> {
+        let (plain_course, fixed_bells, ranges, transitions) = Self::ranges_from_place_not(
+            stage,
+            method_pn,
+            fixed_bell_chars,
+            call_pns,
+            plain_lead_calling_positions,
+        )?;
+
+        Ok(Self::new(
+            stage,
+            plain_course,
+            &fixed_bells,
+            &ranges,
+            transitions,
+        ))
+    }
+
+    /// A helper function to generate the ranges & transitions for a given method and calls.  This
+    /// is made into a helper function so it can be easily tested in isolation.
+    fn ranges_from_place_not(
+        stage: Stage,
+        method_pn: &str,
+        fixed_bell_chars: &[char],
+        call_pns: &[(&str, char, &str)],
+        plain_lead_calling_positions: &str,
+    ) -> Result<
+        (
+            // The method's plain course
+            Vec<Row>,
+            // The parsed fixed bells
+            Vec<Bell>,
+            // The ranges of the course
+            Vec<Range<usize>>,
+            // The transitions between the ranges
+            Vec<Vec<Transition>>,
+        ),
+        PnBlockParseError,
+    > {
+        /* Parse everything and cache commonly-used values */
+
+        let method = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage)?);
+        let fixed_bells = fixed_bell_chars
+            .iter()
+            .map(|c| Bell::from_name(*c).unwrap())
+            .collect_vec();
+        let calls = call_pns
+            .iter()
+            .map(|(pn, sym, calling_positions)| {
+                (
+                    PlaceNot::parse(pn, stage).unwrap(),
+                    *sym,
+                    *calling_positions,
+                )
+            })
+            .collect_vec();
+
+        let tenor = Bell::tenor(stage).unwrap();
         let plain_course = method.plain_course();
         let lead_len = method.lead_len();
+        let course_len = plain_course.len();
+        let lead_end_indices = plain_course
+            .annots()
+            .enumerate()
+            .filter_map(|(i, (_, pos))| {
+                pos.filter(|s| s == &proj_core::method::LABEL_LEAD_END)
+                    .map(|_| i)
+            })
+            .collect_vec();
 
+        /* Generate a mapping from fixed bell indices to the lead head and its index, which we'll
+         * then use when deciding which calling positions are and aren't allowed. */
+
+        let pc_lead_heads: HashMap<Vec<usize>, (usize, &Row)> = plain_course.annot_rows()
+            [..course_len - 1]
+            .iter()
+            .enumerate()
+            .step_by(lead_len)
+            .map(|(i, r)| (get_bell_inds(&fixed_bells, r.row()), (i, r.row())))
+            .collect();
+
+        /* Generate a map of which calls preserve fixed bells, and what course jump occurs as a
+         * result of those calls. */
+
+        let mut call_jumps = Vec::<(usize, usize, Row, String)>::new();
+        for (pn, call_name, calling_positions) in &calls {
+            // Test this call at every lead end and check that it keeps the fixed bells in plain
+            // coursing order
+            for &lead_end_ind in &lead_end_indices {
+                // This unsafety is OK because all the rows & pns are parsed within this function,
+                // which is provided a single Stage
+                let new_lh = unsafe {
+                    pn.permute_new_unchecked(plain_course.get_row(lead_end_ind).unwrap())
+                };
+                // Check that this call hasn't permuted the fixed bells
+                if let Some(&(lh_ind, pc_lh)) =
+                    pc_lead_heads.get(&get_bell_inds(&fixed_bells, &new_lh))
+                {
+                    let tenor_place = new_lh.place_of(tenor).unwrap();
+                    let call_pos = calling_positions.chars().nth(tenor_place).unwrap();
+                    let call_string = format!("{}{}", call_name, call_pos);
+                    // This unsafety is OK because all the rows & pns are parsed within this
+                    // function, which is provided a single Stage
+                    let new_course_head = unsafe { pc_lh.tranposition_to_unchecked(&new_lh) };
+                    call_jumps.push((lead_end_ind, lh_ind, new_course_head, call_string));
+                }
+            }
+        }
+
+        /* Use this call mapping to split every course into a set of (not necessarily mutually
+         * exclusive) ranges */
+
+        // We have to start a range after every call, and end a range just before that call
+        let mut range_starts = call_jumps.iter().map(|(_, to, ..)| *to).collect_vec();
+        let mut range_ends = call_jumps.iter().map(|(from, ..)| *from).collect_vec();
+        // If a call is omitted, then we can perform an un-jump from one lead end to the
+        // consecutive lead head.  These have to be added manually if we have calls which affect
+        // but don't permute fix bells (e.g. 4ths place calls in n-ths place methods).
+        range_starts.extend(range_ends.iter().map(|&x| (x + 1) % course_len));
+
+        // Sort and deduplicate the starts and ends so that the later algorithms work properly
+        range_starts.sort_unstable();
+        range_starts.dedup();
+        range_ends.sort_unstable();
+        range_ends.dedup();
+
+        // Calculate the ranges.  Each of `range_starts` corresponds to a unique range, which ends
+        // at the first range_end which is encountered (wrapping round the end of the course if
+        // needed).
+        let ranges = range_starts
+            .iter()
+            .map(|&start| {
+                let range_end_ind = range_ends.binary_search(&start).unwrap_err();
+                let end = *range_ends.get(range_end_ind).unwrap_or(&range_ends[0]);
+                start..end
+            })
+            .collect_vec();
+
+        /* Use the parsed call data to generate which ranges can be joined together. */
+
+        // Conversion table from range starts to their index within `ranges`
+        let range_index_by_start = ranges
+            .iter()
+            .enumerate()
+            .map(|(i, r)| (r.start, i))
+            .collect::<HashMap<_, _>>();
+
+        let transitions = ranges
+            .iter()
+            .map(|range| {
+                let lead_head_index = (range.end + 1) % course_len;
+                let plain_lead_tenor_place = plain_course
+                    .get_row(lead_head_index)
+                    .unwrap()
+                    .place_of(tenor)
+                    .unwrap();
+                let plain_calling_pos = plain_lead_calling_positions
+                    .chars()
+                    .nth(plain_lead_tenor_place)
+                    .unwrap();
+
+                // Each call which starts at the last row of this range could cause a call
+                let mut ts = vec![(
+                    Call::new(None, plain_calling_pos),
+                    Row::rounds(stage),
+                    range_index_by_start[&lead_head_index],
+                )];
+                ts.extend(
+                    call_jumps
+                        .iter()
+                        .filter(|(from, ..)| *from == range.end)
+                        .map(|(_from, to, course_head, name)| {
+                            (name.clone(), course_head.clone(), range_index_by_start[to])
+                        }),
+                );
+                ts
+            })
+            .collect_vec();
+
+        Ok((
+            plain_course.rows().cloned().collect_vec(),
+            fixed_bells,
+            ranges,
+            transitions,
+        ))
+    }
+
+    pub fn new(
+        stage: Stage,
+        plain_course_rows: Vec<Row>,
+        fixed_bells: &[Bell],
+        ranges: &[Range<usize>],
+        next_nodes: Vec<Vec<Transition>>,
+    ) -> Table {
         /* Group rows in each range by the locations of the fixed bells.  By the definition of
          * fixed bells, we only consider falseness between rows which have the fixed bells in the
          * same places. */
@@ -89,17 +283,11 @@ impl Table {
         let grouped_rows: Vec<FalsenessMap> = ranges
             .iter()
             .map(|lead_range| {
-                // Convert the range of leads to a range of rows
-                let row_range = (lead_range.start * lead_len)..(lead_range.end * lead_len);
                 // Group all the rows by the indices of the fixed bells
                 let mut rows_by_fixed_bell_indices: FalsenessMap =
-                    HashMap::with_capacity(row_range.len());
-                for annot_r in &plain_course.annot_rows()[row_range] {
-                    let r = annot_r.row();
-                    let fixed_bell_inds = fixed_bells
-                        .iter()
-                        .map(|b| r.place_of(*b).unwrap())
-                        .collect_vec();
+                    HashMap::with_capacity(lead_range.len());
+                for r in &plain_course_rows[lead_range.clone()] {
+                    let fixed_bell_inds = get_bell_inds(fixed_bells, r);
                     rows_by_fixed_bell_indices
                         .entry(fixed_bell_inds)
                         .or_insert_with(Vec::new)
@@ -161,13 +349,15 @@ impl Table {
 
         Table {
             falseness: final_table,
-            lengths: ranges.iter().map(|r| r.len() * method.lead_len()).collect(),
-            stage: method.stage(),
+            // The `+ 1` corrects for the fact that we are using inclusive ranges (i.e. the first
+            // lead of surprise major will be represented as 0..31 not 0..32).
+            lengths: ranges.iter().map(|r| r.len() + 1).collect(),
+            stage,
             next_nodes: next_nodes
-                .iter()
+                .into_iter()
                 .map(|vs| {
-                    vs.iter()
-                        .map(|(s, r, i)| (String::from(*s), r.clone(), Section::new(*i)))
+                    vs.into_iter()
+                        .map(|(s, r, i)| (s, r, Section::new(i)))
                         .collect()
                 })
                 .collect(),
@@ -182,4 +372,9 @@ impl Table {
             }
         }
     }
+}
+
+/// Returns the indices of a set of [`Bells`] within a given [`Row`]
+fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
+    bells.iter().map(|b| r.place_of(*b).unwrap()).collect_vec()
 }
