@@ -1,13 +1,10 @@
-[package]
-name = "comp-engine"
-version = "0.1.0"
-authors = ["Ben White-Horne <kneasle@gmail.com>"]
-edition = "2018"
+[workspace]
+members = [
+    "engine"
+]
 
-[dependencies]
-proj_core = { path = "../jigsaw/core/" }
-itertools = "0.10"
-
+# Use optimisations even on debug builds - compilation is fast and the unoptimised code is
+# SLLLLOOOOOOOW
 [profile.dev]
 opt-level = 3
 
