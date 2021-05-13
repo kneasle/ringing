@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "engine"
+    "engine",
+    "simd_row"
 ]
 
 # Use optimisations even on debug builds - compilation is fast and the unoptimised code is

@@ -1,10 +1,10 @@
 [package]
-name = "comp-engine"
+name = "simd_row"
 version = "0.1.0"
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-proj_core = { path = "../../jigsaw/core/" }
-simd_row = { path = "../simd_row/" }
+safe_arch = "0.5"
 itertools = "0.10"
+proj_core = { path = "../../jigsaw/core/" }
