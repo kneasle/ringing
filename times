@@ -1,4 +1,9 @@
-commit d1beca3:
+commit d1beca3 (pre-simd):
 - All bobs-only tenors together peals of Cambs 8:
-  - VecSet: 858.51s
+  - VecSet:  858.51s
   - HashSet: 575.40s
+
+commit 18a3dd2 (post-simd):
+- All bobs-only tenors together peals of Cambs 8:
+  - VecSet:  200.08s
+  - HashSet: 337.33s

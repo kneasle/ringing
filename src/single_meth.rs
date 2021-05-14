@@ -461,6 +461,27 @@ impl Table<Row> {
             }
         }
     }
+
+    pub fn change_row_type<R: RowTrait + From<Row>>(self) -> Table<R> {
+        Table {
+            falseness: self
+                .falseness
+                .into_iter()
+                .map(|rs| rs.into_iter().map(|(r, s)| (R::from(r), s)).collect_vec())
+                .collect_vec(),
+            next_nodes: self
+                .next_nodes
+                .into_iter()
+                .map(|vs| {
+                    vs.into_iter()
+                        .map(|(c, r, s)| (c, R::from(r), s))
+                        .collect_vec()
+                })
+                .collect_vec(),
+            stage: self.stage,
+            lengths: self.lengths,
+        }
+    }
 }
 
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]

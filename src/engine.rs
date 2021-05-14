@@ -12,7 +12,7 @@ use proj_core::{RowTrait, Stage};
 /// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic
 /// performance).  However, this is left as a simple switch in order to get the best performance
 /// for all cases.
-type _Set<T> = crate::set::HashSet<T>;
+type _Set<T> = crate::set::VecSet<T>;
 
 /* DEBUG PRINT SETTINGS */
 
