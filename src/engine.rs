@@ -6,7 +6,7 @@ use std::{
 
 use crate::set::Set;
 use itertools::Itertools;
-use proj_core::{Row, RowTrait, Stage};
+use proj_core::{RowTrait, Stage};
 
 /// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
 /// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic
@@ -39,7 +39,7 @@ macro_rules! dbg_print {
 
 /// Trait that describes the smallest atomic chunk of a composition.  This trait is used by the
 /// [`Engine`] to customise generic tree search.
-pub trait Section: Display + Debug + Copy + Eq + Hash {
+pub trait Section<R: RowTrait>: Display + Debug + Copy + Eq + Hash {
     type Table: Debug;
     type Call: Copy + Debug + Display;
 
@@ -51,25 +51,25 @@ pub trait Section: Display + Debug + Copy + Eq + Hash {
     fn start() -> Self;
 
     /// Returns `true` if this section is the end of a composition
-    fn is_end(node: &Node<Self>) -> bool;
+    fn is_end(node: &Node<R, Self>) -> bool;
 
     /// The first [`Node`] of any composition
-    fn start_node(table: &Self::Table) -> Node<Self> {
-        Node::new(Row::rounds(Self::stage(table)), Self::start())
+    fn start_node(table: &Self::Table) -> Node<R, Self> {
+        Node::new(R::rounds(Self::stage(table)), Self::start())
     }
 
     /// Returns the number of [`Row`]s in a given `Section`
     fn length(self, table: &Self::Table) -> usize;
 
     /// Which other `Section`s are false against `(Row::rounds(_), self)`
-    fn falseness(self, table: &Self::Table) -> &[(Row, Self)];
+    fn falseness(self, table: &Self::Table) -> &[(R, Self)];
 
     /// Which `Section`s and transpositions are directly reachable from a given `Section`
-    fn expand(self, table: &Self::Table) -> &[(Self::Call, Row, Self)];
+    fn expand(self, table: &Self::Table) -> &[(Self::Call, R, Self)];
 
     /// Build a composition out of these `Section`s
     fn compose(table: &Self::Table, desired_len: RangeInclusive<usize>) {
-        Engine::<Self>::new(table, *desired_len.start()..*desired_len.end() + 1).compose()
+        Engine::<R, Self>::new(table, *desired_len.start()..*desired_len.end() + 1).compose()
     }
 
     /// Write a list of calls in a human-readable format
@@ -79,18 +79,18 @@ pub trait Section: Display + Debug + Copy + Eq + Hash {
 /// A single node of the composition - this is a [`Section`] (usually some part of the plain
 /// course), along with a [`Row`] which describes which course the [`Section`] refers to.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Node<S> {
-    pub row: Row,
+pub struct Node<R, S> {
+    pub row: R,
     pub section: S,
 }
 
-impl<S> Node<S> {
-    pub fn new(row: Row, section: S) -> Self {
+impl<R, S> Node<R, S> {
+    pub fn new(row: R, section: S) -> Self {
         Node { row, section }
     }
 }
 
-impl<S: Section> Display for Node<S> {
+impl<R: RowTrait, S: Section<R>> Display for Node<R, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({:?}|{})", self.section, self.row)
     }
@@ -98,15 +98,15 @@ impl<S: Section> Display for Node<S> {
 
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
-pub struct Engine<'t, S: Section> {
-    nodes: _Set<Node<S>>,
+pub struct Engine<'t, R: RowTrait, S: Section<R>> {
+    nodes: _Set<Node<R, S>>,
     table: &'t S::Table,
     desired_len: Range<usize>,
     calls: Vec<S::Call>,
     nodes_considered: usize,
 }
 
-impl<'t, S: Section> Engine<'t, S> {
+impl<'t, R: RowTrait, S: Section<R>> Engine<'t, R, S> {
     fn new(table: &'t S::Table, desired_len: Range<usize>) -> Self {
         Engine {
             nodes: _Set::empty(),
@@ -123,7 +123,7 @@ impl<'t, S: Section> Engine<'t, S> {
         println!("{} nodes considered", self.nodes_considered);
     }
 
-    fn recursive_compose(&mut self, node: Node<S>, len: usize, depth: usize) {
+    fn recursive_compose(&mut self, node: Node<R, S>, len: usize, depth: usize) {
         dbg_print!(
             "Considering {}...",
             self.calls.iter().map(S::Call::to_string).join("")

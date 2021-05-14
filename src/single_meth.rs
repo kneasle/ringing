@@ -75,8 +75,8 @@ impl Display for Section {
     }
 }
 
-impl engine::Section for Section {
-    type Table = Table;
+impl<R: RowTrait> engine::Section<R> for Section {
+    type Table = Table<R>;
     type Call = Call;
 
     #[inline(always)]
@@ -90,7 +90,7 @@ impl engine::Section for Section {
     }
 
     #[inline(always)]
-    fn is_end(node: &Node<Self>) -> bool {
+    fn is_end(node: &Node<R, Self>) -> bool {
         node.row.is_rounds() && node.section.ind == 0
     }
 
@@ -100,12 +100,12 @@ impl engine::Section for Section {
     }
 
     #[inline(always)]
-    fn falseness(self, table: &Self::Table) -> &[(Row, Self)] {
+    fn falseness(self, table: &Self::Table) -> &[(R, Self)] {
         table.falseness[self.ind].as_slice()
     }
 
     #[inline(always)]
-    fn expand(self, table: &Self::Table) -> &[(Self::Call, Row, Self)] {
+    fn expand(self, table: &Self::Table) -> &[(Self::Call, R, Self)] {
         table.next_nodes[self.ind].as_slice()
     }
 
@@ -126,21 +126,21 @@ impl engine::Section for Section {
 
 /// The persistent state table for a single method
 #[derive(Debug, Clone)]
-pub struct Table {
-    falseness: Vec<Vec<(Row, Section)>>,
-    next_nodes: Vec<Vec<(Call, Row, Section)>>,
+pub struct Table<R: RowTrait> {
+    falseness: Vec<Vec<(R, Section)>>,
+    next_nodes: Vec<Vec<(Call, R, Section)>>,
     lengths: Vec<usize>,
     stage: Stage,
 }
 
-impl Table {
+impl Table<Row> {
     pub fn from_place_not(
         stage: Stage,
         method_pn: &str,
         fixed_bell_chars: &str,
         call_pns: &[(&str, char, &str)],
         plain_lead_calling_positions: &str,
-    ) -> Result<Table, PnBlockParseError> {
+    ) -> Result<Self, PnBlockParseError> {
         let (plain_course, fixed_bells, ranges, transitions) = Self::ranges_from_place_not(
             stage,
             method_pn,
@@ -345,11 +345,10 @@ impl Table {
         fixed_bells: &[Bell],
         ranges: &[Range<usize>],
         transitions: Vec<Vec<Transition>>,
-    ) -> Table {
+    ) -> Self {
         /* Group rows in each range by the locations of the fixed bells.  By the definition of
          * fixed bells, we only consider falseness between rows which have the fixed bells in the
          * same places. */
-        type FalsenessMap<'a> = HashMap<Vec<usize>, Vec<&'a Row>>;
 
         // Calculate the correct range lengths (handling ranges which wrap round the end of the
         // course)
@@ -359,12 +358,14 @@ impl Table {
             .map(|r| (r.end + plain_course_len + 1 - r.start) % plain_course_len)
             .collect_vec();
 
-        let grouped_rows: Vec<FalsenessMap> = ranges
+        type FalseMap<'a> = HashMap<Vec<usize>, Vec<&'a Row>>;
+
+        let grouped_rows: Vec<FalseMap> = ranges
             .iter()
             .zip(range_lengths.iter())
             .map(|(range, len)| {
                 // Group all the rows by the indices of the fixed bells
-                let mut rows_by_fixed_bell_indices: FalsenessMap = HashMap::with_capacity(*len);
+                let mut rows_by_fixed_bell_indices: FalseMap = HashMap::with_capacity(*len);
 
                 // Correctly handle ranges which wrap round the end of a course
                 let ranges = if range.start < range.end {

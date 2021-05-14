@@ -2,11 +2,11 @@ mod engine;
 mod set;
 mod single_meth;
 
-use proj_core::Stage;
+use proj_core::{Row, Stage};
 
 use engine::Section;
 
-fn yorkshire() -> single_meth::Table {
+fn yorkshire() -> single_meth::Table<Row> {
     single_meth::Table::from_place_not(
         Stage::ROYAL,
         "x30x14x50x16x1270x38x14x50x16x90,12",
@@ -19,7 +19,7 @@ fn yorkshire() -> single_meth::Table {
 }
 
 fn main() {
-    let table = single_meth::Table::from_place_not(
+    let table = single_meth::Table::<Row>::from_place_not(
         Stage::ROYAL,
         "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
         "17890",
