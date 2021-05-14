@@ -6,7 +6,7 @@ use std::{
 
 use crate::set::Set;
 use itertools::Itertools;
-use proj_core::{Row, Stage};
+use proj_core::{Row, RowTrait, Stage};
 
 /// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
 /// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic

@@ -5,7 +5,9 @@ use std::{
 };
 
 use itertools::Itertools;
-use proj_core::{place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, Row, Stage};
+use proj_core::{
+    place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, Row, RowTrait, Stage,
+};
 
 use crate::engine::{self, Node};
 
