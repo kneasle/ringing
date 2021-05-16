@@ -12,16 +12,29 @@ use crate::single_meth::near_calls;
 
 mod tables {
     #![allow(dead_code)]
+    use crate::single_meth::far_calls;
+
     use super::*;
 
-    pub fn yorkshire_s8() -> single_meth::Table<Row> {
+    pub fn yorkshire_s10() -> single_meth::Table<Row> {
         single_meth::Table::from_place_not(
             Stage::ROYAL,
             "x30x14x50x16x1270x38x14x50x16x90,12",
             // Fix the treble and all the tenors
             "17890",
-            &[("14", '-', "LIBFVXSMWH"), ("1234", 's', "LBTFVXSMWH")],
+            &near_calls(Stage::ROYAL),
             "LBTFVXSMWH",
+        )
+        .unwrap()
+    }
+
+    pub fn bristol_s8() -> single_meth::Table<Row> {
+        single_meth::Table::from_place_not(
+            Stage::MAJOR,
+            "x58x14.58x58.36.14x14.58x14x18,18",
+            "178",
+            &near_calls(Stage::MAJOR),
+            "LIBMFHVW",
         )
         .unwrap()
     }
@@ -31,6 +44,17 @@ mod tables {
             Stage::MAJOR,
             "-38-14-1258-36-14-58-16-78,12",
             "178",
+            &near_calls(Stage::MAJOR)[..1],
+            "LBTFVMWH",
+        )
+        .unwrap()
+    }
+
+    pub fn yorkshire_s8() -> single_meth::Table<Row> {
+        single_meth::Table::from_place_not(
+            Stage::MAJOR,
+            "x38x14x58x16x12x38x14x78,12",
+            "178",
             &near_calls(Stage::MAJOR),
             "LBTFVMWH",
         )
@@ -39,7 +63,7 @@ mod tables {
 }
 
 fn main() {
-    let table = tables::cambs_s8();
+    let table = tables::bristol_s8();
 
     table.print_falseness();
 

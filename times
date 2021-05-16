@@ -10,5 +10,9 @@ commit 18a3dd2 (SIMD using safe_arch):
 
 commit ee54f68 (SIMD using intrinsics):
 - All bobs-only tenors together peals of Cambs 8:
-  - VecSet:  200.08s
+  - VecSet:  ????
   - HashSet: 293s
+
+commit 0e20cea (SIMD using safe_arch, again):
+- All bobs-only tenors together peals of Cambs 8:
+  - SplitVecSet:  53.78s
