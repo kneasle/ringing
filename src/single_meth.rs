@@ -90,6 +90,11 @@ impl<R: RowTrait> engine::Section<R> for Section {
     }
 
     #[inline(always)]
+    fn num_sections(table: &Self::Table) -> usize {
+        table.lengths.len()
+    }
+
+    #[inline(always)]
     fn is_end(node: &Node<R, Self>) -> bool {
         node.row.is_rounds() && node.section.ind == 0
     }
@@ -121,6 +126,13 @@ impl<R: RowTrait> engine::Section<R> for Section {
                 Some(name) => format!("{}{}", name, position),
             })
             .join("")
+    }
+}
+
+impl Into<usize> for Section {
+    #[inline(always)]
+    fn into(self) -> usize {
+        self.ind
     }
 }
 

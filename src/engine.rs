@@ -4,7 +4,7 @@ use std::{
     ops::{Range, RangeInclusive},
 };
 
-use crate::set::Set;
+use crate::set::NodeSet;
 use itertools::Itertools;
 use proj_core::{RowTrait, Stage};
 
@@ -12,7 +12,7 @@ use proj_core::{RowTrait, Stage};
 /// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic
 /// performance).  However, this is left as a simple switch in order to get the best performance
 /// for all cases.
-type _Set<T> = crate::set::VecSet<T>;
+type _Set<R, S> = crate::set::SplitVecSet<R, S>;
 
 /* DEBUG PRINT SETTINGS */
 
@@ -50,6 +50,9 @@ pub trait Section<R: RowTrait>: Display + Debug + Copy + Eq + Hash {
     /// The first `Section` of any composition
     fn start() -> Self;
 
+    /// The number of different section values
+    fn num_sections(table: &Self::Table) -> usize;
+
     /// Returns `true` if this section is the end of a composition
     fn is_end(node: &Node<R, Self>) -> bool;
 
@@ -68,7 +71,10 @@ pub trait Section<R: RowTrait>: Display + Debug + Copy + Eq + Hash {
     fn expand(self, table: &Self::Table) -> &[(Self::Call, R, Self)];
 
     /// Build a composition out of these `Section`s
-    fn compose(table: &Self::Table, desired_len: RangeInclusive<usize>) {
+    fn compose(table: &Self::Table, desired_len: RangeInclusive<usize>)
+    where
+        Self: Into<usize>,
+    {
         Engine::<R, Self>::new(table, *desired_len.start()..*desired_len.end() + 1).compose()
     }
 
@@ -99,17 +105,17 @@ impl<R: RowTrait, S: Section<R>> Display for Node<R, S> {
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
 pub struct Engine<'t, R: RowTrait, S: Section<R>> {
-    nodes: _Set<Node<R, S>>,
+    nodes: _Set<R, S>,
     table: &'t S::Table,
     desired_len: Range<usize>,
     calls: Vec<S::Call>,
     nodes_considered: usize,
 }
 
-impl<'t, R: RowTrait, S: Section<R>> Engine<'t, R, S> {
+impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
     fn new(table: &'t S::Table, desired_len: Range<usize>) -> Self {
         Engine {
-            nodes: _Set::empty(),
+            nodes: _Set::empty(S::num_sections(table)),
             table,
             desired_len,
             calls: Vec::new(),

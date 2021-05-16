@@ -31,7 +31,7 @@ mod tables {
             Stage::MAJOR,
             "-38-14-1258-36-14-58-16-78,12",
             "178",
-            &near_calls(Stage::MAJOR)[..1],
+            &near_calls(Stage::MAJOR),
             "LBTFVMWH",
         )
         .unwrap()
@@ -41,11 +41,11 @@ mod tables {
 fn main() {
     let table = tables::cambs_s8();
 
-    // table.print_falseness();
+    table.print_falseness();
 
     if SimdRow::are_cpu_features_enabled() {
         println!("Can use SIMD!");
-        single_meth::Section::compose(&table.change_row_type::<SimdRow>(), 5000..=5184);
+        single_meth::Section::compose(&table.change_row_type::<SimdRow>(), 1280..=1280);
     } else {
         println!("Can't use SIMD.");
         single_meth::Section::compose(&table, 5000..=5184);
