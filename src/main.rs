@@ -5,7 +5,7 @@ mod set;
 mod single_meth;
 
 use engine::Section;
-use proj_core::row::simd::SimdRow;
+use proj_core::SimdRow;
 use proj_core::{Row, Stage};
 
 use crate::single_meth::near_calls;
