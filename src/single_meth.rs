@@ -54,60 +54,6 @@ impl Display for Section {
     }
 }
 
-impl<R: RowTrait> engine::Section<R> for Section {
-    type Table = Table<R>;
-    type Call = Call;
-
-    #[inline(always)]
-    fn stage(table: &Self::Table) -> Stage {
-        table.stage
-    }
-
-    #[inline(always)]
-    fn start() -> Self {
-        Self::new(0)
-    }
-
-    #[inline(always)]
-    fn num_sections(table: &Self::Table) -> usize {
-        table.lengths.len()
-    }
-
-    #[inline(always)]
-    fn is_end(node: &Node<R, Self>) -> bool {
-        node.row.is_rounds() && node.section.ind == 0
-    }
-
-    #[inline(always)]
-    fn length(self, table: &Self::Table) -> usize {
-        table.lengths[self.ind]
-    }
-
-    #[inline(always)]
-    fn falseness(self, table: &Self::Table) -> &[(R, Self)] {
-        table.falseness[self.ind].as_slice()
-    }
-
-    #[inline(always)]
-    fn expand(self, table: &Self::Table) -> &[(Self::Call, R, Self)] {
-        table.next_nodes[self.ind].as_slice()
-    }
-
-    fn comp_string(calls: &[Self::Call]) -> String {
-        calls
-            .iter()
-            .map(|Call { call, position }| match call {
-                // Plain leads don't get displayed
-                None => String::new(),
-                // Bobs are implicit
-                Some('-') => format!("{}", position),
-                // Any other call is written out in full
-                Some(name) => format!("{}{}", name, position),
-            })
-            .join("")
-    }
-}
-
 impl Into<usize> for Section {
     #[inline(always)]
     fn into(self) -> usize {
@@ -501,6 +447,65 @@ impl Table<Row> {
             stage: self.stage,
             lengths: self.lengths,
         }
+    }
+}
+
+impl<R: RowTrait> engine::Table<R> for Table<R> {
+    type Section = Section;
+    type Call = Call;
+
+    #[inline(always)]
+    fn stage(&self) -> Stage {
+        self.stage
+    }
+
+    #[inline(always)]
+    fn start() -> Self::Section {
+        Section::new(0)
+    }
+
+    #[inline(always)]
+    fn num_sections(&self) -> usize {
+        self.lengths.len()
+    }
+
+    #[inline(always)]
+    fn is_end(node: &Node<R, Self::Section>) -> bool {
+        node.row.is_rounds() && node.section.ind == 0
+    }
+
+    #[inline(always)]
+    fn length(&self, section: Self::Section) -> usize {
+        self.lengths[section.ind]
+    }
+
+    #[inline(always)]
+    fn falseness(&self, section: Self::Section) -> &[(R, Self::Section)] {
+        self.falseness[section.ind].as_slice()
+    }
+
+    #[inline(always)]
+    fn expand(&self, section: Self::Section) -> &[(Self::Call, R, Self::Section)] {
+        self.next_nodes[section.ind].as_slice()
+    }
+
+    #[inline(always)]
+    fn music(&self, section: Self::Section) -> f32 {
+        unimplemented!()
+    }
+
+    fn comp_string(calls: &[Self::Call]) -> String {
+        calls
+            .iter()
+            .map(|Call { call, position }| match call {
+                // Plain leads don't get displayed
+                None => String::new(),
+                // Bobs are implicit
+                Some('-') => format!("{}", position),
+                // Any other call is written out in full
+                Some(name) => format!("{}{}", name, position),
+            })
+            .join("")
     }
 }
 

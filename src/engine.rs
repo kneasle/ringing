@@ -39,48 +39,58 @@ macro_rules! dbg_print {
 
 /// Trait that describes the smallest atomic chunk of a composition.  This trait is used by the
 /// [`Engine`] to customise generic tree search.
-pub trait Section<R: RowTrait>: Display + Debug + Copy + Eq + Hash {
-    type Table: Debug;
+pub trait Table<R: RowTrait>: Debug {
+    type Section: Into<usize> + Display + Debug + Copy + Eq + Hash;
     type Call: Copy + Debug + Display;
 
-    /// The [`Stage`] of this `Section` type.  All the instances must share the same [`Stage`], so
-    /// this has no `self` parameter.
-    fn stage(table: &Self::Table) -> Stage;
+    /* STATIC METHODS */
 
     /// The first `Section` of any composition
-    fn start() -> Self;
-
-    /// The number of different section values.  If `Self : Into<usize>`, then we require that the
-    /// `self` always maps to a value in the range `0..S::num_sections(table)`.
-    fn num_sections(table: &Self::Table) -> usize;
+    fn start() -> Self::Section;
 
     /// Returns `true` if this section is the end of a composition
-    fn is_end(node: &Node<R, Self>) -> bool;
-
-    /// The first [`Node`] of any composition
-    fn start_node(table: &Self::Table) -> Node<R, Self> {
-        Node::new(R::rounds(Self::stage(table)), Self::start())
-    }
-
-    /// Returns the number of [`Row`]s in a given `Section`
-    fn length(self, table: &Self::Table) -> usize;
-
-    /// Which other `Section`s are false against `(Row::rounds(_), self)`
-    fn falseness(self, table: &Self::Table) -> &[(R, Self)];
-
-    /// Which `Section`s and transpositions are directly reachable from a given `Section`
-    fn expand(self, table: &Self::Table) -> &[(Self::Call, R, Self)];
-
-    /// Build a composition out of these `Section`s
-    fn compose(table: &Self::Table, desired_len: RangeInclusive<usize>)
-    where
-        Self: Into<usize>,
-    {
-        Engine::<R, Self>::new(table, *desired_len.start()..*desired_len.end() + 1).compose()
-    }
+    fn is_end(node: &Node<R, Self::Section>) -> bool;
 
     /// Write a list of calls in a human-readable format
     fn comp_string(calls: &[Self::Call]) -> String;
+
+    /* COMPOSING METHODS */
+
+    /// The number of different section values.  If `Self : Into<usize>`, then we require that the
+    /// `self` always maps to a value in the range `0..S::num_sections(table)`.
+    fn num_sections(&self) -> usize;
+
+    /// The [`Stage`] of all compositions generated from this `Table`.  All the instances must
+    /// share the same [`Stage`], so this has no `self` parameter.
+    fn stage(&self) -> Stage;
+
+    /// Returns the number of [`Row`]s in a given `Section`
+    fn length(&self, section: Self::Section) -> usize;
+
+    /// Which other `Section`s are false against `(Row::rounds(_), self)`
+    fn falseness(&self, section: Self::Section) -> &[(R, Self::Section)];
+
+    /// Which `Section`s and transpositions are directly reachable from a given `Section`
+    fn expand(&self, section: Self::Section) -> &[(Self::Call, R, Self::Section)];
+
+    /// Tests a certain node for musicality
+    fn music(&self, section: Self::Section) -> f32;
+
+    /* PROVIDED METHODS */
+
+    /// The first [`Node`] of any composition specified by this `Table`
+    fn start_node(&self) -> Node<R, Self::Section> {
+        Node::new(R::rounds(self.stage()), Self::start())
+    }
+
+    /// Generate compositions according to this `Table`
+    fn compose(&self, desired_len: RangeInclusive<usize>)
+    where
+        Self: Sized,
+    {
+        let half_open_range = *desired_len.start()..*desired_len.end() + 1;
+        Engine::<R, Self>::new(self, half_open_range).compose()
+    }
 }
 
 /// A single node of the composition - this is a [`Section`] (usually some part of the plain
@@ -97,7 +107,7 @@ impl<R, S> Node<R, S> {
     }
 }
 
-impl<R: RowTrait, S: Section<R>> Display for Node<R, S> {
+impl<R: RowTrait, S: Debug> Display for Node<R, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({:?}|{})", self.section, self.row)
     }
@@ -105,18 +115,18 @@ impl<R: RowTrait, S: Section<R>> Display for Node<R, S> {
 
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
-pub struct Engine<'t, R: RowTrait, S: Section<R>> {
-    nodes: _Set<R, S>,
-    table: &'t S::Table,
+pub struct Engine<'t, R: RowTrait, T: Table<R>> {
+    nodes: _Set<R, T::Section>,
+    table: &'t T,
     desired_len: Range<usize>,
-    calls: Vec<S::Call>,
+    calls: Vec<T::Call>,
     nodes_considered: usize,
 }
 
-impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
-    fn new(table: &'t S::Table, desired_len: Range<usize>) -> Self {
+impl<'t, R: RowTrait, T: Table<R>> Engine<'t, R, T> {
+    fn new(table: &'t T, desired_len: Range<usize>) -> Self {
         Engine {
-            nodes: _Set::empty(S::num_sections(table)),
+            nodes: _Set::empty(T::num_sections(table)),
             table,
             desired_len,
             calls: Vec::new(),
@@ -125,15 +135,15 @@ impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
     }
 
     fn compose(&mut self) {
-        self.recursive_compose(S::start_node(&self.table), 0, 0);
+        self.recursive_compose(self.table.start_node(), 0, 0);
 
         println!("{} nodes considered", self.nodes_considered);
     }
 
-    fn recursive_compose(&mut self, node: Node<R, S>, len: usize, depth: usize) {
+    fn recursive_compose(&mut self, node: Node<R, T::Section>, len: usize, depth: usize) {
         dbg_print!(
             "Considering {}...",
-            self.calls.iter().map(S::Call::to_string).join("")
+            self.calls.iter().map(T::Call::to_string).join("")
         );
 
         self.nodes_considered += 1;
@@ -141,8 +151,8 @@ impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
         /* CHECK THAT THE NEW NODE IS VALID */
 
         // Check if we've found a valid composition
-        if S::is_end(&node) && self.desired_len.contains(&len) {
-            println!("FOUND COMP! (len {}): {}", len, S::comp_string(&self.calls));
+        if T::is_end(&node) && self.desired_len.contains(&len) {
+            println!("FOUND COMP! (len {}): {}", len, T::comp_string(&self.calls));
             return;
         }
 
@@ -153,12 +163,12 @@ impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
         }
 
         // Check whether this node is false against anything we've already rung
-        for (r, section) in node.section.falseness(&self.table).iter() {
-            if self
-                .nodes
-                .contains(&Node::new(unsafe { node.row.mul_unchecked(r) }, *section))
-            {
-                dbg_println!("False against {}: {:?}", r, section);
+        for (fch, false_section) in self.table.falseness(node.section).iter() {
+            if self.nodes.contains(&Node::new(
+                unsafe { node.row.mul_unchecked(fch) },
+                *false_section,
+            )) {
+                dbg_println!("False against {}: {:?}", fch, false_section);
                 return;
             }
         }
@@ -178,13 +188,13 @@ impl<'t, R: RowTrait, S: Section<R> + Into<usize>> Engine<'t, R, S> {
         self.nodes.add(node.clone());
 
         // Expand this in all possible ways
-        for (name, transposition, section) in node.section.expand(&self.table) {
+        for (name, transposition, section) in self.table.expand(node.section) {
             // Add the new name to the composition string
             self.calls.push(*name);
 
             self.recursive_compose(
                 Node::new(unsafe { node.row.mul_unchecked(transposition) }, *section),
-                len + node.section.length(&self.table),
+                len + self.table.length(node.section),
                 depth + 1,
             );
 
