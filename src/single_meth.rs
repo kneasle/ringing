@@ -9,31 +9,10 @@ use proj_core::{
     place_not::PnBlockParseError, Bell, Method, PlaceNot, PnBlock, Row, RowTrait, Stage,
 };
 
-use crate::engine::{self, Node};
-
-/// 4ths place calls for any [`Stage`]
-pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
-    let (bob_pos, single_pos) = match stage {
-        Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
-        Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
-        Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
-        _ => unimplemented!(),
-    };
-
-    vec![("14", '-', bob_pos), ("1234", 's', single_pos)]
-}
-
-/// (n-2)nds place calls for any [`Stage`]
-pub fn far_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
-    let (bob_pos, single_pos, bob, single) = match stage {
-        Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
-        Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
-        Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
-        _ => unimplemented!(),
-    };
-
-    vec![(bob, '-', bob_pos), (single, 's', single_pos)]
-}
+use crate::{
+    engine::{self, Node},
+    music::{self, MusicPattern},
+};
 
 /// A tuple of values which represent the transition between two segments
 type Transition = (Call, Row, usize);
@@ -167,6 +146,7 @@ impl Table<Row> {
             &fixed_bells,
             &ranges,
             transitions,
+            MusicPattern::four_bell_runs(stage),
         ))
     }
 
@@ -277,7 +257,8 @@ impl Table<Row> {
         // but don't permute fix bells (e.g. 4ths place calls in n-ths place methods).
         range_starts.extend(range_ends.iter().map(|&x| (x + 1) % course_len));
 
-        // Sort and deduplicate the starts and ends so that the later algorithms work properly
+        // Sort and de-duplicate the starts and ends (later algorithms rely on binary searching
+        // these arrays)
         range_starts.sort_unstable();
         range_starts.dedup();
         range_ends.sort_unstable();
@@ -343,28 +324,32 @@ impl Table<Row> {
             })
             .collect_vec();
 
-        Ok((
-            plain_course.rows().cloned().collect_vec(),
-            fixed_bells,
-            ranges,
-            transitions,
-        ))
+        let mut rows = plain_course.rows().cloned().collect_vec();
+        // `rows` starts and ends with rounds, so we pop the rounds at the end since it isn't
+        // needed
+        assert!(rows.pop().unwrap().is_rounds());
+
+        Ok((rows, fixed_bells, ranges, transitions))
     }
 
     pub fn new(
         stage: Stage,
+        // The rows of the plain course, NOT including the finishing rounds
         plain_course_rows: Vec<Row>,
         fixed_bells: &[Bell],
         ranges: &[Range<usize>],
         transitions: Vec<Vec<Transition>>,
+        music_patterns: Vec<MusicPattern>,
     ) -> Self {
         /* Group rows in each range by the locations of the fixed bells.  By the definition of
          * fixed bells, we only consider falseness between rows which have the fixed bells in the
          * same places. */
 
+        music::generate_music_table(stage, fixed_bells, &plain_course_rows, &music_patterns);
+
         // Calculate the correct range lengths (handling ranges which wrap round the end of the
         // course)
-        let plain_course_len = plain_course_rows.len() - 1;
+        let plain_course_len = plain_course_rows.len();
         let range_lengths = ranges
             .iter()
             .map(|r| (r.end + plain_course_len + 1 - r.start) % plain_course_len)
@@ -494,6 +479,30 @@ impl Table<Row> {
             lengths: self.lengths,
         }
     }
+}
+
+/// 4ths place calls for any [`Stage`]
+pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
+    let (bob_pos, single_pos) = match stage {
+        Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
+        Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
+        Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
+        _ => unimplemented!(),
+    };
+
+    vec![("14", '-', bob_pos), ("1234", 's', single_pos)]
+}
+
+/// (n-2)nds place calls for any [`Stage`]
+pub fn far_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
+    let (bob_pos, single_pos, bob, single) = match stage {
+        Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
+        Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
+        Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
+        _ => unimplemented!(),
+    };
+
+    vec![(bob, '-', bob_pos), (single, 's', single_pos)]
 }
 
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]

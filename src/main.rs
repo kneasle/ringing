@@ -1,6 +1,7 @@
 #![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
 mod engine;
+mod music;
 mod set;
 mod single_meth;
 
@@ -12,8 +13,6 @@ use crate::single_meth::near_calls;
 
 mod tables {
     #![allow(dead_code)]
-    use crate::single_meth::far_calls;
-
     use super::*;
 
     pub fn yorkshire_s10() -> single_meth::Table<Row> {

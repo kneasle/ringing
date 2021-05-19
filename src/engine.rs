@@ -50,7 +50,8 @@ pub trait Section<R: RowTrait>: Display + Debug + Copy + Eq + Hash {
     /// The first `Section` of any composition
     fn start() -> Self;
 
-    /// The number of different section values
+    /// The number of different section values.  If `Self : Into<usize>`, then we require that the
+    /// `self` always maps to a value in the range `0..S::num_sections(table)`.
     fn num_sections(table: &Self::Table) -> usize;
 
     /// Returns `true` if this section is the end of a composition
