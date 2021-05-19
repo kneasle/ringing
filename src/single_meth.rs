@@ -146,7 +146,7 @@ impl Table<Row> {
             &fixed_bells,
             &ranges,
             transitions,
-            MusicPattern::four_bell_runs(stage),
+            MusicPattern::runs_front_or_back(stage, 4, 1.0),
         ))
     }
 
@@ -345,8 +345,6 @@ impl Table<Row> {
          * fixed bells, we only consider falseness between rows which have the fixed bells in the
          * same places. */
 
-        music::generate_music_table(stage, fixed_bells, &plain_course_rows, &music_patterns);
-
         // Calculate the correct range lengths (handling ranges which wrap round the end of the
         // course)
         let plain_course_len = plain_course_rows.len();
@@ -368,8 +366,9 @@ impl Table<Row> {
                 let ranges = if range.start < range.end {
                     vec![range.clone()]
                 } else {
-                    vec![range.start..plain_course_rows.len() - 1, 0..range.end]
+                    vec![range.start..plain_course_len, 0..range.end]
                 };
+
                 for range in ranges {
                     for r in &plain_course_rows[range.start..range.end + 1] {
                         let fixed_bell_inds = get_bell_inds(fixed_bells, r);
@@ -428,10 +427,14 @@ impl Table<Row> {
             final_table[i].push((r, Section::new(j)));
         }
 
-        // Sort the falseness tables
+        // Sort the falseness tables (which will give better cache performance and is also easier
+        // just to read)
         final_table
             .iter_mut()
             .for_each(|v| v.sort_by(|a, b| (a.1.ind, &a.0).cmp(&(b.1.ind, &b.0))));
+
+        // Generate the music tables for each section
+        music::generate_course_head_masks(stage, fixed_bells, &plain_course_rows, &music_patterns);
 
         Table {
             falseness: final_table,
@@ -508,6 +511,13 @@ pub fn far_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]
 fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
     bells.iter().map(|b| r.place_of(*b).unwrap()).collect_vec()
+}
+
+/// Returns the list of fixed [`Bell`]s which only allows 2-6 to be affected
+pub fn tenors_together_fixed_bells(stage: Stage) -> Vec<Bell> {
+    let mut fixed_bells = vec![Bell::TREBLE];
+    fixed_bells.extend((6..stage.as_usize()).map(Bell::from_index));
+    fixed_bells
 }
 
 #[cfg(test)]

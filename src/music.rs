@@ -45,13 +45,12 @@ impl MusicPattern {
         }
     }
 
-    pub fn four_bell_runs(stage: Stage) -> Vec<MusicPattern> {
+    pub fn runs_front_or_back(stage: Stage, len: usize, weight: f32) -> Vec<MusicPattern> {
         let num_bells = stage.as_usize();
 
         let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
-        for i in 0..=num_bells - 4 {
-            // Collect the run of bells into a Vec which can be cloned
-            let run_iterator = (i..i + 4).map(Bell::from_index).map(RowRegexElem::Bell);
+        for i in 0..=num_bells - len {
+            let run_iterator = (i..i + len).map(Bell::from_index).map(RowRegexElem::Bell);
 
             // Descending runs on the back
             runs.push(
@@ -75,7 +74,6 @@ impl MusicPattern {
             // Ascending runs on the back
             runs.push(
                 run_iterator
-                    .clone()
                     .rev()
                     .chain(once(RowRegexElem::Glob))
                     .collect_vec(),
@@ -83,17 +81,17 @@ impl MusicPattern {
         }
 
         runs.into_iter()
-            .map(|regex| MusicPattern { regex, weight: 1.0 })
+            .map(|regex| MusicPattern { regex, weight })
             .collect_vec()
     }
 }
 
-pub fn generate_music_table<'a>(
+pub fn generate_course_head_masks<'r>(
     stage: Stage,
     fixed_bells: &[Bell],
-    rows: impl IntoIterator<Item = &'a Row> + Clone,
-    music_types: &[MusicPattern],
-) {
+    rows: impl IntoIterator<Item = &'r Row> + Clone,
+    patterns: &[MusicPattern],
+) -> Vec<(Vec<(usize, Bell)>, f32)> {
     /* The first step of compiling the music table is to parse the regexes into a single list of
      * which bells are required to go where.
      *
@@ -117,10 +115,10 @@ pub fn generate_music_table<'a>(
      *     ([(0, '5'), (1, '4'), (2, '3'), (3, '2')], 1.0),
      * ]
      * ```
-     * then this would corresponds to wanting "2345" or "5432" in bell range `0..4` with a weight
+     * then this would corresponds to wanting "2345" or "5432" in the range `0..4` with a weight
      * of 1 each.
      */
-    let bell_requirements: Vec<(Vec<(usize, Bell)>, f32)> = music_types
+    let bell_requirements: Vec<(Vec<(usize, Bell)>, f32)> = patterns
         .iter()
         .map(|m| {
             let regex_len = m.regex.len();
@@ -170,7 +168,7 @@ pub fn generate_music_table<'a>(
                     bell_requirements
                 }
                 _ => {
-                    panic!("Can't handle music regexes with more than one glob");
+                    panic!("Can't handle music patterns with more than one glob");
                 }
             };
             // Important thing to note here is that bell_requirements is always sorted by index,
@@ -235,7 +233,7 @@ pub fn generate_music_table<'a>(
                 // If they do agree on the locations of the source bells, then figure out which
                 // course heads we'd need in order to generate this music using the given source
                 // pattern.
-                let mut course_head_mask: Vec<(usize, Bell)> = 
+                let mut course_head_mask: Vec<(usize, Bell)> =
                     // Zip the source and music patterns together
                     source_pattern
                     .iter()
@@ -255,12 +253,105 @@ pub fn generate_music_table<'a>(
         }
     }
 
-    // Print the course head masks
-    for (mask, score) in course_head_masks {
-        let mut row = vec![String::from("x"); stage.as_usize()];
-        for (ind, bell) in mask {
-            row[ind] = bell.name();
-        }
-        println!("{}: {}", row.iter().join(""), score);
+    // Finally, convert the hash table into a vector and return
+    course_head_masks.into_iter().collect_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::single_meth::tenors_together_fixed_bells;
+
+    use super::*;
+    use proj_core::{Method, PnBlock, RowTrait};
+
+    fn test_plain_course_run_masks(pn: &str, stage: Stage, exp_masks: &str) {
+        let mut plain_course =
+            Method::with_lead_end(String::new(), &PnBlock::parse(pn, stage).unwrap())
+                .plain_course()
+                .into_rows();
+        // Pop the duplicated rounds at the end
+        assert!(plain_course.pop().unwrap().is_rounds());
+
+        let course_head_masks = generate_course_head_masks(
+            stage,
+            &tenors_together_fixed_bells(stage),
+            &plain_course,
+            &MusicPattern::runs_front_or_back(stage, 4, 1.0),
+        );
+
+        let mut formatted_masks = course_head_masks
+            .iter()
+            .map(|(mask, score)| {
+                let mut row = vec![String::from("x"); stage.as_usize()];
+                for (ind, bell) in mask {
+                    row[*ind] = bell.name();
+                }
+                format!("{}: {}", row.iter().join(""), score)
+            })
+            .collect_vec();
+        // We have to sort the masks because they from a hash table's iterator which doesn't
+        // guarantee any ordering
+        formatted_masks.sort();
+
+        // Join the sorted lines and check it's what we expect
+        let full_format = formatted_masks.iter().join("\n");
+        assert_eq!(full_format, exp_masks);
+    }
+
+    #[test]
+    fn course_head_mask() {
+        test_plain_course_run_masks(
+            "-5-4.5-5.36.4-4.5-4-1,8",
+            Stage::MAJOR,
+            "x2345xxx: 8
+x234x5xx: 8
+x234xxxx: 4
+x23x4xxx: 4
+x2435xxx: 8
+x243x5xx: 8
+x243xxxx: 4
+x2x3x4xx: 4
+x324xxxx: 4
+x3254xxx: 8
+x325x4xx: 8
+x32x4xxx: 4
+x342xxxx: 4
+x3456xxx: 8
+x345x6xx: 8
+x3524xxx: 8
+x352x4xx: 8
+x3546xxx: 8
+x354x6xx: 8
+x3x2x4xx: 4
+x4253xxx: 8
+x425x3xx: 8
+x42x3xxx: 4
+x4365xxx: 8
+x436x5xx: 8
+x43x2xxx: 4
+x4523xxx: 8
+x452x3xx: 8
+x4635xxx: 8
+x463x5xx: 8
+x4x2x3xx: 4
+x4x3x2xx: 4
+x5342xxx: 8
+x534x2xx: 8
+x5364xxx: 8
+x536x4xx: 8
+x5432xxx: 8
+x543x2xx: 8
+x54x6xxx: 8
+x5634xxx: 8
+x563x4xx: 8
+x6453xxx: 8
+x645x3xx: 8
+x64x5xxx: 8
+x6543xxx: 8
+x654x3xx: 8
+xx6x5xxx: 8
+xxx5x6xx: 8
+xxxx56xx: 8",
+        );
     }
 }
