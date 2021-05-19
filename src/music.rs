@@ -253,6 +253,13 @@ pub fn generate_course_head_masks<'r>(
         }
     }
 
+    for (mask, score) in &course_head_masks {
+        let mut row = vec![String::from("x"); stage.as_usize()];
+        for (ind, bell) in mask {
+            row[*ind] = bell.name();
+        }
+        println!("    {}: {}", row.iter().join(""), score)
+    }
     // Finally, convert the hash table into a vector and return
     course_head_masks.into_iter().collect_vec()
 }

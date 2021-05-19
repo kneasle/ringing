@@ -11,7 +11,7 @@ use proj_core::{
 
 use crate::{
     engine::{self, Node},
-    music::{self, MusicPattern},
+    music::{self, generate_course_head_masks, MusicPattern},
 };
 
 /// A tuple of values which represent the transition between two segments
@@ -366,7 +366,8 @@ impl Table<Row> {
                 let ranges = if range.start < range.end {
                     vec![range.clone()]
                 } else {
-                    vec![range.start..plain_course_len, 0..range.end]
+                    // TODO: Stop the off-by-one indexing errors
+                    vec![range.start..plain_course_len - 1, 0..range.end]
                 };
 
                 for range in ranges {
@@ -434,7 +435,26 @@ impl Table<Row> {
             .for_each(|v| v.sort_by(|a, b| (a.1.ind, &a.0).cmp(&(b.1.ind, &b.0))));
 
         // Generate the music tables for each section
-        music::generate_course_head_masks(stage, fixed_bells, &plain_course_rows, &music_patterns);
+        for r in ranges {
+            println!("{:?}", r);
+            let music_masks = if r.start < r.end {
+                generate_course_head_masks(
+                    stage,
+                    fixed_bells,
+                    &plain_course_rows[r.start..r.end + 1],
+                    &music_patterns,
+                )
+            } else {
+                generate_course_head_masks(
+                    stage,
+                    fixed_bells,
+                    plain_course_rows[r.start..plain_course_len]
+                        .iter()
+                        .chain(plain_course_rows[..r.end + 1].iter()),
+                    &music_patterns,
+                )
+            };
+        }
 
         Table {
             falseness: final_table,
