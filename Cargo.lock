@@ -6,6 +6,8 @@ version = "0.1.0"
 dependencies = [
  "itertools",
  "proj_core",
+ "safe_arch",
+ "shortlist",
 ]
 
 [[package]]
@@ -36,3 +38,9 @@ name = "safe_arch"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1ff3d6d9696af502cc3110dacce942840fb06ff4514cad92236ecc455f2ce05"
+
+[[package]]
+name = "shortlist"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e8030b6cd6a74b9934f8228e70169293e51a78c515e3efaf6533b54d860e06f"

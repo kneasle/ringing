@@ -10,8 +10,8 @@ use proj_core::{
 };
 
 use crate::{
-    engine::{self, Node},
-    music::{self, generate_course_head_masks, MusicPattern},
+    engine::{self, CompRow, Node},
+    music::{MusicPattern, MusicTable},
 };
 
 /// A tuple of values which represent the transition between two segments
@@ -63,9 +63,10 @@ impl Into<usize> for Section {
 
 /// The persistent state table for a single method
 #[derive(Debug, Clone)]
-pub struct Table<R: RowTrait> {
+pub struct Table<R: CompRow> {
     falseness: Vec<Vec<(R, Section)>>,
     next_nodes: Vec<Vec<(Call, R, Section)>>,
+    music_tables: Vec<MusicTable>,
     lengths: Vec<usize>,
     stage: Stage,
 }
@@ -381,26 +382,29 @@ impl Table<Row> {
             .for_each(|v| v.sort_by(|a, b| (a.1.ind, &a.0).cmp(&(b.1.ind, &b.0))));
 
         // Generate the music tables for each section
-        for r in ranges {
-            println!("{:?}", r);
-            let music_masks = if r.start < r.end {
-                generate_course_head_masks(
-                    stage,
-                    fixed_bells,
-                    &plain_course_rows[r.start..r.end + 1],
-                    &music_patterns,
-                )
-            } else {
-                generate_course_head_masks(
-                    stage,
-                    fixed_bells,
-                    plain_course_rows[r.start..plain_course_len]
-                        .iter()
-                        .chain(plain_course_rows[..r.end + 1].iter()),
-                    &music_patterns,
-                )
-            };
-        }
+        let music_tables = ranges
+            .iter()
+            .map(|r| {
+                let music_table = if r.start < r.end {
+                    MusicTable::from_rows(
+                        stage,
+                        fixed_bells,
+                        &plain_course_rows[r.start..r.end + 1],
+                        &music_patterns,
+                    )
+                } else {
+                    MusicTable::from_rows(
+                        stage,
+                        fixed_bells,
+                        plain_course_rows[r.start..plain_course_len]
+                            .iter()
+                            .chain(plain_course_rows[..r.end + 1].iter()),
+                        &music_patterns,
+                    )
+                };
+                music_table
+            })
+            .collect_vec();
 
         Table {
             falseness: final_table,
@@ -408,6 +412,7 @@ impl Table<Row> {
             // lead of surprise major will be represented as 0..31 not 0..32).
             lengths: range_lengths,
             stage,
+            music_tables,
             next_nodes: transitions
                 .into_iter()
                 .map(|vs| {
@@ -419,6 +424,7 @@ impl Table<Row> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn print_falseness(&self) {
         for (i, secs) in self.falseness.iter().enumerate() {
             println!("{}", i);
@@ -428,7 +434,7 @@ impl Table<Row> {
         }
     }
 
-    pub fn change_row_type<R: RowTrait + From<Row>>(self) -> Table<R> {
+    pub fn change_row_type<R: CompRow + From<Row>>(self) -> Table<R> {
         Table {
             falseness: self
                 .falseness
@@ -446,11 +452,12 @@ impl Table<Row> {
                 .collect_vec(),
             stage: self.stage,
             lengths: self.lengths,
+            music_tables: self.music_tables,
         }
     }
 }
 
-impl<R: RowTrait> engine::Table<R> for Table<R> {
+impl<R: CompRow> engine::Table<R> for Table<R> {
     type Section = Section;
     type Call = Call;
 
@@ -490,11 +497,11 @@ impl<R: RowTrait> engine::Table<R> for Table<R> {
     }
 
     #[inline(always)]
-    fn music(&self, section: Self::Section) -> f32 {
-        unimplemented!()
+    fn music(&self, node: &Node<R, Self::Section>) -> f32 {
+        self.music_tables[node.section.ind].evaluate(&node.row)
     }
 
-    fn comp_string(calls: &[Self::Call]) -> String {
+    fn comp_string(&self, calls: &[Self::Call]) -> String {
         calls
             .iter()
             .map(|Call { call, position }| match call {
@@ -518,7 +525,11 @@ pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
         _ => unimplemented!(),
     };
 
-    vec![("14", '-', bob_pos), ("1234", 's', single_pos)]
+    vec![
+        ("14", '-', bob_pos),
+        ("1234", 's', single_pos),
+        // ("16", 'x', bob_pos),
+    ]
 }
 
 /// (n-2)nds place calls for any [`Stage`]

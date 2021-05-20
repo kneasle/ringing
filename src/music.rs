@@ -3,7 +3,10 @@ use std::{collections::HashMap, iter::once};
 use itertools::Itertools;
 use proj_core::{Bell, Row, Stage};
 
+use crate::engine::CompRow;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[allow(dead_code)]
 pub enum RowRegexElem {
     /// One single specific [`Bell`].  Only matched by that exact [`Bell`].
     Bell(Bell),
@@ -31,6 +34,7 @@ pub struct MusicPattern {
 }
 
 impl MusicPattern {
+    #[allow(dead_code)]
     pub fn from_regex(regex: &str, weight: f32) -> Self {
         MusicPattern {
             regex: regex
@@ -86,12 +90,84 @@ impl MusicPattern {
     }
 }
 
-pub fn generate_course_head_masks<'r>(
+/// The information required to quickly compute the music of a segment of some course
+#[derive(Debug, Clone)]
+pub struct MusicTable {
+    /// Music score which is generated regardless of the course head.  This corresponds to the
+    /// course head mask `xxxxxx...`.
+    guarunteed_music: f32,
+    compiled_masks: Vec<(u128, u128, f32)>,
+}
+
+impl MusicTable {
+    pub fn from_rows<'r>(
+        stage: Stage,
+        fixed_bells: &[Bell],
+        rows: impl IntoIterator<Item = &'r Row> + Clone,
+        patterns: &[MusicPattern],
+    ) -> Self {
+        let course_head_masks = generate_course_head_masks(stage, fixed_bells, rows, patterns);
+        Self::from_course_masks(course_head_masks)
+    }
+
+    fn from_course_masks(masks: impl IntoIterator<Item = (Vec<(usize, Bell)>, f32)>) -> MusicTable {
+        let mut guarunteed_music = 0.0;
+        let compiled_masks = masks
+            .into_iter()
+            .filter_map(|(bell_locs, score)| {
+                // If no bells are specified, then this mask is always satisfied and counts as
+                // guarunteed_music and doesn't generate a runtime match.
+                if bell_locs.is_empty() {
+                    guarunteed_music += score;
+                    return None;
+                }
+                // If there are some specified bells, then generate the masks for their locations.
+                // - `mask` has 0x00 in the locations of the bells and 0xff otherwise (it's
+                //   inverted in the return expression).
+                // - `bells` has each bell's byte in the locations of the bells and 0xff otherwise.
+                let mut mask = 0u128;
+                let mut bells = (-1i128) as u128; // Start off with all 1s
+                for (index, bell) in bell_locs {
+                    // Fill the byte in the mask with 1s (which will be turned into 0s after the
+                    // bitwise not at the end)
+                    mask |= 0xffu128 << (index * 8);
+                    // Zero out the current bell byte
+                    bells &= !(0xffu128 << (index * 8));
+                    // Fill the zeroed byte with the bell index
+                    bells |= (bell.index() as u128) << (index * 8);
+                }
+                // println!("{:>16x}\n{:>32x}", !mask, bells);
+                Some((!mask, bells, score))
+            })
+            .collect_vec();
+
+        MusicTable {
+            guarunteed_music,
+            compiled_masks,
+        }
+    }
+
+    #[inline(always)]
+    pub fn evaluate<R: CompRow>(&self, row: &R) -> f32 {
+        let mut total_music = self.guarunteed_music;
+        for &(mask, expected_bells, score) in &self.compiled_masks {
+            // Use the mask to overwrite every byte we don't care about with 0xff
+            let masked_row = row.pack_u128() | mask;
+            // Compare the masked row to the expected_bells we've set up
+            if masked_row == expected_bells {
+                total_music += score;
+            }
+        }
+        total_music
+    }
+}
+
+fn generate_course_head_masks<'r>(
     stage: Stage,
     fixed_bells: &[Bell],
     rows: impl IntoIterator<Item = &'r Row> + Clone,
     patterns: &[MusicPattern],
-) -> Vec<(Vec<(usize, Bell)>, f32)> {
+) -> HashMap<Vec<(usize, Bell)>, f32> {
     /* The first step of compiling the music table is to parse the regexes into a single list of
      * which bells are required to go where.
      *
@@ -253,15 +329,8 @@ pub fn generate_course_head_masks<'r>(
         }
     }
 
-    for (mask, score) in &course_head_masks {
-        let mut row = vec![String::from("x"); stage.as_usize()];
-        for (ind, bell) in mask {
-            row[*ind] = bell.name();
-        }
-        println!("    {}: {}", row.iter().join(""), score)
-    }
-    // Finally, convert the hash table into a vector and return
-    course_head_masks.into_iter().collect_vec()
+    // Return the hashtable in full (since it will be used to generate a `MusicTable`)
+    course_head_masks
 }
 
 #[cfg(test)]

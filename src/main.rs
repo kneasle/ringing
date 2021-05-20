@@ -39,6 +39,28 @@ mod tables {
         .unwrap()
     }
 
+    pub fn cooktown_d8() -> SingleMethTable<Row> {
+        SingleMethTable::from_place_not(
+            Stage::MAJOR,
+            "-38-14-1256-18-12-58-16-78,12",
+            "178",
+            &near_calls(Stage::MAJOR),
+            "LBTFVMWH",
+        )
+        .unwrap()
+    }
+
+    pub fn pb_8() -> SingleMethTable<Row> {
+        SingleMethTable::from_place_not(
+            Stage::MAJOR,
+            "-18-18-18-18,12",
+            "178",
+            &near_calls(Stage::MAJOR),
+            "LBTFVMWH",
+        )
+        .unwrap()
+    }
+
     pub fn yorkshire_s8() -> SingleMethTable<Row> {
         SingleMethTable::from_place_not(
             Stage::MAJOR,
@@ -75,17 +97,17 @@ mod tables {
 }
 
 fn main() {
-    let table = tables::bristol_s10();
+    let table = tables::yorkshire_s8();
+    let len = 1250..=1300;
+    // let len = 5000..=5184;
 
     // table.print_falseness();
 
-    return;
-
     if SimdRow::are_cpu_features_enabled() {
         println!("Can use SIMD!");
-        single_meth::Table::compose(&table.change_row_type::<SimdRow>(), 5000..=5184);
+        single_meth::Table::compose(&table.change_row_type::<SimdRow>(), len);
     } else {
         println!("Can't use SIMD.");
-        single_meth::Table::compose(&table, 5000..=5184);
+        single_meth::Table::compose(&table, len);
     }
 }

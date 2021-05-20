@@ -1,8 +1,6 @@
 use std::{hash::Hash, marker::PhantomData};
 
-use proj_core::RowTrait;
-
-use crate::engine::{Node, Table};
+use crate::engine::{CompRow, Node};
 
 /// A trait for a generic set of nodes.  Used to easily switch out implementations to compare
 /// performance.
@@ -31,7 +29,7 @@ pub struct SplitVecSet<R, S> {
     _phantom: PhantomData<S>,
 }
 
-impl<R: RowTrait, S: Copy + Into<usize>> NodeSet<R, S> for SplitVecSet<R, S> {
+impl<R: CompRow, S: Copy + Into<usize>> NodeSet<R, S> for SplitVecSet<R, S> {
     #[inline(always)]
     fn empty(num_sections: usize) -> Self {
         SplitVecSet {

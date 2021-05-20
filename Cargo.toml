@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 proj_core = { path = "../jigsaw/core/", features = ["simd_row"] }
 itertools = "0.10"
+safe_arch = "0.5"
+shortlist = "0.1"
 
 [profile.dev]
 opt-level = 3

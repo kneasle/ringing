@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     fmt::{Debug, Display, Formatter},
     hash::Hash,
     ops::{Range, RangeInclusive},
@@ -6,7 +7,8 @@ use std::{
 
 use crate::set::NodeSet;
 use itertools::Itertools;
-use proj_core::{RowTrait, Stage};
+use proj_core::{Row, RowTrait, SimdRow, Stage};
+use shortlist::Shortlist;
 
 /// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
 /// [`HashSet`] when the sets are small (since we care more about the constant than the asymptotic
@@ -37,9 +39,30 @@ macro_rules! dbg_print {
     };
 }
 
+/// Trait bound for what types can be used as course heads in a composing engine.  It is
+/// implemented for [`Row`] and [`SimdRow`].
+pub trait CompRow: RowTrait {
+    /// Pack bytes representing the [`Bell`]s of this `Row` into a 128 bit number, panicking if the
+    /// [`Stage`] as greater than 16.
+    fn pack_u128(&self) -> u128;
+}
+
+impl CompRow for Row {
+    fn pack_u128(&self) -> u128 {
+        unimplemented!()
+    }
+}
+
+impl CompRow for SimdRow {
+    #[inline(always)]
+    fn pack_u128(&self) -> u128 {
+        u128::from(self.to_m128i())
+    }
+}
+
 /// Trait that describes the smallest atomic chunk of a composition.  This trait is used by the
 /// [`Engine`] to customise generic tree search.
-pub trait Table<R: RowTrait>: Debug {
+pub trait Table<R: CompRow>: Debug {
     type Section: Into<usize> + Display + Debug + Copy + Eq + Hash;
     type Call: Copy + Debug + Display;
 
@@ -52,7 +75,7 @@ pub trait Table<R: RowTrait>: Debug {
     fn is_end(node: &Node<R, Self::Section>) -> bool;
 
     /// Write a list of calls in a human-readable format
-    fn comp_string(calls: &[Self::Call]) -> String;
+    fn comp_string(&self, calls: &[Self::Call]) -> String;
 
     /* COMPOSING METHODS */
 
@@ -74,7 +97,7 @@ pub trait Table<R: RowTrait>: Debug {
     fn expand(&self, section: Self::Section) -> &[(Self::Call, R, Self::Section)];
 
     /// Tests a certain node for musicality
-    fn music(&self, section: Self::Section) -> f32;
+    fn music(&self, node: &Node<R, Self::Section>) -> f32;
 
     /* PROVIDED METHODS */
 
@@ -107,36 +130,89 @@ impl<R, S> Node<R, S> {
     }
 }
 
-impl<R: RowTrait, S: Debug> Display for Node<R, S> {
+impl<R: CompRow, S: Debug> Display for Node<R, S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "({:?}|{})", self.section, self.row)
     }
 }
 
-/// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
-pub struct Engine<'t, R: RowTrait, T: Table<R>> {
-    nodes: _Set<R, T::Section>,
-    table: &'t T,
-    desired_len: Range<usize>,
+pub struct Comp<R: CompRow, T: Table<R>> {
     calls: Vec<T::Call>,
-    nodes_considered: usize,
+    length: usize,
+    music: f32,
 }
 
-impl<'t, R: RowTrait, T: Table<R>> Engine<'t, R, T> {
+impl<R: CompRow, T: Table<R>> Comp<R, T> {
+    fn to_string(&self, table: &T) -> String {
+        format!(
+            "{} rows, music {}: {}",
+            self.length,
+            self.music,
+            table.comp_string(&self.calls)
+        )
+    }
+}
+
+impl<R: CompRow, T: Table<R>> PartialOrd for Comp<R, T> {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.music.partial_cmp(&other.music)
+    }
+}
+
+impl<R: CompRow, T: Table<R>> Ord for Comp<R, T> {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+    }
+}
+
+impl<R: CompRow, T: Table<R>> PartialEq for Comp<R, T> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.music == other.music
+    }
+}
+
+impl<R: CompRow, T: Table<R>> Eq for Comp<R, T> {}
+
+/// All the persistent data required to generate a composition
+#[derive(Debug, Clone)]
+pub struct Engine<'t, R: CompRow, T: Table<R>> {
+    // Static data
+    table: &'t T,
+    desired_len: Range<usize>,
+    // Dynamic data (history of the current comp)
+    nodes: _Set<R, T::Section>,
+    calls: Vec<T::Call>,
+    accumulated_music: f32,
+    // Dynamic data (stats or best comps)
+    nodes_considered: usize,
+    shortlist: Shortlist<Comp<R, T>>,
+}
+
+impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
     fn new(table: &'t T, desired_len: Range<usize>) -> Self {
         Engine {
-            nodes: _Set::empty(T::num_sections(table)),
             table,
             desired_len,
+            nodes: _Set::empty(T::num_sections(table)),
             calls: Vec::new(),
+            accumulated_music: 0.0,
             nodes_considered: 0,
+            shortlist: Shortlist::new(10),
         }
     }
 
     fn compose(&mut self) {
         self.recursive_compose(self.table.start_node(), 0, 0);
 
+        let mut comps = self.shortlist.iter().collect_vec();
+        comps.sort();
+        for comp in comps {
+            println!("{}", comp.to_string(&self.table));
+        }
         println!("{} nodes considered", self.nodes_considered);
     }
 
@@ -152,7 +228,20 @@ impl<'t, R: RowTrait, T: Table<R>> Engine<'t, R, T> {
 
         // Check if we've found a valid composition
         if T::is_end(&node) && self.desired_len.contains(&len) {
-            println!("FOUND COMP! (len {}): {}", len, T::comp_string(&self.calls));
+            /*
+            println!(
+                "FOUND COMP! (len {}, music {}): {}",
+                len,
+                self.accumulated_music,
+                self.table.comp_string(&self.calls)
+            );
+            */
+
+            self.shortlist.push(Comp {
+                calls: self.calls.clone(),
+                length: len,
+                music: self.accumulated_music,
+            });
             return;
         }
 
@@ -172,6 +261,13 @@ impl<'t, R: RowTrait, T: Table<R>> Engine<'t, R, T> {
                 return;
             }
         }
+
+        /* Compute the music for this table */
+
+        // We cache the music because adding and subtracting the music score isn't guaranteed to
+        // give the same value when using floats
+        let last_music_score = self.accumulated_music;
+        self.accumulated_music += self.table.music(&node);
 
         dbg_println!("It isn't false!");
 
@@ -203,6 +299,7 @@ impl<'t, R: RowTrait, T: Table<R>> Engine<'t, R, T> {
         }
 
         // Return the engine to the state before this node was added
+        self.accumulated_music = last_music_score;
         self.nodes.remove_last(&node);
     }
 }
