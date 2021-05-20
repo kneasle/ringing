@@ -213,13 +213,16 @@ impl Table<Row> {
 
         // Calculate the ranges.  Each of `range_starts` corresponds to a unique range, which ends
         // at the first range_end which is encountered (wrapping round the end of the course if
-        // needed).
+        // needed).  **NOTE:** this also increments all end-points, so that the ranges are
+        // half-open (which is the semantics of `..`)
         let mut ranges = range_starts
             .iter()
             .map(|&start| {
                 let range_end_ind = range_ends.binary_search(&start).unwrap_err();
                 let end = *range_ends.get(range_end_ind).unwrap_or(&range_ends[0]);
-                start..end
+                // `end` is an inclusive bound, but `..` is half-open.  Therefore, we add one here
+                // to correct for this
+                start..end + 1
             })
             .collect_vec();
 
@@ -242,7 +245,9 @@ impl Table<Row> {
         let transitions = ranges
             .iter()
             .map(|range| {
-                let lead_head_index = (range.end + 1) % course_len;
+                // For fragments that end at the course head, `range.end` will equal `course_len`
+                // but the modulo maps that back to 0 so it can be connected to the first segment
+                let lead_head_index = range.end % course_len;
                 let plain_lead_tenor_place = plain_course
                     .get_row(lead_head_index)
                     .unwrap()
@@ -262,7 +267,12 @@ impl Table<Row> {
                 ts.extend(
                     call_jumps
                         .iter()
-                        .filter(|(from, ..)| *from == range.end)
+                        // Remove any calls that don't appear at the end of this range.  The `- 1`
+                        // corrects for the fact that call starts refer to lead ends, whereas
+                        // ranges are half open and therefore refer to the lead **head**.  We also
+                        // use modulo to make the subtraction wrap around the end of the course
+                        // instead of overflowing.
+                        .filter(|(from, ..)| *from == (range.end + course_len - 1) % course_len)
                         .map(|(_from, to, course_head, name)| {
                             (*name, course_head.clone(), range_index_by_start[to])
                         }),
@@ -297,7 +307,11 @@ impl Table<Row> {
         let plain_course_len = plain_course_rows.len();
         let range_lengths = ranges
             .iter()
-            .map(|r| (r.end + plain_course_len + 1 - r.start) % plain_course_len)
+            // We can't simply call `r.len()`, because we have to handle ranges which wrap over the
+            // end of the course.  This will make `r.start <= r.end` resulting in the block
+            // erroneously being given length 0.  We also add `plain_course_len` before the
+            // subtraction in order to prevent overflowing past 0
+            .map(|r| (r.end + plain_course_len - r.start) % plain_course_len)
             .collect_vec();
 
         type FalseMap<'a> = HashMap<Vec<usize>, Vec<&'a Row>>;
@@ -314,11 +328,11 @@ impl Table<Row> {
                     vec![range.clone()]
                 } else {
                     // TODO: Stop the off-by-one indexing errors
-                    vec![range.start..plain_course_len - 1, 0..range.end]
+                    vec![range.start..plain_course_len, 0..range.end]
                 };
 
                 for range in ranges {
-                    for r in &plain_course_rows[range.start..range.end + 1] {
+                    for r in &plain_course_rows[range.clone()] {
                         let fixed_bell_inds = get_bell_inds(fixed_bells, r);
                         rows_by_fixed_bell_indices
                             .entry(fixed_bell_inds)
@@ -389,16 +403,16 @@ impl Table<Row> {
                     MusicTable::from_rows(
                         stage,
                         fixed_bells,
-                        &plain_course_rows[r.start..r.end + 1],
+                        &plain_course_rows[r.clone()],
                         &music_patterns,
                     )
                 } else {
                     MusicTable::from_rows(
                         stage,
                         fixed_bells,
-                        plain_course_rows[r.start..plain_course_len]
+                        plain_course_rows[r.start..]
                             .iter()
-                            .chain(plain_course_rows[..r.end + 1].iter()),
+                            .chain(plain_course_rows[..r.end].iter()),
                         &music_patterns,
                     )
                 };
@@ -408,8 +422,6 @@ impl Table<Row> {
 
         Table {
             falseness: final_table,
-            // The `+ 1` corrects for the fact that we are using inclusive ranges (i.e. the first
-            // lead of surprise major will be represented as 0..31 not 0..32).
             lengths: range_lengths,
             stage,
             music_tables,
@@ -635,7 +647,7 @@ mod tests {
                 &near_calls(Stage::MAJOR),
                 "LBTFVMWH",
             ),
-            &[0..63, 64..95, 96..127, 128..223, 160..223],
+            &[0..64, 64..96, 96..128, 128..224, 160..224],
             &[
                 vec![(None, 'B', "12345678", 1), (Some('-'), 'B', "13526478", 4)],
                 vec![
@@ -672,7 +684,7 @@ mod tests {
                 &near_calls(Stage::MAJOR),
                 "LIBMFHVW",
             ),
-            &[0..31, 32..63, 64..127, 128..223, 192..223],
+            &[0..32, 32..64, 64..128, 128..224, 192..224],
             &[
                 vec![
                     (None, 'H', "12345678", 1),
@@ -709,7 +721,7 @@ mod tests {
                 &near_calls(Stage::MAXIMUS),
                 "LIB?F??M?HVW",
             ),
-            &[0..143, 144..335, 192..335, 336..527],
+            &[0..144, 144..336, 192..336, 336..528],
             &[
                 vec![
                     (None, 'M', "1234567890ET", 1),
@@ -745,7 +757,7 @@ mod tests {
                 &far_calls(Stage::ROYAL),
                 "LIO?VM?HVW",
             ),
-            &[200..119, 120..159, 160..199],
+            &[200..120, 120..160, 160..200],
             &[
                 vec![
                     (None, 'V', "1234567890", 1),
