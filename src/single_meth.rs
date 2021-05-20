@@ -76,14 +76,14 @@ impl Table<Row> {
         stage: Stage,
         method_pn: &str,
         fixed_bell_chars: &str,
-        call_pns: &[(&str, char, &str)],
+        calls: Vec<CallSpec>,
         plain_lead_calling_positions: &str,
     ) -> Result<Self, PnBlockParseError> {
         let (plain_course, fixed_bells, ranges, transitions) = Self::ranges_from_place_not(
             stage,
             method_pn,
             fixed_bell_chars,
-            call_pns,
+            calls,
             plain_lead_calling_positions,
         )?;
 
@@ -104,7 +104,7 @@ impl Table<Row> {
         stage: Stage,
         method_pn: &str,
         fixed_bell_chars: &str,
-        call_pns: &[(&str, char, &str)],
+        call_specs: Vec<CallSpec>,
         plain_lead_calling_positions: &str,
     ) -> Result<
         (
@@ -126,15 +126,21 @@ impl Table<Row> {
             .chars()
             .map(|c| Bell::from_name(c).unwrap())
             .collect_vec();
-        let calls = call_pns
-            .iter()
-            .map(|(pn, sym, calling_positions)| {
-                (
-                    PlaceNot::parse(pn, stage).unwrap(),
-                    *sym,
-                    *calling_positions,
-                )
-            })
+        let calls = call_specs
+            .into_iter()
+            .map(
+                |CallSpec {
+                     place_not_str,
+                     symbol,
+                     calling_positions,
+                 }| {
+                    (
+                        PlaceNot::parse(&place_not_str, stage).unwrap(),
+                        symbol,
+                        calling_positions,
+                    )
+                },
+            )
             .collect_vec();
 
         let tenor = Bell::tenor(stage).unwrap();
@@ -179,7 +185,7 @@ impl Table<Row> {
                     pc_lead_heads.get(&get_bell_inds(&fixed_bells, &new_lh))
                 {
                     let tenor_place = new_lh.place_of(tenor).unwrap();
-                    let call_pos = calling_positions.chars().nth(tenor_place).unwrap();
+                    let call_pos = *calling_positions.iter().nth(tenor_place).unwrap();
                     // This unsafety is OK because all the rows & pns are parsed within this
                     // function, which is provided a single Stage
                     let new_course_head = unsafe { pc_lh.tranposition_to_unchecked(&new_lh) };
@@ -528,32 +534,53 @@ impl<R: CompRow> engine::Table<R> for Table<R> {
     }
 }
 
-/// 4ths place calls for any [`Stage`]
-pub fn near_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
-    let (bob_pos, single_pos) = match stage {
-        Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
-        Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
-        Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
-        _ => unimplemented!(),
-    };
-
-    vec![
-        ("14", '-', bob_pos),
-        ("1234", 's', single_pos),
-        // ("16", 'x', bob_pos),
-    ]
+/// The specification of a single call type used in a composition.
+#[derive(Debug, Clone)]
+pub struct CallSpec {
+    place_not_str: String,
+    symbol: char,
+    calling_positions: Vec<char>,
 }
 
-/// (n-2)nds place calls for any [`Stage`]
-pub fn far_calls(stage: Stage) -> Vec<(&'static str, char, &'static str)> {
-    let (bob_pos, single_pos, bob, single) = match stage {
-        Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
-        Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
-        Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
-        _ => unimplemented!(),
-    };
+impl CallSpec {
+    pub fn from_borrowed(pn: &str, symbol: char, calling_positions: &str) -> Self {
+        CallSpec {
+            place_not_str: pn.to_owned(),
+            symbol,
+            calling_positions: calling_positions.chars().collect_vec(),
+        }
+    }
 
-    vec![(bob, '-', bob_pos), (single, 's', single_pos)]
+    /// 4ths place calls for any [`Stage`]
+    pub fn near(stage: Stage) -> Vec<Self> {
+        let (bob_pos, single_pos) = match stage {
+            Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
+            Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
+            Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
+            _ => unimplemented!(),
+        };
+
+        vec![
+            Self::from_borrowed("14", '-', bob_pos),
+            Self::from_borrowed("1234", 's', single_pos),
+            // Self::from_borrowed("16", 'x', bob_pos),
+        ]
+    }
+
+    /// (n-2)nds place calls for any [`Stage`]
+    pub fn far(stage: Stage) -> Vec<Self> {
+        let (bob_pos, single_pos, bob, single) = match stage {
+            Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
+            Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
+            Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
+            _ => unimplemented!(),
+        };
+
+        vec![
+            Self::from_borrowed(bob, '-', bob_pos),
+            Self::from_borrowed(single, 's', single_pos),
+        ]
+    }
 }
 
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]

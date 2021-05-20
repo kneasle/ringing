@@ -9,11 +9,9 @@ use engine::Table;
 use proj_core::SimdRow;
 use proj_core::{Row, Stage};
 
-use crate::single_meth::near_calls;
-
 mod tables {
     #![allow(dead_code)]
-    use crate::single_meth::{far_calls, Table as SingleMethTable};
+    use crate::single_meth::{CallSpec, Table as SingleMethTable};
 
     use super::*;
 
@@ -22,18 +20,22 @@ mod tables {
             Stage::MAJOR,
             "x58x14.58x58.36.14x14.58x14x18,18",
             "178",
-            &near_calls(Stage::MAJOR),
+            CallSpec::near(Stage::MAJOR),
             "LIBMFHVW",
         )
         .unwrap()
     }
 
     pub fn cambs_s8() -> SingleMethTable<Row> {
+        // Pop the single from the calls
+        let mut calls = CallSpec::near(Stage::MAJOR);
+        calls.pop();
+
         SingleMethTable::from_place_not(
             Stage::MAJOR,
             "-38-14-1258-36-14-58-16-78,12",
             "178",
-            &near_calls(Stage::MAJOR)[..1],
+            calls,
             "LBTFVMWH",
         )
         .unwrap()
@@ -44,7 +46,7 @@ mod tables {
             Stage::MAJOR,
             "-38-14-1256-18-12-58-16-78,12",
             "178",
-            &near_calls(Stage::MAJOR),
+            CallSpec::near(Stage::MAJOR),
             "LBTFVMWH",
         )
         .unwrap()
@@ -55,7 +57,7 @@ mod tables {
             Stage::MAJOR,
             "-18-18-18-18,12",
             "178",
-            &near_calls(Stage::MAJOR),
+            CallSpec::near(Stage::MAJOR),
             "LBTFVMWH",
         )
         .unwrap()
@@ -66,7 +68,7 @@ mod tables {
             Stage::MAJOR,
             "x38x14x58x16x12x38x14x78,12",
             "178",
-            &near_calls(Stage::MAJOR),
+            CallSpec::near(Stage::MAJOR),
             "LBTFVMWH",
         )
         .unwrap()
@@ -78,7 +80,7 @@ mod tables {
             "x30x14x50x16x1270x38x14x50x16x90,12",
             // Fix the treble and all the tenors
             "17890",
-            &near_calls(Stage::ROYAL),
+            CallSpec::near(Stage::ROYAL),
             "LBTFVXSMWH",
         )
         .unwrap()
@@ -89,7 +91,7 @@ mod tables {
             Stage::ROYAL,
             "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
             "17890",
-            &far_calls(Stage::ROYAL),
+            CallSpec::far(Stage::ROYAL),
             "LIO?VM?HVW",
         )
         .unwrap()
