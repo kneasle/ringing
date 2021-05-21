@@ -20,6 +20,7 @@ type _Set<R, S> = crate::set::SplitVecSet<R, S>;
 
 const DBG_PRINT: bool = false;
 const DBG_NODE_TABLE: bool = false;
+const PRINT_COMPS: bool = false;
 
 /// Acts the same as `println!` if `DBG_PRINT = true`, but otherwise gets removed by the compiler
 macro_rules! dbg_println {
@@ -217,6 +218,8 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
     }
 
     fn recursive_compose(&mut self, node: Node<R, T::Section>, len: usize, depth: usize) {
+        // PERF: Move these checks into the expansion loop, since we're always doing an unnecessary
+        // function call before the checks
         dbg_print!(
             "Considering {}...",
             self.calls.iter().map(T::Call::to_string).join("")
@@ -228,14 +231,14 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
 
         // Check if we've found a valid composition
         if T::is_end(&node) && self.desired_len.contains(&len) {
-            /*
-            println!(
-                "FOUND COMP! (len {}, music {}): {}",
-                len,
-                self.accumulated_music,
-                self.table.comp_string(&self.calls)
-            );
-            */
+            if PRINT_COMPS {
+                println!(
+                    "FOUND COMP! (len {}, music {}): {}",
+                    len,
+                    self.accumulated_music,
+                    self.table.comp_string(&self.calls)
+                );
+            }
 
             self.shortlist.push(Comp {
                 calls: self.calls.clone(),
@@ -278,7 +281,7 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
             }
         }
 
-        /* IF THE NEW NODE IS VALID, ADD IT TO THE COMPOSITION AND EXPAND ITS BRANCH */
+        /* IF THE NEW NODE IS VALID, EXPAND IT AND EXPLORE FURTHER */
 
         // Now add this to the engine's comp
         self.nodes.add(node.clone());

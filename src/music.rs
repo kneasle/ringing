@@ -265,7 +265,7 @@ fn generate_course_head_masks<'r>(
         let bells = bell_indices.iter().map(|(_, b)| *b).collect_vec();
         index_requirements
             .entry(indices)
-            .or_insert(Vec::new())
+            .or_insert_with(Vec::new)
             .push((bells, weight));
     }
 

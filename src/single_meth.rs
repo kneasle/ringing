@@ -12,6 +12,7 @@ use proj_core::{
 use crate::{
     engine::{self, CompRow, Node},
     music::{MusicPattern, MusicTable},
+    spec::CallSpec,
 };
 
 /// A tuple of values which represent the transition between two segments
@@ -54,10 +55,10 @@ impl Display for Section {
     }
 }
 
-impl Into<usize> for Section {
+impl From<Section> for usize {
     #[inline(always)]
-    fn into(self) -> usize {
-        self.ind
+    fn from(s: Section) -> usize {
+        s.ind
     }
 }
 
@@ -76,56 +77,74 @@ impl Table<Row> {
         stage: Stage,
         method_pn: &str,
         fixed_bell_chars: &str,
-        calls: Vec<CallSpec>,
+        calls: &[CallSpec],
         plain_lead_calling_positions: &str,
     ) -> Result<Self, PnBlockParseError> {
-        let (plain_course, fixed_bells, ranges, transitions) = Self::ranges_from_place_not(
-            stage,
-            method_pn,
-            fixed_bell_chars,
+        let (method, fixed_bells) = Self::parse_pn(stage, method_pn, fixed_bell_chars)?;
+
+        Ok(Self::from_method(
+            &method,
+            fixed_bells,
             calls,
             plain_lead_calling_positions,
-        )?;
+        ))
+    }
 
-        Ok(Self::new(
+    fn parse_pn(
+        stage: Stage,
+        method_pn: &str,
+        fixed_bell_chars: &str,
+    ) -> Result<(Method, Vec<Bell>), PnBlockParseError> {
+        let method = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage)?);
+        let fixed_bells = fixed_bell_chars
+            .chars()
+            .map(|c| Bell::from_name(c).unwrap())
+            .collect_vec();
+        Ok((method, fixed_bells))
+    }
+
+    /// Generates a new table for a known method
+    pub fn from_method(
+        method: &Method,
+        fixed_bells: Vec<Bell>,
+        calls: &[CallSpec],
+        plain_lead_calling_positions: &str,
+    ) -> Self {
+        let stage = method.stage();
+        let (plain_course, fixed_bells, ranges, transitions) =
+            Self::generate_ranges(method, fixed_bells, calls, plain_lead_calling_positions);
+
+        Self::new(
             stage,
             plain_course,
             &fixed_bells,
             &ranges,
             transitions,
             MusicPattern::runs_front_or_back(stage, 4, 1.0),
-        ))
+        )
     }
 
     /// A helper function to generate the ranges & transitions for a given method and calls.  This
     /// is made into a helper function so it can be easily tested in isolation.
     #[allow(clippy::type_complexity)]
-    fn ranges_from_place_not(
-        stage: Stage,
-        method_pn: &str,
-        fixed_bell_chars: &str,
-        call_specs: Vec<CallSpec>,
+    fn generate_ranges(
+        method: &Method,
+        fixed_bells: Vec<Bell>,
+        call_specs: &[CallSpec],
         plain_lead_calling_positions: &str,
-    ) -> Result<
-        (
-            // The method's plain course
-            Vec<Row>,
-            // The parsed fixed bells
-            Vec<Bell>,
-            // The ranges of the course
-            Vec<Range<usize>>,
-            // The transitions between the ranges
-            Vec<Vec<Transition>>,
-        ),
-        PnBlockParseError,
-    > {
+    ) -> (
+        // The method's plain course
+        Vec<Row>,
+        // The parsed fixed bells
+        Vec<Bell>,
+        // The ranges of the course
+        Vec<Range<usize>>,
+        // The transitions between the ranges
+        Vec<Vec<Transition>>,
+    ) {
         /* Parse everything and cache commonly-used values */
 
-        let method = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage)?);
-        let fixed_bells = fixed_bell_chars
-            .chars()
-            .map(|c| Bell::from_name(c).unwrap())
-            .collect_vec();
+        let stage = method.stage();
         let calls = call_specs
             .into_iter()
             .map(
@@ -185,7 +204,7 @@ impl Table<Row> {
                     pc_lead_heads.get(&get_bell_inds(&fixed_bells, &new_lh))
                 {
                     let tenor_place = new_lh.place_of(tenor).unwrap();
-                    let call_pos = *calling_positions.iter().nth(tenor_place).unwrap();
+                    let call_pos = calling_positions.get(tenor_place).unwrap();
                     // This unsafety is OK because all the rows & pns are parsed within this
                     // function, which is provided a single Stage
                     let new_course_head = unsafe { pc_lh.tranposition_to_unchecked(&new_lh) };
@@ -193,7 +212,7 @@ impl Table<Row> {
                         lead_end_ind,
                         lh_ind,
                         new_course_head,
-                        Call::new(Some(*call_name), call_pos),
+                        Call::new(Some(**call_name), *call_pos),
                     ));
                 }
             }
@@ -292,7 +311,7 @@ impl Table<Row> {
         // needed
         assert!(rows.pop().unwrap().is_rounds());
 
-        Ok((rows, fixed_bells, ranges, transitions))
+        (rows, fixed_bells, ranges, transitions)
     }
 
     pub fn new(
@@ -534,55 +553,6 @@ impl<R: CompRow> engine::Table<R> for Table<R> {
     }
 }
 
-/// The specification of a single call type used in a composition.
-#[derive(Debug, Clone)]
-pub struct CallSpec {
-    place_not_str: String,
-    symbol: char,
-    calling_positions: Vec<char>,
-}
-
-impl CallSpec {
-    pub fn from_borrowed(pn: &str, symbol: char, calling_positions: &str) -> Self {
-        CallSpec {
-            place_not_str: pn.to_owned(),
-            symbol,
-            calling_positions: calling_positions.chars().collect_vec(),
-        }
-    }
-
-    /// 4ths place calls for any [`Stage`]
-    pub fn near(stage: Stage) -> Vec<Self> {
-        let (bob_pos, single_pos) = match stage {
-            Stage::MAJOR => ("LIBFVMWH", "LBTFVMWH"),
-            Stage::ROYAL => ("LIBFVXSMWH", "LBTFVXSMWH"),
-            Stage::MAXIMUS => ("LIBFVXSENMWH", "LBTFVXSENMWH"),
-            _ => unimplemented!(),
-        };
-
-        vec![
-            Self::from_borrowed("14", '-', bob_pos),
-            Self::from_borrowed("1234", 's', single_pos),
-            // Self::from_borrowed("16", 'x', bob_pos),
-        ]
-    }
-
-    /// (n-2)nds place calls for any [`Stage`]
-    pub fn far(stage: Stage) -> Vec<Self> {
-        let (bob_pos, single_pos, bob, single) = match stage {
-            Stage::MAJOR => ("LIOFVMWH", "LIOFVMWH", "16", "1678"),
-            Stage::ROYAL => ("LIOFVXSMWH", "LIOFVXSMWH", "18", "1890"),
-            Stage::MAXIMUS => ("LIOFVXSENMWH", "LIOFVXSENMWH", "10", "10ET"),
-            _ => unimplemented!(),
-        };
-
-        vec![
-            Self::from_borrowed(bob, '-', bob_pos),
-            Self::from_borrowed(single, 's', single_pos),
-        ]
-    }
-}
-
 /// Returns the indices of a set of [`Bells`] within a given [`Row`]
 fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
     bells.iter().map(|b| r.place_of(*b).unwrap()).collect_vec()
@@ -603,7 +573,7 @@ mod tests {
         stage: Stage,
         method_pn: &'a str,
         fixed_bell_chars: &'a str,
-        call_pns: &'a [(&'a str, char, &'a str)],
+        calls: Vec<CallSpec>,
         plain_lead_calling_positions: &'a str,
     }
 
@@ -612,14 +582,14 @@ mod tests {
             stage: Stage,
             method_pn: &'a str,
             fixed_bell_chars: &'a str,
-            call_pns: &'a [(&'a str, char, &'a str)],
+            calls: Vec<CallSpec>,
             plain_lead_calling_positions: &'a str,
         ) -> Self {
             Self {
                 stage,
                 method_pn,
                 fixed_bell_chars,
-                call_pns,
+                calls,
                 plain_lead_calling_positions,
             }
         }
@@ -649,14 +619,14 @@ mod tests {
             .collect_vec();
 
         // Generate the regions
-        let (_pc, _fixed_bells, ranges, transitions) = Table::ranges_from_place_not(
-            input.stage,
-            input.method_pn,
-            input.fixed_bell_chars,
-            input.call_pns,
+        let (method, fixed_bells) =
+            Table::parse_pn(input.stage, input.method_pn, input.fixed_bell_chars).unwrap();
+        let (_pc, _fixed_bells, ranges, transitions) = Table::generate_ranges(
+            &method,
+            fixed_bells,
+            &input.calls,
             input.plain_lead_calling_positions,
-        )
-        .unwrap();
+        );
 
         // Test the output
         assert_eq!(ranges, exp_ranges);
@@ -671,7 +641,7 @@ mod tests {
                 Stage::MAJOR,
                 "-38-14-1258-36-14-58-16-78,12",
                 "178",
-                &near_calls(Stage::MAJOR),
+                CallSpec::near(Stage::MAJOR),
                 "LBTFVMWH",
             ),
             &[0..64, 64..96, 96..128, 128..224, 160..224],
@@ -708,7 +678,7 @@ mod tests {
                 Stage::MAJOR,
                 "-58-14.58-58.36.14-14.58-14-18,18",
                 "178",
-                &near_calls(Stage::MAJOR),
+                CallSpec::near(Stage::MAJOR),
                 "LIBMFHVW",
             ),
             &[0..32, 32..64, 64..128, 128..224, 192..224],
@@ -745,7 +715,7 @@ mod tests {
                 Stage::MAXIMUS,
                 "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T",
                 "17890ET",
-                &near_calls(Stage::MAXIMUS),
+                CallSpec::near(Stage::MAXIMUS),
                 "LIB?F??M?HVW",
             ),
             &[0..144, 144..336, 192..336, 336..528],
@@ -781,7 +751,7 @@ mod tests {
                 Stage::ROYAL,
                 "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
                 "17890",
-                &far_calls(Stage::ROYAL),
+                CallSpec::far(Stage::ROYAL),
                 "LIO?VM?HVW",
             ),
             &[200..120, 120..160, 160..200],
