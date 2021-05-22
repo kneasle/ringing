@@ -3,6 +3,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
     ops::{Range, RangeInclusive},
+    time::Instant,
 };
 
 use crate::set::NodeSet;
@@ -108,12 +109,12 @@ pub trait Table<R: CompRow>: Debug {
     }
 
     /// Generate compositions according to this `Table`
-    fn compose(&self, desired_len: RangeInclusive<usize>)
+    fn compose(&self, desired_len: RangeInclusive<usize>, shortlist_size: usize) -> Results<R, Self>
     where
         Self: Sized,
     {
         let half_open_range = *desired_len.start()..*desired_len.end() + 1;
-        Engine::<R, Self>::new(self, half_open_range).compose()
+        Engine::<R, Self>::new(self, half_open_range, shortlist_size).compose()
     }
 }
 
@@ -145,7 +146,7 @@ pub struct Comp<R: CompRow, T: Table<R>> {
 }
 
 impl<R: CompRow, T: Table<R>> Comp<R, T> {
-    fn to_string(&self, table: &T) -> String {
+    pub fn to_string(&self, table: &T) -> String {
         format!(
             "{} rows, music {}: {}",
             self.length,
@@ -178,6 +179,24 @@ impl<R: CompRow, T: Table<R>> PartialEq for Comp<R, T> {
 
 impl<R: CompRow, T: Table<R>> Eq for Comp<R, T> {}
 
+/// The results of a composing run
+#[derive(Debug, Clone)]
+pub struct Results<R: CompRow, T: Table<R>> {
+    pub comps: Shortlist<Comp<R, T>>,
+    pub nodes_expanded: usize,
+    pub comps_found: usize,
+}
+
+impl<R: CompRow, T: Table<R>> Results<R, T> {
+    fn new(shortlist_size: usize) -> Self {
+        Results {
+            comps: Shortlist::new(shortlist_size),
+            nodes_expanded: 0,
+            comps_found: 0,
+        }
+    }
+}
+
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
 pub struct Engine<'t, R: CompRow, T: Table<R>> {
@@ -189,32 +208,46 @@ pub struct Engine<'t, R: CompRow, T: Table<R>> {
     calls: Vec<T::Call>,
     accumulated_music: f32,
     // Dynamic data (stats or best comps)
-    nodes_considered: usize,
-    shortlist: Shortlist<Comp<R, T>>,
+    results: Results<R, T>,
 }
 
 impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
-    fn new(table: &'t T, desired_len: Range<usize>) -> Self {
+    fn new(table: &'t T, desired_len: Range<usize>, shortlist_size: usize) -> Self {
         Engine {
             table,
             desired_len,
             nodes: _Set::empty(T::num_sections(table)),
             calls: Vec::new(),
             accumulated_music: 0.0,
-            nodes_considered: 0,
-            shortlist: Shortlist::new(10),
+            results: Results::new(shortlist_size),
         }
     }
 
-    fn compose(&mut self) {
+    fn compose(mut self) -> Results<R, T> {
+        // Run the composing algorithm
         self.recursive_compose(self.table.start_node(), 0, 0);
+        // Return the results
+        self.results
+    }
 
-        let mut comps = self.shortlist.iter().collect_vec();
-        comps.sort();
-        for comp in comps {
-            println!("{}", comp.to_string(&self.table));
+    #[cold]
+    #[inline(never)]
+    fn save_comp(&mut self, len: usize) {
+        if PRINT_COMPS {
+            println!(
+                "FOUND COMP! (len {}, music {}): {}",
+                len,
+                self.accumulated_music,
+                self.table.comp_string(&self.calls)
+            );
         }
-        println!("{} nodes considered", self.nodes_considered);
+
+        self.results.comps_found += 1;
+        self.results.comps.push(Comp {
+            calls: self.calls.clone(),
+            length: len,
+            music: self.accumulated_music,
+        });
     }
 
     fn recursive_compose(&mut self, node: Node<R, T::Section>, len: usize, depth: usize) {
@@ -225,26 +258,13 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
             self.calls.iter().map(T::Call::to_string).join("")
         );
 
-        self.nodes_considered += 1;
+        self.results.nodes_expanded += 1;
 
         /* CHECK THAT THE NEW NODE IS VALID */
 
         // Check if we've found a valid composition
         if T::is_end(&node) && self.desired_len.contains(&len) {
-            if PRINT_COMPS {
-                println!(
-                    "FOUND COMP! (len {}, music {}): {}",
-                    len,
-                    self.accumulated_music,
-                    self.table.comp_string(&self.calls)
-                );
-            }
-
-            self.shortlist.push(Comp {
-                calls: self.calls.clone(),
-                length: len,
-                music: self.accumulated_music,
-            });
+            self.save_comp(len);
             return;
         }
 

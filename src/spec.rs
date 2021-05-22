@@ -1,6 +1,7 @@
 use std::{
     iter::once,
     ops::{Range, RangeInclusive},
+    time::Instant,
 };
 
 use itertools::Itertools;
@@ -23,6 +24,7 @@ pub struct Spec {
     length: RangeInclusive<usize>,
     fixed_bells: Vec<Bell>,
     calls: Vec<CallSpec>,
+    shortlist_size: usize,
 }
 
 impl Spec {
@@ -31,6 +33,7 @@ impl Spec {
         pn: &str,
         calls: Vec<CallSpec>,
         length: RangeInclusive<usize>,
+        shortlist_size: usize,
     ) -> Result<Self, PnBlockParseError> {
         Ok(Self {
             method: Method::with_lead_end(String::new(), &PnBlock::parse(pn, stage)?),
@@ -40,6 +43,7 @@ impl Spec {
                 .collect_vec(),
             calls,
             length,
+            shortlist_size,
         })
     }
 
@@ -59,9 +63,38 @@ impl Spec {
 
     /// Use this to generate a composition
     pub fn compose<R: CompRow + From<Row>>(&self) {
-        self.to_table()
-            .change_row_type::<R>()
-            .compose(self.length.clone())
+        // Generate the table
+        print!("Generating table... ");
+        let table_start_time = Instant::now();
+        let table = self.to_table().change_row_type::<R>();
+        println!("DONE in {:?}", Instant::now() - table_start_time);
+
+        // Run the tree search
+        print!("Running tree search... ");
+        let comp_start_time = Instant::now();
+        let results = table.compose(self.length.clone(), self.shortlist_size);
+        let composing_time = Instant::now() - comp_start_time;
+        println!("DONE in {:?}", composing_time);
+
+        // Print the comps
+        let mut comps = results.comps.iter().collect_vec();
+        comps.sort();
+        for comp in comps {
+            println!("{}", comp.to_string(&table));
+        }
+
+        // Print the stats
+        println!("---###---###---                   #---###---");
+        println!(
+            "{:>15} nodes considered ({:>10.0}/s)",
+            results.nodes_expanded,
+            results.nodes_expanded as f64 / composing_time.as_secs_f64()
+        );
+        println!(
+            "{:>15} comps found      ({:>10.0}/s)",
+            results.comps_found,
+            results.comps_found as f64 / composing_time.as_secs_f64()
+        );
     }
 }
 

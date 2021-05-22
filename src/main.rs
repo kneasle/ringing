@@ -77,13 +77,13 @@ mod tables {
 fn main() {
     let (stage, pn, calls) = tables::yorkshire_s8();
 
-    let spec = Spec::tenors_together_from_pn(stage, pn, calls, spec::QP).unwrap();
+    let spec = Spec::tenors_together_from_pn(stage, pn, calls, spec::QP, 10).unwrap();
 
     if SimdRow::are_cpu_features_enabled() {
-        println!("Use SimdRow!");
+        println!("Using SimdRow!");
         spec.compose::<SimdRow>();
     } else {
-        println!("Can't use SimdRow, defaulting to Row.");
+        println!("Can't use SimdRow, defaulting to standard Row.");
         spec.compose::<Row>();
     }
 }
