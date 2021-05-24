@@ -10,7 +10,7 @@ use proj_core::{place_not::PnBlockParseError, Bell, Method, PnBlock, Row, Stage}
 
 use crate::{
     engine::{CompRow, Table as TableTrait},
-    single_meth::Table,
+    single_meth::{tenors_together_fixed_bells, Table},
 };
 
 pub const QP: RangeInclusive<usize> = 1250..=1300;
@@ -38,9 +38,7 @@ impl Spec {
         Ok(Self {
             method: Method::with_lead_end(String::new(), &PnBlock::parse(pn, stage)?),
             // Fix the treble and >=7th
-            fixed_bells: once(Bell::TREBLE)
-                .chain((6..stage.as_usize()).map(Bell::from_index))
-                .collect_vec(),
+            fixed_bells: tenors_together_fixed_bells(stage),
             calls,
             length,
             shortlist_size,

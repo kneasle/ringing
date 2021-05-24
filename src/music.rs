@@ -96,7 +96,11 @@ pub struct MusicTable {
     /// Music score which is generated regardless of the course head.  This corresponds to the
     /// course head mask `xxxxxx...`.
     guarunteed_music: f32,
-    compiled_masks: Vec<(u128, u128, f32)>,
+    /// In order to speed up music detection, we chose some place and then split our table by which
+    /// bell is in that place.  This usually reduces the max table length by about 5, and thus
+    /// causes ~5x speedup of music detection.
+    pivot_place: usize,
+    compiled_masks: Vec<Vec<(u128, u128, f32)>>,
 }
 
 impl MusicTable {
@@ -107,59 +111,149 @@ impl MusicTable {
         patterns: &[MusicPattern],
     ) -> Self {
         let course_head_masks = generate_course_head_masks(stage, fixed_bells, rows, patterns);
-        Self::from_course_masks(course_head_masks)
-    }
-
-    fn from_course_masks(masks: impl IntoIterator<Item = (Vec<(usize, Bell)>, f32)>) -> MusicTable {
-        let mut guarunteed_music = 0.0;
-        let compiled_masks = masks
-            .into_iter()
-            .filter_map(|(bell_locs, score)| {
-                // If no bells are specified, then this mask is always satisfied and counts as
-                // guarunteed_music and doesn't generate a runtime match.
-                if bell_locs.is_empty() {
-                    guarunteed_music += score;
-                    return None;
-                }
-                // If there are some specified bells, then generate the masks for their locations.
-                // - `mask` has 0x00 in the locations of the bells and 0xff otherwise (it's
-                //   inverted in the return expression).
-                // - `bells` has each bell's byte in the locations of the bells and 0xff otherwise.
-                let mut mask = 0u128;
-                let mut bells = (-1i128) as u128; // Start off with all 1s
-                for (index, bell) in bell_locs {
-                    // Fill the byte in the mask with 1s (which will be turned into 0s after the
-                    // bitwise not at the end)
-                    mask |= 0xffu128 << (index * 8);
-                    // Zero out the current bell byte
-                    bells &= !(0xffu128 << (index * 8));
-                    // Fill the zeroed byte with the bell index
-                    bells |= (bell.index() as u128) << (index * 8);
-                }
-                // println!("{:>16x}\n{:>32x}", !mask, bells);
-                Some((!mask, bells, score))
-            })
-            .collect_vec();
-
-        MusicTable {
-            guarunteed_music,
-            compiled_masks,
-        }
+        Self::from_course_masks(stage, fixed_bells, course_head_masks)
     }
 
     #[inline(always)]
-    pub fn evaluate<R: CompRow>(&self, row: &R) -> f32 {
+    pub fn evaluate(&self, row: &impl CompRow) -> f32 {
+        let partition_bell = row.bell_at(self.pivot_place);
+
         let mut total_music = self.guarunteed_music;
-        for &(mask, expected_bells, score) in &self.compiled_masks {
-            // Use the mask to overwrite every byte we don't care about with 0xff
-            let masked_row = row.pack_u128() | mask;
-            // Compare the masked row to the expected_bells we've set up
-            if masked_row == expected_bells {
-                total_music += score;
+        if let Some(masks) = self.compiled_masks.get(partition_bell.index()) {
+            for &(mask, expected_bells, score) in masks {
+                // Use the mask to overwrite every byte we don't care about with 0xff
+                let masked_row = row.pack_u128() | mask;
+                // Compare the masked row to the expected_bells we've set up
+                if masked_row == expected_bells {
+                    total_music += score;
+                }
             }
         }
         total_music
     }
+
+    /// Helper function which builds a search-ready `MusicTable` from a set of course head masks
+    /// and their music scores
+    fn from_course_masks(
+        stage: Stage,
+        fixed_bells: &[Bell],
+        mut masks: HashMap<Vec<(usize, Bell)>, f32>,
+    ) -> MusicTable {
+        let mut guarunteed_music = masks.remove(&Vec::new()).unwrap_or(0.0);
+
+        // TODO: Upper bound the best possible music density here
+
+        let non_fixed_bells = (0..stage.as_usize())
+            .map(Bell::from_index)
+            .filter(|b| !fixed_bells.contains(b))
+            .collect_vec();
+
+        /// Mapping from bells to sets of masks which apply if that bell is in `pivot_place`
+        type MaskByBell<'a> = HashMap<Bell, Vec<(&'a [(usize, Bell)], f32)>>;
+
+        // Check each non-fixed bell's home position as a possible pivot, choosing the best one
+        let (pivot_place, masks_by_bell): (usize, MaskByBell) = non_fixed_bells
+            .iter()
+            .map(|b| {
+                let place = b.index();
+
+                // How large the partition for each bell will be, given this pivot place
+                let mut masks_by_bell: MaskByBell = HashMap::new();
+
+                // Go through each mask, and figure out which pivot bells' partitions it belongs in
+                for (mask, score) in &masks {
+                    // Compute which bell is in the pivot place
+                    let bell_in_pivot = mask
+                        .iter()
+                        .find(|(p, _)| *p == place)
+                        .map(|(_, bell)| *bell);
+
+                    match bell_in_pivot {
+                        // If there is a bell in the pivot, then this mask can only exist in that
+                        // bell's partition
+                        Some(b) => masks_by_bell
+                            .entry(b)
+                            .or_insert_with(Vec::new)
+                            .push((mask.as_slice(), *score)),
+                        // If no bell is in the pivot, then every non-fixed bell that isn't already
+                        // in the mask could go here
+                        None => non_fixed_bells
+                            .iter()
+                            .filter(|b| mask.iter().find(|(_, b2)| *b == b2).is_none())
+                            .for_each(|b| {
+                                masks_by_bell
+                                    .entry(*b)
+                                    .or_insert_with(Vec::new)
+                                    .push((mask.as_slice(), *score))
+                            }),
+                    }
+                }
+
+                // Assuming the bells in the pivot are generated uniformly, the average length will
+                // be the expected number of equality checks required to perform this music check.
+                //
+                // However, if we get a tie-break between two pivots then we go for the one that's
+                // the most consistent (i.e. has the smallest max value)
+                let length_sum = masks_by_bell.values().map(Vec::len).sum::<usize>();
+                let length_max = masks_by_bell.values().map(Vec::len).max().unwrap_or(0);
+                (place, masks_by_bell, (length_sum, length_max))
+            })
+            .min_by_key(|(_, _, sum_max)| *sum_max)
+            // Throw away the values which we used to rank the pivots
+            .map(|(place, masks, _)| (place, masks))
+            // Perhaps we should do something sensible - this unwrap will trigger if no music is
+            // specified.  In that case, we should probably early return an empty pivot map
+            .unwrap();
+
+        println!(
+            "pivoting at {}: len reduction: {} -> {}",
+            pivot_place,
+            masks.len(),
+            masks_by_bell.values().map(|p| p.len()).sum::<usize>() as f32
+                / masks_by_bell.len() as f32
+        );
+
+        let max_pivot_bell_index = masks_by_bell.keys().map(|b| b.index()).max().unwrap_or(0);
+        // The `+ 1` here is necessary to make sure that the last entry in `partition_table` has
+        // index `max_pivot_bell_index`
+        let mut partition_table = vec![Vec::new(); max_pivot_bell_index + 1];
+        // Compile all the masks and put them in the partition table
+        for (bell, masks) in masks_by_bell {
+            partition_table[bell.index()].extend(
+                masks
+                    .into_iter()
+                    .map(|(bell_locs, score)| compile_mask(&bell_locs, score)),
+            );
+        }
+
+        MusicTable {
+            guarunteed_music,
+            pivot_place,
+            compiled_masks: partition_table,
+        }
+    }
+}
+
+/// Compile a list of bell locations into a pair of bitmasks which can be used to efficiently check
+/// the mask
+fn compile_mask(bell_locs: &[(usize, Bell)], score: f32) -> (u128, u128, f32) {
+    // Generate the masks for their locations.
+    // - `mask` has 0x00 in the locations of the bells and 0xff otherwise (it's
+    //   inverted in the return expression).
+    // - `bells` has each bell's byte in the locations of the bells and 0xff otherwise.
+    let mut mask = 0u128;
+    let mut bells = (-1i128) as u128; // Start off with all 1s
+    for (index, bell) in bell_locs {
+        // Fill the byte in the mask with 1s (which will be turned into 0s after the
+        // bitwise not at the end)
+        mask |= 0xffu128 << (index * 8);
+        // Zero out the current bell byte
+        bells &= !(0xffu128 << (index * 8));
+        // Fill the zeroed byte with the bell index
+        bells |= (bell.index() as u128) << (index * 8);
+    }
+    // println!("{:>16x}\n{:>32x}", !mask, bells);
+    (!mask, bells, score)
 }
 
 fn generate_course_head_masks<'r>(
@@ -333,8 +427,19 @@ fn generate_course_head_masks<'r>(
     course_head_masks
 }
 
+#[allow(dead_code)]
+fn format_mask(stage: Stage, mask: &[(usize, Bell)]) -> String {
+    let mut row = vec![String::from("x"); stage.as_usize()];
+    for (ind, bell) in mask {
+        row[*ind] = bell.name();
+    }
+    row.iter().join("")
+}
+
 #[cfg(test)]
 mod tests {
+    use std::ops::Range;
+
     use crate::single_meth::tenors_together_fixed_bells;
 
     use super::*;
@@ -357,13 +462,7 @@ mod tests {
 
         let mut formatted_masks = course_head_masks
             .iter()
-            .map(|(mask, score)| {
-                let mut row = vec![String::from("x"); stage.as_usize()];
-                for (ind, bell) in mask {
-                    row[*ind] = bell.name();
-                }
-                format!("{}: {}", row.iter().join(""), score)
-            })
+            .map(|(mask, score)| format!("{}: {}", format_mask(stage, mask), score))
             .collect_vec();
         // We have to sort the masks because they from a hash table's iterator which doesn't
         // guarantee any ordering
@@ -428,6 +527,66 @@ x654x3xx: 8
 xx6x5xxx: 8
 xxx5x6xx: 8
 xxxx56xx: 8",
+        );
+    }
+
+    fn test_music_table(
+        stage: Stage,
+        method_pn: &str,
+        pc_range: Range<usize>,
+        tests: &[(&str, f32)],
+    ) {
+        let meth = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage).unwrap());
+
+        let first_lead_rows = meth.plain_course().into_rows();
+
+        let table = MusicTable::from_rows(
+            Stage::MAJOR,
+            &tenors_together_fixed_bells(stage),
+            &first_lead_rows[pc_range],
+            &MusicPattern::runs_front_or_back(Stage::MAJOR, 4, 1.0),
+        );
+
+        for &(row_rep, exp_score) in tests {
+            assert_eq!(table.evaluate(&Row::parse(row_rep).unwrap()), exp_score);
+        }
+    }
+
+    #[test]
+    fn bristol_s8() {
+        // First lead
+        test_music_table(
+            Stage::MAJOR,
+            "x58x14.58x58.36.14x14.58x14x18,18",
+            0..32,
+            &[
+                ("12345678", 8.0f32),
+                ("12435678", 8.0f32),
+                ("13245678", 6.0f32),
+                ("14325678", 4.0f32),
+                ("12346578", 4.0f32),
+                ("16542378", 2.0f32),
+                ("15432678", 2.0f32),
+                ("15243678", 0.0f32),
+                ("12364578", 0.0f32),
+            ],
+        );
+        // First 4 leads
+        test_music_table(
+            Stage::MAJOR,
+            "x58x14.58x58.36.14x14.58x14x18,18",
+            0..128,
+            &[
+                ("12345678", 16.0f32),
+                ("12435678", 14.0f32),
+                ("13245678", 10.0f32),
+                ("14325678", 6.0f32),
+                ("12346578", 8.0f32),
+                ("16542378", 4.0f32),
+                ("15432678", 6.0f32),
+                ("15243678", 0.0f32),
+                ("12364578", 2.0f32),
+            ],
         );
     }
 }

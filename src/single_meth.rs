@@ -146,7 +146,7 @@ impl Table<Row> {
 
         let stage = method.stage();
         let calls = call_specs
-            .into_iter()
+            .iter()
             .map(
                 |CallSpec {
                      place_not_str,

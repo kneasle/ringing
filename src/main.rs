@@ -6,11 +6,10 @@ mod set;
 mod single_meth;
 mod spec;
 
-use engine::Table;
 use proj_core::{Row, SimdRow, Stage};
 use spec::Spec;
 
-mod tables {
+mod methods {
     #![allow(dead_code)]
 
     use crate::spec::CallSpec;
@@ -28,7 +27,7 @@ mod tables {
     pub fn cambs_s8() -> (Stage, &'static str, Vec<CallSpec>) {
         (Stage::MAJOR, "-38-14-1258-36-14-58-16-78,12", {
             let mut calls = CallSpec::near(Stage::MAJOR);
-            calls.pop();
+            // calls.pop();
             calls
         })
     }
@@ -45,6 +44,22 @@ mod tables {
         (
             Stage::MAJOR,
             "-18-18-18-18,12",
+            CallSpec::near(Stage::MAJOR),
+        )
+    }
+
+    pub fn kiveton_s8() -> (Stage, &'static str, Vec<CallSpec>) {
+        (
+            Stage::MAJOR,
+            "38-58.14-12-36-78-58.14-16.78,12",
+            CallSpec::near(Stage::MAJOR),
+        )
+    }
+
+    pub fn carolina_reaper_tb8() -> (Stage, &'static str, Vec<CallSpec>) {
+        (
+            Stage::MAJOR,
+            "38-38.18-56-18-34-18.16-16.78,12",
             CallSpec::near(Stage::MAJOR),
         )
     }
@@ -75,7 +90,7 @@ mod tables {
 }
 
 fn main() {
-    let (stage, pn, calls) = tables::yorkshire_s8();
+    let (stage, pn, calls) = methods::kiveton_s8();
 
     let spec = Spec::tenors_together_from_pn(stage, pn, calls, spec::QP, 10).unwrap();
 

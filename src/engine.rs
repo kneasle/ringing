@@ -3,7 +3,6 @@ use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
     ops::{Range, RangeInclusive},
-    time::Instant,
 };
 
 use crate::set::NodeSet;
@@ -51,7 +50,11 @@ pub trait CompRow: RowTrait {
 
 impl CompRow for Row {
     fn pack_u128(&self) -> u128 {
-        unimplemented!()
+        let mut bs = 0u128;
+        for (i, b) in self.bell_iter().enumerate() {
+            bs |= (b.index() as u128) << (i * 8);
+        }
+        bs
     }
 }
 
