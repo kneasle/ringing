@@ -98,7 +98,7 @@ impl MusicPattern {
 pub struct MusicTable {
     /// Music score which is generated regardless of the course head.  This corresponds to the
     /// course head mask `xxxxxx...`.
-    guarunteed_music: f32,
+    guaranteed_music: f32,
     /// In order to speed up music detection, we chose some place and then split our table by which
     /// bell is in that place.  This usually reduces the max table length by about 5, and thus
     /// causes ~5x speedup of music detection.
@@ -114,6 +114,10 @@ impl MusicTable {
         patterns: &[MusicPattern],
     ) -> Self {
         let course_head_masks = generate_course_head_masks(stage, fixed_bells, rows, patterns);
+        /* println!(
+            "{}",
+            best_music_score(stage, fixed_bells, &course_head_masks)
+        ); */
         Self::from_course_masks(stage, fixed_bells, course_head_masks)
     }
 
@@ -121,7 +125,7 @@ impl MusicTable {
     pub fn evaluate(&self, row: &impl CompRow) -> f32 {
         let partition_bell = row.bell_at(self.pivot_place);
 
-        let mut total_music = self.guarunteed_music;
+        let mut total_music = self.guaranteed_music;
         if let Some(masks) = self.compiled_masks.get(partition_bell.index()) {
             for &(mask, expected_bells, score) in masks {
                 // Use the mask to overwrite every byte we don't care about with 0xff
@@ -142,7 +146,7 @@ impl MusicTable {
         fixed_bells: &[Bell],
         mut masks: HashMap<Vec<(usize, Bell)>, f32>,
     ) -> MusicTable {
-        let mut guarunteed_music = masks.remove(&Vec::new()).unwrap_or(0.0);
+        let guaranteed_music = masks.remove(&Vec::new()).unwrap_or(0.0);
 
         // TODO: Upper bound the best possible music density here
 
@@ -165,7 +169,7 @@ impl MusicTable {
 
                 // Go through each mask, and figure out which pivot bells' partitions it belongs in
                 for (mask, score) in &masks {
-                    // Compute which bell is in the pivot place
+                    // Which bell is in the pivot place
                     let bell_in_pivot = mask
                         .iter()
                         .find(|(p, _)| *p == place)
@@ -208,13 +212,13 @@ impl MusicTable {
             // specified.  In that case, we should probably early return an empty pivot map
             .unwrap();
 
-        println!(
+        /* println!(
             "pivoting at {}: len reduction: {} -> {}",
             pivot_place,
             masks.len(),
             masks_by_bell.values().map(|p| p.len()).sum::<usize>() as f32
                 / masks_by_bell.len() as f32
-        );
+        ); */
 
         let max_pivot_bell_index = masks_by_bell.keys().map(|b| b.index()).max().unwrap_or(0);
         // The `+ 1` here is necessary to make sure that the last entry in `partition_table` has
@@ -230,7 +234,7 @@ impl MusicTable {
         }
 
         MusicTable {
-            guarunteed_music,
+            guaranteed_music,
             pivot_place,
             compiled_masks: partition_table,
         }
@@ -257,6 +261,52 @@ fn compile_mask(bell_locs: &[(usize, Bell)], score: f32) -> (u128, u128, f32) {
     }
     // println!("{:>16x}\n{:>32x}", !mask, bells);
     (!mask, bells, score)
+}
+
+/// Computes the highest achievable music score, given a set of course head masks
+fn best_music_score(
+    stage: Stage,
+    fixed_bells: &[Bell],
+    masks: &HashMap<Vec<(usize, Bell)>, f32>,
+) -> f32 {
+    // In order to quickly compute the best scoring course head, we can use to our advantage the
+    // fact that fully specified masks are mutually exclusive.  Therefore, it suffic
+    let num_non_fixed_bells = stage.as_usize() - fixed_bells.len();
+    let underspecified_masks = masks
+        .iter()
+        .filter(|(mask, _)| mask.len() < num_non_fixed_bells)
+        .collect_vec();
+
+    let mut mask_hmap = HashMap::<usize, Bell>::new();
+    let best_score_with_fully_specified_mask = masks
+        .iter()
+        // Filter only the fully specified masks
+        .filter(|(mask, _)| mask.len() == num_non_fixed_bells)
+        .map(|(mask, score)| {
+            // Update `mask_hmap` to represent the lookup table specified by `mask`
+            mask_hmap.clear();
+            mask_hmap.extend(mask.iter().cloned());
+            // Sum up the score of this mask plus all the underspecified masks which also satisfy
+            // its pattern
+            let mut total_score = *score;
+            for &(u_mask, u_score) in &underspecified_masks {
+                if u_mask.iter().all(|(i, b)| mask_hmap[i] == *b) {
+                    total_score += *u_score;
+                }
+            }
+            total_score
+        })
+        // Find the max value, panicking if we find a NaN (it just shouldn't happen)
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap_or(0.0);
+
+    // TODO: It could be possible that just using underspecified masks produces a music score
+    // better than the ones generated using fully specified masks
+    assert!(
+        best_score_with_fully_specified_mask > underspecified_masks.iter().map(|(_, s)| *s).sum()
+    );
+
+    best_score_with_fully_specified_mask
 }
 
 /// Combines rows and music patterns to generate a list of course head masks and their music
@@ -401,7 +451,7 @@ fn generate_course_head_masks<'r>(
         // Now go through this condensed list and test each music pattern against it to see (given
         // the fixed bells) which course heads would produce music in this location
         for (source_pattern, count) in source_pattern_counts {
-            'music_loop: for (music_pattern, weight) in &bell_patterns {
+            'pattern_loop: for (music_pattern, weight) in &bell_patterns {
                 // First of all, check if these patterns agree on the locations of the fixed bells.
                 // If they don't then this particular musical pattern can never be generated in
                 // this location.
@@ -409,7 +459,7 @@ fn generate_course_head_masks<'r>(
                     let source_index = source_pattern.iter().position(|b| b == fb);
                     let music_index = music_pattern.iter().position(|b| b == fb);
                     if source_index != music_index {
-                        continue 'music_loop;
+                        continue 'pattern_loop;
                     }
                 }
 

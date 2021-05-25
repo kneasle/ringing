@@ -143,9 +143,9 @@ impl<R: CompRow, S: Debug> Display for Node<R, S> {
 
 #[derive(Debug, Clone)]
 pub struct Comp<R: CompRow, T: Table<R>> {
-    calls: Vec<T::Call>,
-    length: usize,
-    music: f32,
+    pub calls: Vec<T::Call>,
+    pub length: usize,
+    pub score: f32,
 }
 
 impl<R: CompRow, T: Table<R>> Comp<R, T> {
@@ -153,7 +153,7 @@ impl<R: CompRow, T: Table<R>> Comp<R, T> {
         format!(
             "{} rows, music {}: {}",
             self.length,
-            self.music,
+            self.score,
             table.comp_string(&self.calls)
         )
     }
@@ -162,7 +162,7 @@ impl<R: CompRow, T: Table<R>> Comp<R, T> {
 impl<R: CompRow, T: Table<R>> PartialOrd for Comp<R, T> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.music.partial_cmp(&other.music)
+        self.score.partial_cmp(&other.score)
     }
 }
 
@@ -176,7 +176,7 @@ impl<R: CompRow, T: Table<R>> Ord for Comp<R, T> {
 impl<R: CompRow, T: Table<R>> PartialEq for Comp<R, T> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.music == other.music
+        self.score == other.score
     }
 }
 
@@ -249,7 +249,7 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
         self.results.comps.push(Comp {
             calls: self.calls.clone(),
             length: len,
-            music: self.accumulated_music,
+            score: self.accumulated_music,
         });
     }
 

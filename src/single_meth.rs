@@ -204,7 +204,9 @@ impl Table<Row> {
                     pc_lead_heads.get(&get_bell_inds(&fixed_bells, &new_lh))
                 {
                     let tenor_place = new_lh.place_of(tenor).unwrap();
-                    let call_pos = calling_positions.get(tenor_place).unwrap();
+                    let call_pos = calling_positions
+                        .get(tenor_place)
+                        .expect("Calling positions are too short");
                     // This unsafety is OK because all the rows & pns are parsed within this
                     // function, which is provided a single Stage
                     let new_course_head = unsafe { pc_lh.tranposition_to_unchecked(&new_lh) };
