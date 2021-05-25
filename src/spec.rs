@@ -5,8 +5,8 @@ use std::{
 };
 
 use itertools::Itertools;
-
 use proj_core::{place_not::PnBlockParseError, Bell, Method, PnBlock, Row, Stage};
+use separator::Separatable;
 
 use crate::{
     engine::{CompRow, Table as TableTrait},
@@ -17,8 +17,8 @@ pub const QP: RangeInclusive<usize> = 1250..=1300;
 pub const HALF_PEAL: RangeInclusive<usize> = 2500..=2600;
 pub const PEAL: RangeInclusive<usize> = 5000..=5200;
 
-/// The full specification for a single method composition.  This is what will be parsed from the input
-/// TOML file.
+/// The full specification for a single method composition.  This is what will be parsed from an
+/// input TOML file.
 pub struct Spec {
     method: Method,
     length: RangeInclusive<usize>,
@@ -82,16 +82,15 @@ impl Spec {
         }
 
         // Print the stats
-        println!("---###---###---                   #---###---");
         println!(
-            "{:>15} nodes considered ({:>10.0}/s)",
-            results.nodes_expanded,
-            results.nodes_expanded as f64 / composing_time.as_secs_f64()
+            "{:>15} nodes considered ({:>10}/s)",
+            results.nodes_expanded.separated_string(),
+            (results.nodes_expanded as f64 / composing_time.as_secs_f64()).separated_string()
         );
         println!(
-            "{:>15} comps found      ({:>10.0}/s)",
-            results.comps_found,
-            results.comps_found as f64 / composing_time.as_secs_f64()
+            "{:>15} comps found      ({:>10}/s)",
+            results.comps_found.separated_string(),
+            (results.comps_found as f64 / composing_time.as_secs_f64()).separated_string()
         );
     }
 }
