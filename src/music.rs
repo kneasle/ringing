@@ -1,4 +1,7 @@
-use std::{collections::HashMap, iter::once};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::once,
+};
 
 use itertools::Itertools;
 use proj_core::{Bell, Row, Stage};
@@ -256,12 +259,20 @@ fn compile_mask(bell_locs: &[(usize, Bell)], score: f32) -> (u128, u128, f32) {
     (!mask, bells, score)
 }
 
+/// Combines rows and music patterns to generate a list of course head masks and their music
+/// scores.  These masks will never contain only one missing non-fixed bell (i.e. `x3254xxx` is
+/// normalised to `x32546xx`).
 fn generate_course_head_masks<'r>(
     stage: Stage,
     fixed_bells: &[Bell],
     rows: impl IntoIterator<Item = &'r Row> + Clone,
     patterns: &[MusicPattern],
 ) -> HashMap<Vec<(usize, Bell)>, f32> {
+    let non_fixed_bells = (0..stage.as_usize())
+        .map(Bell::from_index)
+        .filter(|b| !fixed_bells.contains(b))
+        .collect_vec();
+
     /* The first step of compiling the music table is to parse the regexes into a single list of
      * which bells are required to go where.
      *
@@ -347,11 +358,13 @@ fn generate_course_head_masks<'r>(
         })
         .collect_vec();
 
-    /* The second step is to convert these requirements into a hash table from a list of indices to
-     * all the bell patterns which use those indices so that we can prevent work later on.
+    /* The second step is to convert these requirements into a hash table which maps a list of
+     * indices to all the bell patterns which use those indices so that we can prevent work later
+     * on.
      *
      * For example, if `[0, 1, 2, 3]` maps to `[("2345", 1.0), ("5432", 1.0)]` then it means that
-     * we'd count either 2345 or 5432 in places `0..4`, each with weight 1. */
+     * we'd count either 2345 or 5432 in places `0..4`, each with weight 1 (and no other bell
+     * pattern of indices [0..3] will generate music). */
     let mut index_requirements: HashMap<Vec<usize>, Vec<(Vec<Bell>, f32)>> = HashMap::new();
     for (bell_indices, weight) in bell_requirements {
         // Unzip the iterators
@@ -412,6 +425,29 @@ fn generate_course_head_masks<'r>(
                     .filter(|(_, b)| !fixed_bells.contains(b))
                     .map(|(source_bell, music_bell)| (source_bell.index(), *music_bell))
                     .collect_vec();
+
+                // If this mask has only one empty place, then there is only one possible bell and
+                // we add it to normalise the mask.  For example, this maps `13254x78` to
+                // `13254678` (filling in the 6).  This prevents accidental duplication of masks
+                // which would cause the music detection to do unnecessary work.
+                if course_head_mask.len() + 1 == non_fixed_bells.len() {
+                    // Compute which places/bells are missing
+                    let mut missing_bells: HashSet<Bell> =
+                        non_fixed_bells.iter().cloned().collect();
+                    let mut missing_places: HashSet<usize> =
+                        non_fixed_bells.iter().map(|b| b.index()).collect();
+                    for (i, b) in &course_head_mask {
+                        missing_places.remove(i);
+                        missing_bells.remove(b);
+                    }
+                    assert_eq!(missing_bells.len(), 1);
+                    assert_eq!(missing_places.len(), 1);
+                    let missing_bell = missing_bells.into_iter().next().unwrap();
+                    let missing_place = missing_places.into_iter().next().unwrap();
+                    // Add this missing pair to the course head mask
+                    course_head_mask.push((missing_place, missing_bell));
+                }
+
                 // IMPORTANT: Sort this mask by the indices so that the same mask can't have two
                 // different representations
                 course_head_mask.sort_unstable_by_key(|(i, _bell)| *i);
@@ -478,52 +514,52 @@ mod tests {
         test_plain_course_run_masks(
             "-5-4.5-5.36.4-4.5-4-1,8",
             Stage::MAJOR,
-            "x2345xxx: 8
-x234x5xx: 8
+            "x23456xx: 8
+x23465xx: 8
 x234xxxx: 4
 x23x4xxx: 4
-x2435xxx: 8
-x243x5xx: 8
+x24356xx: 8
+x24365xx: 8
 x243xxxx: 4
 x2x3x4xx: 4
 x324xxxx: 4
-x3254xxx: 8
-x325x4xx: 8
+x32546xx: 8
+x32564xx: 8
 x32x4xxx: 4
 x342xxxx: 4
-x3456xxx: 8
-x345x6xx: 8
-x3524xxx: 8
-x352x4xx: 8
-x3546xxx: 8
-x354x6xx: 8
+x34526xx: 8
+x34562xx: 8
+x35246xx: 8
+x35264xx: 8
+x35426xx: 8
+x35462xx: 8
 x3x2x4xx: 4
-x4253xxx: 8
-x425x3xx: 8
+x42536xx: 8
+x42563xx: 8
 x42x3xxx: 4
-x4365xxx: 8
-x436x5xx: 8
+x43625xx: 8
+x43652xx: 8
 x43x2xxx: 4
-x4523xxx: 8
-x452x3xx: 8
-x4635xxx: 8
-x463x5xx: 8
+x45236xx: 8
+x45263xx: 8
+x46325xx: 8
+x46352xx: 8
 x4x2x3xx: 4
 x4x3x2xx: 4
-x5342xxx: 8
-x534x2xx: 8
-x5364xxx: 8
-x536x4xx: 8
-x5432xxx: 8
-x543x2xx: 8
+x53426xx: 8
+x53462xx: 8
+x53624xx: 8
+x53642xx: 8
+x54326xx: 8
+x54362xx: 8
 x54x6xxx: 8
-x5634xxx: 8
-x563x4xx: 8
-x6453xxx: 8
-x645x3xx: 8
+x56324xx: 8
+x56342xx: 8
+x64523xx: 8
+x64532xx: 8
 x64x5xxx: 8
-x6543xxx: 8
-x654x3xx: 8
+x65423xx: 8
+x65432xx: 8
 xx6x5xxx: 8
 xxx5x6xx: 8
 xxxx56xx: 8",
