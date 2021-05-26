@@ -320,6 +320,7 @@ fn main() {
             }
         }
 
+        // Print error messages, or an OK message
         if error_messages.is_empty() {
             println!("Results OK ({} comps)", comps.len());
         } else {
