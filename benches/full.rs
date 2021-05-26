@@ -1,6 +1,6 @@
 use comp_engine::{
     engine::Table,
-    spec::{CallSpec, Spec, PEAL, QP},
+    spec::{CallSpec, Spec, HALF_PEAL, PEAL, QP},
 };
 use itertools::Itertools;
 use proj_core::{SimdRow, Stage};
@@ -23,7 +23,103 @@ impl TestCase {
 }
 
 fn main() {
-    let test_cases = &[
+    // Run the test cases
+    for test in test_cases() {
+        // Print some nice pre-amble
+        println!("\n\n");
+        println!("Running `{}`", test.name);
+
+        // Run the benchmark/test to generate some compositions
+        let outcome = test.spec.compose::<SimdRow>();
+        let mut comps = outcome.results.comps.iter().collect_vec();
+        comps.sort_by(|c1, c2| c1.score.partial_cmp(&c2.score).unwrap());
+
+        // Print the perf stats
+        outcome.pretty_print_perf();
+
+        /* Check that the compositions are as expected.  This is more difficult than simply sorting
+         * and checking equality, since if there's a tie-break then the order is non-deterministic.
+         * Therefore, the worst comps that made it into the shortlist may change depending on
+         * threading, etc. */
+
+        let mut error_messages: Vec<String> = Vec::new();
+
+        // Get the worst music score that made it into the shortlist
+        let worst_comp_score = match test.exp_comps.first() {
+            Some(comp) => comp.1,
+            None => {
+                // If there aren't any example comps, then we probably haven't written the tests
+                // yet, so just dump the code required to generate the test cases
+                println!("");
+                println!("FAILED TEST!");
+                println!("");
+                println!("It looks like you don't have any example comps.");
+                println!("You might want to copy this:");
+                println!(
+                    "{}",
+                    comps
+                        .iter()
+                        .enumerate()
+                        .map(|(i, c)| format!(
+                            "({}, {:.1}{}, \"{}\".to_owned()),",
+                            c.length,
+                            c.score,
+                            if i == 0 { "f32" } else { "" },
+                            outcome.table.comp_string(&c.calls)
+                        ))
+                        .join("\n")
+                );
+                panic!();
+            }
+        };
+        // First up, check that there are the right number of comps with the lowest score
+        let num_worst_comps = comps.iter().filter(|c| c.score == worst_comp_score).count();
+        let num_exp_worst_comps = test
+            .exp_comps
+            .iter()
+            .filter(|(_, s, _)| *s == worst_comp_score)
+            .count();
+        if num_exp_worst_comps != num_worst_comps {
+            error_messages.push(format!(
+                "Expected {} comps with score {}, got {}",
+                num_exp_worst_comps, worst_comp_score, num_worst_comps
+            ));
+        }
+
+        // Next up, check that every expected comp is found somewhere within the output
+        let non_worst_comp_set: Vec<(usize, f32, String)> = comps
+            .iter()
+            .map(|c| (c.length, c.score, outcome.table.comp_string(&c.calls)))
+            .collect_vec();
+        for exp_comp in test
+            .exp_comps
+            .iter()
+            .filter(|(_, s, _)| *s != worst_comp_score)
+        {
+            if non_worst_comp_set.iter().find(|c| *c == exp_comp).is_none() {
+                error_messages.push(format!("Didn't find comp '{}'", exp_comp.2));
+            }
+        }
+
+        // Print error messages, or an OK message
+        if error_messages.is_empty() {
+            println!("Results OK ({} comps)", comps.len());
+        } else {
+            println!("");
+            println!("FAILED TEST!");
+            println!("");
+            for m in error_messages {
+                println!("ERROR: {}", m);
+            }
+            println!("");
+            println!("These comps were generated:");
+            outcome.pretty_print();
+        }
+    }
+}
+
+fn test_cases() -> Vec<TestCase> {
+    vec![
         TestCase::new(
             "Bristol s12 QPs".to_owned(),
             Spec::tenors_together_from_pn(
@@ -208,6 +304,49 @@ fn main() {
             ],
         ),
         TestCase::new(
+            "Bristol s10 half-peals".to_owned(),
+            Spec::tenors_together_from_pn(
+                Stage::ROYAL,
+                "-50-14.50-50.36.14-70.58.16-16.70-16-10,10",
+                CallSpec::far(Stage::ROYAL),
+                HALF_PEAL,
+                30,
+            )
+            .unwrap(),
+            vec![
+                (2520, 296.0f32, "sVsIOVIsIsVIOV".to_owned()),
+                (2520, 296.0, "IOOIVIVsIsVIOI".to_owned()),
+                (2520, 296.0, "sVsOsOsIOsOsIsVsIOsOsI".to_owned()),
+                (2520, 296.0, "sOsIVIsOsVVIIsVsO".to_owned()),
+                (2520, 296.0, "VIVOOOIIsVsIsOsI".to_owned()),
+                (2520, 297.0, "sOsIsVsIVsIsVIVIsOsIsVsO".to_owned()),
+                (2520, 297.0, "sVsOsVsIVIsVsOVIsOsIV".to_owned()),
+                (2520, 297.0, "OIVsVsIOsVsIsVsIsVsO".to_owned()),
+                (2520, 298.0, "sVsIOOIIOVsOsIsOsI".to_owned()),
+                (2520, 298.0, "OIVIOVIsIsVIsVsO".to_owned()),
+                (2520, 298.0, "sVsOsOsIOVVsIsVIOI".to_owned()),
+                (2520, 298.0, "IsVsOIsVsOVIIsVsIsOsI".to_owned()),
+                (2520, 299.0, "VIVOOVsVsIsVsIsOsI".to_owned()),
+                (2520, 299.0, "sVsIOVsVsIOVOIOI".to_owned()),
+                (2520, 299.0, "VIVIOIVsVsIOV".to_owned()),
+                (2520, 299.0, "VIVIOIVsVsOsOsIsVsO".to_owned()),
+                (2520, 299.0, "sVsIVOVIIsVsOIOsOsI".to_owned()),
+                (2520, 300.0, "IOVIVOVsIsVIOI".to_owned()),
+                (2520, 300.0, "OIsVsIVOOOIIsVsO".to_owned()),
+                (2520, 300.0, "sOsIVIVOVsIVOsIIsVsO".to_owned()),
+                (2520, 301.0, "sVsIOVsVsIOVsOsIsOsI".to_owned()),
+                (2520, 301.0, "sVsIsVsOsVsIOVIOsOsI".to_owned()),
+                (2520, 302.0, "sOsIsVsIsVsOOOIIsVsO".to_owned()),
+                (2520, 303.0, "OIsVsIVOOVsVsIsVsO".to_owned()),
+                (2520, 303.0, "VIVIIOVIOsOsI".to_owned()),
+                (2520, 303.0, "VIVOsOsIOVIOsOsI".to_owned()),
+                (2520, 304.0, "VIVOOOIIOV".to_owned()),
+                (2520, 305.0, "sVsIOOIIsVsOIOsOsI".to_owned()),
+                (2520, 307.0, "VIVOOVsVsIOV".to_owned()),
+                (2520, 308.0, "sVsIOVsVsIsVsOIOsOsI".to_owned()),
+            ],
+        ),
+        TestCase::new(
             "Lessness s8 QPs".to_owned(),
             Spec::tenors_together_from_pn(
                 Stage::MAJOR,
@@ -240,99 +379,5 @@ fn main() {
                 (1280, 76.0, "sHsMsWsHMBHBsHsMsHMWsH".to_owned()),
             ],
         ),
-    ];
-
-    // Run the test cases
-    for test in test_cases {
-        // Print some nice pre-amble
-        println!("\n\n");
-        println!("Running `{}`", test.name);
-
-        // Run the benchmark/test to generate some compositions
-        let outcome = test.spec.compose::<SimdRow>();
-        let mut comps = outcome.results.comps.iter().collect_vec();
-        comps.sort_by(|c1, c2| c1.score.partial_cmp(&c2.score).unwrap());
-
-        // Print the perf stats
-        outcome.pretty_print_perf();
-
-        /* Check that the compositions are as expected.  This is more difficult than simply sorting
-         * and checking equality, since if there's a tie-break then the order is non-deterministic.
-         * Therefore, the worst comps that made it into the shortlist may change depending on
-         * threading, etc. */
-
-        let mut error_messages: Vec<String> = Vec::new();
-
-        // Get the worst music score that made it into the shortlist
-        let worst_comp_score = match test.exp_comps.first() {
-            Some(comp) => comp.1,
-            None => {
-                // If there aren't any example comps, then we probably haven't written the tests
-                // yet, so just dump the code required to generate the test cases
-                println!("");
-                println!("FAILED TEST!");
-                println!("");
-                println!("It looks like you don't have any example comps.");
-                println!("You might want to copy this:");
-                println!(
-                    "{}",
-                    comps
-                        .iter()
-                        .enumerate()
-                        .map(|(i, c)| format!(
-                            "({}, {:.1}{}, \"{}\".to_owned()),",
-                            c.length,
-                            c.score,
-                            if i == 0 { "f32" } else { "" },
-                            outcome.table.comp_string(&c.calls)
-                        ))
-                        .join("\n")
-                );
-                panic!();
-            }
-        };
-        // First up, check that there are the right number of comps with the lowest score
-        let num_worst_comps = comps.iter().filter(|c| c.score == worst_comp_score).count();
-        let num_exp_worst_comps = test
-            .exp_comps
-            .iter()
-            .filter(|(_, s, _)| *s == worst_comp_score)
-            .count();
-        if num_exp_worst_comps != num_worst_comps {
-            error_messages.push(format!(
-                "Expected {} comps with score {}, got {}",
-                num_exp_worst_comps, worst_comp_score, num_worst_comps
-            ));
-        }
-
-        // Next up, check that every expected comp is found somewhere within the output
-        let non_worst_comp_set: Vec<(usize, f32, String)> = comps
-            .iter()
-            .map(|c| (c.length, c.score, outcome.table.comp_string(&c.calls)))
-            .collect_vec();
-        for exp_comp in test
-            .exp_comps
-            .iter()
-            .filter(|(_, s, _)| *s != worst_comp_score)
-        {
-            if non_worst_comp_set.iter().find(|c| *c == exp_comp).is_none() {
-                error_messages.push(format!("Didn't find comp '{}'", exp_comp.2));
-            }
-        }
-
-        // Print error messages, or an OK message
-        if error_messages.is_empty() {
-            println!("Results OK ({} comps)", comps.len());
-        } else {
-            println!("");
-            println!("FAILED TEST!");
-            println!("");
-            for m in error_messages {
-                println!("ERROR: {}", m);
-            }
-            println!("");
-            println!("These comps were generated:");
-            outcome.pretty_print();
-        }
-    }
+    ]
 }
