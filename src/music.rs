@@ -107,17 +107,16 @@ pub struct MusicTable {
 }
 
 impl MusicTable {
+    /// Converts a sequence of [`Row`]s of the plain course into:
+    /// - A table which computes music on any course of these rows
+    /// - The best possible music score achievable by this section of any course
     pub fn from_rows<'r>(
         stage: Stage,
         fixed_bells: &[Bell],
         rows: impl IntoIterator<Item = &'r Row> + Clone,
         patterns: &[MusicPattern],
-    ) -> Self {
+    ) -> (Self, f32) {
         let course_head_masks = generate_course_head_masks(stage, fixed_bells, rows, patterns);
-        /* println!(
-            "{}",
-            best_music_score(stage, fixed_bells, &course_head_masks)
-        ); */
         Self::from_course_masks(stage, fixed_bells, course_head_masks)
     }
 
@@ -140,12 +139,13 @@ impl MusicTable {
     }
 
     /// Helper function which builds a search-ready `MusicTable` from a set of course head masks
-    /// and their music scores
+    /// and their music scores.  This function also returns the best possible score achievable in
+    /// this chunk.
     fn from_course_masks(
         stage: Stage,
         fixed_bells: &[Bell],
         mut masks: HashMap<Vec<(usize, Bell)>, f32>,
-    ) -> MusicTable {
+    ) -> (MusicTable, f32) {
         let guaranteed_music = masks.remove(&Vec::new()).unwrap_or(0.0);
 
         // TODO: Upper bound the best possible music density here
@@ -220,6 +220,16 @@ impl MusicTable {
                 / masks_by_bell.len() as f32
         ); */
 
+        // Compute best possible music score from partitioned masks, and then take the max of these
+        let best_possible_score = masks_by_bell
+            .iter()
+            .map(|(_bell, masks)| best_music_score(&masks))
+            // We shouldn't be able to get a score of NaN, so if we do then panic
+            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
+            // If there are no course head masks, then no course heads produce music and this
+            // should have score 0
+            .unwrap_or(0.0);
+
         let max_pivot_bell_index = masks_by_bell.keys().map(|b| b.index()).max().unwrap_or(0);
         // The `+ 1` here is necessary to make sure that the last entry in `partition_table` has
         // index `max_pivot_bell_index`
@@ -233,11 +243,12 @@ impl MusicTable {
             );
         }
 
-        MusicTable {
+        let table = MusicTable {
             guaranteed_music,
             pivot_place,
             compiled_masks: partition_table,
-        }
+        };
+        (table, best_possible_score)
     }
 }
 
@@ -264,49 +275,135 @@ fn compile_mask(bell_locs: &[(usize, Bell)], score: f32) -> (u128, u128, f32) {
 }
 
 /// Computes the highest achievable music score, given a set of course head masks
-fn best_music_score(
-    stage: Stage,
-    fixed_bells: &[Bell],
-    masks: &HashMap<Vec<(usize, Bell)>, f32>,
-) -> f32 {
-    // In order to quickly compute the best scoring course head, we can use to our advantage the
-    // fact that fully specified masks are mutually exclusive.  Therefore, it suffic
-    let num_non_fixed_bells = stage.as_usize() - fixed_bells.len();
-    let underspecified_masks = masks
-        .iter()
-        .filter(|(mask, _)| mask.len() < num_non_fixed_bells)
-        .collect_vec();
+fn best_music_score(masks: &[(&[(usize, Bell)], f32)]) -> f32 {
+    /* For the A*-style DFS to work, we only need an upper bound for the best possible score for a
+     * given segment.  However, the tighter the bound the better the pruning so it pays to spend
+     * some more time computing this exactly.  I want this to work even when there are large
+     * numbers of non-fixed bells, so instead of computing every possible course head we instead
+     * perform tree search over which sets of masks are compatible. This is NP-hard (of course),
+     * but we only need it to work for small lists of masks (<= 100) */
 
-    let mut mask_hmap = HashMap::<usize, Bell>::new();
-    let best_score_with_fully_specified_mask = masks
-        .iter()
-        // Filter only the fully specified masks
-        .filter(|(mask, _)| mask.len() == num_non_fixed_bells)
-        .map(|(mask, score)| {
-            // Update `mask_hmap` to represent the lookup table specified by `mask`
-            mask_hmap.clear();
-            mask_hmap.extend(mask.iter().cloned());
-            // Sum up the score of this mask plus all the underspecified masks which also satisfy
-            // its pattern
-            let mut total_score = *score;
-            for &(u_mask, u_score) in &underspecified_masks {
-                if u_mask.iter().all(|(i, b)| mask_hmap[i] == *b) {
-                    total_score += *u_score;
-                }
+    /* Pre-compute useful information to speed up the tree search */
+
+    let scores = masks.iter().map(|(_, score)| *score).collect_vec();
+    // If we encounter mask `i` in tree search, then next_masks[i] contains all compatible masks
+    // with index greater than `i`.  These are the nodes that we should recurse onto
+    let mut next_masks: Vec<Vec<usize>> = vec![Vec::new(); masks.len()];
+    // Set of pairs of masks (i, j) where i < j and i, j are compatible
+    let mut compatible_masks: HashSet<(usize, usize)> = HashSet::new();
+    // Run through every pair of masks and populate `next_masks` and `compatible_masks`
+    for (i1, &(m1, _)) in masks.iter().enumerate() {
+        for (i2, &(m2, _)) in masks[..i1].iter().enumerate() {
+            if are_compatible(m1, m2) {
+                // This way round is correct because i2 < i1
+                next_masks[i2].push(i1);
+                compatible_masks.insert((i2, i1));
             }
-            total_score
-        })
-        // Find the max value, panicking if we find a NaN (it just shouldn't happen)
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap_or(0.0);
+        }
+    }
 
-    // TODO: It could be possible that just using underspecified masks produces a music score
-    // better than the ones generated using fully specified masks
-    assert!(
-        best_score_with_fully_specified_mask > underspecified_masks.iter().map(|(_, s)| *s).sum()
-    );
+    /* Perform the tree search */
 
-    best_score_with_fully_specified_mask
+    // Lookup table for which masks have been added at any point
+    let mut used_masks: Vec<usize> = Vec::new();
+    // Tracker for the best score found so far
+    let mut best_score_so_far = 0.0f32;
+    // Iterate through every node, and compute all the valid sets which contain it as the smallest
+    // indexed mask.  By the end, this will have enumerated all sets of compatible masks once and
+    // only once each
+    for i in 0..masks.len() {
+        // `best_score_tree_search` doesn't check if `i` is valid to insert, but this is fine
+        // because no masks are added yet so any mask is compatible with no masks.
+        best_score_tree_search(
+            i,
+            0.0,
+            &scores,
+            &next_masks,
+            &compatible_masks,
+            &mut used_masks,
+            &mut best_score_so_far,
+        );
+    }
+
+    // After the tree search, every compatible set of masks has been searched, so
+    // `best_score_so_far` will contain the best possible score for this segment
+    best_score_so_far
+}
+
+/// Perform DFS search over which sets of masks can be used simultaneously.  In order to only
+/// search each mask once, we only add masks in ascending order by index.  Once this function is
+/// called, it is a assumed that the `mask_ind` is valid
+fn best_score_tree_search(
+    // Info about this node
+    mask_ind: usize,
+    cumulative_score: f32,
+    // Persistent lookup tables
+    scores: &[f32],
+    next_masks: &[Vec<usize>],
+    compatible_masks: &HashSet<(usize, usize)>,
+    // Mutable state
+    used_masks: &mut Vec<usize>,
+    best_score_so_far: &mut f32,
+) {
+    // Firstly, mark this mask as used
+    used_masks.push(mask_ind);
+
+    // See if adding this mask generates a new high-score
+    let score = cumulative_score + scores[mask_ind];
+    *best_score_so_far = best_score_so_far.max(score);
+
+    // Try to add more masks that are compatible with this one
+    'next_mask_loop: for &new_mask_ind in &next_masks[mask_ind] {
+        // Check that this new mask is compatible with **all** the existing masks (we already know
+        // it's compatible with the most recently added mask, but compatibility isn't transiative
+        // so that isn't enough).
+        for m_ind in used_masks.iter() {
+            // Reject this node completely if any of the existing masks are incompatible
+            if !compatible_masks.contains(&(*m_ind, new_mask_ind)) {
+                continue 'next_mask_loop;
+            }
+        }
+        // If all the existing masks are compatible, then add this mask and keep searching
+        best_score_tree_search(
+            new_mask_ind,
+            score,
+            scores,
+            next_masks,
+            compatible_masks,
+            used_masks,
+            best_score_so_far,
+        );
+    }
+
+    // Mark this mask as unused once we return
+    used_masks.pop();
+}
+
+fn are_compatible(m1: &[(usize, Bell)], m2: &[(usize, Bell)]) -> bool {
+    // Two masks are compatible if and only if, for every (i, b) in m1, m2 doesn't put either a
+    // different bell in `i` or put `b` in a different place
+
+    for &(i, b) in m1 {
+        // Check that m2 doesn't put a different bell in place `i`
+        if !m2
+            .iter()
+            .find(|(i2, _)| i == *i2)
+            .map_or(true, |(_, b2)| b == *b2)
+        {
+            // If they disagree, then immediately return false
+            return false;
+        }
+        // Check that m1 doesn't put bell `b` in a different place
+        if !m2
+            .iter()
+            .find(|(_, b2)| b == *b2)
+            .map_or(true, |(i2, _)| i == *i2)
+        {
+            // If they disagree, then immediately return false
+            return false;
+        }
+    }
+    true
 }
 
 /// Combines rows and music patterns to generate a list of course head masks and their music
@@ -621,18 +718,20 @@ xxxx56xx: 8",
         method_pn: &str,
         pc_range: Range<usize>,
         tests: &[(&str, f32)],
+        exp_best_density: f32,
     ) {
         let meth = Method::with_lead_end(String::new(), &PnBlock::parse(method_pn, stage).unwrap());
 
         let first_lead_rows = meth.plain_course().into_rows();
 
-        let table = MusicTable::from_rows(
+        let (table, best_density) = MusicTable::from_rows(
             Stage::MAJOR,
             &tenors_together_fixed_bells(stage),
             &first_lead_rows[pc_range],
             &MusicPattern::runs_front_or_back(Stage::MAJOR, 4, 1.0),
         );
 
+        assert_eq!(best_density, exp_best_density);
         for &(row_rep, exp_score) in tests {
             assert_eq!(table.evaluate(&Row::parse(row_rep).unwrap()), exp_score);
         }
@@ -656,6 +755,7 @@ xxxx56xx: 8",
                 ("15243678", 0.0f32),
                 ("12364578", 0.0f32),
             ],
+            8.0,
         );
         // First 4 leads
         test_music_table(
@@ -673,6 +773,7 @@ xxxx56xx: 8",
                 ("15243678", 0.0f32),
                 ("12364578", 2.0f32),
             ],
+            16.0,
         );
     }
 }

@@ -75,8 +75,8 @@ impl Spec {
     ) -> Result<Self, PnBlockParseError> {
         Ok(Self {
             method: Method::with_lead_end(String::new(), &PnBlock::parse(pn, stage)?),
-            // Fix the treble and >=7th
             fixed_bells: tenors_together_fixed_bells(stage),
+            // fixed_bells: vec![Bell::TREBLE, Bell::tenor(stage).unwrap()],
             calls,
             length,
             shortlist_size,

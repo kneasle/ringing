@@ -86,12 +86,21 @@ mod methods {
             CallSpec::far(Stage::ROYAL),
         )
     }
+
+    pub fn bristol_s12() -> (Stage, &'static str, Vec<CallSpec>) {
+        (
+            Stage::MAXIMUS,
+            "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T",
+            CallSpec::near(Stage::MAXIMUS),
+        )
+    }
 }
 
 fn main() {
-    let (stage, pn, calls) = methods::yorkshire_s10();
+    let (stage, pn, calls) = methods::bristol_s10();
 
-    let spec = Spec::tenors_together_from_pn(stage, pn, calls, comp_engine::spec::QP, 10).unwrap();
+    let spec =
+        Spec::tenors_together_from_pn(stage, pn, calls, comp_engine::spec::HALF_PEAL, 10).unwrap();
 
     if SimdRow::are_cpu_features_enabled() {
         println!("Using SimdRow!");

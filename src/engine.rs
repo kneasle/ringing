@@ -104,6 +104,10 @@ pub trait Table<R: CompRow>: Debug {
     /// Tests a certain node for musicality
     fn music(&self, node: &Node<R, Self::Section>) -> f32;
 
+    /// Generate an upper bound for how much music can be generated in a given number of rows.
+    /// This **must** be an upper bound, or optimality is no longer guaranteed.
+    fn music_upper_bound(&self, num_rows: usize) -> f32;
+
     /* PROVIDED METHODS */
 
     /// The first [`Node`] of any composition specified by this `Table`
