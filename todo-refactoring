@@ -1,0 +1,3 @@
+- Only use `non_fixed_bells`
+- Make `Section` always be a newtype of `usize`
+- Switch to runtime SIMD

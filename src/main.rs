@@ -1,6 +1,6 @@
 #![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
-use comp_engine::spec::Spec;
+use comp_engine::spec::{Spec, PEAL};
 use itertools::Itertools;
 use proj_core::{Row, SimdRow, Stage};
 
@@ -99,8 +99,7 @@ mod methods {
 fn main() {
     let (stage, pn, calls) = methods::bristol_s10();
 
-    let spec =
-        Spec::tenors_together_from_pn(stage, pn, calls, comp_engine::spec::HALF_PEAL, 10).unwrap();
+    let spec = Spec::tenors_together_from_pn(stage, pn, calls, PEAL, 10).unwrap();
 
     if SimdRow::are_cpu_features_enabled() {
         println!("Using SimdRow!");

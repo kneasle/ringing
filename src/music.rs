@@ -221,14 +221,15 @@ impl MusicTable {
         ); */
 
         // Compute best possible music score from partitioned masks, and then take the max of these
-        let best_possible_score = masks_by_bell
-            .iter()
-            .map(|(_bell, masks)| best_music_score(&masks))
-            // We shouldn't be able to get a score of NaN, so if we do then panic
-            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
-            // If there are no course head masks, then no course heads produce music and this
-            // should have score 0
-            .unwrap_or(0.0);
+        let best_possible_score = guaranteed_music
+            + masks_by_bell
+                .iter()
+                .map(|(_bell, masks)| best_music_score(&masks))
+                // We shouldn't be able to get a score of NaN, so if we do then panic
+                .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
+                // If there are no course head masks, then no course heads produce music and this
+                // should have score 0
+                .unwrap_or(0.0);
 
         let max_pivot_bell_index = masks_by_bell.keys().map(|b| b.index()).max().unwrap_or(0);
         // The `+ 1` here is necessary to make sure that the last entry in `partition_table` has

@@ -97,7 +97,10 @@ fn main() {
             .filter(|(_, s, _)| *s != worst_comp_score)
         {
             if non_worst_comp_set.iter().find(|c| *c == exp_comp).is_none() {
-                error_messages.push(format!("Didn't find comp '{}'", exp_comp.2));
+                error_messages.push(format!(
+                    "Didn't find comp '{}' (score {})",
+                    exp_comp.2, exp_comp.1
+                ));
             }
         }
 

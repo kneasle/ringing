@@ -3,11 +3,14 @@ use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
     ops::{Range, RangeInclusive},
+    thread,
+    time::Duration,
 };
 
 use crate::set::NodeSet;
 use itertools::Itertools;
 use proj_core::{Row, RowTrait, SimdRow, Stage};
+use separator::Separatable;
 use shortlist::Shortlist;
 
 /// They type of [`Set`] that will be used by [`Engine`].  Generally [`Vec`] outperforms a
@@ -20,7 +23,7 @@ type _Set<R, S> = crate::set::SplitVecSet<R, S>;
 
 const DBG_PRINT: bool = false;
 const DBG_NODE_TABLE: bool = false;
-const PRINT_COMPS: bool = false;
+const PRINT_COMPS: bool = true;
 
 /// Acts the same as `println!` if `DBG_PRINT = true`, but otherwise gets removed by the compiler
 macro_rules! dbg_println {
@@ -42,7 +45,7 @@ macro_rules! dbg_print {
 
 /// Trait bound for what types can be used as course heads in a composing engine.  It is
 /// implemented for [`Row`] and [`SimdRow`].
-pub trait CompRow: RowTrait {
+pub trait CompRow: RowTrait + Send + Sync {
     /// Pack bytes representing the [`Bell`]s of this `Row` into a 128 bit number, panicking if the
     /// [`Stage`] as greater than 16.
     fn pack_u128(&self) -> u128;
@@ -67,9 +70,9 @@ impl CompRow for SimdRow {
 
 /// Trait that describes the smallest atomic chunk of a composition.  This trait is used by the
 /// [`Engine`] to customise generic tree search.
-pub trait Table<R: CompRow>: Debug {
-    type Section: Into<usize> + Display + Debug + Copy + Eq + Hash;
-    type Call: Copy + Debug + Display;
+pub trait Table<R: CompRow>: Debug + Clone {
+    type Section: Into<usize> + Display + Debug + Copy + Eq + Hash + Send + Sync;
+    type Call: Copy + Debug + Display + Send + Sync;
 
     /* STATIC METHODS */
 
@@ -106,7 +109,7 @@ pub trait Table<R: CompRow>: Debug {
 
     /// Generate an upper bound for how much music can be generated in a given number of rows.
     /// This **must** be an upper bound, or optimality is no longer guaranteed.
-    fn music_upper_bound(&self, num_rows: usize) -> f32;
+    fn music_upper_bound(&self, section: Self::Section, num_rows: usize) -> f32;
 
     /* PROVIDED METHODS */
 
@@ -118,7 +121,7 @@ pub trait Table<R: CompRow>: Debug {
     /// Generate compositions according to this `Table`
     fn compose(&self, desired_len: RangeInclusive<usize>, shortlist_size: usize) -> Results<R, Self>
     where
-        Self: Sized,
+        Self: Sized + Send + Sync,
     {
         let half_open_range = *desired_len.start()..*desired_len.end() + 1;
         Engine::<R, Self>::new(self, half_open_range, shortlist_size).compose()
@@ -202,20 +205,29 @@ impl<R: CompRow, T: Table<R>> Results<R, T> {
             comps_found: 0,
         }
     }
+
+    fn reset(&mut self) {
+        self.comps.clear();
+        self.nodes_expanded = 0;
+        self.comps_found = 0;
+    }
 }
 
 /// All the persistent data required to generate a composition
 #[derive(Debug, Clone)]
 pub struct Engine<'t, R: CompRow, T: Table<R>> {
-    // Static data
+    /* Static data */
     table: &'t T,
     desired_len: Range<usize>,
+    /// The engine won't produce any comps with a music score worse than this.  It will use this
+    /// to perform a large amount of pruning.
+    music_target: f32,
     // Dynamic data (history of the current comp)
     nodes: _Set<R, T::Section>,
     calls: Vec<T::Call>,
-    accumulated_music: f32,
     // Dynamic data (stats or best comps)
     results: Results<R, T>,
+    shortlist_size: usize,
 }
 
 impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
@@ -223,28 +235,71 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
         Engine {
             table,
             desired_len,
+            music_target: 0.0f32,
             nodes: _Set::empty(T::num_sections(table)),
             calls: Vec::new(),
-            accumulated_music: 0.0,
             results: Results::new(shortlist_size),
+            shortlist_size,
         }
     }
 
-    fn compose(mut self) -> Results<R, T> {
-        // Run the composing algorithm
-        self.recursive_compose(self.table.start_node(), 0, 0);
-        // Return the results
-        self.results
+    fn compose(mut self) -> Results<R, T>
+    where
+        T: Sync + Send,
+        R: Sync + Send,
+    {
+        // Start by setting the music target to the table's upper bound from rounds (i.e. this is
+        // guaranteed to be at least as good as the perfect composition)
+        let start_music_target = self
+            .table
+            .music_upper_bound(self.table.start_node().section, self.desired_len.end);
+        let num_threads = 11;
+        let desc_step = 10.0f32;
+
+        let threads = (0..num_threads)
+            .map(|i| {
+                let mut new_engine = self.clone();
+                new_engine.music_target = start_music_target - i as f32 * desc_step;
+                thread::spawn(move || {
+                    new_engine.parallel_compose(i, num_threads as f32 * desc_step)
+                });
+            })
+            .collect_vec();
+
+        // Sleep the main thread forever
+        loop {
+            thread::sleep(Duration::new(60, 0));
+        }
+    }
+
+    fn parallel_compose(mut self, id: usize, music_decrease_step: f32) -> Results<R, T> {
+        loop {
+            println!("[{}] Targeting score {}", id, self.music_target);
+            // Run the composing algorithm
+            self.recursive_compose(self.table.start_node().clone(), 0, 0, 0.0);
+            self.music_target -= music_decrease_step;
+            // Print out the number of nodes expanded
+            println!(
+                "[{}] >> {:>15} nodes expanded... ",
+                id,
+                self.results.nodes_expanded.separated_string()
+            );
+            // If we've finished, then return the results
+            if self.music_target <= 0.0 || self.results.comps.len() >= self.shortlist_size {
+                return self.results;
+            }
+            self.results.reset();
+        }
     }
 
     #[cold]
     #[inline(never)]
-    fn save_comp(&mut self, len: usize) {
+    fn save_comp(&mut self, len: usize, score: f32) {
         if PRINT_COMPS {
             println!(
                 "FOUND COMP! (len {}, music {}): {}",
                 len,
-                self.accumulated_music,
+                score,
                 self.table.comp_string(&self.calls)
             );
         }
@@ -253,11 +308,17 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
         self.results.comps.push(Comp {
             calls: self.calls.clone(),
             length: len,
-            score: self.accumulated_music,
+            score,
         });
     }
 
-    fn recursive_compose(&mut self, node: Node<R, T::Section>, len: usize, depth: usize) {
+    fn recursive_compose(
+        &mut self,
+        node: Node<R, T::Section>,
+        len: usize,
+        depth: usize,
+        score: f32,
+    ) {
         // PERF: Move these checks into the expansion loop, since we're always doing an unnecessary
         // function call before the checks
         dbg_print!(
@@ -271,7 +332,7 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
 
         // Check if we've found a valid composition
         if T::is_end(&node) && self.desired_len.contains(&len) {
-            self.save_comp(len);
+            self.save_comp(len, score);
             return;
         }
 
@@ -296,8 +357,16 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
 
         // We cache the music because adding and subtracting the music score isn't guaranteed to
         // give the same value when using floats
-        let last_music_score = self.accumulated_music;
-        self.accumulated_music += self.table.music(&node);
+        let new_score = score + self.table.music(&node);
+
+        // Check if this node causes the music prediction to drop below the target
+        let music_prediction = new_score
+            + self
+                .table
+                .music_upper_bound(node.section, self.desired_len.end - len);
+        if music_prediction < self.music_target {
+            return;
+        }
 
         dbg_println!("It isn't false!");
 
@@ -322,6 +391,7 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
                 Node::new(unsafe { node.row.mul_unchecked(transposition) }, *section),
                 len + self.table.length(node.section),
                 depth + 1,
+                new_score,
             );
 
             // Pop the call that we've explored
@@ -329,7 +399,6 @@ impl<'t, R: CompRow, T: Table<R>> Engine<'t, R, T> {
         }
 
         // Return the engine to the state before this node was added
-        self.accumulated_music = last_music_score;
         self.nodes.remove_last(&node);
     }
 }
