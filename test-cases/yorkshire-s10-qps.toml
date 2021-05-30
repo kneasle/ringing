@@ -1,0 +1,20 @@
+length = "QP"
+num_comps = 16
+base_calls = "near"
+
+[method]
+name = "Yorkshire"
+stage = 10
+place_notation = "x30x14x50x16x1270x38x14x50x16x90,12"
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+
+[[music]]
+run_length = 4
+weight = 1
+
+# [[music]]
+# run_length = 5
+# weight = 1
