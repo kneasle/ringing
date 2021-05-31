@@ -12,8 +12,9 @@ use self::{
 mod calls;
 mod length;
 
-/// The specification for a set of compositions which Monument should find.  This is parsed directly
-/// from the `TOML`
+/// The specification for a set of compositions which Monument should find.  The [`Spec`] type is
+/// parsed directly from the `TOML`, and needs additional processing before it can be fed into the
+/// IDA* engine.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Spec {

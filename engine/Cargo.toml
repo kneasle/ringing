@@ -1,0 +1,9 @@
+[package]
+name = "engine"
+version = "0.1.0"
+authors = ["Ben White-Horne <kneasle@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+proj_core = { path = "../../jigsaw/core/", features = ["serde"] }
+itertools = "0.10"
