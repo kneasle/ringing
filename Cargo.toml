@@ -1,2 +1,5 @@
 [workspace]
 members = [ "monument", "engine" ]
+
+[profile.dev]
+opt-level = 3

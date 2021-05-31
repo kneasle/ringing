@@ -1,0 +1,33 @@
+# This file specifies what arguments/structures are possible in which sections of Monument's input
+# format
+
+length = "peal"
+# length = 5040
+# length = { min = 5040, max = 5040 }
+num_comps = 10
+
+# calls = "near"
+# calls = "far"
+base_calls = "near"
+
+[method]
+place_notation = "-50-14.50-50.36.14-70.58.16-16.70-16-10,10"
+name = "Bristol"
+stage = "Royal"
+# stage = "royal"
+# stage = 10
+#(opt) lead_locations = { 0 = "LE", 20 = "HL" }
+
+[[calls]]
+place_notation = "16"
+symbol = "x"
+#(opt) lead_location = "LE"
+#(opt) calling_positions = "LIBFVXSMWH"
+
+[[music]]
+run_length = 4
+weight = 1
+
+[[music]]
+pattern = "*7x8x9x0"
+weight = 3

@@ -13,8 +13,9 @@ mod calls;
 mod length;
 
 /// The specification for a set of compositions which Monument should find.  The [`Spec`] type is
-/// parsed directly from the `TOML`, and needs additional processing before it can be fed into the
-/// IDA* engine.
+/// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
+/// file.  This requires additional processing and verification before it can be fed into the IDA*
+/// engine.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Spec {
@@ -24,6 +25,7 @@ pub struct Spec {
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
     num_comps: usize,
+    /// The call type specified by the `base_calls` argument
     base_calls: Option<BaseCalls>,
 
     /// The [`Method`] who's compositions we are after
