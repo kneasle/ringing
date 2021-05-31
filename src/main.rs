@@ -1,4 +1,4 @@
-use zimmer::spec::Spec;
+use monument::spec::Spec;
 
 fn main() {
     let spec_toml = std::fs::read_to_string("test-cases/bristol-s10-lb4s.toml").unwrap();

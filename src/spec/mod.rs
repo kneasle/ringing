@@ -12,7 +12,7 @@ use self::{
 mod calls;
 mod length;
 
-/// The specification for a set of compositions which Zimmer should find.  This is parsed directly
+/// The specification for a set of compositions which Monument should find.  This is parsed directly
 /// from the `TOML`
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -21,7 +21,7 @@ pub struct Spec {
     non_fixed_bells: Option<Vec<Bell>>,
     /// The range of lengths of composition which are allowed
     length: Length,
-    /// Zimmer won't stop until it generates the `num_comps` best compositions
+    /// Monument won't stop until it generates the `num_comps` best compositions
     num_comps: usize,
     base_calls: Option<BaseCalls>,
 
