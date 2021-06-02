@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    num::ParseIntError,
-};
+use std::{collections::HashMap, num::ParseIntError};
 
 use engine::Engine;
 use hmap::hmap;
@@ -47,7 +44,7 @@ pub struct Spec {
 
 impl Spec {
     pub fn create_engine(&self) -> Result<Engine, SpecConvertError> {
-        let (method, lead_locations) = self.method.gen_method()?;
+        let method = self.method.gen_method()?;
         let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
 
         Ok(Engine::single_method(
@@ -83,11 +80,10 @@ pub struct MethodSpec {
 }
 
 impl MethodSpec {
-    fn gen_method(&self) -> Result<(Method, HashSet<&'_ str>), SpecConvertError<'_>> {
+    fn gen_method(&self) -> Result<Method, SpecConvertError<'_>> {
         let mut m =
             Method::from_place_not_string(self.name.clone(), self.stage, &self.place_notation)
                 .map_err(SpecConvertError::MethodPnParse)?;
-        let mut lead_locations: HashSet<&str> = HashSet::new();
         for (index_str, name) in &self.lead_locations {
             let index = index_str
                 .parse::<isize>()
@@ -96,9 +92,8 @@ impl MethodSpec {
             let wrapped_index = (index % lead_len) + lead_len % lead_len;
             // This cast is OK because we used % twice to guarantee a positive index
             m.set_label(wrapped_index as usize, Some(name.clone()));
-            lead_locations.insert(&name);
         }
-        Ok((m, lead_locations))
+        Ok(m)
     }
 }
 
