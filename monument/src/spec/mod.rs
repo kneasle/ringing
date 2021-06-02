@@ -1,11 +1,19 @@
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    num::ParseIntError,
+};
 
+use engine::Engine;
 use hmap::hmap;
-use proj_core::{method::LABEL_LEAD_END, Bell, Stage};
+use proj_core::{
+    method::LABEL_LEAD_END,
+    place_not::{self, PnBlockParseError},
+    Bell, Method, Stage,
+};
 use serde_derive::Deserialize;
 
 use self::{
-    calls::{BaseCalls, Calls},
+    calls::{BaseCalls, SpecificCall},
     length::Length,
 };
 
@@ -31,9 +39,33 @@ pub struct Spec {
     /// The [`Method`] who's compositions we are after
     method: MethodSpec,
     /// Which calls to use in the compositions
-    calls: Calls,
+    #[serde(default)]
+    calls: Vec<SpecificCall>,
     /// Which music to use
     music: Vec<MusicSpec>,
+}
+
+impl Spec {
+    pub fn create_engine(&self) -> Result<Engine, SpecConvertError> {
+        let (method, lead_locations) = self.method.gen_method()?;
+        let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
+
+        Ok(Engine::single_method(
+            self.length.range.clone(),
+            self.num_comps,
+            method,
+            calls,
+        ))
+    }
+}
+
+/// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
+#[derive(Debug, Clone)]
+pub enum SpecConvertError<'s> {
+    NoCalls,
+    CallPnParse(&'s str, place_not::ParseError),
+    MethodPnParse(PnBlockParseError),
+    LeadLocationIndex(&'s str, ParseIntError),
 }
 
 /// The contents of the `[method]` header in the input TOML file
@@ -50,6 +82,26 @@ pub struct MethodSpec {
     lead_locations: HashMap<String, String>,
 }
 
+impl MethodSpec {
+    fn gen_method(&self) -> Result<(Method, HashSet<&'_ str>), SpecConvertError<'_>> {
+        let mut m =
+            Method::from_place_not_string(self.name.clone(), self.stage, &self.place_notation)
+                .map_err(SpecConvertError::MethodPnParse)?;
+        let mut lead_locations: HashSet<&str> = HashSet::new();
+        for (index_str, name) in &self.lead_locations {
+            let index = index_str
+                .parse::<isize>()
+                .map_err(|e| SpecConvertError::LeadLocationIndex(&index_str, e))?;
+            let lead_len = m.lead_len() as isize;
+            let wrapped_index = (index % lead_len) + lead_len % lead_len;
+            // This cast is OK because we used % twice to guarantee a positive index
+            m.set_label(wrapped_index as usize, Some(name.clone()));
+            lead_locations.insert(&name);
+        }
+        Ok((m, lead_locations))
+    }
+}
+
 /* Music */
 
 /// The specification for one type of music
@@ -59,12 +111,24 @@ pub enum MusicSpec {
     Runs {
         #[serde(rename = "run_length")]
         length: usize,
+        #[serde(default = "get_one")]
         weight: f32,
     },
     Pattern {
         pattern: String,
+        #[serde(default = "get_one")]
         weight: f32,
     },
+    Patterns {
+        patterns: Vec<String>,
+        #[serde(default = "get_one")]
+        weight: f32,
+    },
+}
+
+#[inline(always)]
+fn get_one() -> f32 {
+    1.0
 }
 
 /* Deserialization helpers */

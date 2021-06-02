@@ -1,7 +1,7 @@
 [general]
 length = { min = 1250, max = 1440 }
 num_comps = 30
-calls = "near"
+base_calls = "near"
 
 [method]
 name = "Bristol"
@@ -10,4 +10,3 @@ place_notation = "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T"
 
 [[music]]
 run_length = 4
-weight = 1

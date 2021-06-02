@@ -1,17 +1,49 @@
-use std::fmt::Formatter;
+use engine::single_method::CallSpec;
+use proj_core::{method::LABEL_LEAD_END, PlaceNot, Stage};
+use serde::{de::Error, Deserialize, Deserializer};
 
-use proj_core::method::LABEL_LEAD_END;
-use serde::de::Error;
-use serde::de::SeqAccess;
-use serde::de::Visitor;
-use serde::Deserialize;
-use serde::Deserializer;
+use super::SpecConvertError;
 
 /// The values of the `base_calls` attribute
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BaseCalls {
     Near,
     Far,
+}
+
+impl BaseCalls {
+    pub(crate) fn to_call_specs(self, stage: Stage) -> Vec<CallSpec> {
+        let num_bells = stage.as_usize();
+        // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
+        // generate comps on fewer than 8 bells, but we should still check because the alternative
+        // is UB
+        assert!(num_bells >= 4);
+
+        match self {
+            BaseCalls::Near => vec![
+                CallSpec::lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
+                CallSpec::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
+            ],
+            BaseCalls::Far => {
+                vec![
+                    // The unsafety here is OK, because the slice is always sorted (unless stage <
+                    // MINIMUS, in which case the assert trips)
+                    CallSpec::lead_end_bob(unsafe {
+                        PlaceNot::from_sorted_slice(&[0, num_bells - 3], stage).unwrap()
+                    }),
+                    // The unsafety here is OK, because the slice is always sorted (unless stage <
+                    // MINIMUS, in which case the assert trips)
+                    CallSpec::lead_end_single(unsafe {
+                        PlaceNot::from_sorted_slice(
+                            &[0, num_bells - 3, num_bells - 2, num_bells - 1],
+                            stage,
+                        )
+                        .unwrap()
+                    }),
+                ]
+            }
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for BaseCalls {
@@ -29,67 +61,51 @@ impl<'de> Deserialize<'de> for BaseCalls {
     }
 }
 
-/// The values for the `calls` attribute
-#[derive(Debug, Clone)]
-pub enum Calls {
-    Base(BaseCalls),
-    Specific(Vec<CallSpec>),
-}
-
-struct CallsVisitor;
-
-impl<'de> Visitor<'de> for CallsVisitor {
-    type Value = Calls;
-
-    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-        formatter.write_str("`near` or `far`")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        let lower_str = v.to_lowercase();
-        Ok(match lower_str.as_str() {
-            "near" => Calls::Base(BaseCalls::Near),
-            "far" => Calls::Base(BaseCalls::Far),
-            _ => return Err(E::custom(format!("unknown call type '{}'", v))),
-        })
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let mut calls = Vec::with_capacity(seq.size_hint().unwrap_or(10));
-        while let Some(e) = seq.next_element::<CallSpec>()? {
-            calls.push(e);
-        }
-        Ok(Calls::Specific(calls))
-    }
-}
-
-impl<'de> Deserialize<'de> for Calls {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_any(CallsVisitor)
-    }
-}
-
 /// The specification of a single call type used in a composition.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct CallSpec {
+pub struct SpecificCall {
     place_notation: String,
     symbol: String,
+    debug_symbol: Option<String>,
     #[serde(default = "lead_end")]
     lead_location: String,
-    calling_positions: Option<String>,
+    calling_positions: Option<Vec<String>>,
+}
+
+impl SpecificCall {
+    fn to_call_spec(&self, stage: Stage) -> Result<CallSpec, SpecConvertError> {
+        Ok(CallSpec::new(
+            self.symbol.clone(),
+            self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
+            self.lead_location.clone(),
+            PlaceNot::parse(&self.place_notation, stage)
+                .map_err(|e| SpecConvertError::CallPnParse(&self.place_notation, e))?,
+            self.calling_positions.clone(),
+        ))
+    }
 }
 
 #[inline(always)]
 fn lead_end() -> String {
     LABEL_LEAD_END.to_owned()
+}
+
+pub fn gen_calls<'s>(
+    stage: Stage,
+    base_calls: Option<&'s BaseCalls>,
+    calls: &'s [SpecificCall],
+) -> Result<Vec<CallSpec>, SpecConvertError<'s>> {
+    // Check if the user hasn't specified any calls
+    if base_calls.is_none() && calls.is_empty() {
+        return Err(SpecConvertError::NoCalls);
+    }
+
+    // Expand base calls into `CallSpec`s
+    let mut call_specs = base_calls.map_or_else(Vec::new, |bc| bc.to_call_specs(stage));
+    for specific_call in calls {
+        call_specs.push(specific_call.to_call_spec(stage)?);
+    }
+
+    Ok(call_specs)
 }

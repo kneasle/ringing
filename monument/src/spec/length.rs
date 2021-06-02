@@ -18,7 +18,7 @@ pub const PEAL: RangeInclusive<usize> = 5000..=5200;
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 pub(super) struct Length {
-    range: Range<usize>,
+    pub(super) range: Range<usize>,
 }
 
 // Convert Length to a ranges

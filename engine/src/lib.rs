@@ -1,6 +1,9 @@
 use std::ops::Range;
 
-use proj_core::Row;
+use proj_core::{Method, Row};
+use single_method::{single_method_layout, CallSpec};
+
+pub mod single_method;
 
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -16,17 +19,26 @@ struct Table {
 /// A struct to hold compiled data required for a composition to be generated
 #[derive(Debug, Clone)]
 pub struct Engine {
-    table: Table,
+    len_range: Range<usize>,
+    num_comps: usize,
 }
 
 impl Engine {
-    /// Creates a new `Engine` according to a map of course sections
-    pub fn new(spec: Spec) -> Self {
-        let table = Table {
-            len_range: spec.len_range,
-        };
+    pub fn from_layout(len_range: Range<usize>, num_comps: usize, layout: Layout) -> Self {
+        Self {
+            len_range,
+            num_comps,
+        }
+    }
 
-        Engine { table }
+    pub fn single_method(
+        len_range: Range<usize>,
+        num_comps: usize,
+        method: Method,
+        calls: Vec<CallSpec>,
+    ) -> Self {
+        let layout = single_method_layout(method, calls);
+        Self::from_layout(len_range, num_comps, layout)
     }
 }
 
@@ -40,8 +52,11 @@ pub struct Spec {
     pub len_range: Range<usize>,
     /// Monument will generate this many best compositions
     pub num_comps: usize,
+    pub layout: Layout,
+}
 
-    /* COURSE LAYOUT */
+#[derive(Debug, Clone)]
+pub struct Layout {
     /// The rows contained in `(<rounds>, i)` will be in `segment_rows[i]`.  These are usually
     /// ranges of the plain course of a single method, but could contain the plain courses of
     /// multiple methods (in the case of spliced).  If a segment contains rounds, it will be
@@ -51,13 +66,12 @@ pub struct Spec {
     pub segment_rows: Vec<Vec<Row>>,
     /// Calls which connect pairs of segments together (the decision not to make a call is
     /// represented here as a `plain` call)
-    pub calls: Vec<CallSpec>,
-    /* SCORING (todo) */
+    pub calls: Vec<SegmentLink>,
 }
 
 /// The specification of the effect of a call at a given location in the course.
 #[derive(Debug, Clone)]
-pub struct CallSpec {
+pub struct SegmentLink {
     pub display_name: String,
     pub debug_name: String,
     pub start_segment: usize,

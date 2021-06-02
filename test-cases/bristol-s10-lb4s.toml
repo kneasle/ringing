@@ -1,6 +1,6 @@
 length = 5040
 num_comps = 10
-calls = "far"
+base_calls = "far"
 
 [method]
 place_notation = "-50-14.50-50.36.14-70.58.16-16.70-16-10,10"
@@ -9,4 +9,3 @@ stage = "Royal"
 
 [[music]]
 run_length = 4
-weight = 1
