@@ -1,7 +1,7 @@
 use std::ops::Range;
 
-use proj_core::{Method, Row};
-use single_method::{single_method_layout, CallSpec};
+use proj_core::{Bell, Method, Row};
+use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 pub mod single_method;
 
@@ -34,11 +34,12 @@ impl Engine {
     pub fn single_method(
         len_range: Range<usize>,
         num_comps: usize,
-        method: Method,
-        calls: Vec<CallSpec>,
-    ) -> Self {
-        let layout = single_method_layout(method, calls);
-        Self::from_layout(len_range, num_comps, layout)
+        method: &Method,
+        calls: &[CallSpec],
+        non_fixed_bells: &[Bell],
+    ) -> Result<Self, SingleMethodError> {
+        let layout = single_method_layout(method, calls, non_fixed_bells);
+        Ok(Self::from_layout(len_range, num_comps, layout?))
     }
 }
 
@@ -69,7 +70,8 @@ pub struct Layout {
     pub calls: Vec<SegmentLink>,
 }
 
-/// The specification of the effect of a call at a given location in the course.
+/// A structure representing the link between two course segments.  These are usually calls, but
+/// can also be plain lead-ends or possibly even method splices.
 #[derive(Debug, Clone)]
 pub struct SegmentLink {
     pub display_name: String,

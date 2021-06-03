@@ -1,7 +1,8 @@
 use std::{collections::HashMap, num::ParseIntError};
 
-use engine::Engine;
+use engine::{single_method::SingleMethodError, Engine};
 use hmap::hmap;
+use itertools::Itertools;
 use proj_core::{
     method::LABEL_LEAD_END,
     place_not::{self, PnBlockParseError},
@@ -46,14 +47,28 @@ impl Spec {
     pub fn create_engine(&self) -> Result<Engine, SpecConvertError> {
         let method = self.method.gen_method()?;
         let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
+        let non_fixed_bells = self.non_fixed_bells.as_ref().map_or_else(
+            || tenors_together_non_fixed_bells(self.method.stage),
+            Vec::clone,
+        );
 
         Ok(Engine::single_method(
             self.length.range.clone(),
             self.num_comps,
-            method,
-            calls,
-        ))
+            &method,
+            &calls,
+            &non_fixed_bells,
+        )
+        .map_err(SpecConvertError::EngineError)?)
     }
+}
+
+fn tenors_together_non_fixed_bells(stage: Stage) -> Vec<Bell> {
+    // By default, fix the treble and >=7.  Also, make sure to always fix the tenor even on Minor
+    // or lower.  Note that we're using 1-indexed bell 'numbers' here
+    (2..=(stage.as_usize() - 1).min(6))
+        .map(|num| Bell::from_number(num).unwrap())
+        .collect_vec()
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
@@ -63,6 +78,7 @@ pub enum SpecConvertError<'s> {
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
+    EngineError(SingleMethodError),
 }
 
 /// The contents of the `[method]` header in the input TOML file
@@ -121,12 +137,12 @@ pub enum MusicSpec {
     },
 }
 
+/* Deserialization helpers */
+
 #[inline(always)]
 fn get_one() -> f32 {
     1.0
 }
-
-/* Deserialization helpers */
 
 /// By default, add a lead location "LE" at the lead end (i.e. when the place notation repeats).
 #[inline]
