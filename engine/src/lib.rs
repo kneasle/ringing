@@ -44,19 +44,6 @@ impl Engine {
     }
 }
 
-/// A generic specification for a composition that [`Engine`] can generate.  This is set up so that
-/// spliced compositions would also work (hence we aren't taking a single method).  This is
-/// intended to be only way to created `Engine`s
-#[derive(Debug, Clone)]
-pub struct Spec {
-    /* GENERAL */
-    /// What [`Range`] of lengths can the resulting compositions have
-    pub len_range: Range<usize>,
-    /// Monument will generate this many best compositions
-    pub num_comps: usize,
-    pub layout: Layout,
-}
-
 #[derive(Debug, Clone)]
 pub struct Layout {
     /// The rows contained in `(<rounds>, i)` will be in `segment_rows[i]`.  These are usually
