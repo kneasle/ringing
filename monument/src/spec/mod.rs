@@ -56,6 +56,10 @@ impl Spec {
             self.length.range.clone(),
             self.num_comps,
             &method,
+            // For the time being, just use the default plain calling positions.  These will be
+            // wrong for anything other than lead end calls, but are only used for debugging so
+            // that's probably fine.  TODO: Make these specifiable
+            None,
             &calls,
             &non_fixed_bells,
         )

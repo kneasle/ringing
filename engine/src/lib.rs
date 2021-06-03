@@ -8,7 +8,7 @@ pub mod single_method;
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
-struct Segment(usize);
+struct SegmentID(usize);
 
 /// A static, immutable look-up table, used by IDA* to generate compositions
 #[derive(Debug, Clone)]
@@ -35,10 +35,11 @@ impl Engine {
         len_range: Range<usize>,
         num_comps: usize,
         method: &Method,
+        plain_lead_positions: Option<Vec<String>>,
         calls: &[CallSpec],
         non_fixed_bells: &[Bell],
     ) -> Result<Self, SingleMethodError> {
-        let layout = single_method_layout(method, calls, non_fixed_bells);
+        let layout = single_method_layout(method, plain_lead_positions, calls, non_fixed_bells);
         Ok(Self::from_layout(len_range, num_comps, layout?))
     }
 }
@@ -62,12 +63,18 @@ pub struct Layout {
     /// ranges of the plain course of a single method, but could contain the plain courses of
     /// multiple methods (in the case of spliced).  If a segment contains rounds, it will be
     /// assumed that it is a possible starting point for the composition.
+    pub segments: Vec<Segment>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Segment {
+    /// The [`Row`]s contained in this `Segment`
     // TODO: This should probably be `proj_core::Block`, but we first have to relax the restriction
     // that blocks must begin at rounds
-    pub segment_rows: Vec<Vec<Row>>,
-    /// Calls which connect pairs of segments together (the decision not to make a call is
-    /// represented here as a `plain` call)
-    pub calls: Vec<SegmentLink>,
+    pub rows: Vec<Row>,
+    /// The ways that this `Segment` can be lead to other `Segment`s (in possibly different
+    /// courses).
+    pub links: Vec<SegmentLink>,
 }
 
 /// A structure representing the link between two course segments.  These are usually calls, but
@@ -76,7 +83,6 @@ pub struct Layout {
 pub struct SegmentLink {
     pub display_name: String,
     pub debug_name: String,
-    pub start_segment: usize,
     pub end_segment: usize,
     pub transposition: Row,
 }
