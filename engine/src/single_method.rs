@@ -350,15 +350,15 @@ fn default_plain_lead_positions(stage: Stage) -> Vec<String> {
 
     // Middles are only defined on >= 7 bells
     if stage >= Stage::TRIPLES {
-        replace_mwh!(3, 'M');
+        replace_mwh!(if stage.is_even() { 3 } else { 2 }, 'M');
     }
     // Wrongs are only defined on >= 6 bells
     if stage >= Stage::MINOR {
-        replace_mwh!(0, 'W');
+        replace_mwh!(if stage.is_even() { 0 } else { 1 }, 'W');
     }
     // Homes are defined on >= 5 bells
-    if stage >= Stage::MINOR {
-        replace_mwh!(1, 'H');
+    if stage >= Stage::DOUBLES {
+        replace_mwh!(if stage.is_even() { 1 } else { 0 }, 'H');
     }
 
     positions
