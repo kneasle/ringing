@@ -3,6 +3,7 @@ use std::ops::Range;
 use proj_core::{Bell, Method, Row};
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
+pub mod fast_row;
 pub mod single_method;
 
 /// A newtyped integer which is used to refer to a specific composition segment
@@ -10,40 +11,58 @@ pub mod single_method;
 #[repr(transparent)]
 struct SegmentID(usize);
 
-/// A static, immutable look-up table, used by IDA* to generate compositions
-#[derive(Debug, Clone)]
-struct Table {
-    len_range: Range<usize>,
-}
-
 /// A struct to hold compiled data required for a composition to be generated
 #[derive(Debug, Clone)]
 pub struct Engine {
+    config: Config,
     len_range: Range<usize>,
-    num_comps: usize,
 }
 
 impl Engine {
-    pub fn from_layout(len_range: Range<usize>, num_comps: usize, layout: Layout) -> Self {
-        Self {
-            len_range,
-            num_comps,
-        }
+    pub fn from_layout(config: Config, len_range: Range<usize>, layout: Layout) -> Self {
+        Self { len_range, config }
     }
 
     pub fn single_method(
+        config: Config,
         len_range: Range<usize>,
-        num_comps: usize,
         method: &Method,
         plain_lead_positions: Option<Vec<String>>,
         calls: &[CallSpec],
         non_fixed_bells: &[Bell],
     ) -> Result<Self, SingleMethodError> {
         let layout = single_method_layout(method, plain_lead_positions, calls, non_fixed_bells);
-        Ok(Self::from_layout(len_range, num_comps, layout?))
+        Ok(Self::from_layout(config, len_range, layout?))
     }
 }
 
+/// General configuration parameters for an [`Engine`].  These do not form parts of the composition
+/// specification, instead changing how the [`Engine`] operates.
+#[derive(Debug, Clone)]
+pub struct Config {
+    /// The number of compositions that the [`Engine`] will generate before terminating.  These
+    /// `num_comps` compositions are guaranteed to be optimal.
+    pub num_comps: usize,
+    /// How many threads will be used to generate the best composition.  If set to `None`, this
+    /// will use the number of available CPU cores.
+    pub num_threads: Option<usize>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            num_comps: 1,
+            num_threads: None,
+        }
+    }
+}
+
+/// A mid-level representation of the course layout of a composition.  In this representation, a
+/// layout is a set of [`Segment`]s, which are sequences of [`Row`]s combined with links to the
+/// [`Segment`]s which can come after them.  Every useful composition structure can be represented
+/// like this, but it is not efficient to use [`Layout`]s directly in the composing loop.
+/// Therefore, [`Engine`] compiles this down into a compact representation which can be efficiently
+/// queried.
 #[derive(Debug, Clone)]
 pub struct Layout {
     /// The rows contained in `(<rounds>, i)` will be in `segment_rows[i]`.  These are usually

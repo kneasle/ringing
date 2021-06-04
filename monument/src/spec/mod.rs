@@ -1,6 +1,6 @@
 use std::{collections::HashMap, num::ParseIntError};
 
-use engine::{single_method::SingleMethodError, Engine};
+use engine::{single_method::SingleMethodError, Config, Engine};
 use hmap::hmap;
 use itertools::Itertools;
 use proj_core::{
@@ -53,8 +53,11 @@ impl Spec {
         );
 
         Ok(Engine::single_method(
+            Config {
+                num_comps: self.num_comps,
+                ..Config::default()
+            },
             self.length.range.clone(),
-            self.num_comps,
             &method,
             // For the time being, just use the default plain calling positions.  These will be
             // wrong for anything other than lead end calls, but are only used for debugging so

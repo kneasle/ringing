@@ -5,6 +5,7 @@ use proj_core::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, S
 
 use super::{Layout, Segment, SegmentLink};
 
+/// Generates a [`Layout`] for a single [`Method`]
 pub fn single_method_layout(
     method: &Method,
     plain_lead_positions: Option<Vec<String>>,
