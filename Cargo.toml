@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2018"
 description = "Fast and idiomatic primitives for Change Ringing."
+license = "MIT"
+repository = "https://github.com/kneasle/bellframe"
 
 [features]
 serde = ["serde_crate"]
