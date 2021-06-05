@@ -1,5 +1,5 @@
+use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use engine::single_method::CallSpec;
-use proj_core::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use serde::{de::Error, Deserialize, Deserializer};
 
 use super::SpecConvertError;

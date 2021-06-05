@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use proj_core::{Bell, Method, Row};
+use bellframe::{Bell, Method, Row};
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 pub mod fast_row;

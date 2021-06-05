@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::repeat_with};
 
+use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, Stage};
 use itertools::Itertools;
-use proj_core::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, Stage};
 
 use super::{Layout, Segment, SegmentLink};
 
@@ -434,8 +434,8 @@ fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {
+    use bellframe::{PlaceNot, Stage};
     use itertools::Itertools;
-    use proj_core::{PlaceNot, Stage};
 
     fn char_vec(string: &str) -> Vec<String> {
         string.chars().map(|c| c.to_string()).collect_vec()
