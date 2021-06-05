@@ -1,7 +1,6 @@
 //! A type-safe representation of a bell.
 
-use std::fmt::Formatter;
-
+#[cfg(feature = "serde")]
 use serde_crate::{
     de::{Error, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -244,7 +243,7 @@ struct BellVisitor;
 impl<'de> Visitor<'de> for BellVisitor {
     type Value = Bell;
 
-    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("a non-negative integer, or a bell name")
     }
 

@@ -1,2 +1,3 @@
 # Cargo's build files
 /target
+Cargo.lock
