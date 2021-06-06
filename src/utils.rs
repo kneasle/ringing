@@ -14,12 +14,12 @@ pub fn run_len(iter: impl IntoIterator<Item = Bell>) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::{run_len as rl, Row};
+    use crate::{run_len as rl, RowBuf};
 
     #[test]
     fn run_len() {
         for &(row, run_len_f) in &[("123456", 6), ("456231", 3), ("612345", 1)] {
-            assert_eq!(rl(Row::parse(row).unwrap().bell_iter()), run_len_f);
+            assert_eq!(rl(RowBuf::parse(row).unwrap().bell_iter()), run_len_f);
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Module for parsing and handling place notation
 
-use crate::{AnnotBlock, AnnotRow, Bell, IncompatibleStages, Row, Stage};
+use crate::{AnnotBlock, AnnotRow, Bell, IncompatibleStages, Row, RowBuf, Stage};
 use itertools::Itertools;
 use std::{
     fmt::{Display, Formatter},
@@ -271,7 +271,7 @@ impl PlaceNot {
 
     /// Uses this `PlaceNot` to permute a given [`Row`], preserving the old copy and returning a
     /// new [`Row`].  This checks that the [`Stage`]s are equal, and is therefore safe.
-    pub fn permute_new(&self, row: &Row) -> Result<Row, IncompatibleStages> {
+    pub fn permute_new(&self, row: &Row) -> Result<RowBuf, IncompatibleStages> {
         IncompatibleStages::test_err(row.stage(), self.stage)?;
         Ok(unsafe { self.permute_new_unchecked(row) })
     }
@@ -282,8 +282,8 @@ impl PlaceNot {
     /// # Safety
     ///
     /// This function is safe to use only when `self.stage() == row.stage()`.
-    pub unsafe fn permute_new_unchecked(&self, row: &Row) -> Row {
-        let mut new_row = row.clone();
+    pub unsafe fn permute_new_unchecked(&self, row: &Row) -> RowBuf {
+        let mut new_row = row.to_owned();
         self.permute_unchecked(&mut new_row);
         new_row
     }
@@ -572,7 +572,7 @@ impl PnBlock {
     pub fn to_block<A: Default>(&self) -> AnnotBlock<A> {
         // The rows which will make up the new Block
         let mut rows: Vec<AnnotRow<A>> = Vec::with_capacity(self.pns.len() + 1);
-        rows.push(AnnotRow::with_default(Row::rounds(self.stage())));
+        rows.push(AnnotRow::with_default(RowBuf::rounds(self.stage())));
         for pn in &self.pns {
             rows.push(AnnotRow::with_default(unsafe {
                 pn.permute_new_unchecked(&rows.last().unwrap().row())

@@ -6,7 +6,7 @@ use std::{
     ops::Index,
 };
 
-use crate::{IncompatibleStages, InvalidRowError, Row, Stage};
+use crate::{IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
 
 /// All the possible ways that parsing a [`Block`] could fail
 #[derive(Debug, Clone)]
@@ -49,20 +49,20 @@ impl std::error::Error for ParseError {}
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AnnotRow<A> {
-    row: Row,
+    row: RowBuf,
     annot: A,
 }
 
 impl<A> AnnotRow<A> {
     /// Creates a new `AnnotRow` from its parts
     #[inline]
-    pub fn new(row: Row, annot: A) -> Self {
+    pub fn new(row: RowBuf, annot: A) -> Self {
         AnnotRow { row, annot }
     }
 
     /// Creates a new `Row` with the default annotations
     #[inline]
-    pub fn with_default(row: Row) -> Self
+    pub fn with_default(row: RowBuf) -> Self
     where
         A: Default,
     {
@@ -83,7 +83,7 @@ impl<A> AnnotRow<A> {
 
     /// Separates this `AnnotRow` into its raw parts
     #[inline]
-    pub fn into_raw_parts(self) -> (Row, A) {
+    pub fn into_raw_parts(self) -> (RowBuf, A) {
         (self.row, self.annot)
     }
 
@@ -94,7 +94,7 @@ impl<A> AnnotRow<A> {
     ///
     /// This is safe to call, so long as the [`Stage`] of `row` is equal to that of `self`
     #[inline]
-    pub unsafe fn set_row_unchecked(&mut self, row: Row) {
+    pub unsafe fn set_row_unchecked(&mut self, row: RowBuf) {
         self.row = row;
     }
 
@@ -168,12 +168,12 @@ impl<A> AnnotBlock<A> {
         // We store the _inverse_ of the first Row, because for each row R we are solving the
         // equation `FX = R` where F is the first Row.  The solution to this is `X = F^-1 * R`, so
         // it makes sense to invert F once and then use that in all subsequent calculations.
-        let mut inv_first_row: Option<Row> = None;
+        let mut inv_first_row: Option<RowBuf> = None;
         let mut annot_rows: Vec<AnnotRow<A>> = Vec::new();
         for (i, l) in s.lines().enumerate() {
             // Parse the line into a Row, and fail if its either invalid or doesn't match the stage
             let parsed_row =
-                Row::parse(l).map_err(|err| ParseError::InvalidRow { line: i, err })?;
+                RowBuf::parse(l).map_err(|err| ParseError::InvalidRow { line: i, err })?;
             if let Some(inv_first_row) = &inv_first_row {
                 if inv_first_row.stage() != parsed_row.stage() {
                     return Err(ParseError::IncompatibleStages {
@@ -188,8 +188,8 @@ impl<A> AnnotBlock<A> {
                 }));
             } else {
                 // If this is the first Row, then push rounds and set the inverse first row
-                inv_first_row = Some(!&parsed_row);
-                annot_rows.push(AnnotRow::with_default(Row::rounds(parsed_row.stage())));
+                inv_first_row = Some(!&*parsed_row);
+                annot_rows.push(AnnotRow::with_default(RowBuf::rounds(parsed_row.stage())));
             }
         }
         // Return an error if the rows would form a zero-length block
@@ -250,7 +250,7 @@ impl<A> AnnotBlock<A> {
         A: Default,
     {
         AnnotBlock {
-            rows: vec![AnnotRow::new(Row::rounds(stage), A::default())],
+            rows: vec![AnnotRow::new(RowBuf::rounds(stage), A::default())],
         }
     }
 
@@ -336,7 +336,7 @@ impl<A> AnnotBlock<A> {
     /// will start from a different [`Row`].
     pub fn pre_mul(&mut self, perm_row: &Row) -> Result<(), IncompatibleStages> {
         IncompatibleStages::test_err(perm_row.stage(), self.stage())?;
-        let mut row_buf = Row::empty();
+        let mut row_buf = RowBuf::empty();
         self.rows.iter_mut().for_each(|AnnotRow { row, .. }| {
             // Do in-place pre-multiplication using `row_buf` as a temporary buffer
             row_buf.clone_from(row);
@@ -381,7 +381,7 @@ impl<A> AnnotBlock<A> {
 
     /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
     /// annotation is passed through the given function.
-    pub fn into_rows(self) -> Vec<Row> {
+    pub fn into_rows(self) -> Vec<RowBuf> {
         self.rows
             .into_iter()
             .map(|annot_row| annot_row.row)
@@ -409,7 +409,7 @@ impl<A> AnnotBlock<A> {
     /// annotation is moved to the second block (and the leftover row of `self` is annotated with
     /// a default value).
     #[must_use]
-    pub fn split(&mut self, index: usize) -> Option<(Row, Self)>
+    pub fn split(&mut self, index: usize) -> Option<(RowBuf, Self)>
     where
         A: Default,
     {
@@ -420,13 +420,13 @@ impl<A> AnnotBlock<A> {
         // Firstly, record the first Row of the 2nd block and cache its inverse to avoid
         // recalculation
         let other_block_first_row = self.rows[index].row.clone();
-        let inv_first_row = !&other_block_first_row;
+        let inv_first_row = !&*other_block_first_row;
         // Now, drain the rows out of `self`, transpose them and collect them in a new `Vec` to be
         // turned into the new `AnnotBlock`
         let new_rows: Vec<AnnotRow<A>> = self
             .rows
             .drain(index..)
-            .map(|AnnotRow { row, annot }| AnnotRow::new(&inv_first_row * &row, annot))
+            .map(|AnnotRow { row, annot }| AnnotRow::new(&*inv_first_row * &row, annot))
             .collect();
         // The drain will have left `self` without a leftover Row, so we add it back in by cloning
         // `other_block_first_row`
@@ -452,7 +452,7 @@ impl<A> AnnotBlock<A> {
         &mut self,
         annot_rows: impl IntoIterator<Item = AnnotRow<A>>,
     ) -> Result<(), IncompatibleStages> {
-        let mut transposition: Option<Row> = None;
+        let mut transposition: Option<RowBuf> = None;
         for annot_r in annot_rows {
             // Return error if the stages don't match
             IncompatibleStages::test_err(self.stage(), annot_r.row.stage())?;

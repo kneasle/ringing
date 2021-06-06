@@ -1,5 +1,6 @@
 use crate::{
-    block::AnnotRowIter, place_not::PnBlockParseError, AnnotBlock, AnnotRow, PnBlock, Row, Stage,
+    block::AnnotRowIter, place_not::PnBlockParseError, AnnotBlock, AnnotRow, PnBlock, Row, RowBuf,
+    Stage,
 };
 
 // Imports used solely for doc comments
@@ -81,7 +82,7 @@ impl Method {
     /// Generates a new [`CourseIter`] which generates an infinite course of this [`Method`],
     /// starting at a given `starting_row`.
     #[inline]
-    pub fn course_iter(&self, starting_row: Row) -> CourseIter<'_> {
+    pub fn course_iter(&self, starting_row: RowBuf) -> CourseIter<'_> {
         CourseIter::new(self, starting_row)
     }
 
@@ -108,7 +109,7 @@ impl Method {
     /// Generates a new [`CourseIter`] which generates the plain course of this [`Method`] forever.
     #[inline]
     pub fn plain_course_iter(&self) -> CourseIter<'_> {
-        CourseIter::new(self, Row::rounds(self.stage()))
+        CourseIter::new(self, RowBuf::rounds(self.stage()))
     }
 
     /// Sets or clears the label at a given index, panicking if the index is out of range
@@ -118,11 +119,11 @@ impl Method {
 
     /// Returns the label at a given index, panicking if the index is out of range
     pub fn get_label(&self, index: usize) -> Option<&str> {
-        if let Some(s) = self.first_lead.get_annot(index).unwrap() {
-            Some(s.as_str())
-        } else {
-            None
-        }
+        self.first_lead
+            .get_annot(index)
+            .unwrap()
+            .as_ref()
+            .map(String::as_str)
     }
 }
 
@@ -137,13 +138,13 @@ pub struct CourseIter<'m> {
     method: &'m Method,
     current_iter: _InternalIter<'m>,
     // PERF: We could replace this with an accumulator to stop needless allocations
-    current_lead_head: Row,
+    current_lead_head: RowBuf,
 }
 
 impl<'m> CourseIter<'m> {
     /// Creates a new `CourseIter` which generates a given [`Method`], beginning at some inital
     /// [`Row`].
-    fn new(method: &'m Method, first_lead_head: Row) -> Self {
+    fn new(method: &'m Method, first_lead_head: RowBuf) -> Self {
         CourseIter {
             method,
             current_lead_head: first_lead_head,
@@ -164,7 +165,7 @@ impl<'m> CourseIter<'m> {
 // PERF: We should implement more of the iterator methods like `skip`, which are used extensively
 // but generate very bad code by default
 impl<'m> Iterator for CourseIter<'m> {
-    type Item = (usize, Option<&'m str>, Row);
+    type Item = (usize, Option<&'m str>, RowBuf);
 
     fn next(&mut self) -> Option<Self::Item> {
         // If the iterator is about to finish, then move on by a lead and create a new iterator

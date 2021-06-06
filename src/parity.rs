@@ -77,7 +77,7 @@ impl Mul for Parity {
 
 #[cfg(test)]
 mod tests {
-    use crate::Stage;
+    use crate::{RowBuf, Stage};
 
     // In general, it's a bad idea to import enum variants directly, but in this case it makes our
     // tests much terser
@@ -102,10 +102,10 @@ mod tests {
 
     #[test]
     fn row_parity() {
-        assert_eq!(Row::rounds(Stage::from(0)).parity(), Even);
-        assert_eq!(Row::rounds(Stage::MAJOR).parity(), Even);
-        assert_eq!(Row::parse("13245").unwrap().parity(), Odd);
-        assert_eq!(Row::parse("231546").unwrap().parity(), Odd);
-        assert_eq!(Row::parse("231564").unwrap().parity(), Even);
+        assert_eq!(RowBuf::rounds(Stage::from(0)).parity(), Even);
+        assert_eq!(RowBuf::rounds(Stage::MAJOR).parity(), Even);
+        assert_eq!(RowBuf::parse("13245").unwrap().parity(), Odd);
+        assert_eq!(RowBuf::parse("231546").unwrap().parity(), Odd);
+        assert_eq!(RowBuf::parse("231564").unwrap().parity(), Even);
     }
 }
