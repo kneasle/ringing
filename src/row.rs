@@ -57,7 +57,7 @@ impl std::error::Error for InvalidRowError {}
 ///
 /// # Example
 /// ```
-/// use proj_core::{Bell, Row, Stage, InvalidRowError};
+/// use bellframe::{Bell, Row, Stage, InvalidRowError};
 ///
 /// // Create rounds on 8 bells.  Rounds is always valid on any `Stage`
 /// let rounds_on_8 = Row::rounds(Stage::MAJOR);
@@ -94,7 +94,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, InvalidRowError, Row};
+    /// use bellframe::{Bell, InvalidRowError, Row};
     ///
     /// // Converting a `Row` from a valid `Vec` of `Bell`s is fine
     /// assert_eq!(
@@ -136,7 +136,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, InvalidRowError, Row};
+    /// use bellframe::{Bell, InvalidRowError, Row};
     ///
     /// # fn test() -> Option<()> {
     /// // Converting a `Row` from a valid `Vec` of `Bell`s is fine, but still unsafe
@@ -184,7 +184,7 @@ impl Row {
     /// of items yeilded by `iter`.
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row, Stage, InvalidRowError};
+    /// use bellframe::{Bell, Row, Stage, InvalidRowError};
     ///
     /// // Create a valid row from an iterator over `Bell`s
     /// let iter = [0, 3, 4, 2, 1].iter().copied().map(Bell::from_index);
@@ -204,7 +204,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// // Rounds on a given `Stage` should have that `Stage`
     /// assert_eq!(Row::rounds(Stage::MINIMUS).stage(), Stage::MINIMUS);
@@ -212,7 +212,7 @@ impl Row {
     ///
     /// assert_eq!(Row::parse("41325")?.stage(), Stage::DOUBLES);
     /// assert_eq!(Row::parse("321 654 987 0")?.stage(), Stage::ROYAL);
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     #[inline(always)]
     pub fn stage(&self) -> Stage {
@@ -231,7 +231,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row, Stage, IncompatibleStages};
+    /// use bellframe::{Bell, Row, Stage, IncompatibleStages};
     ///
     /// // Multiplying two Rows of the same Stage is OK, but still unsafe
     /// assert_eq!(
@@ -248,7 +248,7 @@ impl Row {
     ///         [7, 4, 3, 1].iter().map(|&x| Bell::from_number(x).unwrap()).collect()
     ///     )}
     /// );
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub unsafe fn mul_unchecked(&self, rhs: &Self) -> Self {
         // We bypass the validity check because if two Rows are valid, then so is their product.
@@ -277,7 +277,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// // The inverse of Queens is Tittums
     /// assert_eq!(!Row::parse("135246")?, Row::parse("142536")?);
@@ -286,7 +286,7 @@ impl Row {
     /// // `1324` inverts to `1423`
     /// assert_eq!(!Row::parse("1342")?, Row::parse("1423")?);
     /// #
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn inv(&self) -> Self {
         let mut inv_bells = vec![Bell::TREBLE; self.stage().as_usize()];
@@ -304,7 +304,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// // Create a new row that will be overwritten to avoid reallocations
     /// let mut row_buf = Row::empty();
@@ -318,7 +318,7 @@ impl Row {
     /// Row::parse("1342")?.inv_into(&mut row_buf);
     /// assert_eq!(row_buf, Row::parse("1423")?);
     /// #
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn inv_into(&self, out: &mut Self) {
         // Make sure that `out` has the right stage
@@ -345,7 +345,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// let mut rounds = Row::rounds(Stage::MAJOR);
     /// assert_eq!(rounds.to_string(), "12345678");
@@ -370,7 +370,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row, Stage, InvalidRowError};
+    /// use bellframe::{Bell, Row, Stage, InvalidRowError};
     ///
     /// // Parsing a valid Row is fine
     /// assert_eq!(Row::parse("12543")?.to_string(), "12543");
@@ -402,7 +402,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row, Stage, InvalidRowError};
+    /// use bellframe::{Bell, Row, Stage, InvalidRowError};
     ///
     /// // Parsing a valid Row is fine
     /// assert_eq!(Row::parse("12543")?.to_string(), "12543");
@@ -434,7 +434,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// assert_eq!(Row::rounds(Stage::MINIMUS).to_string(), "1234");
     /// assert_eq!(Row::rounds(Stage::CATERS).to_string(), "123456789");
@@ -448,7 +448,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// assert_eq!(Row::backrounds(Stage::MINIMUS).to_string(), "4321");
     /// assert_eq!(Row::backrounds(Stage::CATERS).to_string(), "987654321");
@@ -462,7 +462,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// assert_eq!(Row::queens(Stage::MINIMUS).to_string(), "1324");
     /// assert_eq!(Row::queens(Stage::CATERS).to_string(), "135792468");
@@ -492,7 +492,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row, Stage, InvalidRowError};
+    /// use bellframe::{Bell, Row, Stage, InvalidRowError};
     ///
     /// // Create a valid row from an iterator over `Bell`s
     /// let iter = [0, 3, 4, 2, 1].iter().copied().map(Bell::from_index);
@@ -523,7 +523,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// // The closure of "18234567" are all the fixed-treble cyclic part heads.
     /// assert_eq!(
@@ -538,7 +538,7 @@ impl Row {
     ///         Row::parse("12345678")?,
     ///     ]
     /// );
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn closure(&self) -> Vec<Self> {
         let mut closure = Vec::new();
@@ -579,7 +579,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// // The closure of "18234567" are all the fixed-treble cyclic part heads.
     /// // Note how rounds is the first Row/part head generated
@@ -595,7 +595,7 @@ impl Row {
     ///         Row::parse("13456782")?,
     ///     ]
     /// );
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn closure_from_rounds(&self) -> Vec<Self> {
         let mut closure = vec![Self::rounds(self.stage())];
@@ -777,7 +777,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row};
+    /// use bellframe::{Bell, Row};
     ///
     /// # fn test() -> Option<()> {
     /// let tittums = Row::parse("15263748").unwrap();
@@ -799,13 +799,13 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// // Rounds is ... rounds (DOH)
     /// assert!(Row::rounds(Stage::MAXIMUS).is_rounds());
     /// // This is not rounds
     /// assert!(!Row::parse("18423756")?.is_rounds());
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn is_rounds(&self) -> bool {
         self.bell_iter().enumerate().all(|(i, b)| b.index() == i)
@@ -817,7 +817,7 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// // Multiplying two Rows of the same Stage is fine
     /// assert_eq!(
@@ -833,7 +833,7 @@ impl Row {
     ///         .to_string(),
     ///     "Incompatible stages: Major (lhs), Minimus (rhs)"
     /// );
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn mul(&self, rhs: &Self) -> Result<Self, IncompatibleStages> {
         IncompatibleStages::test_err(self.stage(), rhs.stage())?;
@@ -871,11 +871,11 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Bell, Row};
+    /// use bellframe::{Bell, Row};
     ///
     /// let tittums = Row::parse("15263748")?;
     /// assert_eq!(tittums.slice()[3], Bell::from_name('6').unwrap());
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     #[inline]
     pub fn slice(&self) -> &[Bell] {
@@ -888,13 +888,13 @@ impl Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// let waterfall = Row::parse("6543217890")?;
     /// let mut string = "Waterfall is: ".to_owned();
     /// waterfall.push_to_string(&mut string);
     /// assert_eq!(string, "Waterfall is: 6543217890");
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn push_to_string(&self, string: &mut String) {
         for b in &self.bells {
@@ -934,11 +934,11 @@ impl std::fmt::Display for Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// assert_eq!(Row::rounds(Stage::MAJOR).to_string(), "12345678");
     /// assert_eq!(Row::parse("146235")?.to_string(), "146235");
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::with_capacity(self.stage().as_usize());
@@ -972,23 +972,23 @@ impl std::ops::Mul for &Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// // Multiplying two Rows of the same Stage just returns a new Row
     /// assert_eq!(
     ///     &Row::parse("13425678")? * &Row::parse("43217568")?,
     ///     Row::parse("24317568")?
     /// );
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     ///
     /// ```should_panic
-    /// use proj_core::{Row};
+    /// use bellframe::{Row};
     ///
     /// // Multiplying two Rows of different Stages panics rather than
     /// // producing undefined behaviour
     /// let _unrow = &Row::parse("13425678")? * &Row::parse("4321")?;
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     fn mul(self, rhs: &Row) -> Self::Output {
         assert_eq!(self.stage(), rhs.stage());
@@ -1018,7 +1018,7 @@ impl std::ops::Not for &Row {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Row, Stage};
+    /// use bellframe::{Row, Stage};
     ///
     /// // The inverse of Queens is Tittums
     /// assert_eq!(!Row::parse("135246")?, Row::parse("142536")?);
@@ -1027,7 +1027,7 @@ impl std::ops::Not for &Row {
     /// // `1324` inverts to `1423`
     /// assert_eq!(!Row::parse("1342")?, Row::parse("1423")?);
     /// #
-    /// # Ok::<(), proj_core::InvalidRowError>(())
+    /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     fn not(self) -> Self::Output {
         self.inv()

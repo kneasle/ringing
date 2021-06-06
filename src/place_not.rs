@@ -81,7 +81,7 @@ impl PlaceNot {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{Stage, PlaceNot, place_not::ParseError};
+    /// use bellframe::{Stage, PlaceNot, place_not::ParseError};
     ///
     /// // Parsing a valid place notation is OK
     /// assert_eq!(PlaceNot::parse("14", Stage::MAJOR)?.to_string(), "14");
@@ -185,14 +185,14 @@ impl PlaceNot {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{PlaceNot, Stage};
+    /// use bellframe::{PlaceNot, Stage};
     ///
     /// // These are crosses
     /// assert_eq!(
     ///     PlaceNot::cross(Stage::MAJOR).unwrap(),
     ///     PlaceNot::parse("x", Stage::MAJOR)?
     /// );
-    /// # Ok::<(), proj_core::place_not::ParseError>(())
+    /// # Ok::<(), bellframe::place_not::ParseError>(())
     /// ```
     pub fn cross(stage: Stage) -> Option<Self> {
         if stage.as_usize() % 2 == 0 {
@@ -209,7 +209,7 @@ impl PlaceNot {
     ///
     /// # Example
     /// ```
-    /// use proj_core::{PlaceNot, Stage};
+    /// use bellframe::{PlaceNot, Stage};
     ///
     /// // These are crosses
     /// assert!(PlaceNot::cross(Stage::MAJOR).unwrap().is_cross());
@@ -217,7 +217,7 @@ impl PlaceNot {
     /// // These are not
     /// assert!(!PlaceNot::parse("14", Stage::MAJOR)?.is_cross());
     /// assert!(!PlaceNot::parse("3", Stage::TRIPLES)?.is_cross());
-    /// # Ok::<(), proj_core::place_not::ParseError>(())
+    /// # Ok::<(), bellframe::place_not::ParseError>(())
     /// ```
     #[inline(always)]
     pub fn is_cross(&self) -> bool {

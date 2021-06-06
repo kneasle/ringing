@@ -33,7 +33,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // Converting a valid name to a `Bell` and back should be the identity function
     /// assert_eq!(Bell::from_name('1')?.name(), "1");
@@ -62,7 +62,7 @@ impl Bell {
     ///
     /// # Example
     /// ```
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // A 'Bell' with index 0 is the treble
     /// assert_eq!(Bell::from_index(0).name(), "1");
@@ -80,7 +80,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // The `Bell` with number '12' is the 12th and should be displayed as 'T'
     /// assert_eq!(Bell::from_number(12)?.name(), "T");
@@ -100,7 +100,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::{Bell, Stage};
+    /// use bellframe::{Bell, Stage};
     ///
     /// // The **5** is the 'tenor' when ringing Doubles
     /// assert_eq!(Bell::tenor(Stage::DOUBLES)?, Bell::from_number(5)?);
@@ -119,7 +119,7 @@ impl Bell {
     ///
     /// # Example
     /// ```
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // `TREBLE` should be the bell with name '1'
     /// assert_eq!(Bell::from_name('1'), Some(Bell::TREBLE));
@@ -137,7 +137,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // A 'Bell' with index 0 is the treble, and therefore displays as `1`
     /// assert_eq!(Bell::from_index(0).to_char(), Some('1'));
@@ -159,7 +159,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // Creating a `Bell` with `from_index` should return the same index passed to it
     /// assert_eq!(Bell::from_index(0).index(), 0);
@@ -182,7 +182,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// assert_eq!(Bell::from_index(0).number(), 1);
     /// assert_eq!(Bell::from_name('0')?.number(), 10);
@@ -205,7 +205,7 @@ impl Bell {
     /// # Example
     /// ```
     /// # fn test() -> Option<()> {
-    /// use proj_core::Bell;
+    /// use bellframe::Bell;
     ///
     /// // Bells which are <= 9th should return their number as a `String`
     /// assert_eq!(Bell::from_number(1)?.name(), "1");

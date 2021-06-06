@@ -15,7 +15,7 @@ use crate::Row;
 /// To create a new `Stage`, you can either create it directly by using `Stage::from(usize)` or use
 /// a constant for the human name for each `Stage`:
 /// ```
-/// use proj_core::Stage;
+/// use bellframe::Stage;
 ///
 /// // Converting from numbers is the same as using the constants
 /// assert_eq!(Stage::SINGLES, Stage::from(3));
@@ -29,7 +29,7 @@ use crate::Row;
 ///
 /// `Stage`s with names will also be [`Display`](std::fmt::Display)ed as their names:
 /// ```
-/// # use proj_core::Stage;
+/// # use bellframe::Stage;
 /// #
 /// assert_eq!(&format!("{}", Stage::MAXIMUS), "Maximus");
 /// assert_eq!(&format!("{}", Stage::from(9)), "Caters");
@@ -43,7 +43,7 @@ impl Stage {
     ///
     /// # Example
     /// ```
-    /// use proj_core::Stage;
+    /// use bellframe::Stage;
     ///
     /// assert_eq!(Stage::DOUBLES.as_usize(), 5);
     /// assert_eq!(Stage::MAXIMUS.as_usize(), 12);
@@ -64,13 +64,13 @@ impl Stage {
 ///
 /// # Example
 /// ```
-/// use proj_core::Stage;
+/// use bellframe::Stage;
 ///
 /// assert_eq!(Stage::MINIMUS, Stage::from(4));
 /// assert_eq!(Stage::MINOR, Stage::from(6));
 /// assert_eq!(Stage::TRIPLES, Stage::from(7));
 /// assert_eq!(Stage::FOURTEEN, Stage::from(14));
-/// assert_eq!(Stage::SEXTUPLES, Stage::from(15));
+/// assert_eq!(Stage::SEPTUPLES, Stage::from(15));
 /// ```
 impl Stage {
     /// A `Stage` with no bells
