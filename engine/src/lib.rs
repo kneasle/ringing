@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use bellframe::{Bell, Method, Row};
+use bellframe::{Bell, Method, RowBuf};
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 pub mod fast_row;
@@ -77,7 +77,7 @@ pub struct Segment {
     /// The [`Row`]s contained in this `Segment`
     // TODO: This should probably be `proj_core::Block`, but we first have to relax the restriction
     // that blocks must begin at rounds
-    pub rows: Vec<Row>,
+    pub rows: Vec<RowBuf>,
     /// The ways that this `Segment` can be lead to other `Segment`s (in possibly different
     /// courses).
     pub links: Vec<SegmentLink>,
@@ -90,5 +90,5 @@ pub struct SegmentLink {
     pub display_name: String,
     pub debug_name: String,
     pub end_segment: usize,
-    pub transposition: Row,
+    pub transposition: RowBuf,
 }

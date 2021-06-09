@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter::repeat_with};
 
-use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, Stage};
+use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use super::{Layout, Segment, SegmentLink};
@@ -29,6 +29,7 @@ pub fn single_method_layout(
      * 4. Convert the `CallJump`s and row ranges into the light-weight Layout struct. */
 
     /* COMMONLY USED VALUES */
+
     // We can safely unwrap here because `method.stage()` can't be zero
     let fixed_bells = (0..method.stage().as_usize())
         .map(Bell::from_index)
@@ -75,7 +76,7 @@ pub fn single_method_layout(
     struct CallJump<'a> {
         from_index: usize,
         to_index: usize,
-        new_course_head: Row,
+        new_course_head: RowBuf,
         call: &'a CallSpec,
         calling_position: &'a str,
     }
@@ -189,7 +190,7 @@ pub fn single_method_layout(
         .iter()
         .map(|range| {
             /* CLONE THE ROWS THAT ARE CONTAINED IN THIS RANGE */
-            let mut rows = Vec::new();
+            let mut rows = Vec::<RowBuf>::new();
 
             if range.end > range.start {
                 // If the range doesn't wrap over the course end, then just we can just slice the
@@ -198,7 +199,7 @@ pub fn single_method_layout(
                     plain_course.annot_rows()[range.clone()]
                         .iter()
                         .map(AnnotRow::row)
-                        .cloned(),
+                        .map(Row::to_owned),
                 );
             };
 
@@ -223,7 +224,7 @@ pub fn single_method_layout(
                 display_name: String::new(),
                 debug_name: format!("p{}", plain_calling_pos),
                 end_segment: segment_index_by_start[&next_segment_start_index],
-                transposition: Row::rounds(method.stage()),
+                transposition: RowBuf::rounds(method.stage()),
             };
 
             /* Linking this segment with a call */
