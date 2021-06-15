@@ -7,3 +7,6 @@ edition = "2018"
 [dependencies]
 bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
+
+[dev-dependencies]
+proptest = "1.0"
