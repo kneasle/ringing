@@ -56,8 +56,6 @@ impl FastRow {
             "SimdRows can only contain 16 bells",
         );
 
-        println!("{:x}", val); // 1084818905618843912u128);
-
         (Self::from_u128(val), Stage::from(num_bells_popped))
     }
 

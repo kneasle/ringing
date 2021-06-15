@@ -8,5 +8,8 @@ fn main() {
     let spec: Spec = toml::from_str(&spec_toml).unwrap();
     println!("{:#?}", spec);
 
-    let engine = spec.create_engine();
+    let engine = spec.create_engine().unwrap();
+
+    println!("\n");
+    println!("{:?}", engine);
 }

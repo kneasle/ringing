@@ -1,9 +1,12 @@
 use std::ops::Range;
 
 use bellframe::{Bell, Method, RowBuf};
+
+use segment_table::SegmentTable;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
-pub mod fast_row;
+mod fast_row;
+mod segment_table;
 pub mod single_method;
 
 /// A newtyped integer which is used to refer to a specific composition segment
@@ -11,18 +14,33 @@ pub mod single_method;
 #[repr(transparent)]
 struct SegmentID(usize);
 
-/// A struct to hold compiled data required for a composition to be generated
+impl From<usize> for SegmentID {
+    #[inline(always)]
+    fn from(v: usize) -> Self {
+        SegmentID(v)
+    }
+}
+
+/// The static data required for composition generation.  This data will not be modified and will
+/// be shared between threads (once multi-threading is implemented).
 #[derive(Debug, Clone)]
 pub struct Engine {
     config: Config,
     len_range: Range<usize>,
+    segment_tables: Vec<SegmentTable>,
 }
 
 impl Engine {
+    /// Creates an `Engine` from a course [`Layout`].
     pub fn from_layout(config: Config, len_range: Range<usize>, layout: Layout) -> Self {
-        Self { len_range, config }
+        Self {
+            len_range,
+            config,
+            segment_tables: SegmentTable::from_segments(&layout.segments, &layout.fixed_bells),
+        }
     }
 
+    /// Creates an `Engine` to generate compositions of a single method.
     pub fn single_method(
         config: Config,
         len_range: Range<usize>,
@@ -70,6 +88,8 @@ pub struct Layout {
     /// multiple methods (in the case of spliced).  If a segment contains rounds, it will be
     /// assumed that it is a possible starting point for the composition.
     pub segments: Vec<Segment>,
+    /// The bells which must be fixed
+    pub fixed_bells: Vec<Bell>,
 }
 
 #[derive(Debug, Clone)]

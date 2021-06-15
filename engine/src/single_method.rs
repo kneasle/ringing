@@ -257,7 +257,10 @@ pub fn single_method_layout(
         })
         .collect_vec();
 
-    Ok(Layout { segments })
+    Ok(Layout {
+        segments,
+        fixed_bells,
+    })
 }
 
 #[derive(Debug, Clone)]
