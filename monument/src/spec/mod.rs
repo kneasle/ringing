@@ -2,10 +2,11 @@ use std::{collections::HashMap, num::ParseIntError};
 
 use bellframe::{
     method::LABEL_LEAD_END,
+    music::Regex,
     place_not::{self, PnBlockParseError},
     Bell, Method, Stage,
 };
-use engine::{single_method::SingleMethodError, Config, Engine};
+use engine::{single_method::SingleMethodError, Config, Engine, MusicType};
 use hmap::hmap;
 use itertools::Itertools;
 use serde_derive::Deserialize;
@@ -53,18 +54,25 @@ impl Spec {
         );
 
         Ok(Engine::single_method(
+            // General
             Config {
                 num_comps: self.num_comps,
                 ..Config::default()
             },
             self.length.range.clone(),
+            // Method/course structure
             &method,
+            &calls,
+            &non_fixed_bells,
             // For the time being, just use the default plain calling positions.  These will be
             // wrong for anything other than lead end calls, but are only used for debugging so
             // that's probably fine.  TODO: Make these specifiable
             None,
-            &calls,
-            &non_fixed_bells,
+            // Music
+            self.music
+                .iter()
+                .map(|b| b.to_music_type(method.stage()))
+                .collect_vec(),
         )
         .map_err(SpecConvertError::EngineError)?)
     }
@@ -144,6 +152,36 @@ pub enum MusicSpec {
     },
 }
 
+impl MusicSpec {
+    /// Gets the weight given to one instance of this `MusicSpec`
+    pub fn weight(&self) -> f32 {
+        match self {
+            Self::Runs { weight, .. } => *weight,
+            Self::Pattern { weight, .. } => *weight,
+            Self::Patterns { weight, .. } => *weight,
+        }
+    }
+
+    /// Gets the [`Regex`]es which match this `MusicSpec`
+    pub fn regexes(&self, stage: Stage) -> Vec<Regex> {
+        match self {
+            Self::Runs { length, .. } => Regex::runs_front_or_back(stage, *length),
+            Self::Pattern { pattern, .. } => vec![Regex::parse(&pattern)],
+            Self::Patterns { patterns, .. } => {
+                patterns.iter().map(|s| Regex::parse(&s)).collect_vec()
+            }
+        }
+    }
+
+    /// Generates a [`MusicType`] representing `self`.
+    pub fn to_music_type(&self, stage: Stage) -> MusicType {
+        MusicType {
+            weight: self.weight(),
+            regexes: self.regexes(stage),
+        }
+    }
+}
+
 /* Deserialization helpers */
 
 #[inline(always)]
@@ -151,7 +189,7 @@ fn get_one() -> f32 {
     1.0
 }
 
-/// By default, add a lead location "LE" at the lead end (i.e. when the place notation repeats).
+/// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
 #[inline]
 fn default_lead_locations() -> HashMap<String, String> {
     hmap! { "0".to_owned() => LABEL_LEAD_END.to_owned() }

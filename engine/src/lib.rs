@@ -6,8 +6,12 @@ use segment_table::SegmentTable;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 mod fast_row;
+mod music;
 mod segment_table;
 pub mod single_method;
+
+// Top level re-exports for convenience
+pub use music::MusicType;
 
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -32,25 +36,38 @@ pub struct Engine {
 
 impl Engine {
     /// Creates an `Engine` from a course [`Layout`].
-    pub fn from_layout(config: Config, len_range: Range<usize>, layout: Layout) -> Self {
+    pub fn from_layout(
+        config: Config,
+        len_range: Range<usize>,
+        layout: Layout,
+        music: Vec<MusicType>,
+    ) -> Self {
         Self {
             len_range,
             config,
-            segment_tables: SegmentTable::from_segments(&layout.segments, &layout.fixed_bells),
+            segment_tables: SegmentTable::from_segments(
+                &layout.segments,
+                &layout.fixed_bells,
+                &music,
+            ),
         }
     }
 
     /// Creates an `Engine` to generate compositions of a single method.
     pub fn single_method(
+        // General params
         config: Config,
         len_range: Range<usize>,
+        // Method or course structure
         method: &Method,
-        plain_lead_positions: Option<Vec<String>>,
         calls: &[CallSpec],
         non_fixed_bells: &[Bell],
+        plain_lead_positions: Option<Vec<String>>,
+        // Music
+        music: Vec<MusicType>,
     ) -> Result<Self, SingleMethodError> {
         let layout = single_method_layout(method, plain_lead_positions, calls, non_fixed_bells);
-        Ok(Self::from_layout(config, len_range, layout?))
+        Ok(Self::from_layout(config, len_range, layout?, music))
     }
 }
 

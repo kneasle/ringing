@@ -100,6 +100,11 @@ impl FastRow {
             ),
         }
     }
+
+    #[inline(always)]
+    pub fn bell_at(self, place: usize) -> Bell {
+        Bell::from_index((u128::from(self) >> (place * 8)) as usize)
+    }
 }
 
 impl PartialEq for FastRow {

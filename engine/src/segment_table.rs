@@ -3,23 +3,33 @@ use std::collections::{HashMap, HashSet};
 use bellframe::{Bell, Row, RowBuf};
 use itertools::Itertools;
 
-use crate::{fast_row::FastRow, Segment, SegmentID};
+use crate::{
+    fast_row::FastRow,
+    music::{MusicTable, MusicType},
+    Segment, SegmentID,
+};
 
 /// A table of static compiled data about a single course segment.
 #[derive(Debug, Clone)]
 pub struct SegmentTable {
     false_segments: Vec<(FastRow, SegmentID)>,
     length: usize,
+    music: MusicTable,
 }
 
 impl SegmentTable {
-    pub fn from_segments(segments: &[Segment], fixed_bells: &[Bell]) -> Vec<Self> {
+    pub fn from_segments(
+        segments: &[Segment],
+        fixed_bells: &[Bell],
+        music_types: &[MusicType],
+    ) -> Vec<Self> {
         // Create segment tables with empty falseness
         let mut tables = segments
             .iter()
             .map(|s| SegmentTable {
                 false_segments: Vec::new(),
                 length: s.rows.len(),
+                music: MusicTable::from_types(&s.rows, music_types, fixed_bells),
             })
             .collect_vec();
 
