@@ -73,7 +73,7 @@ pub struct PlaceNot {
 
 impl PlaceNot {
     /// Parse a string, interpreting it as a single `PlaceNot` of a given [`Stage`].  Like
-    /// [`Row::parse_with_stage`], this ignores chars that don't correspond to valid [`Bell`]
+    /// [`RowBuf::parse_with_stage`], this ignores chars that don't correspond to valid [`Bell`]
     /// names, including `&`, `.`, `,` and `+` which have reserved meanings in blocks of place
     /// notation.  This will expand implicit places (even between two written places) but will fail
     /// if there is any kind of ambiguity, returning a [`ParseError`] describing the problem.  This

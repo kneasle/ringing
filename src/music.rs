@@ -19,7 +19,7 @@ pub enum RegexElem {
 }
 
 impl RegexElem {
-    /// If this is a [`RowRegexElem::Bell`], this returns the contained [`Bell`], otherwise `None`
+    /// If this is a [`RegexElem::Bell`], this returns the contained [`Bell`], otherwise `None`
     #[inline]
     pub fn bell(self) -> Option<Bell> {
         match self {

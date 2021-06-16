@@ -11,6 +11,10 @@ use itertools::Itertools;
 
 use crate::{Bell, IncompatibleStages, Parity, Stage};
 
+// Imports used solely for doc comments
+#[allow(unused_imports)]
+use crate::Block;
+
 /* ===== ERRORS ===== */
 
 /// All the possible ways that a [`Row`] could be invalid.
@@ -75,7 +79,7 @@ pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
 
 /// A `Row` as a slice of [`Bell`]s.
 ///
-/// This can be viewed as a permutation of [rounds](Row::rounds) on a given [`Stage`].
+/// This can be viewed as a permutation of [rounds](RowBuf::rounds) on a given [`Stage`].
 ///
 /// `Row`s and [`RowBuf`]s must always be valid according to
 /// [the Framework](https://cccbr.github.io/method_ringing_framework/fundamentals.html) - i.e., it
@@ -204,7 +208,7 @@ impl Row {
     }
 
     /// Perform an in-place check that this `Row` is equal to rounds.  `x.is_rounds()` is an
-    /// optimised version of `x == Row::rounds(x.stage())`.
+    /// optimised version of `x == RowBuf::rounds(x.stage())`.
     ///
     /// # Example
     /// ```
@@ -242,7 +246,7 @@ impl Row {
     /* PERMUTATION ARITHMETIC */
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), checking that the [`Stage`]s are
-    /// compatible.  This is like using [`*`](<Row as Mul>::mul), except that this returns a
+    /// compatible.  This is like using [the * operator](<Row as Mul>::mul), except that this returns a
     /// [`Result`] instead of [`panic!`]ing.
     ///
     /// # Example
@@ -273,9 +277,8 @@ impl Row {
     }
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), but without checking that the
-    /// [`Stage`]s are compatible.  This is slighty faster than using `*` or [`Row::mul`], but is
-    /// `unsafe`: the output is not guaranteed to be valid unless both inputs have the same
-    /// [`Stage`].
+    /// [`Stage`]s are compatible.  This is slightly faster than using `*` or [`Row::mul_result`],
+    /// but could cause undefined behaviour.
     ///
     /// # Safety
     ///
@@ -334,8 +337,8 @@ impl Row {
     }
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), storing the result in an
-    /// existing `Row`.  If any of the [`Stage`]s don't match, then a [`MulIntoErr`] specifying the
-    /// mismatch is returned.
+    /// existing `Row`.  If any of the [`Stage`]s don't match, then a [`MulIntoError`] specifying
+    /// the mismatch is returned.
     pub fn mul_into(&self, rhs: &Row, out: &mut Row) -> Result<(), MulIntoError> {
         // Test that all 3 stages match
         IncompatibleStages::test_err(self.stage(), rhs.stage()).map_err(MulIntoError::RhsStage)?;
@@ -363,7 +366,7 @@ impl Row {
     /// Find the inverse of a `Row`.  If `X` is the input `Row`, and `Y = X.inv()`, then `XY = YX =
     /// I` where `I` is the identity on the same stage as `X` (i.e. rounds).  This operation cannot
     /// fail, since all valid `Row`s have an inverse.  This is equivalent to using the [`!`
-    /// operator](Self::not).
+    /// operator](<Self as Not>::not).
     ///
     /// # Example
     /// ```

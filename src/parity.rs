@@ -2,10 +2,10 @@ use std::ops::Mul;
 
 // Imports used solely for doc tests
 #[allow(unused_imports)]
-use crate::Row;
+use crate::{Row, RowBuf, Stage};
 
 /// Data type representing the parity of a [`Row`].  To generate these, you probably want to use
-/// [`RowTrait::parity`].  Note that [`RowTrait::parity`] always performs a heap allocation and is
+/// [`Row::parity`].  Note that [`Row::parity`] always performs a heap allocation and is
 /// linear-time in the [`Stage`] of the [`Row`].  If you are using `Parity`s as optimisations
 /// within hot code I would recommend computing them upfront on your input [`Row`]s and then
 /// tracking them by hand, probably using the [`*` operator](Parity::mul).
@@ -16,12 +16,12 @@ use crate::Row;
 #[repr(u8)]
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
 pub enum Parity {
-    /// A given [`Row`] requires an **even** number of [`swap`](RowTrait::swap)s to return to
-    /// [`rounds`](RowTrait::rounds).  This is also often called _in course_ or _positive_.  The
-    /// parity of [`rounds`](RowTrait::rounds) on every [`Stage`].
+    /// A given [`Row`] requires an **even** number of [`swap`](Row::swap)s to return to
+    /// [`rounds`](RowBuf::rounds).  This is also often called _in course_ or _positive_.  The
+    /// parity of [`rounds`](RowBuf::rounds) on every [`Stage`].
     Even = 0,
-    /// A given [`Row`] requires an **odd** number of [`swap`](RowTrait::swap)s to return to
-    /// [`rounds`](RowTrait::rounds).  This is also often called _out of course_ or _negative_.
+    /// A given [`Row`] requires an **odd** number of [`swap`](Row::swap)s to return to
+    /// [`rounds`](RowBuf::rounds).  This is also often called _out of course_ or _negative_.
     Odd = 1,
 }
 
@@ -67,7 +67,7 @@ impl Mul for Parity {
     /// 'Multiply' two [`Parity`]s together (this corresponds to xor/uncarried addition where
     /// `Even` is `0` and `Odd` is `1`).  Also, if you have a [`Row`] `r1` with [`Parity`] `p1` and
     /// another [`Row`] `r2` with [`Parity`] `p2` then `(r1 * r2).parity()` will always equal `p1 *
-    /// p2`.  Thus, this can be used to convert calls to [`RowTrait::parity`] into an extremely
+    /// p2`.  Thus, this can be used to convert calls to [`Row::parity`] into an extremely
     /// cheap (likely single-cycle) update function.
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self::Output {
