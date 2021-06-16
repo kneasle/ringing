@@ -747,14 +747,53 @@ mod tests {
 
     #[test]
     fn pn_to_block() {
+        let alnick_lead = "156342
+516324
+153642
+513462
+531426
+354162
+351426
+534162
+354612
+345621
+436512
+463521
+643251
+634215
+362451
+326415
+236145
+321654
+326145
+231654
+213645
+123465
+214356
+124365
+123456";
+        let plain_bob_major_lead = "12345678
+21436587
+24163857
+42618375
+46281735
+64827153
+68472513
+86745231
+87654321
+78563412
+75836142
+57381624
+53718264
+35172846
+31527486
+13254768
+13527486";
+
         let equal_blocks = [
-            (
-                Stage::MINOR,
-                "34-36.14-12-36.14-14.36,12",
-                include_str!("alnwick"),
-            ), // Alnwick Surprise Minor
-            (Stage::MINOR, "34-3.4-2-3.4-4.3,+2", include_str!("alnwick")), // Alnwick Surprise Minor
-            (Stage::MAJOR, "x18x18x18x18,12", include_str!("pb-8")),        // Plain Bob Major
+            (Stage::MINOR, "34-36.14-12-36.14-14.36,12", alnick_lead), // Alnwick Surprise Minor
+            (Stage::MINOR, "34-3.4-2-3.4-4.3,+2", alnick_lead),        // Alnwick Surprise Minor
+            (Stage::MAJOR, "x18x18x18x18,12", plain_bob_major_lead),   // Plain Bob Major
         ];
 
         for &(stage, pn, block) in &equal_blocks {
