@@ -1239,7 +1239,7 @@ impl std::fmt::Debug for Row {
 impl Display for Row {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for b in self.bell_iter() {
-            f.write_fmt(format_args!("{}", b))?;
+            write!(f, "{}", b)?;
         }
         Ok(())
     }
