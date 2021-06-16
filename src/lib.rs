@@ -4,6 +4,7 @@ mod bell;
 pub mod block;
 pub mod call;
 pub mod method;
+pub mod music;
 mod parity;
 pub mod place_not;
 pub mod row;
