@@ -421,5 +421,7 @@ mod tests {
         check("x*12*34", "51234", Some(vec![1, 2, 3, 4]));
         check("x*12*34", "1234", None);
         check("x*12*34", "12534", None);
+        check("*1x2x3x4*", "18273645", Some(vec![0, 2, 4, 6]));
+        check("*1x2x3x4*", "091E273645T8", Some(vec![2, 4, 6, 8]));
     }
 }
