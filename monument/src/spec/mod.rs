@@ -53,7 +53,7 @@ impl Spec {
             Vec::clone,
         );
 
-        Ok(Engine::single_method(
+        Engine::single_method(
             // General
             Config {
                 num_comps: self.num_comps,
@@ -74,7 +74,7 @@ impl Spec {
                 .map(|b| b.to_music_type(method.stage()))
                 .collect_vec(),
         )
-        .map_err(SpecConvertError::EngineError)?)
+        .map_err(SpecConvertError::EngineError)
     }
 }
 
@@ -120,7 +120,7 @@ impl MethodSpec {
                 .parse::<isize>()
                 .map_err(|e| SpecConvertError::LeadLocationIndex(&index_str, e))?;
             let lead_len = m.lead_len() as isize;
-            let wrapped_index = (index % lead_len) + lead_len % lead_len;
+            let wrapped_index = ((index % lead_len) + lead_len) % lead_len;
             // This cast is OK because we used % twice to guarantee a positive index
             m.set_label(wrapped_index as usize, Some(name.clone()));
         }

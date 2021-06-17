@@ -9,7 +9,7 @@ use std::fmt::Formatter;
 
 use bellframe::{Bell, Row, RowBuf, Stage};
 
-const ROUNDS: u128 = 0x0f0e0d0c_0b0a0908_07060504_03020100;
+const ROUNDS: u128 = 0x0f0e_0d0c_0b0a_0908_0706_0504_0302_0100;
 
 /// A fast but unsafe version of [`Row`] which uses SIMD to accelerate [`Row`] operations.
 ///

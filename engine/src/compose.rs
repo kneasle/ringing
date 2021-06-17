@@ -41,7 +41,7 @@ impl EngineWorker {
             worker.starting_node = i;
             // This unsafety is OK, because we check the CPU flags before starting the composing
             // loop
-            unsafe { worker.explore_node(&engine, start_node.clone(), 0, 0.0) };
+            unsafe { worker.explore_node(&engine, *start_node, 0, 0.0) };
         }
 
         let mut discovered_comps = worker.shortlist.into_vec();

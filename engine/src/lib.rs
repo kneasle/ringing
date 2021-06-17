@@ -1,9 +1,10 @@
 use std::{ops::Range, sync::Arc, thread};
 
 use bellframe::{Bell, Method, RowBuf};
+use itertools::Itertools;
 
 use compose::{EngineWorker, Node};
-use itertools::Itertools;
+use fast_row::FastRow;
 use segment_table::SegmentTable;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
@@ -13,10 +14,12 @@ mod music;
 mod segment_table;
 pub mod single_method;
 
+// Imports used solely by doctests
+#[allow(unused_imports)]
+use bellframe::Row;
+
 // Top level re-exports for convenience
 pub use music::MusicType;
-
-use crate::fast_row::FastRow;
 
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -64,8 +67,8 @@ impl Engine {
             unsafe { SegmentTable::from_segments(&layout.segments, &layout.fixed_bells, &music) };
 
         Self {
-            len_range,
             config,
+            len_range,
             segment_tables,
             start_nodes,
         }
