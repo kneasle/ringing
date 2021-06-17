@@ -5,8 +5,9 @@
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+use std::fmt::Formatter;
 
-use bellframe::{Bell, Row, Stage};
+use bellframe::{Bell, Row, RowBuf, Stage};
 
 const ROUNDS: u128 = 0x0f0e0d0c_0b0a0908_07060504_03020100;
 
@@ -15,7 +16,7 @@ const ROUNDS: u128 = 0x0f0e0d0c_0b0a0908_07060504_03020100;
 /// This does not store a [`Stage`] (because the [`Stage`] is known externally during
 /// the composing loop).  This makes equality checks faster, as well as making the memory layout
 /// more efficient.  Additionally, this can only store [`Stage`] of up to 16 bells.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct FastRow {
     bell_bytes: __m128i,
 }
@@ -103,7 +104,31 @@ impl FastRow {
 
     #[inline(always)]
     pub fn bell_at(self, place: usize) -> Bell {
-        Bell::from_index((u128::from(self) >> (place * 8)) as usize)
+        Bell::from_index((u128::from(self) >> (place * 8)) as usize & 0xff)
+    }
+
+    #[inline(always)]
+    pub fn compress(self) -> CompressedRow {
+        let v = u128::from(self);
+        CompressedRow {
+            bells: (v as u64) | ((v >> 60) as u64),
+        }
+    }
+}
+
+impl std::fmt::Debug for FastRow {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FastRow(")?;
+        for i in 0..16 {
+            write!(f, "{}", self.bell_at(i))?;
+        }
+        write!(f, ")")
+    }
+}
+
+impl std::fmt::Display for FastRow {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -130,6 +155,23 @@ impl From<&Row> for FastRow {
         // This unsafety is OK because `Row`s are valid by invariant
         unsafe { Self::from_iter_unchecked(r.bell_iter()).0 }
     }
+}
+
+impl From<&RowBuf> for FastRow {
+    fn from(r: &RowBuf) -> Self {
+        // This unsafety is OK because `Row`s are valid by invariant
+        unsafe { Self::from_iter_unchecked(r.bell_iter()).0 }
+    }
+}
+
+/// A variant of [`FastRow`] which fits 16 bells into a 64-bit number.  This can't be used for
+/// permutations, is very compact and can be used in hash tables, etc.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct CompressedRow {
+    /// The bells are stored in 4-bit blocks by permuting the row by tittums.  So rounds would turn
+    /// into `0xf7e6d5c4b3a29180`.  Because the stage is capped at 16, this representation will
+    /// always be unique.
+    bells: u64,
 }
 
 #[cfg(test)]

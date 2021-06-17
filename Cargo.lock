@@ -60,6 +60,7 @@ dependencies = [
  "bellframe",
  "itertools",
  "proptest",
+ "shortlist",
 ]
 
 [[package]]
@@ -295,6 +296,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "shortlist"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e8030b6cd6a74b9934f8228e70169293e51a78c515e3efaf6533b54d860e06f"
 
 [[package]]
 name = "syn"

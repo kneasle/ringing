@@ -1,4 +1,4 @@
-length = "QP"
+length = "peal"
 num_comps = 16
 base_calls = "near"
 
@@ -6,15 +6,5 @@ base_calls = "near"
 stage = "Royal"
 place_notation = "x30x14x50x16x1270x38x14x50x16x90,12"
 
-[[calls]]
-symbol = "x"
-place_notation = "16"
-
 [[music]]
 run_length = 4
-
-[[music]]
-run_length = 5
-
-[[music]]
-run_length = 6

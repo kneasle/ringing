@@ -3,6 +3,8 @@ use std::{collections::HashMap, iter::repeat_with};
 use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
+use crate::SegmentID;
+
 use super::{Layout, Segment, SegmentLink};
 
 /// Generates a [`Layout`] for a single [`Method`]
@@ -223,7 +225,7 @@ pub fn single_method_layout(
                 // Plain leads are elided when displaying
                 display_name: String::new(),
                 debug_name: format!("p{}", plain_calling_pos),
-                end_segment: segment_index_by_start[&next_segment_start_index],
+                end_segment: SegmentID::from(segment_index_by_start[&next_segment_start_index]),
                 transposition: RowBuf::rounds(method.stage()),
             };
 
@@ -245,7 +247,9 @@ pub fn single_method_layout(
                         SegmentLink {
                             display_name: format!("{}{}", call_jump.call.display_symbol, call_pos),
                             debug_name: format!("{}{}", call_jump.call.debug_symbol, call_pos),
-                            end_segment: segment_index_by_start[&call_jump.to_index],
+                            end_segment: SegmentID::from(
+                                segment_index_by_start[&call_jump.to_index],
+                            ),
                             transposition: call_jump.new_course_head.clone(),
                         }
                     }),

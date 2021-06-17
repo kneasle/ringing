@@ -1,10 +1,13 @@
-use std::ops::Range;
+use std::{ops::Range, sync::Arc, thread};
 
 use bellframe::{Bell, Method, RowBuf};
 
+use compose::{EngineWorker, Node};
+use itertools::Itertools;
 use segment_table::SegmentTable;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
+mod compose;
 mod fast_row;
 mod music;
 mod segment_table;
@@ -13,15 +16,26 @@ pub mod single_method;
 // Top level re-exports for convenience
 pub use music::MusicType;
 
+use crate::fast_row::FastRow;
+
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
-struct SegmentID(usize);
+pub struct SegmentID {
+    v: usize,
+}
 
 impl From<usize> for SegmentID {
     #[inline(always)]
     fn from(v: usize) -> Self {
-        SegmentID(v)
+        SegmentID { v }
+    }
+}
+
+impl From<SegmentID> for usize {
+    #[inline(always)]
+    fn from(seg_id: SegmentID) -> usize {
+        seg_id.v
     }
 }
 
@@ -32,6 +46,7 @@ pub struct Engine {
     config: Config,
     len_range: Range<usize>,
     segment_tables: Vec<SegmentTable>,
+    start_nodes: Vec<Node>,
 }
 
 impl Engine {
@@ -42,14 +57,17 @@ impl Engine {
         layout: Layout,
         music: Vec<MusicType>,
     ) -> Self {
+        assert!(FastRow::are_cpu_features_enabled());
+
+        let (segment_tables, start_nodes) =
+            // This unsafety is OK, because we've checked the CPU flags at the top of this function
+            unsafe { SegmentTable::from_segments(&layout.segments, &layout.fixed_bells, &music) };
+
         Self {
             len_range,
             config,
-            segment_tables: SegmentTable::from_segments(
-                &layout.segments,
-                &layout.fixed_bells,
-                &music,
-            ),
+            segment_tables,
+            start_nodes,
         }
     }
 
@@ -66,8 +84,46 @@ impl Engine {
         // Music
         music: Vec<MusicType>,
     ) -> Result<Self, SingleMethodError> {
-        let layout = single_method_layout(method, plain_lead_positions, calls, non_fixed_bells);
-        Ok(Self::from_layout(config, len_range, layout?, music))
+        let layout = single_method_layout(method, plain_lead_positions, calls, non_fixed_bells)?;
+        Ok(Self::from_layout(config, len_range, layout, music))
+    }
+
+    /// Generate the compositions
+    pub fn compose(self) {
+        let arc_self = Arc::from(self);
+
+        let threads = (0usize..1)
+            .map(|i| {
+                let thread_arc = arc_self.clone();
+                thread::Builder::new()
+                    .name(format!("Worker{}", i))
+                    .spawn(move || {
+                        EngineWorker::compose(thread_arc, i);
+                    })
+                    .unwrap()
+            })
+            .collect_vec();
+
+        // Stop the main thread until all workers have returned
+        for t in threads {
+            t.join().unwrap();
+        }
+    }
+
+    /// Gets the table corresponding to a given ID
+    pub(crate) fn get_seg_table(&self, seg_id: SegmentID) -> &SegmentTable {
+        &self.segment_tables[usize::from(seg_id)]
+    }
+
+    pub fn debug(&self) {
+        for (i, t) in self.segment_tables.iter().enumerate() {
+            println!("Seg {}:", i);
+            println!("  len: {}", t.length);
+            println!("  falseness:");
+            for (r, s) in &t.false_segments {
+                println!("    {}: {}", s.v, r);
+            }
+        }
     }
 }
 
@@ -117,15 +173,29 @@ pub struct Segment {
     pub rows: Vec<RowBuf>,
     /// The ways that this `Segment` can be lead to other `Segment`s (in possibly different
     /// courses).
-    pub links: Vec<SegmentLink>,
+    pub links: Vec<SegmentLink<RowBuf>>,
 }
 
 /// A structure representing the link between two course segments.  These are usually calls, but
 /// can also be plain lead-ends or possibly even method splices.
 #[derive(Debug, Clone)]
-pub struct SegmentLink {
+pub struct SegmentLink<R> {
     pub display_name: String,
     pub debug_name: String,
-    pub end_segment: usize,
-    pub transposition: RowBuf,
+    pub end_segment: SegmentID,
+    pub transposition: R,
+}
+
+impl<R> SegmentLink<R> {
+    pub fn clone_from<'a, R1>(other: &'a SegmentLink<R1>) -> Self
+    where
+        R: From<&'a R1>,
+    {
+        Self {
+            display_name: other.display_name.clone(),
+            debug_name: other.debug_name.clone(),
+            end_segment: other.end_segment,
+            transposition: R::from(&other.transposition),
+        }
+    }
 }
