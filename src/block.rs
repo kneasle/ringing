@@ -260,6 +260,17 @@ impl<A> AnnotBlock<A> {
         self.rows[0].row.stage()
     }
 
+    /// Gets the effective [`Stage`] of this `AnnotBlock` - i.e. the smallest [`Stage`] that this
+    /// `AnnotBlock` can be reduced to without producing invalid [`Row`]s.  See
+    /// [`Row::effective_stage`] for more info and examples.
+    pub fn effective_stage(&self) -> Stage {
+        self.rows()
+            .map(Row::effective_stage)
+            .max()
+            // Unwrapping here is safe, because blocks must contain at least one Row
+            .unwrap()
+    }
+
     /// Gets the [`Row`] at a given index, along with its annotation.
     #[inline]
     pub fn get_row(&self, index: usize) -> Option<&Row> {

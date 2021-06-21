@@ -58,6 +58,13 @@ impl Call {
         self.block.stage()
     }
 
+    /// Gets the effective [`Stage`] of this `Call` (i.e. no places above this [`Stage`] are
+    /// affected by the call).
+    #[inline]
+    pub fn effective_stage(&self) -> Stage {
+        self.block.effective_stage()
+    }
+
     /// Gets the number of [`Row`]s that will be covered by this `Call`
     #[inline]
     pub fn cover_len(&self) -> usize {

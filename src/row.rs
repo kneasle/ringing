@@ -224,6 +224,34 @@ impl Row {
         self.bell_iter().enumerate().all(|(i, b)| b.index() == i)
     }
 
+    /// Return the [`Stage`] of the shortest prefix of `self` that is still a valid `Row`.  This is
+    /// the smallest [`Stage`] that this `Row` can be safely reduced to.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bellframe::{RowBuf, Stage};
+    ///
+    /// // This is essentially a Triples row, because it has the 8 covering
+    /// assert_eq!(RowBuf::parse("14237568")?.effective_stage(), Stage::TRIPLES);
+    /// // This row has no cover bells, so can't be reduced
+    /// assert_eq!(RowBuf::parse("18423756")?.effective_stage(), Stage::MAJOR);
+    /// // Rounds always has an effective `Stage` of 0
+    /// assert_eq!(RowBuf::rounds(Stage::MAXIMUS).effective_stage(), Stage::ZERO);
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    pub fn effective_stage(&self) -> Stage {
+        // Iterate backwards over the bells looking for the first bell which isn't in its place
+        for (i, b) in self.bell_slice.iter().enumerate().rev() {
+            if b.index() != i {
+                // The `+ 1` is needed because `i` is 0-indexed
+                return Stage::from(i + 1);
+            }
+        }
+        // If the loop reached the front of the row, then the effective stage is 0
+        Stage::ZERO
+    }
+
     /// Swap two [`Bell`]s round in this `Row`, panicking if either of the indices point out of
     /// bounds.
     ///
