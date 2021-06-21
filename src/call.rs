@@ -1,4 +1,4 @@
-use crate::{method::LABEL_LEAD_END, Block, PnBlock, Row};
+use crate::{method::LABEL_LEAD_END, Block, PnBlock, Row, Stage};
 
 pub const NOTATION_BOB: char = '-';
 pub const NOTATION_SINGLE: char = 's';
@@ -50,6 +50,12 @@ impl Call {
     #[inline]
     pub fn rows(&self) -> impl Iterator<Item = &Row> {
         self.block.rows()
+    }
+
+    /// Gets the [`Stage`] of this `Call`
+    #[inline]
+    pub fn stage(&self) -> Stage {
+        self.block.stage()
     }
 
     /// Gets the number of [`Row`]s that will be covered by this `Call`
