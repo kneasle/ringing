@@ -765,6 +765,31 @@ impl std::ops::Index<usize> for Row {
     }
 }
 
+impl std::ops::Not for &RowBuf {
+    type Output = RowBuf;
+
+    /// Find the inverse of a [`Row`].  If `X` is the input [`Row`], and `Y = !X`, then
+    /// `XY = YX = I` where `I` is the identity on the same stage as `X` (i.e. rounds).  This
+    /// operation cannot fail, since valid [`Row`]s are guaruteed to have an inverse.
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::{RowBuf, Stage};
+    ///
+    /// // The inverse of Queens is Tittums
+    /// assert_eq!(!&*RowBuf::parse("135246")?, RowBuf::parse("142536")?);
+    /// // Backrounds is self-inverse
+    /// assert_eq!(!&*RowBuf::backrounds(Stage::MAJOR), RowBuf::backrounds(Stage::MAJOR));
+    /// // `1324` inverts to `1423`
+    /// assert_eq!(!&*RowBuf::parse("1342")?, RowBuf::parse("1423")?);
+    /// #
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    fn not(self) -> Self::Output {
+        self.inv()
+    }
+}
+
 impl std::ops::Not for &Row {
     type Output = RowBuf;
 
