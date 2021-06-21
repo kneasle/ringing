@@ -1243,8 +1243,15 @@ impl RowBuf {
 
     /// Extend this `RowBuf` in-place with cover bells so that it has a given [`Stage`].
     fn extend_to_stage(&mut self, stage: Stage) {
+        assert!(self.stage() <= stage);
         self.bell_vec
             .extend((self.bell_vec.len()..stage.as_usize()).map(Bell::from_index));
+    }
+
+    /// Overwrites this with the contents of a [`Row`], thus reusing the allocation.
+    pub fn overwrite_from(&mut self, row: &Row) {
+        self.bell_vec.clear();
+        self.bell_vec.extend(row.bell_iter());
     }
 }
 

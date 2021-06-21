@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn row_parity() {
-        assert_eq!(RowBuf::rounds(Stage::from(0)).parity(), Even);
+        assert_eq!(RowBuf::rounds(Stage::ZERO).parity(), Even);
         assert_eq!(RowBuf::rounds(Stage::MAJOR).parity(), Even);
         assert_eq!(RowBuf::parse("13245").unwrap().parity(), Odd);
         assert_eq!(RowBuf::parse("231546").unwrap().parity(), Odd);

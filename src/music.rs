@@ -183,6 +183,12 @@ impl Regex {
         runs
     }
 
+    /// Gets a slice over the [`RegexElem`]s making up this `Regex`
+    #[inline(always)]
+    pub fn elems(&self) -> &[RegexElem] {
+        &self.elems
+    }
+
     /// Returns `true` if a given [`Row`] satisfies this `Regex`, and `false` otherwise.  If the
     /// normalised `Regex` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
     /// runtime is `O(n + m)`.
