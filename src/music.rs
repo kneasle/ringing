@@ -45,7 +45,7 @@ impl Display for RegexElem {
 /// - Consecutive globs are reduced to a single glob (because `**` is equivalent to `*`)
 /// - If there is a sequence of consecutive 'any's and globs (e.g. `*x*x***`) then the 'any's
 ///   will always come first, followed by the globs (in this example `xx*****`).
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Regex {
     /// The pattern which represents this `Regex`.  This is normalised with the following
     /// invariants:
@@ -295,6 +295,12 @@ impl Display for Regex {
             write!(f, "{}", elem)?;
         }
         Ok(())
+    }
+}
+
+impl std::fmt::Debug for Regex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Regex({})", self)
     }
 }
 
