@@ -1230,6 +1230,15 @@ impl RowBuf {
         Ok(self)
     }
 
+    /// Converts a [`RowBuf`] into a [`Row`].  Equivalent to `&*self`, but doesn't rely on type
+    /// inference.
+    #[inline]
+    pub fn as_row(&self) -> &Row {
+        // The unsafety here is OK, because Row is `#[repr(transparent)]` and the pointer cast
+        // doesn't change the lifetime of the underlying data.
+        unsafe { &*(self.bell_vec.as_slice() as *const [Bell] as *const Row) }
+    }
+
     /* MUTATING OPERATIONS */
 
     /// Extend this `RowBuf` in-place with cover bells so that it has a given [`Stage`].
@@ -1246,9 +1255,7 @@ impl Deref for RowBuf {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        // The unsafety here is OK, because Row is `#[repr(transparent)]` and the pointer cast
-        // doesn't change the lifetime of the underlying data.
-        unsafe { &*(self.bell_vec.as_slice() as *const [Bell] as *const Row) }
+        self.as_row()
     }
 }
 
