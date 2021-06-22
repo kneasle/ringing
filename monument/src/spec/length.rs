@@ -106,6 +106,7 @@ impl<'de> Visitor<'de> for LengthVisitor {
                 }
             }
         }
+        // Open question: should min default to 0?
         let min = min.ok_or_else(|| Error::missing_field("min"))?;
         let max = max.ok_or_else(|| Error::missing_field("max"))?;
         Ok(Length::from(min..=max))
