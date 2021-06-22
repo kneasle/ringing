@@ -6,8 +6,8 @@ use itertools::Itertools;
 use crate::{
     compose::Node,
     fast_row::FastRow,
+    layout::{Segment, SegmentID, SegmentLink},
     music::{MusicTable, MusicType},
-    Segment, SegmentID, SegmentLink,
 };
 
 /// A table of static compiled data about a single course segment.

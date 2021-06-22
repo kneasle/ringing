@@ -3,9 +3,7 @@ use std::{collections::HashMap, iter::repeat_with};
 use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
-use crate::SegmentID;
-
-use super::{Layout, Segment, SegmentLink};
+use crate::layout::{Layout, Segment, SegmentID, SegmentLink};
 
 /// Generates a [`Layout`] for a single [`Method`]
 pub fn single_method_layout(

@@ -4,7 +4,8 @@ use shortlist::Shortlist;
 
 use crate::{
     fast_row::{CompressedRow, FastRow},
-    Engine, SegmentID,
+    layout::SegmentID,
+    Engine,
 };
 
 /// The mutable data required to generate a composition.  Each worker thread will have their own
