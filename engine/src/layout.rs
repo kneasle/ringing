@@ -46,29 +46,15 @@ pub struct Segment {
     pub rows: Vec<RowBuf>,
     /// The ways that this `Segment` can be lead to other `Segment`s (in possibly different
     /// courses).
-    pub links: Vec<SegmentLink<RowBuf>>,
+    pub links: Vec<SegmentLink>,
 }
 
 /// A structure representing the link between two course segments.  These are usually calls, but
-/// can also be plain lead-ends or possibly even method splices.
+/// can also be plain lead-ends or method splices.
 #[derive(Debug, Clone)]
-pub struct SegmentLink<R> {
+pub struct SegmentLink {
     pub display_name: String,
     pub debug_name: String,
     pub end_segment: SegmentID,
-    pub transposition: R,
-}
-
-impl<R> SegmentLink<R> {
-    pub fn clone_from<'a, R1>(other: &'a SegmentLink<R1>) -> Self
-    where
-        R: From<&'a R1>,
-    {
-        Self {
-            display_name: other.display_name.clone(),
-            debug_name: other.debug_name.clone(),
-            end_segment: other.end_segment,
-            transposition: R::from(&other.transposition),
-        }
-    }
+    pub transposition: RowBuf,
 }

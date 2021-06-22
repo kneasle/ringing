@@ -3,14 +3,14 @@ use std::{ops::Range, sync::Arc, thread};
 use bellframe::{Bell, Method};
 use itertools::Itertools;
 
-use compose::{EngineWorker, Node};
-use fast_row::FastRow;
+use compose::EngineWorker;
+use graph::NodeId;
 use layout::{Layout, SegmentID};
 use segment_table::SegmentTable;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 mod compose;
-mod fast_row;
+mod graph;
 mod layout;
 mod music;
 mod segment_table;
@@ -30,7 +30,7 @@ pub struct Engine {
     config: Config,
     len_range: Range<usize>,
     segment_tables: Vec<SegmentTable>,
-    start_nodes: Vec<Node>,
+    start_nodes: Vec<NodeId>,
 }
 
 impl Engine {
@@ -41,11 +41,8 @@ impl Engine {
         layout: Layout,
         music: Vec<MusicType>,
     ) -> Self {
-        assert!(FastRow::are_cpu_features_enabled());
-
         let (segment_tables, start_nodes) =
-            // This unsafety is OK, because we've checked the CPU flags at the top of this function
-            unsafe { SegmentTable::from_segments(&layout.segments, &layout.fixed_bells, &music) };
+            SegmentTable::from_segments(&layout.segments, &layout.fixed_bells, &music);
 
         Self {
             config,

@@ -9,8 +9,6 @@ use bellframe::{
 };
 use itertools::Itertools;
 
-use crate::fast_row::FastRow;
-
 /// The information required to quickly compute the music of a segment of some course
 #[derive(Debug, Clone)]
 pub(crate) struct MusicTable {
@@ -37,12 +35,12 @@ impl MusicTable {
     }
 
     #[inline(always)]
-    pub fn evaluate(&self, row: FastRow) -> f32 {
-        let partition_bell = row.bell_at(self.pivot_place);
+    pub fn evaluate(&self, row: &Row) -> f32 {
+        let partition_bell = row[self.pivot_place];
 
         let mut total_music = self.guaranteed_music;
         if let Some(masks) = self.compiled_masks.get(partition_bell.index()) {
-            for &(mask, score) in masks {
+            for (mask, score) in masks {
                 if mask.evaluate(row) {
                     total_music += score;
                 }
@@ -151,7 +149,7 @@ impl MusicTable {
             partition_table[bell.index()].extend(
                 masks
                     .into_iter()
-                    .map(|(bell_locs, score)| (CourseHeadMask::compile(&bell_locs), score)),
+                    .map(|(bell_locs, score)| (CourseHeadMask::from_slice(bell_locs), score)),
             );
         }
 
@@ -164,41 +162,25 @@ impl MusicTable {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct CourseHeadMask {
-    mask: u128,
-    bells: u128,
+    mask: Vec<(usize, Bell)>,
 }
 
 impl CourseHeadMask {
-    /// Compile a list of bell locations into a pair of bitmasks which can be used to efficiently
-    /// check the mask
-    fn compile(bell_locs: &[(usize, Bell)]) -> Self {
-        // Generate the masks for their locations.
-        // - `mask` has 0x00 in the locations of the bells and 0xff otherwise (it's
-        //   inverted in the return expression).
-        // - `bells` has each bell's byte in the locations of the bells and 0xff otherwise.
-        let mut mask = 0u128;
-        let mut bells = (-1i128) as u128; // Start off with all 1s
-        for (index, bell) in bell_locs {
-            // Fill the byte in the mask with 1s (which will be turned into 0s after the
-            // bitwise not at the end)
-            mask |= 0xffu128 << (index * 8);
-            // Zero out the current bell byte
-            bells &= !(0xffu128 << (index * 8));
-            // Fill the zeroed byte with the bell index
-            bells |= (bell.index() as u128) << (index * 8);
-        }
-        // println!("{:>16x}\n{:>32x}", !mask, bells);
-        Self { mask: !mask, bells }
+    fn from_slice(s: &[(usize, Bell)]) -> Self {
+        Self { mask: s.to_vec() }
     }
 
-    #[inline(always)]
-    fn evaluate(&self, row: FastRow) -> bool {
-        // Use the mask to overwrite every byte we don't care about with 0xff
-        let masked_row = u128::from(row) | self.mask;
-        // Compare the masked row to the bells we're expecting
-        masked_row == self.bells
+    fn evaluate(&self, r: &Row) -> bool {
+        // Check if any of the bells in the row are in the wrong place
+        for &(i, bell) in &self.mask {
+            if r[i] != bell {
+                return false;
+            }
+        }
+        // If all the indices in `r` contain the right bells, then the mask matches
+        true
     }
 }
 

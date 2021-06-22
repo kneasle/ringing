@@ -4,28 +4,26 @@ use bellframe::{Bell, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    compose::Node,
-    fast_row::FastRow,
+    graph::NodeId,
     layout::{Segment, SegmentID, SegmentLink},
     music::{MusicTable, MusicType},
 };
 
 /// A table of static compiled data about a single course segment.
 #[derive(Debug, Clone)]
-pub struct SegmentTable {
-    pub(crate) false_segments: Vec<(FastRow, SegmentID)>,
-    pub(crate) length: usize,
-    pub(crate) music: MusicTable,
-    pub(crate) links: Vec<SegmentLink<FastRow>>,
+pub(crate) struct SegmentTable {
+    pub false_segments: Vec<(RowBuf, SegmentID)>,
+    pub length: usize,
+    pub music: MusicTable,
+    pub links: Vec<SegmentLink>,
 }
 
 impl SegmentTable {
-    #[target_feature(enable = "sse2")]
-    pub(crate) unsafe fn from_segments(
+    pub fn from_segments(
         segments: &[Segment],
         fixed_bells: &[Bell],
         music_types: &[MusicType],
-    ) -> (Vec<Self>, Vec<Node>) {
+    ) -> (Vec<Self>, Vec<NodeId>) {
         // Create segment tables with empty falseness
         let mut tables = segments
             .iter()
@@ -33,15 +31,13 @@ impl SegmentTable {
                 false_segments: Vec::new(),
                 length: s.rows.len(),
                 music: MusicTable::from_types(&s.rows, music_types, fixed_bells),
-                links: s.links.iter().map(SegmentLink::clone_from).collect_vec(),
+                links: s.links.clone(),
             })
             .collect_vec();
 
         // Fill in the falseness between the segments
         for (i, j, r) in inter_segment_falseness(segments, fixed_bells) {
-            tables[i]
-                .false_segments
-                .push((FastRow::from(&*r), SegmentID::from(j)));
+            tables[i].false_segments.push((r, SegmentID::from(j)));
         }
 
         // Determine which nodes can start the composition (for the time being, these are the ones
@@ -50,9 +46,10 @@ impl SegmentTable {
             .iter()
             .enumerate()
             .filter_map(|(i, s)| {
-                let rounds = RowBuf::rounds(s.rows[0].stage());
+                let stage = s.rows[0].stage();
+                let rounds = RowBuf::rounds(stage);
                 if s.rows.contains(&rounds) {
-                    Some(Node::new(SegmentID::from(i), FastRow::rounds()))
+                    Some(NodeId::new(SegmentID::from(i), RowBuf::rounds(stage)))
                 } else {
                     None
                 }
