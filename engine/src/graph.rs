@@ -11,6 +11,7 @@ use std::{
 };
 
 use bellframe::RowBuf;
+use itertools::Itertools;
 
 use crate::{layout::SegmentID, Engine};
 
@@ -35,47 +36,97 @@ impl<P> Graph<P> {
 
         // TODO: Filter out nodes which can't reach rounds
 
-        // Generate blank nodes (i.e. nodes where all the succession/falseness pointers are
-        // `null`, but everything else is initialised).
-        let mut nodes: HashMap<NodeId, Pin<Box<Node<P>>>> = reachable_node_ids
+        #[derive(Debug)]
+        struct NodeInfo<P> {
+            successors: Vec<(usize, NodeId)>,
+            false_nodes: Vec<NodeId>,
+            node: *mut Node<P>,
+        }
+
+        // For each reachable node ID, generate a blank node (i.e. a node where all the
+        // succession/falseness pointers are `null`, but everything else is initialised) along with
+        // additional information about which successors/false nodes are reachable
+        let mut node_infos: HashMap<NodeId, NodeInfo<P>> = reachable_node_ids
             .iter()
             .map(|id| {
                 let seg_table = engine.get_seg_table(id.seg_id);
-                // Determine the number of successors that are reachable
-                let num_successors = seg_table
+                // Determine the number of reachable successors
+                let successors = seg_table
                     .links
                     .iter()
-                    .filter(|seg_link| {
-                        let succ_node = NodeId::new(
+                    .map(|seg_link| {
+                        NodeId::new(
                             seg_link.end_segment,
                             id.row.as_row() * seg_link.transposition.as_row(),
-                        );
-                        reachable_node_ids.contains(&succ_node)
+                        )
                     })
-                    .count();
-                // Determine the number of successors that are reachable
-                let num_false_nodes = seg_table
+                    .enumerate()
+                    .filter(|(_i, succ_node)| reachable_node_ids.contains(succ_node))
+                    .collect_vec();
+                // Determine the number of reachable false nodes
+                let false_nodes = seg_table
                     .false_segments
                     .iter()
-                    .filter(|(false_course_head, seg_id)| {
-                        let false_node =
-                            NodeId::new(*seg_id, id.row.as_row() * false_course_head.as_row());
-                        reachable_node_ids.contains(&false_node)
+                    .map(|(false_course_head, seg_id)| {
+                        NodeId::new(*seg_id, id.row.as_row() * false_course_head.as_row())
                     })
-                    .count();
+                    .filter(|false_node| reachable_node_ids.contains(false_node))
+                    .collect_vec();
 
                 (
                     id.clone(),
-                    Node::blank(gen_payload(&id), num_successors, num_false_nodes),
+                    NodeInfo {
+                        node: Node::blank(gen_payload(&id), successors.len(), false_nodes.len()),
+                        successors,
+                        false_nodes,
+                    },
                 )
             })
             .collect();
 
-        for (id, n) in &nodes {
-            println!("{} of {}: {:?}", id.seg_id.v, id.row, n);
+        // Create a map from IDs to pointers to the nodes.  This creates multiple mutable
+        // *pointers*, but Rust only enforces aliasing of *references* so this is fine (but doing
+        // it in the loop trips the borrow checker).
+        let node_ptrs: HashMap<NodeId, *mut Node<P>> = node_infos
+            .iter()
+            .map(|(id, v)| (id.clone(), v.node))
+            .collect();
+
+        // Now that all the nodes have been allocated, set the succession/falseness pointers
+        for (_id, node_info) in node_infos.iter_mut() {
+            let node = unsafe { node_info.node.as_mut() }.unwrap();
+
+            let succ_ptrs = node.successors_mut();
+            for ((_succ_ind, succ_id), succ_ptr) in
+                node_info.successors.iter().zip_eq(succ_ptrs.iter_mut())
+            {
+                *succ_ptr = *node_ptrs.get(&succ_id).unwrap();
+            }
+
+            let false_ptrs = node.false_nodes_mut();
+            for (false_id, false_ptr) in node_info.false_nodes.iter().zip_eq(false_ptrs.iter_mut())
+            {
+                *false_ptr = *node_ptrs.get(&false_id).unwrap();
+            }
         }
 
-        Self { nodes }
+        for (id, n) in &node_infos {
+            println!("{} of {}: {:?}", id.seg_id.v, id.row, unsafe {
+                n.node.as_ref()
+            });
+        }
+
+        // Drop the blank node infos so that the raw pointers to the nodes are unique when they are
+        // boxed
+        drop(node_infos);
+
+        // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes and return
+        Self {
+            nodes: node_ptrs
+                .into_iter()
+                .map(|(id, ptr)| (id, Pin::new(unsafe { Box::from_raw(ptr) })))
+                .collect(),
+        }
     }
 }
 
@@ -111,10 +162,7 @@ pub(crate) struct Node<P> {
 
 impl<P> Node<P> {
     /// Create a `Node` where all the successor pointers are [`null`](std::ptr::null).
-    fn blank(payload: P, num_successors: usize, num_false_nodes: usize) -> Pin<Box<Self>>
-    where
-        P: Unpin,
-    {
+    fn blank(payload: P, num_successors: usize, num_false_nodes: usize) -> *mut Self {
         let num_pointers = num_successors + num_false_nodes;
         // The size and alignment of a `Node` with one pointer
         let initial_size = std::mem::size_of::<Node<P>>();
@@ -140,8 +188,7 @@ impl<P> Node<P> {
             }
         }
 
-        // Wrap the new node in a pinned Box, and return
-        Pin::new(unsafe { Box::from_raw(new_node) })
+        new_node
     }
 
     pub fn payload(&self) -> &P {
@@ -155,6 +202,13 @@ impl<P> Node<P> {
         unsafe { std::slice::from_raw_parts(self.ptrs.as_ptr(), self.num_successors) }
     }
 
+    fn successors_mut(&mut self) -> &mut [*const Self] {
+        // This unsafety is OK because:
+        // - we allocated the extended slice within a single allocation
+        // - we initialised the entire contents of the extended slice
+        unsafe { std::slice::from_raw_parts_mut(self.ptrs.as_mut_ptr(), self.num_successors) }
+    }
+
     pub fn false_nodes(&self) -> &[*const Self] {
         // This unsafety is OK because:
         // - we allocated the extended slice within a single allocation
@@ -162,6 +216,18 @@ impl<P> Node<P> {
         unsafe {
             std::slice::from_raw_parts(
                 self.ptrs.as_ptr().add(self.num_successors),
+                self.num_false_nodes,
+            )
+        }
+    }
+
+    fn false_nodes_mut(&mut self) -> &mut [*const Self] {
+        // This unsafety is OK because:
+        // - we allocated the extended slice within a single allocation
+        // - we initialised the entire contents of the extended slice
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.ptrs.as_mut_ptr().add(self.num_successors),
                 self.num_false_nodes,
             )
         }
