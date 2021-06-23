@@ -33,6 +33,8 @@ impl<P> Graph<P> {
         let reachable_node_ids = gen_reachable_node_ids(&engine);
         println!("{} reachable nodes", reachable_node_ids.len());
 
+        // TODO: Filter out nodes which can't reach rounds
+
         // Generate blank nodes (i.e. nodes where all the succession/falseness pointers are
         // `null`, but everything else is initialised).
         let mut nodes: HashMap<NodeId, Pin<Box<Node<P>>>> = reachable_node_ids
@@ -43,7 +45,7 @@ impl<P> Graph<P> {
                 let num_successors = seg_table
                     .links
                     .iter()
-                    .map(|seg_link| {
+                    .filter(|seg_link| {
                         let succ_node = NodeId::new(
                             seg_link.end_segment,
                             id.row.as_row() * seg_link.transposition.as_row(),
@@ -55,7 +57,7 @@ impl<P> Graph<P> {
                 let num_false_nodes = seg_table
                     .false_segments
                     .iter()
-                    .map(|(false_course_head, seg_id)| {
+                    .filter(|(false_course_head, seg_id)| {
                         let false_node =
                             NodeId::new(*seg_id, id.row.as_row() * false_course_head.as_row());
                         reachable_node_ids.contains(&false_node)
