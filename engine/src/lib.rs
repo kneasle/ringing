@@ -79,7 +79,8 @@ impl Engine {
                 thread::Builder::new()
                     .name(format!("Worker{}", i))
                     .spawn(move || {
-                        EngineWorker::compose(thread_arc, i);
+                        let mut worker = EngineWorker::from_engine(thread_arc, i);
+                        worker.compose();
                     })
                     .unwrap()
             })

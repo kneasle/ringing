@@ -22,6 +22,8 @@ pub(crate) struct Graph<P> {
     /// The set of nodes reachable in the graph.  For the rest of the code, these are entirely
     /// owned by the `Graph` (which acts like an arena for DSTs).
     nodes: HashMap<NodeId, Pin<Box<Node<P>>>>,
+    /// The [`Node`]s which can start a composition
+    pub start_nodes: Vec<*const Node<P>>,
 }
 
 impl<P> Graph<P> {
@@ -120,8 +122,15 @@ impl<P> Graph<P> {
         // boxed
         drop(node_infos);
 
+        let start_nodes = engine
+            .start_nodes
+            .iter()
+            .filter_map(|id| node_ptrs.get(id).map(|ptr| *ptr as *const Node<P>))
+            .collect_vec();
+
         // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes and return
         Self {
+            start_nodes,
             nodes: node_ptrs
                 .into_iter()
                 .map(|(id, ptr)| (id, Pin::new(unsafe { Box::from_raw(ptr) })))
