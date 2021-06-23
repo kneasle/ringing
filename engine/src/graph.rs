@@ -160,7 +160,7 @@ impl<P> Graph<P> {
 pub(crate) struct Node<P> {
     /// The inner data for this `Node`.  The layout looks like:
     ///
-    /// ```
+    /// ```ignore
     /// Node.inner:
     ///     length: usize // The total number of pointers contained within this node
     ///     header (NodeHeader):
