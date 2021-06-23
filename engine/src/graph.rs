@@ -4,7 +4,7 @@
 
 use std::{
     alloc,
-    cmp::{self, Ordering, Reverse},
+    cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet},
     ops::Mul,
     pin::Pin,
@@ -50,8 +50,8 @@ impl<P> Graph<P> {
         // additional information about which successors/false nodes are reachable
         let mut node_infos: HashMap<NodeId, NodeInfo<P>> = reachable_node_ids
             .iter()
-            .map(|id| {
-                let seg_table = engine.get_seg_table(id.seg_id);
+            .map(|node_id| {
+                let seg_table = engine.get_seg_table(node_id.seg_id);
                 // Determine the number of reachable successors
                 let successors = seg_table
                     .links
@@ -59,7 +59,7 @@ impl<P> Graph<P> {
                     .map(|seg_link| {
                         NodeId::new(
                             seg_link.end_segment,
-                            id.row.as_row() * seg_link.transposition.as_row(),
+                            node_id.row.as_row() * seg_link.transposition.as_row(),
                         )
                     })
                     .enumerate()
@@ -69,16 +69,28 @@ impl<P> Graph<P> {
                 let false_nodes = seg_table
                     .false_segments
                     .iter()
-                    .map(|(false_course_head, seg_id)| {
-                        NodeId::new(*seg_id, id.row.as_row() * false_course_head.as_row())
+                    // All nodes are false against themselves, which is encoded in `false_segments`
+                    // but isn't needed for the graph traversal.  So we filter them out
+                    .filter(|(fch, seg_id)| {
+                        let is_same_node = *seg_id == node_id.seg_id && fch.is_rounds();
+                        !is_same_node
                     })
+                    // Compute the `NodeId`s of the false nodes by transposition
+                    .map(|(false_course_head, seg_id)| {
+                        NodeId::new(*seg_id, node_id.row.as_row() * false_course_head.as_row())
+                    })
+                    // Remove any nodes which are unreachable
                     .filter(|false_node| reachable_node_ids.contains(false_node))
                     .collect_vec();
 
                 (
-                    id.clone(),
+                    node_id.clone(),
                     NodeInfo {
-                        node: Node::blank(gen_payload(&id), successors.len(), false_nodes.len()),
+                        node: Node::blank(
+                            gen_payload(&node_id),
+                            successors.len(),
+                            false_nodes.len(),
+                        ),
                         successors,
                         false_nodes,
                     },
@@ -112,11 +124,11 @@ impl<P> Graph<P> {
             }
         }
 
-        for (id, n) in &node_infos {
+        /* for (id, n) in &node_infos {
             println!("{} of {}: {:?}", id.seg_id.v, id.row, unsafe {
                 n.node.as_ref()
             });
-        }
+        } */
 
         // Drop the blank node infos so that the raw pointers to the nodes are unique when they are
         // boxed
@@ -166,7 +178,7 @@ pub(crate) struct Node<P> {
     ///
     /// - The first `num_successors` pointers refer to successor nodes
     /// - The next `num_false_nodes` pointers refer to false nodes
-    ptrs: [*const Node<P>; 1],
+    ptrs: [*const Self; 1],
 }
 
 impl<P> Node<P> {
@@ -174,15 +186,16 @@ impl<P> Node<P> {
     fn blank(payload: P, num_successors: usize, num_false_nodes: usize) -> *mut Self {
         let num_pointers = num_successors + num_false_nodes;
         // The size and alignment of a `Node` with one pointer
-        let initial_size = std::mem::size_of::<Node<P>>();
-        let align = std::mem::align_of::<Node<P>>();
+        let initial_size = std::mem::size_of::<Self>();
+        let align = std::mem::align_of::<Self>();
         // The size of the node once the array is expanded (the `max` here ensures `Node.ptrs`
         // always has at least one element, so the unexpanded version is always safe to use).
-        let extended_size = initial_size + (cmp::max(num_pointers, 1) - 1) * 8;
+        let extended_size =
+            initial_size + num_pointers.saturating_sub(1) * std::mem::size_of::<*const Self>();
 
         // Allocate some uninitialised memory for the new node
         let extended_layout = alloc::Layout::from_size_align(extended_size, align).unwrap();
-        let new_node = unsafe { alloc::alloc(extended_layout) as *mut Node<P> };
+        let new_node = unsafe { alloc::alloc(extended_layout) as *mut Self };
         // Check the alignment of the new memory
         assert!(new_node as usize % align == 0);
 
@@ -192,8 +205,7 @@ impl<P> Node<P> {
             (*new_node).num_successors = num_successors;
             (*new_node).num_false_nodes = num_false_nodes;
             for i in 0..num_pointers {
-                *((*new_node).ptrs.get_unchecked_mut(i) as *mut *const Node<P>) =
-                    std::ptr::null_mut();
+                *((*new_node).ptrs.get_unchecked_mut(i) as *mut *const Self) = std::ptr::null_mut();
             }
         }
 
