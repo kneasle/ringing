@@ -20,7 +20,7 @@ use crate::{layout::SegmentID, Engine};
 #[derive(Debug)]
 pub(crate) struct Graph<P> {
     /// The set of nodes reachable in the graph.  For the rest of the code, these are entirely
-    /// owned by the `Graph` (which acts like an arena for DSTs).
+    /// owned by the `Graph` (which acts like an arena for dynamically sized [`Node`]s).
     nodes: HashMap<NodeId, Pin<Box<Node<P>>>>,
     /// The [`Node`]s which can start a composition
     pub start_nodes: Vec<*const Node<P>>,
@@ -34,6 +34,7 @@ impl<P> Graph<P> {
     {
         // Calculate which nodes are reachable within the length of the composition
         let reachable_node_ids = gen_reachable_node_ids(&engine);
+
         println!("{} reachable nodes", reachable_node_ids.len());
 
         // TODO: Filter out nodes which can't reach rounds
@@ -140,7 +141,15 @@ impl<P> Graph<P> {
             .filter_map(|id| node_ptrs.get(id).map(|ptr| *ptr as *const Node<P>))
             .collect_vec();
 
-        // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes and return
+        // Before returning the nodes, check that the `*const Node<P>` and `&Node<P>` can be safely
+        // transmuted
+        assert_eq!(
+            std::alloc::Layout::new::<*const Node<P>>(),
+            std::alloc::Layout::new::<&Node<P>>()
+        );
+
+        // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes (so that
+        // they're owned but can't be moved) and return
         Self {
             start_nodes,
             nodes: node_ptrs
@@ -216,11 +225,13 @@ impl<P> Node<P> {
         &self.payload
     }
 
-    pub fn successors(&self) -> &[*const Self] {
+    pub fn successors(&self) -> &[&Self] {
         // This unsafety is OK because:
         // - we allocated the extended slice within a single allocation
         // - we initialised the entire contents of the extended slice
-        unsafe { std::slice::from_raw_parts(self.ptrs.as_ptr(), self.num_successors) }
+        unsafe {
+            std::slice::from_raw_parts(self.ptrs.as_ptr() as *const &Self, self.num_successors)
+        }
     }
 
     fn successors_mut(&mut self) -> &mut [*const Self] {
@@ -230,13 +241,13 @@ impl<P> Node<P> {
         unsafe { std::slice::from_raw_parts_mut(self.ptrs.as_mut_ptr(), self.num_successors) }
     }
 
-    pub fn false_nodes(&self) -> &[*const Self] {
+    pub fn false_nodes(&self) -> &[&Self] {
         // This unsafety is OK because:
         // - we allocated the extended slice within a single allocation
         // - we initialised the entire contents of the extended slice
         unsafe {
             std::slice::from_raw_parts(
-                self.ptrs.as_ptr().add(self.num_successors),
+                self.ptrs.as_ptr().add(self.num_successors) as *const &Self,
                 self.num_false_nodes,
             )
         }

@@ -70,7 +70,7 @@ impl EngineWorker {
         // Since we are committing to ringing this node, we should register its falseness against
         // other nodes
         for &n in node.false_nodes() {
-            let false_count_cell = &unsafe { n.as_ref() }.unwrap().payload().falseness_count;
+            let false_count_cell = &n.payload().falseness_count;
             false_count_cell.set(false_count_cell.get() + 1);
         }
 
@@ -79,8 +79,7 @@ impl EngineWorker {
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            let succ_ref = unsafe { succ.as_ref() }.unwrap();
-            self.expand_node(succ_ref, length + payload.length);
+            self.expand_node(succ, length + payload.length);
             self.comp_prefix.pop();
         }
 
@@ -92,7 +91,7 @@ impl EngineWorker {
             .set(payload.falseness_count.get() - 1);
         // Decrement the falseness counters on all the nodes false against this one
         for &n in node.false_nodes() {
-            let false_count_cell = &unsafe { n.as_ref() }.unwrap().payload().falseness_count;
+            let false_count_cell = &n.payload().falseness_count;
             false_count_cell.set(false_count_cell.get() - 1);
         }
 
