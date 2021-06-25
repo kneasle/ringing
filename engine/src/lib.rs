@@ -3,15 +3,15 @@ use std::{ops::Range, sync::Arc, thread};
 use bellframe::{Bell, Method};
 use itertools::Itertools;
 
-use compose::EngineWorker;
-use graph::NodeId;
-use layout::{Layout, SegmentID};
-use segment_table::SegmentTable;
+// use compose::EngineWorker;
+use layout::{Layout, SegmentId};
+use segment_table::{SegmentTable, SegmentTableEntry};
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
-mod compose;
+// mod compose;
 mod graph;
 mod layout;
+pub mod mask;
 mod music;
 mod segment_table;
 pub mod single_method;
@@ -29,8 +29,7 @@ pub use music::MusicType;
 pub struct Engine {
     config: Config,
     len_range: Range<usize>,
-    segment_tables: Vec<SegmentTable>,
-    start_nodes: Vec<NodeId>,
+    segment_table: SegmentTable,
 }
 
 impl Engine {
@@ -41,14 +40,16 @@ impl Engine {
         layout: Layout,
         music: Vec<MusicType>,
     ) -> Self {
-        let (segment_tables, start_nodes) =
-            SegmentTable::from_segments(&layout.segments, &layout.fixed_bells, &music);
+        println!("{:#?}", layout);
 
         Self {
             config,
             len_range,
-            segment_tables,
-            start_nodes,
+            segment_table: SegmentTable::from_segments(
+                &layout.segments,
+                &layout.fixed_bells,
+                &music,
+            ),
         }
     }
 
@@ -79,8 +80,11 @@ impl Engine {
                 thread::Builder::new()
                     .name(format!("Worker{}", i))
                     .spawn(move || {
+                        /*
                         let mut worker = EngineWorker::from_engine(thread_arc, i);
                         worker.compose();
+                        */
+                        panic!()
                     })
                     .unwrap()
             })
@@ -93,17 +97,17 @@ impl Engine {
     }
 
     /// Gets the table corresponding to a given ID
-    pub(crate) fn get_seg_table(&self, seg_id: SegmentID) -> &SegmentTable {
-        &self.segment_tables[usize::from(seg_id)]
+    pub(crate) fn get_seg_table(&self, seg_id: SegmentId) -> &SegmentTableEntry {
+        &self.segment_table.entries[usize::from(seg_id)]
     }
 
     pub fn debug(&self) {
-        for (i, t) in self.segment_tables.iter().enumerate() {
+        for (i, t) in self.segment_table.entries.iter().enumerate() {
             println!("Seg {}:", i);
             println!("  len: {}", t.length);
             println!("  falseness:");
             for (r, s) in &t.false_segments {
-                println!("    {}: {}", s.v, r);
+                println!("    {}: {}", s.idx, r);
             }
         }
     }

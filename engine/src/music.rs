@@ -191,6 +191,22 @@ pub struct MusicType {
     pub weight: f32,
 }
 
+impl MusicType {
+    /// Compute the score of a sequence of [`Row`]s
+    pub fn score<'r>(&self, rows: impl IntoIterator<Item = &'r Row>) -> f32 {
+        let mut num_matches = 0usize;
+        for row in rows.into_iter() {
+            for regex in &self.regexes {
+                if regex.matches(row) {
+                    num_matches += 1;
+                }
+            }
+        }
+        // Each match is given `self.weight`
+        num_matches as f32 * self.weight
+    }
+}
+
 /// Combines rows and music patterns to generate a list of course head masks and their music
 /// scores.  These masks will never contain only one missing non-fixed bell (i.e. `x3254xxx` is
 /// normalised to `x32546xx`).

@@ -15,11 +15,11 @@ pub(crate) struct EngineWorker {
     len_range: Range<usize>,
     /// The in-memory [`Graph`] of [`Node`]s
     graph: Graph<NodePayload>,
-    /// A `Shortlist` of found compositions
+    /// A `Shortlist` of discovered compositions
     shortlist: Shortlist<Comp>,
     /// Which links where chosen after each node.  These are indices into the `links` field on each
     /// `Segment`.  Therefore, this is cheap to track during the composing loop and reconstruction
-    /// a human-friendly representation just requires a traversal of the [`Engine`]'s [`Layout`].
+    /// a human-friendly representation just requires a traversal of the node graph
     comp_prefix: Vec<usize>,
 }
 
@@ -52,8 +52,10 @@ impl EngineWorker {
             return;
         }
 
+        let len_after_this_node = length + payload.length;
+
         // If the node would make the comp too long then prune
-        if length >= self.len_range.end {
+        if len_after_this_node >= self.len_range.end {
             return;
         }
 
@@ -62,8 +64,8 @@ impl EngineWorker {
         // Sanity check that adding this node wouldn't make the comp false
         debug_assert_eq!(payload.falseness_count.get(), 0);
 
-        // This node is false against itself, so by adding it to the composition we have to mark it
-        // as false against itself (by adding one to its node count)
+        // This node is false against itself, so by adding it to the composition we have to also
+        // mark it as false (by adding one to its node count)
         payload
             .falseness_count
             .set(payload.falseness_count.get() + 1);
@@ -79,7 +81,7 @@ impl EngineWorker {
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            self.expand_node(succ, length + payload.length);
+            self.expand_node(succ, len_after_this_node);
             self.comp_prefix.pop();
         }
 
@@ -114,10 +116,13 @@ pub struct NodePayload {
 
 impl NodePayload {
     fn new(node_id: &NodeId, engine: &Engine) -> Self {
-        let seg_table = engine.get_seg_table(node_id.seg_id);
+        let seg_table = engine.get_seg_table(node_id.central_id(&engine.segment_table).seg_id);
         Self {
             length: seg_table.length,
-            score: seg_table.music.evaluate(&node_id.row),
+            score: match node_id {
+                NodeId::Central(central_id) => seg_table.music.evaluate(&central_id.row),
+                NodeId::End(_) | NodeId::Start(_) => todo!(),
+            },
             falseness_count: Cell::new(0),
         }
     }
@@ -137,7 +142,9 @@ impl Comp {
     fn to_string(&self, engine: &Engine) -> String {
         let mut string = format!("(len: {}, score: {}) ", self.length, self.score);
 
-        let mut current_seg_id = engine.start_nodes[self.starting_node].seg_id;
+        let mut current_seg_id = engine.segment_table.start_nodes[self.starting_node]
+            .super_node
+            .seg_id;
         for &link_ind in &self.calls {
             let link = &engine.get_seg_table(current_seg_id).links[link_ind];
             string.push_str(&link.display_name);

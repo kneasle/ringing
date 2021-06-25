@@ -13,8 +13,9 @@ use std::{
 use bellframe::RowBuf;
 use itertools::Itertools;
 
-use crate::{layout::SegmentID, Engine};
+use crate::{layout::SegmentId, segment_table::SegmentTable, Engine};
 
+/*
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries
 /// a custom payload (`P`), which can be used as annotations.
 #[derive(Debug)]
@@ -52,7 +53,8 @@ impl<P> Graph<P> {
         let mut node_infos: HashMap<NodeId, NodeInfo<P>> = reachable_node_ids
             .iter()
             .map(|node_id| {
-                let seg_table = engine.get_seg_table(node_id.seg_id);
+                let central_id = node_id.central_id(&engine.segment_table);
+                let seg_table = engine.get_seg_table(central_id.seg_id);
                 // Determine the number of reachable successors
                 let successors = seg_table
                     .links
@@ -125,20 +127,20 @@ impl<P> Graph<P> {
             }
         }
 
-        /* for (id, n) in &node_infos {
-            println!("{} of {}: {:?}", id.seg_id.v, id.row, unsafe {
-                n.node.as_ref()
-            });
-        } */
-
         // Drop the blank node infos so that the raw pointers to the nodes are unique when they are
         // boxed
         drop(node_infos);
 
+        // Get the pointers for the possible starting nodes
         let start_nodes = engine
+            .segment_table
             .start_nodes
             .iter()
-            .filter_map(|id| node_ptrs.get(id).map(|ptr| *ptr as *const Node<P>))
+            .filter_map(|se_node| {
+                node_ptrs
+                    .get(&NodeId::Central(se_node.super_node))
+                    .map(|ptr| *ptr as *const Node<P>)
+            })
             .collect_vec();
 
         // Before returning the nodes, check that the `*const Node<P>` and `&Node<P>` can be safely
@@ -167,18 +169,6 @@ impl<P> Graph<P> {
 // allocating).
 #[repr(C)]
 pub(crate) struct Node<P> {
-    /// The inner data for this `Node`.  The layout looks like:
-    ///
-    /// ```ignore
-    /// Node.inner:
-    ///     length: usize // The total number of pointers contained within this node
-    ///     header (NodeHeader):
-    ///         num_successors: usize,
-    ///         payload: I, // The custom payload of this node
-    ///     slice ([*const Node; length]):
-    ///         // The first `num_successors` elements point to the successor nodes
-    ///         // The remaining elements point to false nodes
-    /// ```
     payload: P,
     num_successors: usize,
     num_false_nodes: usize,
@@ -191,7 +181,7 @@ pub(crate) struct Node<P> {
 }
 
 impl<P> Node<P> {
-    /// Create a `Node` where all the successor pointers are [`null`](std::ptr::null).
+    /// Allocate a `Node` where all the successor pointers are [`null`](std::ptr::null).
     fn blank(payload: P, num_successors: usize, num_false_nodes: usize) -> *mut Self {
         let num_pointers = num_successors + num_false_nodes;
         // The size and alignment of a `Node` with one pointer
@@ -265,18 +255,39 @@ impl<P> Node<P> {
         }
     }
 }
+*/
 
-/// The ID of a [`Node`] of the composition - this is a [`SectionID`] (usually some part of the
-/// plain course), along with a [`Row`] describing the course head.
+/// The ID of a [`Node`] that isn't at the start or end of a composition.  Start and end nodes will
+/// be subsections of a 'central' node
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub(crate) struct NodeId {
-    pub seg_id: SegmentID,
+pub(crate) struct CentralNodeId {
     pub row: RowBuf,
+    pub seg_id: SegmentId,
+}
+
+impl CentralNodeId {
+    pub fn new(seg_id: SegmentId, row: RowBuf) -> Self {
+        CentralNodeId { seg_id, row }
+    }
+}
+
+/// The ID of any [`Node`] of the composition, including start and end nodes - this is a
+/// [`SectionID`] (usually some part of the plain course), along with a [`Row`] describing the
+/// course head.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub(crate) enum NodeId {
+    Central(CentralNodeId),
+    Start(usize),
+    End(usize),
 }
 
 impl NodeId {
-    pub fn new(seg_id: SegmentID, row: RowBuf) -> Self {
-        NodeId { seg_id, row }
+    pub fn central_id<'s, 't: 's>(&'s self, seg_table: &'t SegmentTable) -> &'s CentralNodeId {
+        match self {
+            Self::Central(c_id) => c_id,
+            &Self::Start(idx) => &seg_table.start_nodes[idx].super_node,
+            &Self::End(idx) => &seg_table.end_nodes[idx].super_node,
+        }
     }
 }
 
@@ -301,18 +312,21 @@ fn gen_reachable_node_ids(engine: &Engine) -> HashSet<NodeId> {
         }
     }
 
+    dbg!(
+        &engine.segment_table.start_nodes,
+        &engine.segment_table.end_nodes
+    );
+
     // Unexplored nodes, ordered by distance from rounds (i.e. the minimum number of rows required
     // to reach them from rounds)
     let mut frontier: BinaryHeap<Reverse<FrontierNode>> = BinaryHeap::new();
 
-    /* Run Dijkstra's algorithm using the frontier */
+    /* Run Dijkstra's algorithm using comp length as edge weights */
 
     // Populate the frontier with all the possible start nodes, each with distance 0
     frontier.extend(
-        engine
-            .start_nodes
-            .iter()
-            .map(|node_id| Reverse(FrontierNode(node_id.clone(), 0))),
+        (0..engine.segment_table.start_nodes.len())
+            .map(|i| Reverse(FrontierNode(NodeId::Start(i), 0))),
     );
 
     // Consume nodes from the frontier until the frontier is empty
@@ -323,15 +337,23 @@ fn gen_reachable_node_ids(engine: &Engine) -> HashSet<NodeId> {
             continue;
         }
         // If the node hasn't been expanded yet, then add its reachable nodes to the frontier
-        let table = engine.get_seg_table(node_id.seg_id);
+        let central_id = node_id.central_id(&engine.segment_table);
+        let table = engine.get_seg_table(central_id.seg_id);
+        // If the shortest composition including this node is longer the length limit, then don't
+        // include it in the node graph
+        let new_dist = distance + table.length;
+        if new_dist > engine.len_range.end {
+            continue;
+        }
+        // Expand the node by adding its after-neighbours to the frontier
         for link in &table.links {
-            let new_node = NodeId::new(link.end_segment, node_id.row.mul(&link.transposition));
-            let new_dist = distance + table.length;
-            // Add this new node to the frontier if it's distance is within the max composition
-            // length
-            if new_dist <= engine.len_range.end {
-                frontier.push(Reverse(FrontierNode(new_node, new_dist)));
-            }
+            // Find the Central ID of the segment reachable by this link
+            let new_central_id =
+                CentralNodeId::new(link.end_segment, central_id.row.mul(&link.transposition));
+            // If the new segment contains rounds, truncate it to an end node
+            let new_id = engine.segment_table.truncate(new_central_id);
+            // Add the new node to the frontier
+            frontier.push(Reverse(FrontierNode(new_id, new_dist)));
         }
         // Mark this node as expanded
         expanded_nodes.insert(node_id);

@@ -4,18 +4,20 @@ use bellframe::{Bell, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    graph::NodeId,
-    layout::{Segment, SegmentID, SegmentLink},
+    graph::{CentralNodeId, NodeId},
+    layout::{Segment, SegmentId, SegmentLink},
     music::{MusicTable, MusicType},
 };
 
-/// A table of static compiled data about a single course segment.
+/// A table of compiled data about a set of [`Segment`]s
 #[derive(Debug, Clone)]
 pub(crate) struct SegmentTable {
-    pub false_segments: Vec<(RowBuf, SegmentID)>,
-    pub length: usize,
-    pub music: MusicTable,
-    pub links: Vec<SegmentLink>,
+    pub entries: Vec<SegmentTableEntry>,
+    pub start_nodes: Vec<StartEndNode>,
+    pub end_nodes: Vec<StartEndNode>,
+    /// Map of which `CentralNodeId`s will be truncated into end nodes.  This contains the same
+    /// data as `end_nodes` but in the form of a hash table from resulting IDs to lookups.
+    truncation_map: HashMap<CentralNodeId, usize>,
 }
 
 impl SegmentTable {
@@ -23,11 +25,46 @@ impl SegmentTable {
         segments: &[Segment],
         fixed_bells: &[Bell],
         music_types: &[MusicType],
-    ) -> (Vec<Self>, Vec<NodeId>) {
+    ) -> Self {
+        /*
+        // Determine which `NodeId`s can contain rounds, and split them into start and end sections
+        let mut start_nodes = Vec::<StartEndNode>::new();
+        let mut end_nodes = Vec::<StartEndNode>::new();
+
+        for (seg_idx, s) in segments.iter().enumerate() {
+            'row_loop: for (row_idx, r) in s.rows.iter().enumerate() {
+                // Check that the fixed bells are all in their home positions in this row (by
+                // testing for misplaced bells and breaking the loop in that case).
+                for fixed_bell in fixed_bells {
+                    if r[fixed_bell.index()] != *fixed_bell {
+                        continue 'row_loop;
+                    }
+                }
+                // If we've got here then the current row contains all the fixed bells in their
+                // home positions, and thus rounds could occur in this location.  Therefore, the
+                // course head which would contain rounds in this location is the inverse of the
+                // current row.
+                let course_head_with_rounds = r.inv();
+                // Split this node at rounds into a start and end node
+                start_nodes.push(StartEndNode::new(
+                    &s.rows[row_idx..],
+                    course_head_with_rounds.clone(),
+                    seg_idx,
+                    music_types,
+                ));
+                end_nodes.push(StartEndNode::new(
+                    &s.rows[..row_idx],
+                    course_head_with_rounds.clone(),
+                    seg_idx,
+                    music_types,
+                ));
+            }
+        }
+
         // Create segment tables with empty falseness
-        let mut tables = segments
+        let mut entries = segments
             .iter()
-            .map(|s| SegmentTable {
+            .map(|s| SegmentTableEntry {
                 false_segments: Vec::new(),
                 length: s.rows.len(),
                 music: MusicTable::from_types(&s.rows, music_types, fixed_bells),
@@ -37,29 +74,79 @@ impl SegmentTable {
 
         // Fill in the falseness between the segments
         for (i, j, r) in inter_segment_falseness(segments, fixed_bells) {
-            tables[i].false_segments.push((r, SegmentID::from(j)));
+            entries[i].false_segments.push((r, SegmentId::from(j)));
         }
 
-        // Determine which nodes can start the composition (for the time being, these are the ones
-        // which ones contain rounds)
-        let start_nodes = segments
-            .iter()
-            .enumerate()
-            .filter_map(|(i, s)| {
-                let stage = s.rows[0].stage();
-                let rounds = RowBuf::rounds(stage);
-                if s.rows.contains(&rounds) {
-                    Some(NodeId::new(SegmentID::from(i), RowBuf::rounds(stage)))
-                } else {
-                    None
-                }
-            })
-            .collect_vec();
+        Self {
+            entries,
+            start_nodes,
+            truncation_map: end_nodes
+                .iter()
+                .enumerate()
+                .map(|(i, se_node)| (se_node.super_node.clone(), i))
+                .collect(),
+            end_nodes,
+        }
+        */
+        todo!()
+    }
 
-        (tables, start_nodes)
+    /// Return the [`NodeId`] of the [`Node`] that would be rung in the place of a central ID (i.e.
+    /// if rounds occurs, then ring the end node equivalent instead of the central node).
+    pub fn truncate(&self, central_id: CentralNodeId) -> NodeId {
+        match self.truncation_map.get(&central_id) {
+            Some(&end_id) => NodeId::End(end_id),
+            None => NodeId::Central(central_id),
+        }
     }
 }
 
+/// A table of static compiled data about a single course segment.
+#[derive(Debug, Clone)]
+pub(crate) struct SegmentTableEntry {
+    pub false_segments: Vec<(RowBuf, SegmentId)>,
+    pub length: usize,
+    pub music: MusicTable,
+    pub links: Vec<SegmentLink>,
+}
+
+/// A table of static compiled data about a single course segment.
+#[derive(Debug, Clone)]
+pub(crate) struct StartEndNode {
+    pub false_nodes: Vec<NodeId>,
+    pub length: usize,
+    pub score: f32,
+    /// The ID of the [`Node`] that this is a (possibly trivial) subsection of
+    pub super_node: CentralNodeId,
+}
+
+impl StartEndNode {
+    fn new(rows: &[RowBuf], course_head: RowBuf, segment_idx: usize, music: &[MusicType]) -> Self {
+        // Calculate music (reusing `row_buffer`'s allocation to store the transposed row).
+        let mut score = 0f32;
+        let mut transposed_row = RowBuf::empty();
+        for r in rows {
+            course_head.mul_into_buf(r, &mut transposed_row).unwrap();
+
+            for music_type in music {
+                for regex in &music_type.regexes {
+                    if regex.matches(&transposed_row) {
+                        score += music_type.weight;
+                    }
+                }
+            }
+        }
+        // Construct `self` and return
+        Self {
+            false_nodes: Vec::new(),
+            length: rows.len(),
+            score,
+            super_node: CentralNodeId::new(SegmentId::from(segment_idx), course_head),
+        }
+    }
+}
+
+/*
 /// Takes a list of [`Segment`]s and a list of fixed [`Bell`]s, and computes the falseness between
 /// the segments.  If (i, j, r) is in this set, then it means that range `i` of the plain course is
 /// false against range `j` of the course starting with `r`.
@@ -145,3 +232,4 @@ fn inter_segment_falseness(
 fn get_bell_inds(bells: &[Bell], r: &Row) -> Vec<usize> {
     bells.iter().map(|b| r.place_of(*b).unwrap()).collect_vec()
 }
+*/
