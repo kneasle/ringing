@@ -1,4 +1,5 @@
-length = 5040
+# length = 5040
+length = { min = 0, max = 400 }
 num_comps = 10
 base_calls = "far"
 

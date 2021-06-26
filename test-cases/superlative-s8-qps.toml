@@ -1,4 +1,5 @@
-length = "QP"
+# length = "QP"
+length = { min = 0, max = 100 }
 num_comps = 30
 base_calls = "near"
 

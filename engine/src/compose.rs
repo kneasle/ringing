@@ -29,7 +29,9 @@ impl EngineWorker {
         EngineWorker {
             thread_id,
             len_range: engine.len_range.clone(),
-            graph: Graph::from_engine(&engine, |node_id| NodePayload::new(node_id, &engine)),
+            graph: Graph::from_prototype(&engine.prototype_graph, |node_id| {
+                NodePayload::new(node_id, &engine)
+            }),
             shortlist: Shortlist::new(engine.config.num_comps),
             comp_prefix: Vec::new(),
         }
@@ -116,13 +118,10 @@ pub struct NodePayload {
 
 impl NodePayload {
     fn new(node_id: &NodeId, engine: &Engine) -> Self {
-        let seg_table = engine.get_seg_table(node_id.central_id(&engine.segment_table).seg_id);
+        let segment = engine.layout.get_segment(node_id.seg);
         Self {
-            length: seg_table.length,
-            score: match node_id {
-                NodeId::Central(central_id) => seg_table.music.evaluate(&central_id.row),
-                NodeId::End(_) | NodeId::Start(_) => todo!(),
-            },
+            length: segment.row_range.1.length,
+            score: 0f32,
             falseness_count: Cell::new(0),
         }
     }
@@ -142,6 +141,8 @@ impl Comp {
     fn to_string(&self, engine: &Engine) -> String {
         let mut string = format!("(len: {}, score: {}) ", self.length, self.score);
 
+        todo!();
+        /*
         let mut current_seg_id = engine.segment_table.start_nodes[self.starting_node]
             .super_node
             .seg_id;
@@ -152,6 +153,7 @@ impl Comp {
         }
 
         string
+        */
     }
 }
 

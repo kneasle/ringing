@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter::repeat_with};
 
-use bellframe::{method::LABEL_LEAD_END, AnnotRow, Bell, Method, PlaceNot, Row, RowBuf, Stage};
+use bellframe::{method::LABEL_LEAD_END, Bell, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::{
@@ -282,10 +282,15 @@ pub fn single_method_layout(
         })
         .collect_vec();
 
+    let mut rows = plain_course.into_rows();
+    // Remove the closing rounds from the block (since otherwise rounds would appear twice in a
+    // row).
+    assert!(rows.pop().map_or(false, |r| r.is_rounds()));
+
     let mut layout = Layout {
         segments,
         fixed_bells,
-        blocks: vec![plain_course.into_rows()],
+        blocks: vec![rows],
     };
     layout.generate_starts_and_end_nodes();
     Ok(layout)

@@ -4,7 +4,7 @@ use bellframe::{Bell, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    graph::{CentralNodeId, NodeId},
+    graph::NodeId,
     layout::{Segment, SegmentId, SegmentLink},
     music::{MusicTable, MusicType},
 };
@@ -17,7 +17,7 @@ pub(crate) struct SegmentTable {
     pub end_nodes: Vec<StartEndNode>,
     /// Map of which `CentralNodeId`s will be truncated into end nodes.  This contains the same
     /// data as `end_nodes` but in the form of a hash table from resulting IDs to lookups.
-    truncation_map: HashMap<CentralNodeId, usize>,
+    truncation_map: HashMap<NodeId, usize>,
 }
 
 impl SegmentTable {
@@ -90,15 +90,6 @@ impl SegmentTable {
         */
         todo!()
     }
-
-    /// Return the [`NodeId`] of the [`Node`] that would be rung in the place of a central ID (i.e.
-    /// if rounds occurs, then ring the end node equivalent instead of the central node).
-    pub fn truncate(&self, central_id: CentralNodeId) -> NodeId {
-        match self.truncation_map.get(&central_id) {
-            Some(&end_id) => NodeId::End(end_id),
-            None => NodeId::Central(central_id),
-        }
-    }
 }
 
 /// A table of static compiled data about a single course segment.
@@ -117,7 +108,7 @@ pub(crate) struct StartEndNode {
     pub length: usize,
     pub score: f32,
     /// The ID of the [`Node`] that this is a (possibly trivial) subsection of
-    pub super_node: CentralNodeId,
+    pub super_node: NodeId,
 }
 
 impl StartEndNode {
@@ -141,7 +132,7 @@ impl StartEndNode {
             false_nodes: Vec::new(),
             length: rows.len(),
             score,
-            super_node: CentralNodeId::new(SegmentId::from(segment_idx), course_head),
+            super_node: NodeId::new(SegmentId::from(segment_idx), course_head),
         }
     }
 }

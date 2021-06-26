@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use bellframe::{Bell, Row, Stage};
+use bellframe::{Bell, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 /// A mask which fixes the location of some [`Bell`]s.  Unfilled positions are usually denoted by
@@ -52,6 +52,17 @@ impl Mask {
             }
         }
         true
+    }
+
+    /// If this mask matches exactly one [`Row`], then return that [`Row`] (otherwise `None`).
+    pub fn as_row(&self) -> Option<RowBuf> {
+        if self.bells.iter().all(Option::is_some) {
+            // This unsafety is OK because we assert an invariant that masks are subsets of rows
+            // (and thus a complete mask satisfies all the invariants of rows).
+            Some(unsafe { RowBuf::from_bell_iter_unchecked(self.bells.iter().map(|b| b.unwrap())) })
+        } else {
+            None
+        }
     }
 }
 

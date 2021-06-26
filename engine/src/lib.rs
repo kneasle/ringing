@@ -1,14 +1,14 @@
 use std::{ops::Range, sync::Arc, thread};
 
 use bellframe::{Bell, Method};
+use graph::ProtoGraph;
 use itertools::Itertools;
 
-// use compose::EngineWorker;
-use layout::{Layout, SegmentId};
-use segment_table::{SegmentTable, SegmentTableEntry};
+use compose::EngineWorker;
+use layout::Layout;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
-// mod compose;
+mod compose;
 mod graph;
 mod layout;
 pub mod mask;
@@ -29,7 +29,8 @@ pub use music::MusicType;
 pub struct Engine {
     config: Config,
     len_range: Range<usize>,
-    segment_table: SegmentTable,
+    layout: Layout,
+    prototype_graph: ProtoGraph,
 }
 
 impl Engine {
@@ -40,16 +41,18 @@ impl Engine {
         layout: Layout,
         music: Vec<MusicType>,
     ) -> Self {
-        println!("{:#?}", layout);
+        let prototype_graph = ProtoGraph::from_layout(&layout, len_range.end);
 
         Self {
             config,
             len_range,
-            segment_table: SegmentTable::from_segments(
+            layout,
+            prototype_graph,
+            /* segment_table: SegmentTable::from_segments(
                 &layout.segments,
                 &layout.fixed_bells,
                 &music,
-            ),
+            ), */
         }
     }
 
@@ -80,11 +83,8 @@ impl Engine {
                 thread::Builder::new()
                     .name(format!("Worker{}", i))
                     .spawn(move || {
-                        /*
                         let mut worker = EngineWorker::from_engine(thread_arc, i);
                         worker.compose();
-                        */
-                        panic!()
                     })
                     .unwrap()
             })
@@ -93,22 +93,6 @@ impl Engine {
         // Stop the main thread until all workers have returned
         for t in threads {
             t.join().unwrap();
-        }
-    }
-
-    /// Gets the table corresponding to a given ID
-    pub(crate) fn get_seg_table(&self, seg_id: SegmentId) -> &SegmentTableEntry {
-        &self.segment_table.entries[usize::from(seg_id)]
-    }
-
-    pub fn debug(&self) {
-        for (i, t) in self.segment_table.entries.iter().enumerate() {
-            println!("Seg {}:", i);
-            println!("  len: {}", t.length);
-            println!("  falseness:");
-            for (r, s) in &t.false_segments {
-                println!("    {}: {}", s.idx, r);
-            }
         }
     }
 }

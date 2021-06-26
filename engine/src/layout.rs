@@ -5,7 +5,7 @@ use std::{
 
 use bellframe::{Bell, Row, RowBuf};
 
-use crate::mask::Mask;
+use crate::{graph::NodeId, mask::Mask};
 
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -124,7 +124,7 @@ impl Layout {
 
         // Check that rounds is actually reachable
         assert!(
-            new_segments.len() > 0,
+            !new_segments.is_empty(),
             "No nodes satisfying the course head masks can contain rounds"
         );
 
@@ -179,6 +179,33 @@ impl Layout {
             .take(range.length)
             .map(Deref::deref)
     }
+
+    /// Given a [`NodeId`], returns the [`NodeId`] of the truncated version of that node (i.e.
+    /// converting a longer node into an end node if it contains rounds).  If the node can't be
+    /// truncated, then the original ID is returned.
+    pub(crate) fn truncate(&self, node_id: NodeId) -> NodeId {
+        let segment = self.get_segment(node_id.seg);
+        'truncate_loop: for &truncated_id in &segment.truncations {
+            // Check that the node's course head is permitted by the truncated node (for example,
+            // if `i` is the ID of the segment containing rounds, then (i, 13245678) will not be
+            // able to be truncated because the course head masks will not match).
+            for mask in &self.get_segment(truncated_id).course_head_masks {
+                if !mask.matches(&node_id.row) {
+                    // If any mask fails then this segment can't be truncated, so skip to the next
+                    // one
+                    continue 'truncate_loop;
+                }
+            }
+            // If all the masks matched the current node, then we truncate the node
+            return NodeId::new(truncated_id, node_id.row);
+        }
+        // If none of the truncations succeeded, then the node is preserved
+        node_id
+    }
+
+    pub fn get_segment(&self, segment_id: SegmentId) -> &Segment {
+        &self.segments[segment_id.idx]
+    }
 }
 
 /// The range of [`Row`]s covered by a [`Segment`].
@@ -214,6 +241,18 @@ pub struct Segment {
     pub truncations: Vec<SegmentId>,
     /// The position of this `Segment` within the composition
     pub position: Position,
+}
+
+impl Segment {
+    /// If this segment can only exist in one possible course, then by extension it must correspond
+    /// to exactly one node in the search graph.  This returns the [`NodeId`] of that node.
+    pub(crate) fn as_node_id(&self, seg_id: SegmentId) -> Option<NodeId> {
+        if self.course_head_masks.len() != 1 {
+            return None;
+        }
+        let course_head = self.course_head_masks[0].as_row()?;
+        Some(NodeId::new(seg_id, course_head))
+    }
 }
 
 /// The different positions a node can be in the composition
