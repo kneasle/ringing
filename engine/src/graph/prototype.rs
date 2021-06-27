@@ -10,7 +10,7 @@ use itertools::Itertools;
 
 use crate::layout::{Layout, Position, SegmentId};
 
-use super::NodeId;
+use super::{falseness::FalsenessTable, NodeId};
 
 /// A 'prototype' node graph that is inefficient to traverse but easy to modify.  This is used to
 /// build and optimise the node graph before being converted into an efficient [`Graph`] structure
@@ -143,20 +143,31 @@ impl ProtoGraph {
                             )
                         })
                         .collect_vec(),
-                    // TODO: We need a falseness table to compute this
+                    // These are populated in separate passes over the graph
                     false_nodes: Vec::new(),
-                    // This will get filled in as another pass over `nodes`
                     predecessors: Vec::new(),
                 };
                 (node_id.clone(), new_node)
             })
             .collect();
 
+        // Compute falseness between the nodes (by naively testing every pair of nodes in a lookup
+        // table).
+        let all_node_ids = nodes.keys().cloned().collect_vec();
+        let falseness_table = FalsenessTable::from_layout(layout);
+        for (id, node) in nodes.iter_mut() {
+            node.false_nodes = all_node_ids
+                .iter()
+                .filter(|&id2| falseness_table.are_false(id, id2))
+                .cloned()
+                .collect_vec();
+        }
+
         // Add predecessor references
         for (id, _dist) in expanded_nodes {
             // I wish there was a way to do this without cloning the node IDs, but alas the borrow
             // checker won't let me.  In future, we should allocate the node IDs into an arena (or
-            // use RCs) and pass around pointers.
+            // use RCs) to make the cloning cheaper
             for (_, succ_id) in nodes.get(&id).unwrap().successors.clone() {
                 if let Some(node) = nodes.get_mut(&succ_id) {
                     node.predecessors.push(id.clone());

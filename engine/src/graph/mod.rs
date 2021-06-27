@@ -21,6 +21,7 @@ use crate::{
 // can be shared between all the threads)
 pub use prototype::ProtoGraph;
 
+mod falseness;
 mod prototype;
 
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries

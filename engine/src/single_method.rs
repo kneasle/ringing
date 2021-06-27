@@ -359,6 +359,7 @@ impl CallSpec {
 }
 
 fn default_plain_lead_positions(stage: Stage) -> Vec<String> {
+    // Note that these calling positions refer to the location of the tenor at the lead **end**
     let named_positions = "LBIFXVES?N";
 
     // Generate calling positions that aren't M, W or H

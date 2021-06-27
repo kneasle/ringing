@@ -13,7 +13,6 @@ mod graph;
 mod layout;
 pub mod mask;
 mod music;
-mod segment_table;
 pub mod single_method;
 
 // Imports used solely by doctests
