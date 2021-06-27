@@ -362,7 +362,7 @@ impl ProtoGraph {
 pub(super) struct ProtoNode {
     pub position: Position,
     /// The number of rows in this node
-    length: usize,
+    pub length: usize,
     /// A lower bound on the number of rows required to go from any rounds to the first row of
     /// `self`
     min_distance_from_rounds: usize,
@@ -371,9 +371,8 @@ pub(super) struct ProtoNode {
     /// been computed yet).
     min_distance_to_rounds: Option<usize>,
     pub false_nodes: Vec<NodeId>,
-    /// The `usize` here denotes which link in the [`Layout`] has generated this succession link.
-    /// This is required so that a human-friendly representation of the composition can be
-    /// generated.
+    /// The `usize` here denotes which link in the [`Layout`] has generated this succession.  This
+    /// is required so that a human-friendly representation of the composition can be generated.
     pub successors: Vec<(usize, NodeId)>,
     pub predecessors: Vec<NodeId>,
 }

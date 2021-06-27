@@ -47,11 +47,6 @@ impl Engine {
             len_range,
             layout,
             prototype_graph,
-            /* segment_table: SegmentTable::from_segments(
-                &layout.segments,
-                &layout.fixed_bells,
-                &music,
-            ), */
         }
     }
 
@@ -82,7 +77,7 @@ impl Engine {
                 thread::Builder::new()
                     .name(format!("Worker{}", i))
                     .spawn(move || {
-                        let mut worker = EngineWorker::from_engine(thread_arc, i);
+                        let mut worker = EngineWorker::from_engine(&thread_arc, i);
                         worker.compose();
                     })
                     .unwrap()
