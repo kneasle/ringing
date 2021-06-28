@@ -1,9 +1,10 @@
 use std::{cell::Cell, cmp::Ordering, fmt::Write, ops::Range};
 
+use itertools::Itertools;
 use shortlist::Shortlist;
 
 use crate::{
-    graph::{Graph, Node, NodeId},
+    graph::{Graph, Node, NodeId, ProtoGraph},
     layout::Layout,
     Engine,
 };
@@ -21,7 +22,7 @@ pub(crate) struct EngineWorker<'e> {
     shortlist: Shortlist<Comp>,
     /* COMP DATA */
     /// Which of the possible starting nodes was used to start the currently exploring composition
-    start_node_idx: usize,
+    start_node: Option<NodeId>,
     /// Which links where chosen after each node.  These are indices into the `successors` array in
     /// each [`Node`].  This is really cheap to track during the composing loop, but means that
     /// recovering a human-friendly representation requires traversing the node graph and
@@ -42,25 +43,32 @@ impl<'e> EngineWorker<'e> {
                 |_node_id| ExtraPayload(),
             ),
             shortlist: Shortlist::new(engine.config.num_comps),
-            start_node_idx: 0,
+            start_node: None,
             comp_prefix: Vec::new(),
         }
     }
 
     /// Run graph search over the node graph to find compositions.
-    pub fn compose(&mut self) {
-        for (idx, start_node) in self.graph.start_nodes.clone().into_iter().enumerate() {
-            self.start_node_idx = idx;
+    pub fn compose(&mut self) -> Vec<Comp> {
+        println!("{}", self.engine.layout.debug_string());
+        for (start_id, start_node) in self.graph.start_nodes.clone() {
+            println!("{}", start_id);
+            self.start_node = Some(start_id);
             self.expand_node(unsafe { start_node.as_ref() }.unwrap(), 0, 0.0);
         }
+
+        // Once the search has finished, read the best comps from the shortlist and return them
+        self.shortlist.drain().collect_vec()
     }
 
-    /// Test a node, and either expand it or prune.  All statistics apply to the composition
-    /// explored, up to the first row of `node`.
+    /// Test a node, and either expand it or prune.  All arguments apply to the composition
+    /// explored up to the first row of `node`.
     fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize, score: f32) {
         let payload = node.payload();
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
+
+        // println!("{} {:?}", length, self.comp_prefix);
 
         /* ===== POTENTIALLY PRUNE THE NODE ===== */
 
@@ -124,17 +132,15 @@ impl<'e> EngineWorker<'e> {
             return;
         }
 
-        let comp = Comp {
-            start_node_idx: self.start_node_idx,
-            links_taken: self.comp_prefix.clone(),
+        let comp = Comp::new(
+            &self.engine.prototype_graph,
+            self.start_node.as_ref().unwrap(),
+            &self.comp_prefix,
             length,
             score,
-        };
-
-        println!(
-            "FOUND COMP! {}",
-            comp.to_string(&self.graph, &self.engine.layout)
         );
+
+        println!("FOUND COMP! {}", comp.to_string(&self.engine.layout));
 
         self.shortlist.push(comp);
     }
@@ -164,26 +170,40 @@ pub struct ExtraPayload();
 /// A completed composition
 #[derive(Debug, Clone)]
 pub struct Comp {
-    pub start_node_idx: usize,
-    pub links_taken: Vec<usize>,
+    pub(crate) links_taken: Vec<(NodeId, usize)>,
+    pub(crate) end_id: NodeId,
     pub length: usize,
     pub score: f32,
 }
 
 impl Comp {
-    #[allow(dead_code)]
-    fn to_string(&self, graph: &Graph<NodePayload, ExtraPayload>, layout: &Layout) -> String {
+    fn new(
+        graph: &ProtoGraph,
+        start_node: &NodeId,
+        links_taken: &[usize],
+        length: usize,
+        score: f32,
+    ) -> Self {
+        let (links_taken, end_id) = graph.generate_path(start_node, links_taken.iter().cloned());
+        Self {
+            links_taken,
+            end_id,
+            length,
+            score,
+        }
+    }
+
+    pub fn to_string(&self, layout: &Layout) -> String {
         let mut string = format!("(len: {}, score: {}) ", self.length, self.score);
 
-        write!(&mut string, "{}:", self.start_node_idx).unwrap();
+        write!(&mut string, "{}:", usize::from(self.links_taken[0].0.seg)).unwrap();
 
-        // Traverse the node graph to reconstruct the calls
-        let mut node = unsafe { graph.start_nodes[self.start_node_idx].as_ref() }.unwrap();
-        for &succ_idx in &self.links_taken {
-            string.push_str(&node.successor_link(succ_idx, layout).display_name);
-            node = node.successors()[succ_idx];
+        for (id, link_idx) in &self.links_taken {
+            let segment = layout.get_segment(id.seg);
+            string.push_str(&segment.name);
+            string.push_str(&segment.links[*link_idx].display_name);
         }
-        assert!(node.is_end());
+        string.push_str(&layout.get_segment(self.end_id.seg).name);
 
         string
     }

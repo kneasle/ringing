@@ -21,12 +21,33 @@ use super::{falseness::FalsenessTable, NodeId};
 /// for use in tree search.
 #[derive(Debug, Clone)]
 pub struct ProtoGraph {
-    /// Note: References between nodes don't have to be valid (i.e. they can point to a
-    /// [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored).
+    // NOTE: References between nodes don't have to be valid (i.e. they can point to a
+    // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored).
     pub(super) nodes: HashMap<NodeId, ProtoNode>,
 }
 
 impl ProtoGraph {
+    pub(crate) fn generate_path(
+        &self,
+        start_node: &NodeId,
+        succ_idxs: impl IntoIterator<Item = usize>,
+    ) -> (Vec<(NodeId, usize)>, NodeId) {
+        // Start the traversal at the start node
+        let mut node_id = start_node;
+        // Follow succession references until the path finishes
+        let path = succ_idxs
+            .into_iter()
+            .map(|succ_idx| {
+                let (link_idx, succ_id) = &self.nodes.get(node_id).unwrap().successors[succ_idx];
+                let res = (node_id.clone(), *link_idx);
+                node_id = succ_id;
+                res
+            })
+            .collect_vec();
+        // Return this and the start node
+        (path, node_id.clone())
+    }
+
     /// Generate and optimise a graph from a [`Layout`]
     pub fn from_layout(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
         let mut graph = Self::reachable_graph(layout, music_types, max_length);
@@ -80,10 +101,10 @@ impl ProtoGraph {
                 .segments
                 .iter()
                 .enumerate()
-                .filter(|(_i, s)| s.position == Position::Start)
-                .map(|(i, s)| {
+                .filter(|(_i, seg)| seg.position == Position::Start)
+                .map(|(i, seg)| {
                     FrontierNode(
-                        s.as_node_id(SegmentId::from(i))
+                        seg.as_node_id(SegmentId::from(i))
                             .expect("Start segments should only be able to exist in one course"),
                         0,
                     )

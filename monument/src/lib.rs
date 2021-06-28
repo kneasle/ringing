@@ -41,14 +41,12 @@ impl Engine {
         layout: Layout,
         music_types: Vec<MusicType>,
     ) -> Self {
-        let prototype_graph = ProtoGraph::from_layout(&layout, &music_types, len_range.end);
-
-        Self {
+        Engine {
             config,
+            prototype_graph: ProtoGraph::from_layout(&layout, &music_types, len_range.end),
             len_range,
             layout,
             music_types,
-            prototype_graph,
         }
     }
 
@@ -80,7 +78,7 @@ impl Engine {
                     .name(format!("Worker{}", i))
                     .spawn(move || {
                         let mut worker = EngineWorker::from_engine(&thread_arc, i);
-                        worker.compose();
+                        worker.compose()
                     })
                     .unwrap()
             })
@@ -88,7 +86,11 @@ impl Engine {
 
         // Stop the main thread until all workers have returned
         for t in threads {
-            t.join().unwrap();
+            let mut comps = t.join().unwrap();
+            comps.sort();
+            for c in comps {
+                println!("{}", c.to_string(&arc_self.layout));
+            }
         }
     }
 }

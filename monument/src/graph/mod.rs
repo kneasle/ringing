@@ -33,7 +33,7 @@ pub(crate) struct Graph<P, E> {
     /// owned by the `Graph` (which acts like an arena for dynamically sized [`Node`]s).
     nodes: HashMap<NodeId, Pin<Box<Node<P, E>>>>,
     /// The [`Node`]s which can start a composition
-    pub start_nodes: Vec<*const Node<P, E>>,
+    pub start_nodes: Vec<(NodeId, *const Node<P, E>)>,
 }
 
 impl<P, E> Graph<P, E> {
@@ -115,7 +115,7 @@ impl<P, E> Graph<P, E> {
         let start_nodes = nodes
             .iter()
             .filter(|(_id, (_node, proto_node))| proto_node.position == Position::Start)
-            .map(|(_id, (node, _proto_node))| *node as *const Node<P, E>)
+            .map(|(&id, (node, _proto_node))| (id.clone(), *node as *const Node<P, E>))
             .collect_vec();
 
         // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes (so that

@@ -209,10 +209,10 @@ impl Layout {
         &self.segments[segment_id.idx]
     }
 
-    pub fn debug_string(&self) -> Result<String, std::fmt::Error> {
+    pub fn debug_string(&self) -> String {
         let mut s = String::new();
         for (block_idx, b) in self.blocks.iter().enumerate() {
-            writeln!(s, "===== BLOCK {} =====", block_idx)?;
+            writeln!(s, "===== BLOCK {} =====", block_idx).unwrap();
             let segs_in_block = self
                 .segments
                 .iter()
@@ -222,20 +222,20 @@ impl Layout {
 
             // Run through each row of the block, printing each segment which overlaps with it
             for (row_idx, r) in b.iter().enumerate() {
-                write!(s, "{}", r)?;
+                write!(s, "{}", r).unwrap();
                 for &(seg_idx, seg) in &segs_in_block {
                     let row_range = seg.row_range.1;
 
                     if (row_idx + b.len() - row_range.start_idx) % b.len() < row_range.length {
-                        write!(s, " {:>2}", seg_idx)?;
+                        write!(s, " {:>2}", seg_idx).unwrap();
                     } else {
-                        write!(s, "   ")?;
+                        write!(s, "   ").unwrap();
                     }
                 }
-                write!(s, "\n")?;
+                write!(s, "\n").unwrap();
             }
         }
-        Ok(s)
+        s
     }
 }
 
