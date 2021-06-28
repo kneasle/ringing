@@ -58,7 +58,7 @@ impl<'e> EngineWorker<'e> {
     /// Test a node, and either expand it or prune
     fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize) {
         let payload = node.payload();
-        let len_after_this_node = length + node.length();
+        let length_after_this_node = length + node.length();
 
         /* ===== POTENTIALLY PRUNE THE NODE ===== */
 
@@ -69,12 +69,12 @@ impl<'e> EngineWorker<'e> {
 
         // If we've found an end node, then this must be the end of the composition
         if node.is_end() && self.len_range.contains(&length) {
-            self.save_comp(length, f32::NAN);
+            self.save_comp(length_after_this_node, f32::NAN);
             return;
         }
 
         // If the node would make the comp too long, then prune
-        if len_after_this_node >= self.len_range.end {
+        if length_after_this_node >= self.len_range.end {
             return;
         }
 
@@ -95,7 +95,7 @@ impl<'e> EngineWorker<'e> {
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            self.expand_node(succ, len_after_this_node);
+            self.expand_node(succ, length_after_this_node);
             self.comp_prefix.pop();
         }
 
