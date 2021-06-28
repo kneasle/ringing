@@ -27,7 +27,12 @@ impl FalsenessTable {
             .segments
             .iter()
             .enumerate()
-            .map(|(i, s)| group_rows(layout.segment_rows(i), &s.course_head_masks))
+            .map(|(i, s)| {
+                group_rows(
+                    layout.segment_rows(SegmentId::from(i)),
+                    &s.course_head_masks,
+                )
+            })
             .collect_vec();
 
         let mut falseness: HashSet<(SegmentId, SegmentId, RowBuf)> = HashSet::new();

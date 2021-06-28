@@ -66,8 +66,7 @@ impl<P, E> Graph<P, E> {
                             gen_extra_payload(&id),
                             id.clone(),
                             proto_node.length,
-                            // TODO: Compute the score here
-                            f32::NAN,
+                            proto_node.score.score,
                             proto_node.successors.len(),
                             proto_node.false_nodes.len(),
                         ),

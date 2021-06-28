@@ -22,13 +22,14 @@ use bellframe::Row;
 // Top level re-exports for convenience
 pub use music::MusicType;
 
-/// The static data required for composition generation.  This data will not be modified and will
-/// be shared between threads (once multi-threading is implemented).
+/// The static data required for composition generation.  This data will not be modified and
+/// therefore can be shared between threads (once multi-threading is implemented).
 #[derive(Debug, Clone)]
 pub struct Engine {
     config: Config,
     len_range: Range<usize>,
     layout: Layout,
+    music_types: Vec<MusicType>,
     prototype_graph: ProtoGraph,
 }
 
@@ -38,14 +39,15 @@ impl Engine {
         config: Config,
         len_range: Range<usize>,
         layout: Layout,
-        music: Vec<MusicType>,
+        music_types: Vec<MusicType>,
     ) -> Self {
-        let prototype_graph = ProtoGraph::from_layout(&layout, len_range.end);
+        let prototype_graph = ProtoGraph::from_layout(&layout, &music_types, len_range.end);
 
         Self {
             config,
             len_range,
             layout,
+            music_types,
             prototype_graph,
         }
     }

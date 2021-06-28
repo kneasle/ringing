@@ -377,9 +377,9 @@ dependencies = [
 
 [[package]]
 name = "shortlist"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e8030b6cd6a74b9934f8228e70169293e51a78c515e3efaf6533b54d860e06f"
+checksum = "6ac4b749905cb3eaf8804e4d419186471f5a03789a8609c70b5d535839b85161"
 
 [[package]]
 name = "strsim"

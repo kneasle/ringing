@@ -67,7 +67,7 @@ impl Layout {
     pub fn generate_starts_and_end_nodes(&mut self) {
         let mut new_segments = Vec::<(Option<SegmentId>, Segment)>::new();
         for (seg_idx, s) in self.segments.iter().enumerate() {
-            'row_loop: for (row_idx, r) in self.segment_rows(seg_idx).enumerate() {
+            'row_loop: for (row_idx, r) in self.segment_rows(SegmentId::from(seg_idx)).enumerate() {
                 // Check that the fixed bells are all in their home positions in this row (by
                 // testing for misplaced bells and rejecting the row in the case of misplaced
                 // bells).
@@ -171,8 +171,8 @@ impl Layout {
     }
 
     /// Gets an [`Iterator`] over the rows in the plain course of the segment at a given index
-    pub fn segment_rows(&self, segment_idx: usize) -> impl Iterator<Item = &Row> {
-        let (block_idx, range) = self.segments[segment_idx].row_range;
+    pub fn segment_rows(&self, seg_id: SegmentId) -> impl Iterator<Item = &Row> + Clone {
+        let (block_idx, range) = self.segments[seg_id.idx].row_range;
 
         self.blocks[block_idx]
             .iter()

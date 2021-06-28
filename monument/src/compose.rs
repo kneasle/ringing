@@ -51,14 +51,16 @@ impl<'e> EngineWorker<'e> {
     pub fn compose(&mut self) {
         for (idx, start_node) in self.graph.start_nodes.clone().into_iter().enumerate() {
             self.start_node_idx = idx;
-            self.expand_node(unsafe { start_node.as_ref() }.unwrap(), 0);
+            self.expand_node(unsafe { start_node.as_ref() }.unwrap(), 0, 0.0);
         }
     }
 
-    /// Test a node, and either expand it or prune
-    fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize) {
+    /// Test a node, and either expand it or prune.  All statistics apply to the composition
+    /// explored, up to the first row of `node`.
+    fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize, score: f32) {
         let payload = node.payload();
         let length_after_this_node = length + node.length();
+        let score_after_this_node = score + node.score();
 
         /* ===== POTENTIALLY PRUNE THE NODE ===== */
 
@@ -69,7 +71,7 @@ impl<'e> EngineWorker<'e> {
 
         // If we've found an end node, then this must be the end of the composition
         if node.is_end() && self.len_range.contains(&length) {
-            self.save_comp(length_after_this_node, f32::NAN);
+            self.save_comp(length_after_this_node, score_after_this_node);
             return;
         }
 
@@ -95,7 +97,7 @@ impl<'e> EngineWorker<'e> {
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            self.expand_node(succ, length_after_this_node);
+            self.expand_node(succ, length_after_this_node, score_after_this_node);
             self.comp_prefix.pop();
         }
 
@@ -111,9 +113,17 @@ impl<'e> EngineWorker<'e> {
         debug_assert_eq!(payload.falseness_count.get(), 0);
     }
 
-    /// Save the composition currently being explored
+    /// Save the composition corresponding to the path currently being explored
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: f32) {
+        // If the composition wouldn't make it into the shortlist, then there's no point creating
+        // the `Comp` struct
+        if self.shortlist.len() == self.shortlist.capacity()
+            && self.shortlist.peek_min().unwrap().score >= score
+        {
+            return;
+        }
+
         let comp = Comp {
             start_node_idx: self.start_node_idx,
             links_taken: self.comp_prefix.clone(),
