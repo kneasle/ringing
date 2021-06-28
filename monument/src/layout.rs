@@ -1,9 +1,11 @@
 use std::{
+    fmt::Write,
     fmt::{Debug, Formatter},
     ops::Deref,
 };
 
 use bellframe::{Bell, Row, RowBuf};
+use itertools::Itertools;
 
 use crate::{graph::NodeId, mask::Mask};
 
@@ -205,6 +207,35 @@ impl Layout {
 
     pub fn get_segment(&self, segment_id: SegmentId) -> &Segment {
         &self.segments[segment_id.idx]
+    }
+
+    pub fn debug_string(&self) -> Result<String, std::fmt::Error> {
+        let mut s = String::new();
+        for (block_idx, b) in self.blocks.iter().enumerate() {
+            writeln!(s, "===== BLOCK {} =====", block_idx)?;
+            let segs_in_block = self
+                .segments
+                .iter()
+                .enumerate()
+                .filter(|(_i, s)| s.row_range.0 == block_idx)
+                .collect_vec();
+
+            // Run through each row of the block, printing each segment which overlaps with it
+            for (row_idx, r) in b.iter().enumerate() {
+                write!(s, "{}", r)?;
+                for &(seg_idx, seg) in &segs_in_block {
+                    let row_range = seg.row_range.1;
+
+                    if (row_idx + b.len() - row_range.start_idx) % b.len() < row_range.length {
+                        write!(s, " {:>2}", seg_idx)?;
+                    } else {
+                        write!(s, "   ")?;
+                    }
+                }
+                write!(s, "\n")?;
+            }
+        }
+        Ok(s)
     }
 }
 
