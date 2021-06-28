@@ -1,4 +1,4 @@
-use monument::spec::Spec;
+use monument_cli::spec::Spec;
 
 fn main() {
     // let file_name = "test-cases/bristol-s10-lb4s.toml";
