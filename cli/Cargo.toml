@@ -5,7 +5,7 @@ authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-engine = { path = "../engine/" }
+monument = { path = "../monument/" }
 bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
 separator = "0.4"

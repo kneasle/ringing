@@ -54,16 +54,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
-name = "engine"
-version = "0.1.0"
-dependencies = [
- "bellframe",
- "itertools",
- "proptest",
- "shortlist",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -108,13 +98,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12b8adadd720df158f4d70dfe7ccc6adb0472d7c55ca83445f6a5ab3e36f8fb6"
 
 [[package]]
+name = "monument"
+version = "0.1.0"
+dependencies = [
+ "bellframe",
+ "itertools",
+ "proptest",
+ "shortlist",
+]
+
+[[package]]
 name = "monument_cli"
 version = "0.1.0"
 dependencies = [
  "bellframe",
- "engine",
  "hmap",
  "itertools",
+ "monument",
  "separator",
  "serde",
  "serde_derive",
