@@ -44,7 +44,7 @@ impl FalsenessTable {
                     // ... then falseness is possible and every pair of rows in `rows1 x rows2`
                     // will generate a false course head between `i1` and `i2`
                     for (row1, row2) in rows1.iter().cartesian_product(rows2) {
-                        let false_course_head = row1.tranposition_to(row2).unwrap();
+                        let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
                         falseness.insert((
                             SegmentId::from(i1),
                             SegmentId::from(i2),
@@ -61,7 +61,7 @@ impl FalsenessTable {
     /// Returns `true` if `node1` and `node2` are false against each other (slightly
     /// counterintuitive, but read the function name).
     pub fn are_false(&self, node1: &NodeId, node2: &NodeId) -> bool {
-        let course_head_transposition = node1.row.tranposition_to(&node2.row).unwrap();
+        let course_head_transposition = Row::solve_ax_equals_b(&node1.row, &node2.row).unwrap();
         self.falseness
             .contains(&(node1.seg, node2.seg, course_head_transposition))
     }
@@ -84,8 +84,9 @@ fn group_rows<'r>(
                 .push(r);
         }
     }
-    // Dedup the row groups before returning, because pairs of compatible `Mask`s in `masks` will
-    // group the same rows multiple times
+    // Dedup the row groups before returning, if two `Mask`s course head masks are compatible then
+    // they will generate the same rows multiple times.  This doesn't technically change the
+    // result, but wastes time and makes things harder to debug.
     for rows in row_groups.values_mut() {
         rows.sort();
         rows.dedup();
