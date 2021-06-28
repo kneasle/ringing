@@ -68,8 +68,6 @@ impl<'e> EngineWorker<'e> {
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
 
-        // println!("{} {:?}", length, self.comp_prefix);
-
         /* ===== POTENTIALLY PRUNE THE NODE ===== */
 
         // If the node is false against anything in the comp prefix, then prune
@@ -77,14 +75,14 @@ impl<'e> EngineWorker<'e> {
             return;
         }
 
-        // If we've found an end node, then this must be the end of the composition
-        if node.is_end() && self.len_range.contains(&length) {
-            self.save_comp(length_after_this_node, score_after_this_node);
+        // If the node would make the comp too long, then prune
+        if length_after_this_node >= self.len_range.end {
             return;
         }
 
-        // If the node would make the comp too long, then prune
-        if length_after_this_node >= self.len_range.end {
+        // If we've found an end node, then this must be the end of the composition
+        if node.is_end() && self.len_range.contains(&length) {
+            self.save_comp(length_after_this_node, score_after_this_node);
             return;
         }
 
@@ -125,7 +123,7 @@ impl<'e> EngineWorker<'e> {
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: f32) {
         // If the composition wouldn't make it into the shortlist, then there's no point creating
-        // the `Comp` struct
+        // the `Comp` struct (which is quite time intensive)
         if self.shortlist.len() == self.shortlist.capacity()
             && self.shortlist.peek_min().unwrap().score >= score
         {
