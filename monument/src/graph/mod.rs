@@ -66,7 +66,7 @@ impl<P, E> Graph<P, E> {
                             gen_extra_payload(&id),
                             id.clone(),
                             proto_node.length,
-                            proto_node.score.score,
+                            proto_node.score.total,
                             proto_node.successors.len(),
                             proto_node.false_nodes.len(),
                         ),

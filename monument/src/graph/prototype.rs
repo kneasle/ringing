@@ -79,8 +79,9 @@ impl ProtoGraph {
             last_num_nodes = num_nodes;
         }
 
-        // Prune all the references and return
+        // Perform final optimisations and return
         graph.prune_references();
+        graph.sort_successors();
         graph
     }
 
@@ -143,7 +144,8 @@ impl ProtoGraph {
 
         // Once Dijkstra's finishes, `expanded_nodes` contains every node reachable from rounds
         // within the length of the composition.  However, we're still not done because we have to
-        // build a graph over these IDs (which requires computing falseness, connections, etc.).
+        // build a graph over these IDs (which requires computing falseness, music, connections,
+        // etc.).
         let mut nodes: HashMap<NodeId, ProtoNode> = expanded_nodes
             .iter()
             .map(|(node_id, distance)| {
@@ -349,7 +351,7 @@ impl ProtoGraph {
 
     /// Remove cross-node references (falseness, successor, predecessor, etc.) which don't point to
     /// existing nodes.
-    pub(super) fn prune_references(&mut self) {
+    fn prune_references(&mut self) {
         // Lookup table for which node IDs actually correspond to nodes
         let node_ids: HashSet<NodeId> = self.nodes.keys().cloned().collect();
 
@@ -357,6 +359,76 @@ impl ProtoGraph {
             node.successors.retain(|(_, id)| node_ids.contains(id));
             node.predecessors.retain(|id| node_ids.contains(id));
             node.false_nodes.retain(|id| node_ids.contains(id));
+        }
+    }
+
+    /// Reorder the successor links by the amount of easily reachable music - meaning that the
+    /// DFS engine will expand the branches in roughly descending order of goodness.  This is done
+    /// in dynamic programming style - ignoring falseness but running in linear time in the number
+    /// of node links.
+    fn sort_successors(&mut self) {
+        /* COMPUTE THE REACHABLE MUSIC FOR EVERY NODE */
+
+        // How many nodes deep should the music prediction go.  To short and this will ignore slow
+        // linking courses, but too long and this will get stuck in a loop of good courses and not
+        // differentiate very well
+        const MAX_REORDER_DEPTH: usize = 4;
+
+        // A mapping from Node IDs to average scores reachable within `i` nodes.  We initialise
+        // this to 0
+        let mut scores_at_i: HashMap<NodeId, f32> =
+            self.nodes.keys().map(|id| (id.clone(), 0f32)).collect();
+        // A mapping from Node IDs to average scores reachable within `i - 1` nodes
+        let mut scores_at_i_minus_1 = HashMap::<NodeId, f32>::new();
+
+        // Since `i` starts at 2, we need to populate the back buffer with the average score
+        // reachable within `2 - 1 = 1` nodes.  This only allows for each node to explore itself,
+        // and so each node is given its own score
+        scores_at_i_minus_1.extend(
+            self.nodes
+                .iter()
+                .map(|(id, node)| (id.clone(), node.score.total)),
+        );
+
+        // Now, in order to increase the depth by one we overwrite the scores in
+        // `reachable_music_buf_front` (the scores at depth `i`) by averaging the scores of each
+        // node's successors taken from `reachable_music_buf_back` (the scores at depth `i - 1`).
+        for _i in 2..=MAX_REORDER_DEPTH {
+            for (id, node) in &self.nodes {
+                // The average music reachable from a node is its score + the average of its
+                // successor's music reachable in length `i - 1`
+                let reachable_score = node.score.total
+                    + if node.successors.is_empty() {
+                        0f32
+                    } else {
+                        let sum_of_succ_scores = node
+                            .successors
+                            .iter()
+                            .filter_map(|(_, succ_id)| scores_at_i_minus_1.get(succ_id))
+                            .sum::<f32>();
+                        sum_of_succ_scores / node.successors.len() as f32
+                    };
+                // Update the front buffer with the new score
+                *scores_at_i.get_mut(id).unwrap() = reachable_score;
+            }
+            // Swap the buffers so that the front buffer is now on the back
+            std::mem::swap(&mut scores_at_i, &mut scores_at_i_minus_1);
+        }
+
+        /* REORDER THE SUCCESSOR LINKS */
+
+        // At this point 'i = MAX_REORDER_DEPTH + 1' and the buffers have just been swapped, so we
+        // want to read the scores out of the map for `i - 1`
+        for (_id, node) in self.nodes.iter_mut() {
+            node.successors.sort_by(|(_, id1), (_, id2)| {
+                let score1 = *scores_at_i_minus_1.get(id1).unwrap();
+                let score2 = *scores_at_i_minus_1.get(id2).unwrap();
+                score1
+                    .partial_cmp(&score2)
+                    .expect("Unorderable score was found")
+                    // We want the best scores at the front, so we reverse the ordering
+                    .reverse()
+            });
         }
     }
 
