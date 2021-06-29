@@ -140,6 +140,12 @@ pub enum MusicSpec {
         #[serde(default = "get_one")]
         weight: f32,
     },
+    RunsList {
+        #[serde(rename = "run_lengths")]
+        lengths: Vec<usize>,
+        #[serde(default = "get_one")]
+        weight: f32,
+    },
     Pattern {
         pattern: String,
         #[serde(default = "get_one")]
@@ -157,6 +163,7 @@ impl MusicSpec {
     pub fn weight(&self) -> f32 {
         match self {
             Self::Runs { weight, .. } => *weight,
+            Self::RunsList { weight, .. } => *weight,
             Self::Pattern { weight, .. } => *weight,
             Self::Patterns { weight, .. } => *weight,
         }
@@ -166,6 +173,10 @@ impl MusicSpec {
     pub fn regexes(&self, stage: Stage) -> Vec<Regex> {
         match self {
             Self::Runs { length, .. } => Regex::runs_front_or_back(stage, *length),
+            Self::RunsList { lengths, .. } => lengths
+                .iter()
+                .flat_map(|length| Regex::runs_front_or_back(stage, *length))
+                .collect_vec(),
             Self::Pattern { pattern, .. } => vec![Regex::parse(&pattern)],
             Self::Patterns { patterns, .. } => {
                 patterns.iter().map(|s| Regex::parse(&s)).collect_vec()
