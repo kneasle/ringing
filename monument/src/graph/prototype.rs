@@ -123,7 +123,7 @@ impl ProtoGraph {
             let table = layout.get_segment(node_id.seg);
             // If the shortest composition including this node is longer the length limit, then don't
             // include it in the node graph
-            let new_dist = distance + table.row_range.1.length;
+            let new_dist = distance + table.row_range.length;
             if new_dist > max_length {
                 continue;
             }
@@ -155,7 +155,7 @@ impl ProtoGraph {
                     min_distance_from_rounds: *distance,
                     // Distances to rounds are computed during optimisation
                     min_distance_to_rounds: None,
-                    length: segment.row_range.1.length,
+                    length: segment.row_range.length,
                     score,
                     position: segment.position,
                     successors: segment

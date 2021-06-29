@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fmt::Write,
     fmt::{Debug, Formatter},
     ops::Deref,
@@ -65,6 +66,11 @@ impl Layout {
     /// two new segments - one which starts at rounds (i.e. a 'start' node), and one which finishes
     /// at rounds (i.e. an 'end' node).  These 'end' nodes are allowed to have 0 length.
     pub fn generate_starts_and_end_nodes(&mut self) {
+        // Keep track of which start/end ranges we've generated so far, and make sure that we don't
+        // create duplicate start ranges (this happens if rounds appears within two overlapping
+        // segments).
+        let mut generated_ranges = HashSet::<(usize, SegmentRange)>::new();
+
         let mut new_segments = Vec::<(Option<SegmentId>, Segment)>::new();
         for (seg_idx, s) in self.segments.iter().enumerate() {
             'row_loop: for (row_idx, r) in self.segment_rows(SegmentId::from(seg_idx)).enumerate() {
@@ -84,43 +90,52 @@ impl Layout {
 
                 // These look like they're the wrong way round, but it is fine because an 'end'
                 // node covers the run-up to rounds whereas a 'start' node starts at rounds and
-                // continues with the rest of the block
-                let (block_idx, row_range) = s.row_range;
+                // continues to the end of the segment
                 let (end_seg_range, start_seg_range) =
-                    self.split_range(block_idx, row_range, row_idx);
+                    self.split_range(s.block_idx, s.row_range, row_idx);
 
                 // Start segment
-                new_segments.push((
-                    // Start nodes aren't truncating any other segments
-                    None,
-                    Segment {
-                        row_range: (block_idx, start_seg_range),
-                        position: Position::Start,
-                        // Start nodes can only exist with one course head
-                        course_head_masks: vec![Mask::full_row(&course_head_containing_rounds)],
-                        // All other values are inherited from the 'parent' node
-                        ..s.clone()
-                    },
-                ));
+                let start_range = (s.block_idx, start_seg_range);
+                if !generated_ranges.contains(&start_range) {
+                    new_segments.push((
+                        // Start nodes aren't truncating any other segments
+                        None,
+                        Segment {
+                            row_range: start_seg_range,
+                            position: Position::Start,
+                            // Start nodes can only exist with one course head
+                            course_head_masks: vec![Mask::full_row(&course_head_containing_rounds)],
+                            // All other values (including `block_idx`) are inherited from the
+                            // 'parent' node
+                            ..s.clone()
+                        },
+                    ));
+                    generated_ranges.insert(start_range);
+                }
                 // End segment
-                new_segments.push((
-                    // This end segment will truncate its 'parent' segment - i.e. if the
-                    // composition reaches this specific instance of the parent segment then it
-                    // must stop at rounds (thus 'truncating' the parent into the end segment)
-                    Some(SegmentId::from(seg_idx)),
-                    Segment {
-                        row_range: (block_idx, end_seg_range),
-                        position: Position::End,
-                        // End nodes can only exist with one course head
-                        course_head_masks: vec![Mask::full_row(&course_head_containing_rounds)],
-                        // End nodes can't lead anywhere
-                        links: Vec::new(),
-                        // End nodes can't be further truncated
-                        truncations: Vec::new(),
-                        // All other values are inherited from the 'parent' node
-                        ..s.clone()
-                    },
-                ));
+                let end_range = (s.block_idx, end_seg_range);
+                if !generated_ranges.contains(&end_range) {
+                    new_segments.push((
+                        // This end segment will truncate its 'parent' segment - i.e. if the
+                        // composition reaches this specific instance of the parent segment then it
+                        // must stop at rounds (thus 'truncating' the parent into the end segment)
+                        Some(SegmentId::from(seg_idx)),
+                        Segment {
+                            row_range: end_seg_range,
+                            position: Position::End,
+                            // End nodes can only exist with one course head
+                            course_head_masks: vec![Mask::full_row(&course_head_containing_rounds)],
+                            // End nodes can't lead anywhere
+                            links: Vec::new(),
+                            // End nodes can't be further truncated
+                            truncations: Vec::new(),
+                            // All other values (including `block_idx`) are inherited from the 'parent'
+                            // node
+                            ..s.clone()
+                        },
+                    ));
+                    generated_ranges.insert(end_range);
+                }
             }
         }
 
@@ -172,13 +187,12 @@ impl Layout {
 
     /// Gets an [`Iterator`] over the rows in the plain course of the segment at a given index
     pub fn segment_rows(&self, seg_id: SegmentId) -> impl Iterator<Item = &Row> + Clone {
-        let (block_idx, range) = self.segments[seg_id.idx].row_range;
-
-        self.blocks[block_idx]
+        let segment = &self.segments[seg_id.idx];
+        self.blocks[segment.block_idx]
             .iter()
             .cycle()
-            .skip(range.start_idx)
-            .take(range.length)
+            .skip(segment.row_range.start_idx)
+            .take(segment.row_range.length)
             .map(Deref::deref)
     }
 
@@ -209,25 +223,32 @@ impl Layout {
         &self.segments[segment_id.idx]
     }
 
+    /// Returns `true` if the `row_idx`th [`Row`] of the `block_idx`th block is included in a given
+    /// [`Segment`].
+    pub fn is_row_included(&self, block_idx: usize, row_idx: usize, segment_id: SegmentId) -> bool {
+        let seg = self.get_segment(segment_id);
+        let block = &self.blocks[block_idx];
+        (row_idx + block.len() - seg.row_range.start_idx) % block.len() < seg.row_range.length
+    }
+
     pub fn debug_string(&self) -> String {
         let mut s = String::new();
-        for (block_idx, b) in self.blocks.iter().enumerate() {
+        for (block_idx, block) in self.blocks.iter().enumerate() {
             writeln!(s, "===== BLOCK {} =====", block_idx).unwrap();
             let segs_in_block = self
                 .segments
                 .iter()
                 .enumerate()
-                .filter(|(_i, s)| s.row_range.0 == block_idx)
+                .filter(|(_i, s)| s.block_idx == block_idx)
+                .map(|(i, _s)| SegmentId::from(i))
                 .collect_vec();
 
             // Run through each row of the block, printing each segment which overlaps with it
-            for (row_idx, r) in b.iter().enumerate() {
+            for (row_idx, r) in block.iter().enumerate() {
                 write!(s, "{}", r).unwrap();
-                for &(seg_idx, seg) in &segs_in_block {
-                    let row_range = seg.row_range.1;
-
-                    if (row_idx + b.len() - row_range.start_idx) % b.len() < row_range.length {
-                        write!(s, " {:>2}", seg_idx).unwrap();
+                for seg_id in &segs_in_block {
+                    if self.is_row_included(block_idx, row_idx, *seg_id) {
+                        write!(s, " {:>2}", seg_id.idx).unwrap();
                     } else {
                         write!(s, "   ").unwrap();
                     }
@@ -253,10 +274,12 @@ pub struct SegmentRange {
 
 #[derive(Debug, Clone)]
 pub struct Segment {
-    /// The [`Row`]s contained in this `Segment`.  This is a tuple of (index of block, subrange of
-    /// block).  The range is allowed to wrap around the end of the block as many times as desired
-    /// (although the resulting `Segment` would be false against itself and therefore unusable).
-    pub row_range: (usize, SegmentRange),
+    /// The [`Row`]s contained in this `Segment`.  This is a tuple of index of block, subrange of
+    /// block).
+    pub block_idx: usize,
+    /// The range is allowed to wrap around the end of the block as many times as desired (although
+    /// the resulting `Segment` would be false against itself and therefore unusable).
+    pub row_range: SegmentRange,
     /// The ways that this `Segment` can be lead to other `Segment`s (in possibly different
     /// courses).
     pub links: Vec<SegmentLink>,

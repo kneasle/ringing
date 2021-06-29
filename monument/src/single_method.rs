@@ -261,7 +261,8 @@ pub fn single_method_layout(
             /* COMBINE ROWS AND LINKS INTO A `Segment` */
 
             Segment {
-                row_range: (METHOD_INDEX, *range),
+                block_idx: METHOD_INDEX,
+                row_range: *range,
                 links,
                 // Don't assign labels to segments, since there are no method splices to keep track
                 // of
