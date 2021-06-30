@@ -122,6 +122,7 @@ impl<'e> EngineWorker<'e> {
     /// Save the composition corresponding to the path currently being explored
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: f32) {
+        // If enabled, normalise the music scores by length
         let ranking_score = if self.engine.config.normalise_music {
             score / length as f32
         } else {
@@ -135,14 +136,18 @@ impl<'e> EngineWorker<'e> {
             return;
         }
 
-        let comp = Comp::new(
-            &self.engine.prototype_graph,
+        // Traverse the prototype graph and generate the comp
+        let (links_taken, end_id) = self.engine.prototype_graph.generate_path(
             self.start_node.as_ref().unwrap(),
-            &self.comp_prefix,
+            self.comp_prefix.iter().cloned(),
+        );
+        let comp = Comp {
+            links_taken,
+            end_id,
             length,
             score,
             ranking_score,
-        );
+        };
 
         println!("FOUND COMP! {}", comp.to_string(&self.engine.layout));
 
@@ -185,24 +190,6 @@ pub struct Comp {
 }
 
 impl Comp {
-    fn new(
-        graph: &ProtoGraph,
-        start_node: &NodeId,
-        links_taken: &[usize],
-        length: usize,
-        score: f32,
-        ranking_score: f32,
-    ) -> Self {
-        let (links_taken, end_id) = graph.generate_path(start_node, links_taken.iter().cloned());
-        Self {
-            links_taken,
-            end_id,
-            length,
-            score,
-            ranking_score,
-        }
-    }
-
     pub fn to_string(&self, layout: &Layout) -> String {
         let mut string = format!("(len: {}, score: {}) ", self.length, self.score);
 
