@@ -85,7 +85,7 @@ fn group_rows<'r>(
             let transposed_mask = m * r;
             row_groups
                 .entry(transposed_mask)
-                .or_insert(Vec::new())
+                .or_insert_with(Vec::new)
                 .push(r);
         }
     }

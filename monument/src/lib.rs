@@ -1,3 +1,5 @@
+#![allow(rustdoc::private_intra_doc_links)]
+
 use std::{ops::Range, sync::Arc, thread};
 
 use bellframe::{Bell, Method};
@@ -5,7 +7,6 @@ use graph::ProtoGraph;
 use itertools::Itertools;
 
 use compose::EngineWorker;
-use layout::Layout;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 mod compose;
@@ -20,6 +21,7 @@ pub mod single_method;
 use bellframe::Row;
 
 // Top level re-exports for convenience
+pub use layout::*;
 pub use music::MusicType;
 
 /// The static data required for composition generation.  This data will not be modified and

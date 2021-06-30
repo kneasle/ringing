@@ -10,6 +10,10 @@ use itertools::Itertools;
 
 use crate::{graph::NodeId, mask::Mask};
 
+// Imports used only for doc comments
+#[allow(unused_imports)]
+use crate::{graph::Node, Engine};
+
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
@@ -253,7 +257,7 @@ impl Layout {
                         write!(s, "   ").unwrap();
                     }
                 }
-                write!(s, "\n").unwrap();
+                writeln!(s).unwrap();
             }
         }
         s

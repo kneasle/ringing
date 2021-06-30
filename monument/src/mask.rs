@@ -3,7 +3,10 @@ use std::{
     ops::Mul,
 };
 
-use bellframe::{Bell, Row, RowBuf, Stage};
+use bellframe::{
+    music::{Regex, RegexElem},
+    Bell, Row, RowBuf, Stage,
+};
 use itertools::Itertools;
 
 /// A mask which fixes the location of some [`Bell`]s.  Unfilled positions are usually denoted by
@@ -84,7 +87,7 @@ impl Mask {
         }
     }
 
-    /// Check if there exist any [`Row`]s which can satisfy both `Mask`s.  `a.is_compatible(b)`
+    /// Check if there exist any [`Row`]s which can satisfy both `Mask`s.  `a.is_compatible_with(b)`
     /// equivalent to (but faster than) `a.combine(b).is_some()`.
     pub fn is_compatible_with(&self, other: &Mask) -> bool {
         // Masks of different stages are always incompatible
@@ -120,7 +123,7 @@ impl Mask {
     }
 
     /// Creates a new `Mask` which matches precisely the [`Row`]s matched by both `self` _and_
-    /// `other`.  If `self` and `other` aren't [compatible](Self::is_compatible), then such a
+    /// `other`.  If `self` and `other` aren't [compatible](Self::is_compatible_with), then such a
     /// `Mask` cannot exist and `None` is returned.
     pub fn combine(&self, other: &Mask) -> Option<Mask> {
         if !self.is_compatible_with(other) {
@@ -145,6 +148,8 @@ impl Mask {
     }
 }
 
+/* ===== FORMATTING ===== */
+
 impl Debug for Mask {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Mask({})", self)
@@ -162,6 +167,8 @@ impl Display for Mask {
         Ok(())
     }
 }
+
+/* ===== ARITHMETIC ===== */
 
 impl Mul<&Row> for &Mask {
     type Output = Mask;
@@ -200,6 +207,18 @@ impl Mul<&Mask> for &Row {
                 .map(|maybe_bell| maybe_bell.map(|b| self[b.index()]))
                 .collect_vec(),
         }
+    }
+}
+
+/* ===== CONVERSIONS ===== */
+
+impl From<Mask> for Regex {
+    fn from(mask: Mask) -> Regex {
+        Regex::from_elems(
+            mask.bells
+                .iter()
+                .map(|b| b.map_or(RegexElem::Any, RegexElem::Bell)),
+        )
     }
 }
 

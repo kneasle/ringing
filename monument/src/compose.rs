@@ -4,7 +4,7 @@ use itertools::Itertools;
 use shortlist::Shortlist;
 
 use crate::{
-    graph::{Graph, Node, NodeId, ProtoGraph},
+    graph::{Graph, Node, NodeId},
     layout::Layout,
     Engine,
 };

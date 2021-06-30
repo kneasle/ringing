@@ -15,7 +15,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::prototype::ProtoNode,
-    layout::{Layout, Position, SegmentId, SegmentLink},
+    layout::{Position, SegmentId},
 };
 
 // Re-export `ProtoGraph` as an opaque type (the prototype only has to be computed once and then
@@ -48,7 +48,7 @@ impl<P, E> Graph<P, E> {
     {
         // Check that the only nodes with no successors are the end nodes (this fact is used for
         // checking that a comp has come round)
-        for (_id, node) in &prototype_graph.nodes {
+        for node in prototype_graph.nodes.values() {
             assert_eq!(node.successors.is_empty(), node.position == Position::End);
         }
         // For each reachable node ID, generate a blank node (i.e. a node where all the
@@ -200,7 +200,7 @@ impl<P, E> Node<P, E> {
             extras,
             Box::new(ExtraNode {
                 payload: extra_payload,
-                id: id.clone(),
+                id,
                 link_map: Vec::with_capacity(num_successors),
             })
         );
@@ -230,13 +230,6 @@ impl<P, E> Node<P, E> {
     #[inline(always)]
     pub fn score(&self) -> f32 {
         self.score
-    }
-
-    /// Gets the [`SegmentLink`] corresponding to the successor link with a given index
-    pub fn successor_link<'l>(&self, idx: usize, layout: &'l Layout) -> &'l SegmentLink {
-        let link_idx = self.extras.link_map[idx];
-        let seg_id = self.extras.id.seg;
-        &layout.get_segment(seg_id).links[link_idx]
     }
 
     #[inline(always)]
