@@ -20,7 +20,7 @@ use crate::{
 
 // Re-export `ProtoGraph` as an opaque type (the prototype only has to be computed once and then
 // can be shared between all the threads)
-pub use prototype::ProtoGraph;
+pub(crate) use prototype::ProtoGraph;
 
 mod falseness;
 mod prototype;
@@ -33,7 +33,7 @@ pub(crate) struct Graph<P, E> {
     /// owned by the `Graph` (which acts like an arena for dynamically sized [`Node`]s).
     nodes: HashMap<NodeId, Pin<Box<Node<P, E>>>>,
     /// The [`Node`]s which can start a composition
-    pub start_nodes: Vec<(NodeId, *const Node<P, E>)>,
+    start_nodes: HashMap<NodeId, *const Node<P, E>>,
 }
 
 impl<P, E> Graph<P, E> {
@@ -112,11 +112,11 @@ impl<P, E> Graph<P, E> {
         );
 
         // Get the pointers for the possible starting nodes
-        let start_nodes = nodes
+        let start_nodes: HashMap<NodeId, *const Node<P, E>> = nodes
             .iter()
             .filter(|(_id, (_node, proto_node))| proto_node.position == Position::Start)
             .map(|(&id, (node, _proto_node))| (id.clone(), *node as *const Node<P, E>))
-            .collect_vec();
+            .collect();
 
         // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes (so that
         // they're owned but can't be moved) and return
@@ -127,6 +127,13 @@ impl<P, E> Graph<P, E> {
                 .map(|(id, (ptr, _))| (id.clone(), Pin::new(unsafe { Box::from_raw(ptr) })))
                 .collect(),
         }
+    }
+
+    /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
+    pub fn get_start_node(&self, id: &NodeId) -> Option<&Node<P, E>> {
+        self.start_nodes
+            .get(id)
+            .map(|ptr| unsafe { ptr.as_ref() }.unwrap())
     }
 }
 

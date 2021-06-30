@@ -45,7 +45,7 @@ pub struct Spec {
 }
 
 impl Spec {
-    pub fn create_engine(&self) -> Result<Engine, SpecConvertError> {
+    pub fn create_engine(&self, config: Config) -> Result<Engine, SpecConvertError> {
         let method = self.method.gen_method()?;
         let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
         let non_fixed_bells = self.non_fixed_bells.as_ref().map_or_else(
@@ -55,11 +55,9 @@ impl Spec {
 
         Engine::single_method(
             // General
-            Config {
-                num_comps: self.num_comps,
-                ..Config::default()
-            },
+            config,
             self.length.range.clone(),
+            self.num_comps,
             // Method/course structure
             &method,
             &calls,

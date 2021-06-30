@@ -2,13 +2,14 @@
 
 use std::{
     cmp::{Ordering, Reverse},
-    collections::{BinaryHeap, HashMap, HashSet},
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
     ops::Mul,
 };
 
 use itertools::Itertools;
 
 use crate::{
+    compose::CompPrefix,
     layout::{Layout, Position, SegmentId},
     music::Score,
     Config, MusicType,
@@ -20,34 +21,13 @@ use super::{falseness::FalsenessTable, NodeId};
 /// build and optimise the node graph before being converted into an efficient [`Graph`] structure
 /// for use in tree search.
 #[derive(Debug, Clone)]
-pub struct ProtoGraph {
+pub(crate) struct ProtoGraph {
     // NOTE: References between nodes don't have to be valid (i.e. they can point to a
     // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored).
     pub(super) nodes: HashMap<NodeId, ProtoNode>,
 }
 
 impl ProtoGraph {
-    pub(crate) fn generate_path(
-        &self,
-        start_node: &NodeId,
-        succ_idxs: impl IntoIterator<Item = usize>,
-    ) -> (Vec<(NodeId, usize)>, NodeId) {
-        // Start the traversal at the start node
-        let mut node_id = start_node;
-        // Follow succession references until the path finishes
-        let path = succ_idxs
-            .into_iter()
-            .map(|succ_idx| {
-                let (link_idx, succ_id) = &self.nodes.get(node_id).unwrap().successors[succ_idx];
-                let res = (node_id.clone(), *link_idx);
-                node_id = succ_id;
-                res
-            })
-            .collect_vec();
-        // Return this and the start node
-        (path, node_id.clone())
-    }
-
     /// Generate and optimise a graph from a [`Layout`]
     pub fn from_layout(
         layout: &Layout,
@@ -439,7 +419,7 @@ impl ProtoGraph {
         }
     }
 
-    /* ===== HELPER FUNCTIONS ===== */
+    /* ===== OPTIMISATION HELPER FUNCTIONS ===== */
 
     pub(super) fn start_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
         self.nodes
@@ -462,6 +442,69 @@ impl ProtoGraph {
         for id in ids {
             assert!(self.nodes.remove(&id).is_some());
         }
+    }
+
+    /* ===== UTILITY FUNCTIONS FOR THE REST OF THE CODE ===== */
+
+    /// Converts a sequence of successor indexes into a sequence of [`NodeId`] and [`SegmentLink`]
+    /// indexes (i.e. ones which refer to the indices as used in the [`Layout`]).  This is
+    /// basically the conversion from the fast-but-obtuse format used in the composing loop to a
+    /// more long-term usable format that can be used to generate human friendly representations of
+    /// the compositions.
+    pub fn generate_path(
+        &self,
+        start_node: &NodeId,
+        succ_idxs: impl IntoIterator<Item = usize>,
+    ) -> (Vec<(NodeId, usize)>, NodeId) {
+        // Start the traversal at the start node
+        let mut node_id = start_node;
+        // Follow succession references until the path finishes
+        let path = succ_idxs
+            .into_iter()
+            .map(|succ_idx| {
+                let (link_idx, succ_id) = &self.nodes.get(node_id).unwrap().successors[succ_idx];
+                let res = (node_id.clone(), *link_idx);
+                node_id = succ_id;
+                res
+            })
+            .collect_vec();
+        // Return this and the start node
+        (path, node_id.clone())
+    }
+
+    /// Creates `num_prefixes` unique prefixes which are as short as possible (i.e. distribute the
+    /// composing work as evenly as possible).  **NOTE**: This doesn't check the truth of the
+    /// resulting prefixes (yet), so it's worth generating more prefixes than you have threads.
+    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<CompPrefix> {
+        // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
+        // than `num_prefixes` in length, at which point it becomes our prefix list.
+        let mut frontier: VecDeque<(CompPrefix, &ProtoNode)> = self
+            .start_nodes()
+            .map(|(id, node)| (CompPrefix::just_start_node(id.clone()), node))
+            .collect();
+
+        // TODO: Expand evenly between all the different start nodes
+
+        // Repeatedly expand prefixes until the frontier is large enough
+        while let Some((prefix, node)) = frontier.pop_front() {
+            for (succ_idx, (_, succ_id)) in node.successors.iter().enumerate() {
+                if let Some(succ_node) = self.nodes.get(succ_id) {
+                    // Extend the prefix with the new successor index
+                    let mut new_prefix = prefix.clone();
+                    new_prefix.push(succ_idx);
+                    // Add the new prefix to the back of the frontier
+                    frontier.push_back((new_prefix, succ_node));
+                } else {
+                    println!("!Successor node {} doesn't exist", succ_id);
+                }
+            }
+
+            if frontier.len() >= num_prefixes {
+                break;
+            }
+        }
+
+        frontier.into_iter().map(|(prefix, _node)| prefix).collect()
     }
 }
 
