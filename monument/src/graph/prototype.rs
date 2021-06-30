@@ -11,7 +11,7 @@ use itertools::Itertools;
 use crate::{
     layout::{Layout, Position, SegmentId},
     music::Score,
-    MusicType,
+    Config, MusicType,
 };
 
 use super::{falseness::FalsenessTable, NodeId};
@@ -49,7 +49,12 @@ impl ProtoGraph {
     }
 
     /// Generate and optimise a graph from a [`Layout`]
-    pub fn from_layout(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
+    pub fn from_layout(
+        layout: &Layout,
+        music_types: &[MusicType],
+        max_length: usize,
+        config: &Config,
+    ) -> Self {
         let mut graph = Self::reachable_graph(layout, music_types, max_length);
 
         let mut last_num_nodes = graph.nodes.len();
@@ -81,7 +86,9 @@ impl ProtoGraph {
 
         // Perform final optimisations and return
         graph.prune_references();
-        graph.sort_successors();
+        if config.sort_successor_links {
+            graph.sort_successors();
+        }
         graph
     }
 

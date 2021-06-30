@@ -122,10 +122,15 @@ impl<'e> EngineWorker<'e> {
     /// Save the composition corresponding to the path currently being explored
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: f32) {
+        let ranking_score = if self.engine.config.normalise_music {
+            score / length as f32
+        } else {
+            score
+        };
         // If the composition wouldn't make it into the shortlist, then there's no point creating
         // the `Comp` struct (which is quite time intensive)
         if self.shortlist.len() == self.shortlist.capacity()
-            && self.shortlist.peek_min().unwrap().score >= score
+            && self.shortlist.peek_min().unwrap().ranking_score >= ranking_score
         {
             return;
         }
@@ -136,6 +141,7 @@ impl<'e> EngineWorker<'e> {
             &self.comp_prefix,
             length,
             score,
+            ranking_score,
         );
 
         println!("FOUND COMP! {}", comp.to_string(&self.engine.layout));
@@ -171,7 +177,11 @@ pub struct Comp {
     pub(crate) links_taken: Vec<(NodeId, usize)>,
     pub(crate) end_id: NodeId,
     pub length: usize,
+    /// The absolute score of the composition
     pub score: f32,
+    /// The score of the composition used for ranking.  When using relative scoring, this is
+    /// normalised by length to avoid biasing towards longer comps.
+    ranking_score: f32,
 }
 
 impl Comp {
@@ -181,6 +191,7 @@ impl Comp {
         links_taken: &[usize],
         length: usize,
         score: f32,
+        ranking_score: f32,
     ) -> Self {
         let (links_taken, end_id) = graph.generate_path(start_node, links_taken.iter().cloned());
         Self {
@@ -188,6 +199,7 @@ impl Comp {
             end_id,
             length,
             score,
+            ranking_score,
         }
     }
 
@@ -212,7 +224,7 @@ impl Comp {
 impl PartialOrd for Comp {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.score.partial_cmp(&other.score)
+        self.ranking_score.partial_cmp(&other.ranking_score)
     }
 }
 
@@ -226,7 +238,7 @@ impl Ord for Comp {
 impl PartialEq for Comp {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.score == other.score
+        self.ranking_score == other.ranking_score
     }
 }
 

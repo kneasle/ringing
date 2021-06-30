@@ -42,8 +42,8 @@ impl Engine {
         music_types: Vec<MusicType>,
     ) -> Self {
         Engine {
+            prototype_graph: ProtoGraph::from_layout(&layout, &music_types, len_range.end, &config),
             config,
-            prototype_graph: ProtoGraph::from_layout(&layout, &music_types, len_range.end),
             len_range,
             layout,
             music_types,
@@ -105,6 +105,10 @@ pub struct Config {
     /// How many threads will be used to generate the best composition.  If set to `None`, this
     /// will use the number of available CPU cores.
     pub num_threads: Option<usize>,
+    /// Sort succession links so that likely musical nodes are explored first
+    pub sort_successor_links: bool,
+    /// Normalise music scores by their length (i.e. rank by average music output)
+    pub normalise_music: bool,
 }
 
 impl Default for Config {
@@ -112,6 +116,8 @@ impl Default for Config {
         Config {
             num_comps: 1,
             num_threads: None,
+            sort_successor_links: true,
+            normalise_music: true,
         }
     }
 }
