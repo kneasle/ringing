@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::ParseIntError};
+use std::{collections::HashMap, num::ParseIntError, path::Path, sync::Arc};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -8,8 +8,13 @@ use bellframe::{
 };
 use hmap::hmap;
 use itertools::Itertools;
-use monument::{single_method::SingleMethodError, Config, Engine, MusicType};
+use monument::{
+    single_method::{single_method_layout, SingleMethodError},
+    Config, MusicType, Spec,
+};
 use serde_derive::Deserialize;
+
+use crate::test_data::TestData;
 
 use self::{
     calls::{BaseCalls, SpecificCall},
@@ -19,13 +24,13 @@ use self::{
 mod calls;
 mod length;
 
-/// The specification for a set of compositions which Monument should find.  The [`Spec`] type is
+/// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
-/// file.  This requires additional processing and verification before it can be fed into the IDA*
-/// engine.
+/// file.  This requires additional processing and verification before it can be converted into an
+/// [`Engine`].
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Spec {
+pub struct AbstractSpec {
     /// Which bells are allowed to be affected by calls
     non_fixed_bells: Option<Vec<Bell>>,
     /// The range of lengths of composition which are allowed
@@ -42,37 +47,51 @@ pub struct Spec {
     calls: Vec<SpecificCall>,
     /// Which music to use
     music: Vec<MusicSpec>,
+
+    /// Data for the testing/benchmark harness.  It is public so that it can be accessed by the
+    /// testing harness
+    pub test_data: Option<TestData>,
 }
 
-impl Spec {
-    pub fn create_engine(&self, config: Config) -> Result<Engine, SpecConvertError> {
+impl AbstractSpec {
+    /// Read a `Spec` from a TOML file
+    pub fn read_from_file(path: &Path) -> Result<Self, toml::de::Error> {
+        let spec_toml = std::fs::read_to_string(&path).unwrap();
+        toml::from_str(&spec_toml)
+    }
+
+    /// Create an [`Engine`] which generates compositions according to this `Spec`
+    pub fn to_spec(&self, config: &Config) -> Result<Arc<Spec>, SpecConvertError> {
+        // Parse and verify into its fully specified form
         let method = self.method.gen_method()?;
         let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
         let non_fixed_bells = self.non_fixed_bells.as_ref().map_or_else(
             || tenors_together_non_fixed_bells(self.method.stage),
             Vec::clone,
         );
+        let music_types = self
+            .music
+            .iter()
+            .map(|b| b.to_music_type(method.stage()))
+            .collect_vec();
+        // For the time being, just use the default plain calling positions.  These will be wrong
+        // for anything other than lead end calls, but are only used for debugging so that's
+        // probably fine.  TODO: Make these specifiable
+        let plain_lead_positions = None;
 
-        Engine::single_method(
-            // General
-            config,
+        // Generate a `Layout` from the data about the method and calls
+        let layout = single_method_layout(&method, plain_lead_positions, &calls, &non_fixed_bells)
+            .map_err(SpecConvertError::LayoutGenError)?;
+
+        Ok(Spec::new(
+            layout,
             self.length.range.clone(),
             self.num_comps,
-            // Method/course structure
-            &method,
-            &calls,
-            &non_fixed_bells,
-            // For the time being, just use the default plain calling positions.  These will be
-            // wrong for anything other than lead end calls, but are only used for debugging so
-            // that's probably fine.  TODO: Make these specifiable
-            None,
-            // Music
-            self.music
-                .iter()
-                .map(|b| b.to_music_type(method.stage()))
-                .collect_vec(),
-        )
-        .map_err(SpecConvertError::EngineError)
+            music_types,
+            // Always normalise music
+            true,
+            config,
+        ))
     }
 }
 
@@ -91,7 +110,7 @@ pub enum SpecConvertError<'s> {
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
-    EngineError(SingleMethodError),
+    LayoutGenError(SingleMethodError),
 }
 
 /// The contents of the `[method]` header in the input TOML file

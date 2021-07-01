@@ -1,0 +1,11 @@
+length = "peal"
+num_comps = 40
+base_calls = "near"
+
+[method]
+name = "Bristol"
+stage = 12
+place_notation = "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T"
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]

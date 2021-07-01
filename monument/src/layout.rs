@@ -12,7 +12,7 @@ use crate::{graph::NodeId, mask::Mask};
 
 // Imports used only for doc comments
 #[allow(unused_imports)]
-use crate::{graph::Node, Engine};
+use crate::graph::Node;
 
 /// A newtyped integer which is used to refer to a specific composition segment
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]

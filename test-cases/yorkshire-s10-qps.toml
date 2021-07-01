@@ -19,3 +19,25 @@ run_length = 5
 
 [[music]]
 run_length = 6
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 0.2 # seconds
+results = [
+    { length = 1280, score = 176, call_string = "5:WWxHxBW", ranking_score = 0.1375 },
+    { length = 1280, score = 176, call_string = "5:MxBWsHsMWxHxH", ranking_score = 0.1375 },
+    { length = 1280, score = 176, call_string = "5:sHsWHsMsWxBWxH", ranking_score = 0.1375 },
+    { length = 1280, score = 176, call_string = "5:sHsWHsMWxBsWxH", ranking_score = 0.1375 },
+    { length = 1280, score = 177, call_string = "5:xHsWxBsWsWsH", ranking_score = 0.13828126 },
+    { length = 1280, score = 178, call_string = "5:HWHMWxBWH", ranking_score = 0.1390625 },
+    { length = 1280, score = 178, call_string = "5:HWHMWxBsMsWxH", ranking_score = 0.1390625 },
+    { length = 1280, score = 178, call_string = "5:sHsWxBWsHMWsH", ranking_score = 0.1390625 },
+    { length = 1280, score = 178, call_string = "5:sHWxBsWMsWsH", ranking_score = 0.1390625 },
+    { length = 1280, score = 179, call_string = "5:sHsWxBxHsWsH", ranking_score = 0.13984375 },
+    { length = 1280, score = 180, call_string = "5:MHsMsWHWxBxH", ranking_score = 0.140625 },
+    { length = 1280, score = 183, call_string = "5:sHsWHMWxBsMsWxH", ranking_score = 0.14296874 },
+    { length = 1280, score = 183, call_string = "5:sHsWsWxBsMxH", ranking_score = 0.14296874 },
+    { length = 1280, score = 185, call_string = "5:MHWxBMHW", ranking_score = 0.14453125 },
+    { length = 1280, score = 187, call_string = "5:MxBWsHsWsWsH", ranking_score = 0.14609376 },
+    { length = 1280, score = 189, call_string = "5:sHsWxBWMsWsH", ranking_score = 0.14765625 },
+]

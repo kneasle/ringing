@@ -1,43 +1,25 @@
-use std::path::PathBuf;
-
 use monument::Config;
-use monument_cli::spec::Spec;
+use monument_cli::{cli_args::CliArgs, spec::AbstractSpec};
 use structopt::StructOpt;
 
 /// Entry point for the CLI command `monument`
 fn main() {
     // Parse the CLI args
     let args = CliArgs::from_args();
+    let config = Config::from(&args);
 
-    let spec_toml = std::fs::read_to_string(&args.input_file).unwrap();
-    let spec: Spec = toml::from_str(&spec_toml).unwrap();
-    println!("{:#?}", spec);
+    // Parse the TOML file into an 'abstract' specification
+    let abstr_spec = AbstractSpec::read_from_file(&args.input_file).unwrap();
+    println!("{:#?}", abstr_spec);
 
-    let engine = spec.create_engine(Config::from(args)).unwrap();
+    // Convert the abstract specification into a concrete specification accepted by Monument's
+    // engine
+    let comp_spec = abstr_spec.to_spec(&config).unwrap();
 
-    engine.compose();
-}
+    // Use this concrete specification to generate compositions
+    let comps = monument::compose(&comp_spec, &config);
 
-/// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
-/// parsing/help code for us.
-#[derive(Debug, Clone, StructOpt)]
-#[structopt(name = "Monument", about = "A music-oriented composing engine")]
-struct CliArgs {
-    /// The name of the specification file for Monument (`*.toml`)
-    #[structopt(parse(from_os_str))]
-    input_file: PathBuf,
-
-    /// The maximum number of threads that Monument will use
-    #[structopt(short = "T", long)]
-    num_threads: Option<usize>,
-}
-
-impl From<CliArgs> for Config {
-    fn from(args: CliArgs) -> Config {
-        Config {
-            num_threads: args.num_threads,
-            sort_successor_links: true,
-            normalise_music: true,
-        }
+    for c in comps {
+        println!("{}", c.to_string(&comp_spec));
     }
 }

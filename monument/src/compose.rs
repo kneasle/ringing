@@ -3,7 +3,6 @@ use std::{
     cmp::Ordering,
     collections::VecDeque,
     fmt::Write,
-    ops::Range,
     sync::{Arc, Mutex, MutexGuard},
     thread,
 };
@@ -14,17 +13,24 @@ use shortlist::Shortlist;
 
 use crate::{
     graph::{Graph, Node, NodeId},
-    layout::Layout,
-    Engine, SegmentId,
+    Config, SegmentId, Spec,
 };
 
 /// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
 /// best compositions have been found and returned.
-pub fn compose(num_threads: usize, engine: &Arc<Engine>) -> Vec<Comp> {
+pub fn compose(spec: &Arc<Spec>, config: &Config) -> Vec<Comp> {
+    // Decide how many threads to use (defaulting to the number of CPU cores)
+    let num_threads = config.num_threads.unwrap_or_else(num_cpus::get);
+    if num_threads == 1 {
+        println!("Using 1 thread.");
+    } else {
+        println!("Using {} threads.", num_threads);
+    }
+
     // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
     // always have compositions to explore.
     let unexplored_prefixes = Arc::new(Mutex::new(
-        engine.prototype_graph.generate_prefixes(num_threads * 2),
+        spec.prototype_graph.generate_prefixes(num_threads * 2),
     ));
 
     // Spawn all the worker threads
@@ -32,20 +38,20 @@ pub fn compose(num_threads: usize, engine: &Arc<Engine>) -> Vec<Comp> {
         .map(|i| {
             // Create thread-local copies of the shared data which will be captured by the closure
             // of the new thread
-            let thread_arc = engine.clone();
+            let thread_spec = spec.clone();
             let thread_queue = unexplored_prefixes.clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || EngineWorker::compose(&thread_arc, &thread_queue, i))
+                .spawn(move || EngineWorker::compose(&thread_spec, &thread_queue, i))
                 .unwrap()
         })
         .collect_vec();
 
     // Wait for the worker threads to return, and merge all the individual shortlists into one
     // shortlist for the overall best comps
-    let mut main_shortlist: Shortlist<Comp> = Shortlist::new(engine.num_comps);
+    let mut main_shortlist: Shortlist<Comp> = Shortlist::new(spec.num_comps);
     for t in threads {
         let comps = t.join().unwrap();
         main_shortlist.append(comps);
@@ -57,29 +63,27 @@ pub fn compose(num_threads: usize, engine: &Arc<Engine>) -> Vec<Comp> {
 /// The mutable data required to generate a composition.  Each worker thread will have their own
 /// `EngineWorker` struct (but all share the same [`Engine`]).
 #[derive(Debug)]
-struct EngineWorker<'e> {
+struct EngineWorker<'s> {
     thread_id: usize,
-    len_range: Range<usize>,
-    engine: &'e Engine,
+    spec: &'s Spec,
     /// A `Shortlist` of discovered compositions
     shortlist: Shortlist<Comp>,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
 }
 
-impl<'e> EngineWorker<'e> {
+impl<'s> EngineWorker<'s> {
     /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
-    /// tree searching.  This function is called once for each worker thread.
+    /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
     fn compose(
-        engine: &'e Engine,
+        spec: &'s Spec,
         unexplored_prefixes: &Mutex<VecDeque<CompPrefix>>,
         thread_id: usize,
     ) -> Vec<Comp> {
         let mut worker = EngineWorker {
             thread_id,
-            engine,
-            len_range: engine.len_range.clone(),
-            shortlist: Shortlist::new(engine.num_comps),
+            spec,
+            shortlist: Shortlist::new(spec.num_comps),
             comp_prefix: CompPrefix::empty(),
         };
 
@@ -87,8 +91,8 @@ impl<'e> EngineWorker<'e> {
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
         let graph = Graph::from_prototype(
-            &engine.prototype_graph,
-            |node_id| NodePayload::new(node_id, &engine),
+            &spec.prototype_graph,
+            |node_id| NodePayload::new(node_id),
             |_node_id| ExtraPayload(),
         );
 
@@ -123,8 +127,6 @@ impl<'e> EngineWorker<'e> {
         let start_node = graph.get_start_node(&prefix.start_node).unwrap();
         self.comp_prefix.start_node = prefix.start_node;
         self.comp_prefix.successor_idxs.clear();
-
-        println!("Loading {:?}", prefix.successor_idxs);
 
         /// A macro to reset the node graph and return from this function (dropping the mutex lock
         /// on the way).
@@ -297,12 +299,12 @@ impl<'e> EngineWorker<'e> {
         }
 
         // If the node would make the comp too long, then prune
-        if length_after_this_node >= self.len_range.end {
+        if length_after_this_node >= self.spec.len_range.end {
             return true;
         }
 
         // If we've found an end node, then this must be the end of the composition
-        if node.is_end() && self.len_range.contains(&length_after_this_node) {
+        if node.is_end() && self.spec.len_range.contains(&length_after_this_node) {
             self.save_comp(length_after_this_node, score_after_this_node);
             return true;
         }
@@ -340,7 +342,7 @@ impl<'e> EngineWorker<'e> {
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: f32) {
         // If enabled, normalise the music scores by length
-        let ranking_score = if self.engine.config.normalise_music {
+        let ranking_score = if self.spec.normalise_music {
             score / length as f32
         } else {
             score
@@ -354,7 +356,7 @@ impl<'e> EngineWorker<'e> {
         }
 
         // Traverse the prototype graph and generate the comp
-        let (links_taken, end_id) = self.engine.prototype_graph.generate_path(
+        let (links_taken, end_id) = self.spec.prototype_graph.generate_path(
             &self.comp_prefix.start_node,
             self.comp_prefix.successor_idxs.iter().cloned(),
         );
@@ -369,7 +371,7 @@ impl<'e> EngineWorker<'e> {
         println!(
             "[{:>2}] FOUND COMP! {}",
             self.thread_id,
-            comp.to_string(&self.engine.layout)
+            comp.to_string(&self.spec)
         );
 
         self.shortlist.push(comp);
@@ -385,7 +387,7 @@ pub struct NodePayload {
 }
 
 impl NodePayload {
-    fn new(_node_id: &NodeId, _engine: &Engine) -> Self {
+    fn new(_node_id: &NodeId) -> Self {
         Self {
             falseness_count: Cell::new(0),
         }
@@ -405,25 +407,36 @@ pub struct Comp {
     pub length: usize,
     /// The absolute score of the composition
     pub score: f32,
-    /// The score of the composition used for ranking.  When using relative scoring, this is
-    /// normalised by length to avoid biasing towards longer comps.
-    ranking_score: f32,
+    /// The score of the composition used for ranking.  When using relative scoring, the scores are
+    /// normalised against length to avoid bias towards longer comps.
+    pub ranking_score: f32,
 }
 
 impl Comp {
-    pub fn to_string(&self, layout: &Layout) -> String {
-        let mut string = format!("(len: {}, score: {}) ", self.length, self.score);
+    /// Generates the call string for this `Comp`
+    pub fn call_string(&self, spec: &Spec) -> String {
+        let mut string = String::new();
 
         write!(&mut string, "{}:", usize::from(self.links_taken[0].0.seg)).unwrap();
 
         for (id, link_idx) in &self.links_taken {
-            let segment = layout.get_segment(id.seg);
+            let segment = spec.layout.get_segment(id.seg);
             string.push_str(&segment.name);
             string.push_str(&segment.links[*link_idx].display_name);
         }
-        string.push_str(&layout.get_segment(self.end_id.seg).name);
+        string.push_str(&spec.layout.get_segment(self.end_id.seg).name);
 
         string
+    }
+
+    /// Generates a 1-line summary string of this `Comp`
+    pub fn to_string(&self, spec: &Spec) -> String {
+        format!(
+            "(len: {}, score: {}) {}",
+            self.length,
+            self.score,
+            self.call_string(spec)
+        )
     }
 }
 
