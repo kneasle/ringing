@@ -151,8 +151,7 @@ impl<'e> EngineWorker<'e> {
         /// Macro to add a new node to the prefix (and update the graph and all the necessary
         /// counters).
         macro_rules! add_node {
-            ($succ_idx: expr) => {{
-                let succ_idx = $succ_idx;
+            () => {{
                 // Increment stats for this node
                 length_after_node += node.length();
                 score_after_node += node.score();
@@ -164,15 +163,23 @@ impl<'e> EngineWorker<'e> {
                     // reset the graph and return
                     reset_and_return!();
                 }
+            }};
+        }
+
+        /// Macro to add a node and then immediately move on to a given successor
+        macro_rules! move_to_successor {
+            ($succ_idx: expr) => {{
+                add_node!();
                 // If this branch was not pruned, then push the successor index and move to the next
                 // node in the prefix
+                let succ_idx = $succ_idx;
                 self.comp_prefix.push(succ_idx);
                 node = node.successors()[succ_idx];
             }};
         }
 
         for &succ_idx in &prefix.successor_idxs {
-            add_node!(succ_idx);
+            move_to_successor!(succ_idx);
         }
 
         /* ===== EXPLORE TREE UNTIL A BRANCH (NODE WITH >=2 SUCCESSORS) IS FOUND ===== */
@@ -188,10 +195,13 @@ impl<'e> EngineWorker<'e> {
                 0 => reset_and_return!(),
                 // If this node has one successor, then add that successor and continue looking for
                 // a node with multiple successors
-                1 => add_node!(0),
+                1 => move_to_successor!(0),
                 // If this node has multiple successors, then we can begin tree search beginning
                 // at this node
-                _ => break,
+                _ => {
+                    add_node!();
+                    break;
+                }
             }
         }
 
