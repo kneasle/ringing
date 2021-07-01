@@ -135,6 +135,11 @@ impl<P, E> Graph<P, E> {
             .get(id)
             .map(|ptr| unsafe { ptr.as_ref() }.unwrap())
     }
+
+    /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
+    pub fn all_nodes<'s>(&'s self) -> impl Iterator<Item = Pin<&'s Node<P, E>>> {
+        self.nodes.values().map(|x| x.as_ref())
+    }
 }
 
 /// A node in the in-memory graph.  This is a dynamically sized type, since it contains a
@@ -237,6 +242,11 @@ impl<P, E> Node<P, E> {
     #[inline(always)]
     pub fn score(&self) -> f32 {
         self.score
+    }
+
+    #[inline(always)]
+    pub fn id(&self) -> &NodeId {
+        &self.extras.id
     }
 
     #[inline(always)]

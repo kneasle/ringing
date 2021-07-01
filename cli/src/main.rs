@@ -9,7 +9,9 @@ fn main() {
     let config = Config::from(&args);
 
     // Parse the TOML file into an 'abstract' specification
-    let abstr_spec = AbstractSpec::read_from_file(&args.input_file).unwrap();
+    let mut abstr_spec = AbstractSpec::read_from_file(&args.input_file).unwrap();
+    // Remove the test data to stop it clogging up the terminal
+    abstr_spec.test_data = None;
     println!("{:#?}", abstr_spec);
 
     // Convert the abstract specification into a concrete specification accepted by Monument's
