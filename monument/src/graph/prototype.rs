@@ -51,8 +51,8 @@ impl ProtoGraph {
             // - Remove nodes which are false against any required nodes
             // - Merge chunks of nodes which can only be rung together (i.e. each pair has
             //   precisely one successor and predecessor).
-            // - Reorder successor links so that branches with easily reachable music are explored
-            //   first
+            // - Remove successor links which connect two nodes which are false (e.g. calling
+            //   singles in Kent).  These don't need to exist since they can never be explored.
 
             // If the graph has not got smaller, then further optimisation is not useful so we can
             // stop optimising
