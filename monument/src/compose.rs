@@ -1,5 +1,11 @@
 use std::{
-    cell::Cell, cmp::Ordering, collections::VecDeque, fmt::Write, ops::Range, sync::MutexGuard,
+    cell::Cell,
+    cmp::Ordering,
+    collections::VecDeque,
+    fmt::Write,
+    ops::Range,
+    sync::{Arc, Mutex, MutexGuard},
+    thread,
 };
 
 use bellframe::RowBuf;
@@ -12,56 +18,96 @@ use crate::{
     Engine, SegmentId,
 };
 
+/// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
+/// best compositions have been found and returned.
+pub fn compose(num_threads: usize, engine: &Arc<Engine>) -> Vec<Comp> {
+    // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
+    // always have compositions to explore.
+    let unexplored_prefixes = Arc::new(Mutex::new(
+        engine.prototype_graph.generate_prefixes(num_threads * 2),
+    ));
+
+    // Spawn all the worker threads
+    let threads = (0usize..num_threads)
+        .map(|i| {
+            // Create thread-local copies of the shared data which will be captured by the closure
+            // of the new thread
+            let thread_arc = engine.clone();
+            let thread_queue = unexplored_prefixes.clone();
+
+            // Spawn a new worker thread, which will immediately start generating compositions
+            thread::Builder::new()
+                .name(format!("Worker{}", i))
+                .spawn(move || EngineWorker::compose(&thread_arc, &thread_queue, i))
+                .unwrap()
+        })
+        .collect_vec();
+
+    // Wait for the worker threads to return, and merge all the individual shortlists into one
+    // shortlist for the overall best comps
+    let mut main_shortlist: Shortlist<Comp> = Shortlist::new(engine.num_comps);
+    for t in threads {
+        let comps = t.join().unwrap();
+        main_shortlist.append(comps);
+    }
+
+    main_shortlist.into_sorted_vec()
+}
+
 /// The mutable data required to generate a composition.  Each worker thread will have their own
 /// `EngineWorker` struct (but all share the same [`Engine`]).
 #[derive(Debug)]
-pub(crate) struct EngineWorker<'e> {
+struct EngineWorker<'e> {
     thread_id: usize,
     len_range: Range<usize>,
     engine: &'e Engine,
     /// A `Shortlist` of discovered compositions
     shortlist: Shortlist<Comp>,
-    /// The prefix of the currently loaded composition
+    /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
 }
 
 impl<'e> EngineWorker<'e> {
-    /// Creates a new `EngineWorker`
-    pub fn from_engine(engine: &'e Engine, thread_id: usize) -> Self {
-        EngineWorker {
+    /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
+    /// tree searching.  This function is called once for each worker thread.
+    fn compose(
+        engine: &'e Engine,
+        unexplored_prefixes: &Mutex<VecDeque<CompPrefix>>,
+        thread_id: usize,
+    ) -> Vec<Comp> {
+        let mut worker = EngineWorker {
             thread_id,
             engine,
             len_range: engine.len_range.clone(),
             shortlist: Shortlist::new(engine.num_comps),
             comp_prefix: CompPrefix::empty(),
-        }
-    }
+        };
 
-    /// Run graph search over the node graph to find compositions.
-    pub fn compose(&mut self) -> Vec<Comp> {
+        // Generate a compact **copy** of the node graph where links are represented as pointers.
+        // It is very important that this is an exact copy, otherwise the composition callings will
+        // not be recovered correctly.
         let graph = Graph::from_prototype(
-            &self.engine.prototype_graph,
-            |node_id| NodePayload::new(node_id, &self.engine),
+            &engine.prototype_graph,
+            |node_id| NodePayload::new(node_id, &engine),
             |_node_id| ExtraPayload(),
         );
 
         loop {
             // If this thread has nothing to do, then see if the global queue has any more prefixes
             // to explore
-            let mut queue = self.engine.unexplored_prefixes.lock().unwrap();
-            println!("[{:>2}] Queue len: {}", self.thread_id, queue.len());
-            if let Some(new_prefix) = queue.pop_front() {
+            let mut queue = unexplored_prefixes.lock().unwrap();
+            println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
+            match queue.pop_front() {
                 // If the queue isn't empty yet, then pick a new prefix to explore
-                self.explore_prefix(&graph, new_prefix, queue);
-            } else {
-                // If the queue is empty, then there's no point keeping this thread running so
-                // return
-                break;
+                Some(new_prefix) => worker.explore_prefix(&graph, new_prefix, queue),
+                // If the queue is empty, then the search is almost over so exit the loop and stop
+                // the thread
+                None => break,
             }
         }
 
         // Once the search has finished, read the best comps from the shortlist and return them
-        self.shortlist.drain().collect_vec()
+        worker.shortlist.drain().collect_vec()
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one

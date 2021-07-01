@@ -1,18 +1,10 @@
 #![allow(rustdoc::private_intra_doc_links)]
 
-use std::{
-    collections::VecDeque,
-    ops::Range,
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::{ops::Range, sync::Arc};
 
 use bellframe::{Bell, Method};
 use graph::ProtoGraph;
-use itertools::Itertools;
 
-use compose::{Comp, CompPrefix, EngineWorker};
-use shortlist::Shortlist;
 use single_method::{single_method_layout, CallSpec, SingleMethodError};
 
 mod compose;
@@ -43,7 +35,6 @@ pub struct Engine {
     layout: Layout,
     music_types: Vec<MusicType>,
     prototype_graph: ProtoGraph,
-    unexplored_prefixes: Mutex<VecDeque<CompPrefix>>,
 }
 
 impl Engine {
@@ -62,7 +53,6 @@ impl Engine {
             num_comps,
             layout,
             music_types,
-            unexplored_prefixes: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -89,46 +79,19 @@ impl Engine {
     /// Generate the compositions
     pub fn compose(self) {
         // Decide how many threads to use (defaulting to the number of CPU cores)
-        let num_threads = self.config.num_threads.unwrap_or_else(|| num_cpus::get());
+        let num_threads = self.config.num_threads.unwrap_or_else(num_cpus::get);
         if num_threads == 1 {
             println!("Using 1 thread.");
         } else {
             println!("Using {} threads.", num_threads);
         }
 
-        // Initialise the queue with prefixes (we use a block to make sure that the MutexGuard gets
-        // dropped before the other threads start running)
-        {
-            let mut prefixes = self.unexplored_prefixes.lock().unwrap();
-            *prefixes = self.prototype_graph.generate_prefixes(num_threads * 2);
-        }
-
-        // Wrap `self` in an `Arc` to make sure that the threads don't outlive the lifetime of the
-        // engine.
-        let arc_self = Arc::from(self);
-        let threads = (0usize..num_threads)
-            .map(|i| {
-                let thread_arc = arc_self.clone();
-                thread::Builder::new()
-                    .name(format!("Worker{}", i))
-                    .spawn(move || {
-                        let mut worker = EngineWorker::from_engine(&thread_arc, i);
-                        worker.compose()
-                    })
-                    .unwrap()
-            })
-            .collect_vec();
-
-        // Wait for the worker threads to return, and merge all the individual shortlists into one
-        // shortlist for the overall best comps
-        let mut main_shortlist: Shortlist<Comp> = Shortlist::new(arc_self.num_comps);
-        for t in threads {
-            let comps = t.join().unwrap();
-            main_shortlist.append(comps);
-        }
+        // Delegate to the `compose` to run the composition search
+        let arc_self = Arc::new(self);
+        let comps = compose::compose(num_threads, &arc_self);
 
         // Print out the best comps from this global shortlist
-        for c in main_shortlist.into_sorted_vec() {
+        for c in comps {
             println!("{}", c.to_string(&arc_self.layout));
         }
     }
