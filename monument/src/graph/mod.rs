@@ -138,7 +138,7 @@ impl<P, E> Graph<P, E> {
     }
 
     /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
-    pub fn all_nodes<'s>(&'s self) -> impl Iterator<Item = Pin<&'s Node<P, E>>> {
+    pub fn all_nodes(&self) -> impl Iterator<Item = Pin<&'_ Node<P, E>>> {
         self.nodes.values().map(|x| x.as_ref())
     }
 }

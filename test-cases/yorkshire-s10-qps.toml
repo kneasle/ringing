@@ -12,13 +12,7 @@ symbol = "x"
 place_notation = "16"
 
 [[music]]
-run_length = 4
-
-[[music]]
-run_length = 5
-
-[[music]]
-run_length = 6
+run_lengths = [4, 5, 6]
 
 # This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]

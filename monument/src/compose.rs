@@ -9,6 +9,7 @@ use std::{
 
 use bellframe::RowBuf;
 use itertools::Itertools;
+use log::Level;
 use shortlist::Shortlist;
 
 use crate::{
@@ -19,7 +20,7 @@ use crate::{
 
 /// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
 /// best compositions have been found and returned.
-pub fn compose(spec: &Arc<Spec>, config: &Config) -> Vec<Comp> {
+pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
     // Decide how many threads to use (defaulting to the number of CPU cores)
     let num_threads = config.num_threads.unwrap_or_else(num_cpus::get);
     if num_threads == 1 {
@@ -41,11 +42,14 @@ pub fn compose(spec: &Arc<Spec>, config: &Config) -> Vec<Comp> {
             // of the new thread
             let thread_spec = spec.clone();
             let thread_queue = unexplored_prefixes.clone();
+            let thread_config = config.clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || EngineWorker::compose(&thread_spec, &thread_queue, i))
+                .spawn(move || {
+                    EngineWorker::compose(&thread_spec, &thread_queue, &thread_config, i)
+                })
                 .unwrap()
         })
         .collect_vec();
@@ -64,26 +68,29 @@ pub fn compose(spec: &Arc<Spec>, config: &Config) -> Vec<Comp> {
 /// The mutable data required to generate a composition.  Each worker thread will have their own
 /// `EngineWorker` struct (but all share the same [`Engine`]).
 #[derive(Debug)]
-struct EngineWorker<'s> {
+struct EngineWorker<'s, 'c> {
     thread_id: usize,
     spec: &'s Spec,
     /// A `Shortlist` of discovered compositions
     shortlist: Shortlist<Comp>,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
+    config: &'c Config,
 }
 
-impl<'s> EngineWorker<'s> {
+impl<'s, 'c> EngineWorker<'s, 'c> {
     /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
     /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
     fn compose(
         spec: &'s Spec,
         unexplored_prefixes: &Mutex<VecDeque<CompPrefix>>,
+        config: &'c Config,
         thread_id: usize,
     ) -> Vec<Comp> {
         let mut worker = EngineWorker {
             thread_id,
             spec,
+            config,
             shortlist: Shortlist::new(spec.num_comps),
             comp_prefix: CompPrefix::empty(),
         };
@@ -101,7 +108,11 @@ impl<'s> EngineWorker<'s> {
             // If this thread has nothing to do, then see if the global queue has any more prefixes
             // to explore
             let mut queue = unexplored_prefixes.lock().unwrap();
-            // println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
+
+            if worker.config.log_level >= Level::Debug {
+                println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
+            }
+
             match queue.pop_front() {
                 // If the queue isn't empty yet, then pick a new prefix to explore
                 Some(new_prefix) => worker.explore_prefix(&graph, new_prefix, queue),
@@ -142,6 +153,7 @@ impl<'s> EngineWorker<'s> {
         let mut loaded_node_stack: Vec<&Node<NodePayload, ExtraPayload>> = Vec::new();
 
         /* ===== DEFINE A LOAD OF USEFUL MACROS ===== */
+
         // (these macros would be closures, but (a) then we'd need to make sure LLVM inlines them
         // properly and (b) the borrow checker would be overzealous and not compile our code.  I
         // think macros are possibly the simplest way to handle this not-very-simple task).
@@ -401,11 +413,13 @@ impl<'s> EngineWorker<'s> {
             ranking_score,
         };
 
-        /* println!(
-            "[{:>2}] FOUND COMP! {}",
-            self.thread_id,
-            comp.to_string(&self.spec)
-        ); */
+        if self.config.log_level >= Level::Debug {
+            println!(
+                "[{:>2}] FOUND COMP! {}",
+                self.thread_id,
+                comp.to_string(&self.spec)
+            );
+        }
 
         self.shortlist.push(comp);
     }

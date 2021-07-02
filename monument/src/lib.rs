@@ -19,6 +19,7 @@ use bellframe::Row;
 // Top level re-exports for the convenience of people using this as a library (i.e. me)
 pub use compose::{compose, Comp};
 pub use layout::*;
+use log::LevelFilter;
 pub use music::MusicType;
 pub use score::Score;
 
@@ -63,8 +64,8 @@ impl Spec {
             prototype_graph,
             len_range,
             num_comps,
-            normalise_music,
             music_types,
+            normalise_music,
         })
     }
 }
@@ -87,6 +88,9 @@ pub struct Config {
     ///
     /// Defaults to `None`.
     pub num_threads: Option<usize>,
+    /// What logging level Monument should use
+    pub log_level: LevelFilter,
+
     /// How many nodes' lookahead Monument will use to sort the successor of each node.  Sorting
     /// these links has no impact on the DFS search speed but makes Monument explore potentially
     /// good branches first.  If set to `0`, then the links will not be sorted.  There is a balance
@@ -110,6 +114,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             num_threads: None,
+            log_level: LevelFilter::Info,
             successor_link_sort_depth: 2,
             successor_link_sort_strategy: SuccSortStrat::Max,
         }

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use glob::glob;
 use itertools::Itertools;
@@ -46,8 +46,10 @@ fn main() -> std::io::Result<()> {
 fn run_test_case(test_case: TestCase, config: Config) {
     println!("\n\nTesting {:?}", test_case.file_path);
 
-    let spec = test_case.spec.to_spec(&config).unwrap();
-    let mut comps = monument::compose(&spec, &config)
+    let arc_config = Arc::new(config);
+
+    let spec = test_case.spec.to_spec(&arc_config).unwrap();
+    let mut comps = monument::compose(&spec, &arc_config)
         .into_iter()
         .map(|c| CompResult::from_comp(c, &spec))
         .collect_vec();
