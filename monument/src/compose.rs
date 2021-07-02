@@ -13,6 +13,7 @@ use shortlist::Shortlist;
 
 use crate::{
     graph::{Graph, Node, NodeId},
+    score::Score,
     Config, SegmentId, Spec,
 };
 
@@ -100,7 +101,7 @@ impl<'s> EngineWorker<'s> {
             // If this thread has nothing to do, then see if the global queue has any more prefixes
             // to explore
             let mut queue = unexplored_prefixes.lock().unwrap();
-            println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
+            // println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
             match queue.pop_front() {
                 // If the queue isn't empty yet, then pick a new prefix to explore
                 Some(new_prefix) => worker.explore_prefix(&graph, new_prefix, queue),
@@ -132,7 +133,7 @@ impl<'s> EngineWorker<'s> {
 
         // Declare variables to track the state of the nodes explored so far
         let mut length_after_node = 0usize;
-        let mut score_after_node = 0f32;
+        let mut score_after_node = Score::ZERO;
         let mut node = start_node;
         // This keeps track of which nodes have been loaded to the graph before tree search
         // commences.  These will then be unloaded in reverse order before returning, so it is
@@ -289,7 +290,7 @@ impl<'s> EngineWorker<'s> {
 
     /// Test a node, and either expand it or prune.  All arguments apply to the composition
     /// explored up to the first row of `node`.
-    fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize, score: f32) {
+    fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize, score: Score) {
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
 
@@ -321,7 +322,7 @@ impl<'s> EngineWorker<'s> {
         &mut self,
         node: &Node<NodePayload, ExtraPayload>,
         length_after_this_node: usize,
-        score_after_this_node: f32,
+        score_after_this_node: Score,
     ) -> bool {
         let payload = node.payload();
 
@@ -372,10 +373,10 @@ impl<'s> EngineWorker<'s> {
 
     /// Save the composition corresponding to the path currently being explored
     #[inline(never)]
-    fn save_comp(&mut self, length: usize, score: f32) {
+    fn save_comp(&mut self, length: usize, score: Score) {
         // If enabled, normalise the music scores by length
         let ranking_score = if self.spec.normalise_music {
-            score / length as f32
+            score / length
         } else {
             score
         };
@@ -400,11 +401,11 @@ impl<'s> EngineWorker<'s> {
             ranking_score,
         };
 
-        println!(
+        /* println!(
             "[{:>2}] FOUND COMP! {}",
             self.thread_id,
             comp.to_string(&self.spec)
-        );
+        ); */
 
         self.shortlist.push(comp);
     }
@@ -438,10 +439,10 @@ pub struct Comp {
     pub(crate) end_id: NodeId,
     pub length: usize,
     /// The absolute score of the composition
-    pub score: f32,
+    pub score: Score,
     /// The score of the composition used for ranking.  When using relative scoring, the scores are
     /// normalised against length to avoid bias towards longer comps.
-    pub ranking_score: f32,
+    pub ranking_score: Score,
 }
 
 impl Comp {
@@ -477,14 +478,14 @@ impl Comp {
 impl PartialOrd for Comp {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.ranking_score.partial_cmp(&other.ranking_score)
+        Some(self.cmp(&other))
     }
 }
 
 impl Ord for Comp {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        self.ranking_score.cmp(&other.ranking_score)
     }
 }
 

@@ -9,6 +9,7 @@ mod graph;
 mod layout;
 pub mod mask;
 mod music;
+mod score;
 pub mod single_method;
 
 // Imports used solely by doctests
@@ -19,6 +20,7 @@ use bellframe::Row;
 pub use compose::{compose, Comp};
 pub use layout::*;
 pub use music::MusicType;
+pub use score::Score;
 
 /// The `Spec`ification for a set of generated compositions.  This contains all the data which
 /// directly impacts the composition list -- all other options are stored in [`Config`].

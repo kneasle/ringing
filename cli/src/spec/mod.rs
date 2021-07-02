@@ -203,10 +203,7 @@ impl MusicSpec {
 
     /// Generates a [`MusicType`] representing `self`.
     pub fn to_music_type(&self, stage: Stage) -> MusicType {
-        MusicType {
-            weight: self.weight(),
-            regexes: self.regexes(stage),
-        }
+        MusicType::new(self.regexes(stage), self.weight())
     }
 }
 

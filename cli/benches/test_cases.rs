@@ -54,7 +54,13 @@ fn run_test_case(test_case: TestCase, config: Config) {
 
     match test_case.test_data.results {
         // If the test file specifies some compositions, check that our results were compatible
-        Some(mut expected_comps) => are_results_compatible(&mut expected_comps, &mut comps),
+        Some(expected_comps_float) => {
+            let mut expected_comps = expected_comps_float
+                .into_iter()
+                .map(CompResult::from)
+                .collect_vec();
+            are_results_compatible(&mut expected_comps, &mut comps)
+        }
         // If there weren't any then we assume that this test case hasn't been made yet, so we
         // print out the results in such a way that they can be copy/pasted into the TOML file
         None => print_test_string(comps),
@@ -78,10 +84,8 @@ fn are_results_compatible(expected_comps: &mut [CompResult], comps: &mut [CompRe
     // Make sure that the composition lists are sorted (which is a bit painful because floating
     // point numbers are pesky).  That way they can easily be split into worst-comps and
     // non-worst-comps sections
-    let compare_comps =
-        |a: &CompResult, b: &CompResult| a.ranking_score.partial_cmp(&b.ranking_score).unwrap();
-    expected_comps.sort_by(compare_comps);
-    comps.sort_by(compare_comps);
+    expected_comps.sort_by_key(|c| c.ranking_score);
+    comps.sort_by_key(|c| c.ranking_score);
 
     // Check that there are the right number of worst comps (these exact comps can be different if
     // the search space is searched in a different order)
@@ -147,7 +151,10 @@ fn print_test_string(comps: Vec<CompResult>) {
     for c in comps {
         println!(
             "    {{ length = {}, score = {}, call_string = {:?}, ranking_score = {} }},",
-            c.length, c.score, c.call_string, c.ranking_score
+            c.length,
+            c.score.to_radix(),
+            c.call_string,
+            c.ranking_score.to_radix()
         );
     }
     println!("]");
