@@ -21,7 +21,7 @@ impl From<&CliArgs> for Config {
     fn from(args: &CliArgs) -> Config {
         Config {
             num_threads: args.num_threads,
-            sort_successor_links: true,
+            ..Config::default()
         }
     }
 }

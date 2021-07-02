@@ -12,7 +12,7 @@ use crate::{
     compose::CompPrefix,
     layout::{Layout, Position, SegmentId},
     music::Score,
-    Config, MusicType,
+    Config, MusicType, SuccSortStrat,
 };
 
 use super::{falseness::FalsenessTable, NodeId};
@@ -66,9 +66,7 @@ impl ProtoGraph {
 
         // Perform final optimisations and return
         graph.prune_references();
-        if config.sort_successor_links {
-            graph.sort_successors();
-        }
+        graph.sort_successors(config);
         graph
     }
 
@@ -351,15 +349,15 @@ impl ProtoGraph {
 
     /// Reorder the successor links by the amount of easily reachable music - meaning that the
     /// DFS engine will expand the branches in roughly descending order of goodness.  This is done
-    /// in dynamic programming style - ignoring falseness but running in linear time in the number
-    /// of node links.
-    fn sort_successors(&mut self) {
-        /* COMPUTE THE REACHABLE MUSIC FOR EVERY NODE */
+    /// in dynamic programming style - ignoring falseness but using time and memory that is linear
+    /// in both the number of node links and the search depth.
+    fn sort_successors(&mut self, config: &Config) {
+        // If the depth is 0, then the nodes should be sorted
+        if config.successor_link_sort_depth == 0 {
+            return;
+        }
 
-        // How many nodes deep should the music prediction go.  To short and this will ignore slow
-        // linking courses, but too long and this will get stuck in a loop of good courses and not
-        // differentiate very well
-        const MAX_REORDER_DEPTH: usize = 4;
+        /* COMPUTE THE REACHABLE MUSIC FOR EVERY NODE */
 
         // A mapping from Node IDs to average scores reachable within `i` nodes.  We initialise
         // this to 0
@@ -377,24 +375,45 @@ impl ProtoGraph {
                 .map(|(id, node)| (id.clone(), node.score.total)),
         );
 
+        /// Combine several music scores together
+        fn combine_node_scores(
+            vs: impl IntoIterator<Item = f32>,
+            num_successors: usize,
+            strat: SuccSortStrat,
+        ) -> f32 {
+            match strat {
+                SuccSortStrat::Max => vs
+                    .into_iter()
+                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap_or(0f32),
+                SuccSortStrat::Average => {
+                    // If there are no successor nodes, then we arbitrarily set the average to 0 to
+                    // avoid division by 0
+                    if num_successors == 0 {
+                        0f32
+                    } else {
+                        let sum_of_succ_scores = vs.into_iter().sum::<f32>();
+                        sum_of_succ_scores / num_successors as f32
+                    }
+                }
+            }
+        }
+
         // Now, in order to increase the depth by one we overwrite the scores in
         // `reachable_music_buf_front` (the scores at depth `i`) by averaging the scores of each
         // node's successors taken from `reachable_music_buf_back` (the scores at depth `i - 1`).
-        for _i in 2..=MAX_REORDER_DEPTH {
+        for _i in 2..=config.successor_link_sort_depth {
             for (id, node) in &self.nodes {
                 // The average music reachable from a node is its score + the average of its
                 // successor's music reachable in length `i - 1`
                 let reachable_score = node.score.total
-                    + if node.successors.is_empty() {
-                        0f32
-                    } else {
-                        let sum_of_succ_scores = node
-                            .successors
+                    + combine_node_scores(
+                        node.successors
                             .iter()
-                            .filter_map(|(_, succ_id)| scores_at_i_minus_1.get(succ_id))
-                            .sum::<f32>();
-                        sum_of_succ_scores / node.successors.len() as f32
-                    };
+                            .map(|(_, succ_id)| *scores_at_i_minus_1.get(succ_id).unwrap()),
+                        node.successors.len(),
+                        config.successor_link_sort_strategy,
+                    );
                 // Update the front buffer with the new score
                 *scores_at_i.get_mut(id).unwrap() = reachable_score;
             }

@@ -67,6 +67,14 @@ impl Spec {
     }
 }
 
+/// How to combine the costs of each of the paths out of a given node (when sorting successor
+/// links).
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum SuccSortStrat {
+    Average,
+    Max,
+}
+
 /// General configuration parameters for Monument.  These will not change the resulting
 /// compositions, instead changing how Monument operates (and therefore how quickly and in what
 /// order the compositions are searched).
@@ -74,16 +82,34 @@ impl Spec {
 pub struct Config {
     /// How many threads will be used to generate the best composition.  If set to `None`, this
     /// will use the number of available CPU cores.
+    ///
+    /// Defaults to `None`.
     pub num_threads: Option<usize>,
-    /// Sort succession links so that likely musical nodes are explored first
-    pub sort_successor_links: bool,
+    /// How many nodes' lookahead Monument will use to sort the successor of each node.  Sorting
+    /// these links has no impact on the DFS search speed but makes Monument explore potentially
+    /// good branches first.  If set to `0`, then the links will not be sorted.  There is a balance
+    /// here - if this is too short then then Monument will ignore slightly slow linking courses,
+    /// but too long and the results will be too noisy to be useful.
+    ///
+    /// Defaults to `2`.
+    ///
+    /// The purpose of this is to make Monument prefer sticking to the 'hot' music paths, getting
+    /// some good compositions quickly before moving on to less obviously good parts of the search
+    /// space.  If this is paired with music-prediction pruning, then getting good comps quickly
+    /// corresponds directly to better pruning and therefore faster termination.
+    pub successor_link_sort_depth: usize,
+    /// What strategy Monument will use to combine the path scores when sorting successor links.
+    ///
+    /// Defaults to [`SuccSortStrat::Max`].
+    pub successor_link_sort_strategy: SuccSortStrat,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Config {
             num_threads: None,
-            sort_successor_links: true,
+            successor_link_sort_depth: 2,
+            successor_link_sort_strategy: SuccSortStrat::Max,
         }
     }
 }
