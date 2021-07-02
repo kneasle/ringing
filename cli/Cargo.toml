@@ -24,11 +24,12 @@ path = "src/main.rs"
 name = "monument"
 
 [[test]]
-name = "test_cases"
-path = "benches/test_cases.rs"
+name = "examples"
+path = "test/test.rs"
 harness = false
 
-# Run the test cases as benchmarks
+# Run the examples as benchmarks
 [[bench]]
-name = "test_cases"
+name = "examples"
+path = "test/bench.rs"
 harness = false

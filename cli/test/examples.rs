@@ -8,12 +8,12 @@ use monument_cli::{
     test_data::{CompResult, TestData},
 };
 
-fn main() -> std::io::Result<()> {
+pub fn main() -> std::io::Result<()> {
     let mut testing_dir = std::env::current_dir()?;
-    // For some reason, this always runs in the `<project root>/cli` directory not the git repo
+    // This always runs in the `<project root>/cli` directory not the git repo
     // root so we pop the `/cli` dir off the end of the path
     testing_dir.pop();
-    testing_dir.push("test-cases/");
+    testing_dir.push("examples/");
 
     let mut test_file_glob = testing_dir
         .as_os_str()
