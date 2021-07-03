@@ -44,8 +44,8 @@ impl From<CompResultIsize> for CompResult {
         CompResult {
             call_string: v.call_string,
             length: v.length,
-            score: Score::from_radix(v.score),
-            ranking_score: Score::from_radix(v.ranking_score),
+            score: Score::from_numerator(v.score),
+            ranking_score: Score::from_numerator(v.ranking_score),
         }
     }
 }

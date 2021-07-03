@@ -3,7 +3,10 @@ use std::{
     cmp::Ordering,
     collections::VecDeque,
     fmt::Write,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{
+        mpsc::{sync_channel, SyncSender},
+        Arc, Mutex, MutexGuard,
+    },
     thread,
 };
 
@@ -14,7 +17,7 @@ use shortlist::Shortlist;
 
 use crate::{
     graph::{Graph, Node, NodeId},
-    score::Score,
+    score::{AtomicScore, Score},
     Config, SegmentId, Spec,
 };
 
@@ -31,67 +34,112 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
 
     // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
     // always have compositions to explore.
-    let unexplored_prefixes = Arc::new(Mutex::new(
+    let unexplored_prefix_queue = Arc::new(Mutex::new(
         spec.prototype_graph.generate_prefixes(num_threads * 2),
     ));
+
+    let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
+    let engine = Engine {
+        spec: spec.clone(),
+        config: config.clone(),
+
+        shortlist_min_score: Arc::new(AtomicScore::new(Score::MIN)),
+        comp_channel: comp_channel_tx,
+    };
+
+    // Spawn a thread which will read the compositions output by the other threads
+    let shortlist_size = spec.num_comps;
+    let shortlist_min_score = engine.shortlist_min_score.clone();
+    let shortlist_thread = thread::spawn(move || {
+        let mut shortlist = Shortlist::new(shortlist_size);
+        // Repeatedly receive compositions from the worker threads over the channel ...
+        while let Ok(comp) = comp_channel_rx.recv() {
+            shortlist.push(comp);
+            // If the shortlist is full, then update the minimum score required for a composition
+            // to make it into the shortlist.  This is several effects:
+            // 1. It allows the threads to use this value (and an upper bound of music score) to
+            //    prune branches which will never generate enough music
+            // 2. It prevents the comp channel from being inundated with incoming comps, because
+            //    the worker channels compare potential comps against the min value before sending
+            //    them down the channel
+            if shortlist.len() == shortlist.capacity() {
+                shortlist_min_score.set(shortlist.peek_min().unwrap().ranking_score);
+            }
+        }
+        // Once all the worker threads have closed, `comp_channel_rx.recv()` will return an error
+        // and the `while` loop will exit.  At this point the search is over and no more
+        // compositions can be found, so we pass the final comp list to the main thread which then
+        // returns it from `compose()`
+        shortlist.into_sorted_vec()
+    });
 
     // Spawn all the worker threads
     let threads = (0usize..num_threads)
         .map(|i| {
             // Create thread-local copies of the shared data which will be captured by the closure
             // of the new thread
-            let thread_spec = spec.clone();
-            let thread_queue = unexplored_prefixes.clone();
-            let thread_config = config.clone();
+            let thread_engine = engine.clone();
+            let thread_queue = unexplored_prefix_queue.clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || {
-                    EngineWorker::compose(&thread_spec, &thread_queue, &thread_config, i)
-                })
+                .spawn(move || EngineWorker::compose(thread_engine, &thread_queue, i))
                 .unwrap()
         })
         .collect_vec();
 
+    // We have to drop `engine` here because it holds a sender for the composition channel.  The
+    // channel won't close until ALL the senders have been dropped, so not dropping `Engine` here
+    // causes a deadlock: the main thread waits for `shortlist_thread` to terminate, thus keeping
+    // the channel alive and preventing `shortlist_thread` from terminating.
+    drop(engine);
+
     // Wait for the worker threads to finish, then merge all the individual shortlists into one
     // overall shortlist for the `n` best comps
-    let mut main_shortlist: Shortlist<Comp> = Shortlist::new(spec.num_comps);
     for t in threads {
-        let comps = t.join().unwrap();
-        main_shortlist.append(comps);
+        t.join().unwrap();
     }
 
-    main_shortlist.into_sorted_vec()
+    // Once all the workers have finished, wait for the shortlist thread to finish and return its
+    // composition list
+    shortlist_thread.join().unwrap()
+}
+
+/// 'Immutable' data shared between all the workers.  This also includes types with interior
+/// mutability (like channels and atomic integers), but the important thing is that they only
+/// require immutable references in order to function.
+#[derive(Debug, Clone)]
+struct Engine {
+    // Immutable lookup data
+    spec: Arc<Spec>,
+    config: Arc<Config>,
+    // Shared state with interior mutability
+    shortlist_min_score: Arc<AtomicScore>,
+    comp_channel: SyncSender<Comp>,
 }
 
 /// The mutable data required to generate a composition.  Each worker thread will have their own
 /// `EngineWorker` struct (but all share the same [`Engine`]).
 #[derive(Debug)]
-struct EngineWorker<'s, 'c> {
+struct EngineWorker {
     thread_id: usize,
-    spec: &'s Spec,
-    /// A `Shortlist` of discovered compositions
-    shortlist: Shortlist<Comp>,
+    engine: Engine,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
-    config: &'c Config,
 }
 
-impl<'s, 'c> EngineWorker<'s, 'c> {
+impl EngineWorker {
     /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
     /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
     fn compose(
-        spec: &'s Spec,
-        unexplored_prefixes: &Mutex<VecDeque<CompPrefix>>,
-        config: &'c Config,
+        engine: Engine,
+        unexplored_prefix_queue: &Mutex<VecDeque<CompPrefix>>,
         thread_id: usize,
-    ) -> Vec<Comp> {
+    ) {
         let mut worker = EngineWorker {
             thread_id,
-            spec,
-            config,
-            shortlist: Shortlist::new(spec.num_comps),
+            engine,
             comp_prefix: CompPrefix::empty(),
         };
 
@@ -99,7 +147,7 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
         let graph = Graph::from_prototype(
-            &spec.prototype_graph,
+            &worker.engine.spec.prototype_graph,
             |node_id| NodePayload::new(node_id),
             |_node_id| ExtraPayload(),
         );
@@ -107,9 +155,9 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
         loop {
             // If this thread has nothing to do, then see if the global queue has any more prefixes
             // to explore
-            let mut queue = unexplored_prefixes.lock().unwrap();
+            let mut queue = unexplored_prefix_queue.lock().unwrap();
 
-            if worker.config.log_level >= Level::Debug {
+            if worker.engine.config.log_level >= Level::Debug {
                 println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
             }
 
@@ -122,8 +170,12 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
             }
         }
 
-        // Once the search has finished, read the best comps from the shortlist and return them
-        worker.shortlist.drain().collect_vec()
+        // If the shortlist has no values left, then the search must be nearly finished and there's
+        // no point keeping this thread running any longer.  Therefore we return, stopping this
+        // thread and letting the others finish the search.
+        if worker.engine.config.log_level >= Level::Debug {
+            println!("[{:>2}] Terminating", worker.thread_id);
+        }
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one
@@ -251,7 +303,7 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
         let successors = node.successors();
         // Because these successors are sorted by 'goodness', we always want to get to the good
         // comps as quickly as possible.  We'll assume that pushing prefixes to the queue is the
-        // slowest way of expanding them, so therefore we push the last successor to the branch
+        // slowest way of expanding them, so therefore we push the last successor back to the queue
         let mut prefix_to_push = self.comp_prefix.clone();
         prefix_to_push.push(successors.len() - 1);
         queue.push_back(prefix_to_push);
@@ -344,12 +396,12 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
         }
 
         // If the node would make the comp too long, then prune
-        if length_after_this_node >= self.spec.len_range.end {
+        if length_after_this_node >= self.engine.spec.len_range.end {
             return true;
         }
 
         // If we've found an end node, then this must be the end of the composition
-        if node.is_end() && self.spec.len_range.contains(&length_after_this_node) {
+        if node.is_end() && self.engine.spec.len_range.contains(&length_after_this_node) {
             self.save_comp(length_after_this_node, score_after_this_node);
             return true;
         }
@@ -387,21 +439,19 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: Score) {
         // If enabled, normalise the music scores by length
-        let ranking_score = if self.spec.normalise_music {
+        let ranking_score = if self.engine.spec.normalise_music {
             score / length
         } else {
             score
         };
         // If the composition wouldn't make it into the shortlist, then there's no point creating
         // the `Comp` struct (which is quite time intensive)
-        if self.shortlist.len() == self.shortlist.capacity()
-            && self.shortlist.peek_min().unwrap().ranking_score >= ranking_score
-        {
+        if self.engine.shortlist_min_score.get() >= ranking_score {
             return;
         }
 
         // Traverse the prototype graph and generate the comp
-        let (links_taken, end_id) = self.spec.prototype_graph.generate_path(
+        let (links_taken, end_id) = self.engine.spec.prototype_graph.generate_path(
             &self.comp_prefix.start_node,
             self.comp_prefix.successor_idxs.iter().cloned(),
         );
@@ -413,15 +463,18 @@ impl<'s, 'c> EngineWorker<'s, 'c> {
             ranking_score,
         };
 
-        if self.config.log_level >= Level::Debug {
+        if self.engine.config.log_level >= Level::Debug {
             println!(
                 "[{:>2}] FOUND COMP! {}",
                 self.thread_id,
-                comp.to_string(&self.spec)
+                comp.to_string(&self.engine.spec)
             );
         }
 
-        self.shortlist.push(comp);
+        self.engine
+            .comp_channel
+            .send(comp)
+            .expect("Shortlist thread terminated before workers");
     }
 }
 

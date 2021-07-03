@@ -108,6 +108,10 @@ pub struct Config {
     ///
     /// Defaults to [`SuccSortStrat::Max`].
     pub successor_link_sort_strategy: SuccSortStrat,
+
+    /// The maximum number of compositions which can be stored in the channel over which
+    /// compositions are sent from the worker threads to the main thread
+    pub comp_buffer_length: usize,
 }
 
 impl Default for Config {
@@ -117,6 +121,7 @@ impl Default for Config {
             log_level: LevelFilter::Info,
             successor_link_sort_depth: 2,
             successor_link_sort_strategy: SuccSortStrat::Max,
+            comp_buffer_length: 1000,
         }
     }
 }

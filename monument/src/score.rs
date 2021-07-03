@@ -2,6 +2,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     ops::{Add, AddAssign, Div, Mul, MulAssign},
+    sync::atomic::{AtomicIsize, Ordering},
 };
 
 /// Bit index of the radix point in a [`Score`].  This is exactly half-way through the number,
@@ -23,6 +24,9 @@ impl Score {
     pub const ZERO: Score = Self::from_isize_truncating(0);
     pub const ONE: Score = Self::from_isize_truncating(1);
 
+    pub const MIN: Score = Score { value: isize::MIN };
+    pub const MAX: Score = Score { value: isize::MAX };
+
     /// Creates a new [`Score`] from an [`isize`], truncating it if it doesn't fit.
     #[inline(always)]
     const fn from_isize_truncating(v: isize) -> Self {
@@ -32,7 +36,7 @@ impl Score {
     }
 
     /// Creates a `Score` from an integer representing a fraction over (2^32).
-    pub fn from_radix(value: isize) -> Self {
+    pub fn from_numerator(value: isize) -> Self {
         Self { value }
     }
 
@@ -61,9 +65,7 @@ impl Display for Score {
 impl From<f64> for Score {
     #[inline(always)]
     fn from(v: f64) -> Self {
-        Self {
-            value: (Self::ONE.value as f64 * v) as isize,
-        }
+        Self::from_numerator((Self::ONE.value as f64 * v) as isize)
     }
 }
 
@@ -77,9 +79,7 @@ impl From<Score> for f64 {
 impl From<f32> for Score {
     #[inline(always)]
     fn from(v: f32) -> Self {
-        Self {
-            value: (Self::ONE.value as f32 * v) as isize,
-        }
+        Self::from_numerator((Self::ONE.value as f32 * v) as isize)
     }
 }
 
@@ -105,9 +105,7 @@ impl Add for Score {
     /// Add two scores together
     #[inline(always)]
     fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            value: self.value + rhs.value,
-        }
+        Self::from_numerator(self.to_radix() + rhs.to_radix())
     }
 }
 
@@ -123,9 +121,7 @@ impl Mul<usize> for Score {
 
     #[inline(always)]
     fn mul(self, rhs: usize) -> Self::Output {
-        Score {
-            value: self.value * rhs as isize,
-        }
+        Self::from_numerator(self.to_radix() * rhs as isize)
     }
 }
 
@@ -134,9 +130,7 @@ impl Mul<Score> for usize {
 
     #[inline(always)]
     fn mul(self, rhs: Score) -> Self::Output {
-        Score {
-            value: rhs.value * self as isize,
-        }
+        Score::from_numerator(rhs.to_radix() * self as isize)
     }
 }
 
@@ -152,9 +146,7 @@ impl Div<usize> for Score {
 
     #[inline(always)]
     fn div(self, rhs: usize) -> Self::Output {
-        Score {
-            value: self.value / rhs as isize,
-        }
+        Score::from_numerator(self.to_radix() / rhs as isize)
     }
 }
 
@@ -168,6 +160,32 @@ impl Sum for Score {
     }
 }
 
+/// An atomic variable containing a single [`Score`] value which always uses
+/// [`Relaxed`](Ordering::Relaxed) memory ordering.
+#[derive(Debug)]
+pub struct AtomicScore {
+    value: AtomicIsize,
+}
+
+impl AtomicScore {
+    /// Creates a new `AtomicScore` containing a given [`Score`]
+    pub fn new(score: Score) -> Self {
+        AtomicScore {
+            value: AtomicIsize::new(score.value),
+        }
+    }
+
+    /// Sets a value which will eventually be seen by the other threads
+    pub fn set(&self, score: Score) {
+        self.value.store(score.value, Ordering::Relaxed)
+    }
+
+    /// Sets a value which will eventually be seen by the other threads
+    pub fn get(&self) -> Score {
+        Score::from_numerator(self.value.load(Ordering::Relaxed))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Score;
@@ -175,5 +193,6 @@ mod tests {
     #[test]
     fn conversions() {
         assert_eq!(f32::from(Score::from(0f32)), 0f32);
+        assert_eq!(f32::from(Score::from(1f32)), 1f32);
     }
 }
