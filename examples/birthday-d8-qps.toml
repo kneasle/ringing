@@ -1,0 +1,13 @@
+length = "QP"
+num_comps = 30
+base_calls = "near"
+
+[method]
+place_notation = "x38x1456x56x16x34x18x34x58,12"
+stage = 8
+
+[[music]]
+run_lengths = [4, 5, 6, 7]
+
+[[music]]
+patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
