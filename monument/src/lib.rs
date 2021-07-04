@@ -11,6 +11,7 @@ pub mod mask;
 mod music;
 mod score;
 pub mod single_method;
+mod stats;
 
 // Imports used solely by doctests
 #[allow(unused_imports)]

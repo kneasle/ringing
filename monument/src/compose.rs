@@ -18,6 +18,7 @@ use shortlist::Shortlist;
 use crate::{
     graph::{Graph, Node, NodeId},
     score::{AtomicScore, Score},
+    stats::Stats,
     Config, SegmentId, Spec,
 };
 
@@ -97,11 +98,14 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
 
     // Wait for the worker threads to finish, then merge all the individual shortlists into one
     // overall shortlist for the `n` best comps
+    let mut all_stats = Stats::zero();
     for t in threads {
-        t.join().unwrap();
+        all_stats += t.join().unwrap();
     }
 
-    // Once all the workers have finished, wait for the shortlist thread to finish and return its
+    dbg!(all_stats);
+
+    // Once all the workers have finished, wait for the shortlist thread to finish and get its
     // composition list
     shortlist_thread.join().unwrap()
 }
@@ -125,6 +129,7 @@ struct Engine {
 struct EngineWorker {
     thread_id: usize,
     engine: Engine,
+    stats: Stats,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
 }
@@ -136,10 +141,11 @@ impl EngineWorker {
         engine: Engine,
         unexplored_prefix_queue: &Mutex<VecDeque<CompPrefix>>,
         thread_id: usize,
-    ) {
+    ) -> Stats {
         let mut worker = EngineWorker {
             thread_id,
             engine,
+            stats: Stats::zero(),
             comp_prefix: CompPrefix::empty(),
         };
 
@@ -176,6 +182,9 @@ impl EngineWorker {
         if worker.engine.config.log_level >= Level::Debug {
             println!("[{:>2}] Terminating", worker.thread_id);
         }
+
+        // Return the worker's statistics
+        worker.stats
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one
@@ -388,18 +397,19 @@ impl EngineWorker {
         length_after_this_node: usize,
         score_after_this_node: Score,
     ) -> bool {
+        self.stats.on_node_consider();
+
         let payload = node.payload();
 
         // If the node is false against anything in the comp prefix, then prune
         if payload.falseness_count.get() != 0 {
+            self.stats.nodes_proven_false += 1;
             return true;
         }
-
         // If the node would make the comp too long, then prune
         if length_after_this_node >= self.engine.spec.len_range.end {
             return true;
         }
-
         // If we've found an end node, then this must be the end of the composition
         if node.is_end() && self.engine.spec.len_range.contains(&length_after_this_node) {
             self.save_comp(length_after_this_node, score_after_this_node);
@@ -407,6 +417,8 @@ impl EngineWorker {
         }
 
         /* If none of the checks pruned this branch, then add this node to the graph */
+
+        self.stats.nodes_loaded += 1;
 
         // Since we are committing to ringing this node, we should register its falseness against
         // other nodes
@@ -438,6 +450,7 @@ impl EngineWorker {
     /// Save the composition corresponding to the path currently being explored
     #[inline(never)]
     fn save_comp(&mut self, length: usize, score: Score) {
+        self.stats.on_find_comp();
         // If enabled, normalise the music scores by length
         let ranking_score = if self.engine.spec.normalise_music {
             score / length
