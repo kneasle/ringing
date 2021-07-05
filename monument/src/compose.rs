@@ -82,7 +82,16 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
             let queue_clone = unexplored_prefix_queue.clone();
 
             move || {
-                while !has_finished_clone.load(atomic::Ordering::Relaxed) {
+                loop {
+                    // Sleep for a while before updating the stats.  We start by sleeping so that
+                    // very short (<0.2s) searches don't print any statistics at all
+                    thread::sleep(Duration::from_secs_f64(0.2));
+
+                    // Check if the computation has finished
+                    if has_finished_clone.load(atomic::Ordering::Relaxed) {
+                        break;
+                    }
+
                     let percentage_left_in_queue = queue_clone
                         .lock()
                         .unwrap()
@@ -97,9 +106,6 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
                         100.0 - (percentage_left_in_queue + percentage_left_in_threads);
 
                     println!("{:>6.2}%", percentage);
-
-                    // Sleep for a while before updating the stats
-                    thread::sleep(Duration::from_secs_f64(0.2));
                 }
             }
         })
