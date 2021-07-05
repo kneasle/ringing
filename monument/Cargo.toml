@@ -5,11 +5,12 @@ authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+atomic_float = "0.1"
 bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
-shortlist = "0.2"
-num_cpus = "1.13"
 log = "0.4"
+num_cpus = "1.13"
+shortlist = "0.2"
 
 [dev-dependencies]
 proptest = "1.0"

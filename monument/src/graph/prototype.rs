@@ -9,7 +9,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    compose::CompPrefix,
+    compose::QueueElem,
     layout::{Layout, Position, SegmentId},
     music::Breakdown,
     score::Score,
@@ -497,12 +497,18 @@ impl ProtoGraph {
     /// Creates `num_prefixes` unique prefixes which are as short as possible (i.e. distribute the
     /// composing work as evenly as possible).  **NOTE**: This doesn't check the truth of the
     /// resulting prefixes (yet), so it's worth generating more prefixes than you have threads.
-    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<CompPrefix> {
+    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<QueueElem> {
         // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
         // than `num_prefixes` in length, at which point it becomes our prefix list.
-        let mut frontier: VecDeque<(CompPrefix, &ProtoNode)> = self
+        let num_start_nodes = self.start_nodes().count();
+        let mut frontier: VecDeque<(QueueElem, &ProtoNode)> = self
             .start_nodes()
-            .map(|(id, node)| (CompPrefix::just_start_node(id.clone()), node))
+            .map(|(id, node)| {
+                (
+                    QueueElem::just_start_node(id.clone(), num_start_nodes),
+                    node,
+                )
+            })
             .collect();
 
         // TODO: Expand evenly between all the different start nodes
@@ -513,7 +519,7 @@ impl ProtoGraph {
                 if let Some(succ_node) = self.nodes.get(succ_id) {
                     // Extend the prefix with the new successor index
                     let mut new_prefix = prefix.clone();
-                    new_prefix.push(succ_idx);
+                    new_prefix.push(succ_idx, node.successors.len());
                     // Add the new prefix to the back of the frontier
                     frontier.push_back((new_prefix, succ_node));
                 } else {

@@ -4,12 +4,15 @@ use std::{
     collections::VecDeque,
     fmt::Write,
     sync::{
+        atomic::{self, AtomicBool},
         mpsc::{sync_channel, SyncSender},
         Arc, Mutex, MutexGuard,
     },
     thread,
+    time::Duration,
 };
 
+use atomic_float::AtomicF64;
 use bellframe::RowBuf;
 use itertools::Itertools;
 use log::Level;
@@ -33,13 +36,22 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
         println!("Using {} threads.", num_threads);
     }
 
+    /* COMMUNICATION BETWEEN THREADS */
+
+    // A set of atomic floats used by threads to store what percentage (of the overall search) of
+    // their current `QueueElem` has been explored.  This, plus the percentage derived from the
+    // queue itself, gives an overall percentage
+    let percentage_left_per_thread = std::iter::repeat_with(|| Arc::new(AtomicF64::new(0.0)))
+        .take(num_threads)
+        .collect_vec();
+    // A channel down which compositions will be sent when discovered
+    let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
     // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
     // always have compositions to explore.
     let unexplored_prefix_queue = Arc::new(Mutex::new(
         spec.prototype_graph.generate_prefixes(num_threads * 2),
     ));
 
-    let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
     let engine = Engine {
         spec: spec.clone(),
         config: config.clone(),
@@ -48,30 +60,70 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
         comp_channel: comp_channel_tx,
     };
 
-    // Spawn a thread which will read the compositions output by the other threads
-    let shortlist_size = spec.num_comps;
-    let shortlist_min_score = engine.shortlist_min_score.clone();
-    let shortlist_thread = thread::spawn(move || {
-        let mut shortlist = Shortlist::new(shortlist_size);
-        // Repeatedly receive compositions from the worker threads over the channel ...
-        while let Ok(comp) = comp_channel_rx.recv() {
-            shortlist.push(comp);
-            // If the shortlist is full, then update the minimum score required for a composition
-            // to make it into the shortlist.  This is several effects:
-            // 1. It allows the threads to use this value (and an upper bound of music score) to
-            //    prune branches which will never generate enough music
-            // 2. It prevents the comp channel from being inundated with incoming comps, because
-            //    the worker channels compare potential comps against the min value before sending
-            //    them down the channel
-            if shortlist.len() == shortlist.capacity() {
-                shortlist_min_score.set(shortlist.peek_min().unwrap().ranking_score);
+    // This flag gets set to `true` once all the workers have returned and the composition is
+    // finished
+    let has_finished = Arc::new(AtomicBool::new(false));
+    // Spawn a thread to track the progress of the other threads
+    let stats_thread = thread::Builder::new()
+        .name("Stats".to_owned())
+        .spawn({
+            // Variables captured by the thread
+            let has_finished_clone = has_finished.clone();
+            let percentage_left_per_thread_clone = percentage_left_per_thread.clone();
+            let queue_clone = unexplored_prefix_queue.clone();
+
+            move || {
+                while !has_finished_clone.load(atomic::Ordering::Relaxed) {
+                    let percentage_left_in_queue = queue_clone
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .map(|elem| elem.percentage)
+                        .sum::<f64>();
+                    let percentage_left_in_threads = percentage_left_per_thread_clone
+                        .iter()
+                        .map(|p| p.load(atomic::Ordering::Relaxed))
+                        .sum::<f64>();
+                    let percentage =
+                        100.0 - (percentage_left_in_queue + percentage_left_in_threads);
+
+                    println!("{:>6.2}%", percentage);
+
+                    // Sleep for a while before updating the stats
+                    thread::sleep(Duration::from_secs_f64(0.2));
+                }
             }
+        })
+        .unwrap();
+
+    // Spawn a thread which will read the compositions output by the other threads
+    let shortlist_thread = thread::spawn({
+        // Values which will be moved into the thread
+        let shortlist_size = spec.num_comps;
+        let shortlist_min_score = engine.shortlist_min_score.clone();
+
+        move || {
+            let mut shortlist = Shortlist::new(shortlist_size);
+            // Repeatedly receive compositions from the worker threads over the channel ...
+            while let Ok(comp) = comp_channel_rx.recv() {
+                shortlist.push(comp);
+                // If the shortlist is full, then update the minimum score required for a composition
+                // to make it into the shortlist.  This is several effects:
+                // 1. It allows the threads to use this value (and an upper bound of music score) to
+                //    prune branches which will never generate enough music
+                // 2. It prevents this thread from being inundated with bad comps, because the worker
+                //    channels compare potential comps against the min value before sending them down
+                //    the channel
+                if shortlist.len() == shortlist.capacity() {
+                    shortlist_min_score.set(shortlist.peek_min().unwrap().ranking_score);
+                }
+            }
+            // Once all the worker threads have closed, `comp_channel_rx.recv()` will return an error
+            // and the `while` loop will exit.  At this point the search is over and no more
+            // compositions can be found, so we pass the final comp list to the main thread which then
+            // returns it from `compose()`
+            shortlist.into_sorted_vec()
         }
-        // Once all the worker threads have closed, `comp_channel_rx.recv()` will return an error
-        // and the `while` loop will exit.  At this point the search is over and no more
-        // compositions can be found, so we pass the final comp list to the main thread which then
-        // returns it from `compose()`
-        shortlist.into_sorted_vec()
     });
 
     // Spawn all the worker threads
@@ -81,11 +133,19 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
             // of the new thread
             let thread_engine = engine.clone();
             let thread_queue = unexplored_prefix_queue.clone();
+            let thread_percentage_left_var = percentage_left_per_thread[i].clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || EngineWorker::compose(thread_engine, &thread_queue, i))
+                .spawn(move || {
+                    EngineWorker::compose(
+                        thread_engine,
+                        &thread_queue,
+                        i,
+                        thread_percentage_left_var,
+                    )
+                })
                 .unwrap()
         })
         .collect_vec();
@@ -107,7 +167,13 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
 
     // Once all the workers have finished, wait for the shortlist thread to finish and get its
     // composition list
-    shortlist_thread.join().unwrap()
+    let comps = shortlist_thread.join().unwrap();
+
+    // Stop the stats thread
+    has_finished.store(true, atomic::Ordering::Relaxed);
+    stats_thread.join().unwrap();
+
+    comps
 }
 
 /// 'Immutable' data shared between all the workers.  This also includes types with interior
@@ -130,6 +196,8 @@ struct EngineWorker {
     thread_id: usize,
     engine: Engine,
     stats: Stats,
+    percentage_left: f64,
+    percentage_left_atomic: Arc<AtomicF64>,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
 }
@@ -139,12 +207,15 @@ impl EngineWorker {
     /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
     fn compose(
         engine: Engine,
-        unexplored_prefix_queue: &Mutex<VecDeque<CompPrefix>>,
+        unexplored_prefix_queue: &PrefixQueue,
         thread_id: usize,
+        percentage_left_atomic: Arc<AtomicF64>,
     ) -> Stats {
         let worker = EngineWorker {
             thread_id,
             engine,
+            percentage_left: 0.0,
+            percentage_left_atomic,
             stats: Stats::zero(),
             comp_prefix: CompPrefix::empty(),
         };
@@ -197,9 +268,11 @@ impl EngineWorker {
     fn explore_prefix(
         &mut self,
         graph: &Graph<NodePayload, ExtraPayload>,
-        prefix: CompPrefix,
-        mut queue: MutexGuard<VecDeque<CompPrefix>>,
+        queue_elem: QueueElem,
+        mut queue: MutexGuard<VecDeque<QueueElem>>,
     ) {
+        let QueueElem { prefix, percentage } = queue_elem;
+
         /* ===== MOVE TO START NODE ===== */
 
         // Update the internal state to point to the start node of the `prefix`
@@ -314,21 +387,36 @@ impl EngineWorker {
         /* ===== SAVE ONE OF THE BRANCHES BACK TO THE QUEUE ===== */
 
         let successors = node.successors();
+        // We only take the final branch into account here, because all the previous branches are
+        // either part of the prefix (represented in `percentage`) or have only one successor (and
+        // therefore pass the percentage straight to their children).
+        let percentage_per_branch = percentage / successors.len() as f64;
         // Because these successors are sorted by 'goodness', we always want to get to the good
         // comps as quickly as possible.  We'll assume that pushing prefixes to the queue is the
         // slowest way of expanding them, so therefore we push the last successor back to the queue
         let mut prefix_to_push = self.comp_prefix.clone();
         prefix_to_push.push(successors.len() - 1);
-        queue.push_back(prefix_to_push);
+
+        queue.push_back(QueueElem::new(prefix_to_push, percentage_per_branch));
         // Drop the mutex lock on the queue as soon as possible to prevent unnecessary locking of
         // the other threads
         drop(queue);
 
         /* ===== SEARCH THE OTHER BRANCHES ===== */
 
+        // Initialise percentage_left counters before starting tree search
+        self.percentage_left = percentage_per_branch * (successors.len() - 1) as f64;
+        self.percentage_left_atomic
+            .store(self.percentage_left, atomic::Ordering::Relaxed);
+
         for (succ_idx, succ_node) in successors[..successors.len() - 1].iter().enumerate() {
             self.comp_prefix.push(succ_idx);
-            self.expand_node(succ_node, length_after_node, score_after_node);
+            self.explore_node(
+                succ_node,
+                length_after_node,
+                score_after_node,
+                percentage_per_branch,
+            );
             self.comp_prefix.pop();
         }
 
@@ -367,7 +455,14 @@ impl EngineWorker {
 
     /// Test a node, and either expand it or prune.  All arguments apply to the composition
     /// explored up to the first row of `node`.
-    fn expand_node(&mut self, node: &Node<NodePayload, ExtraPayload>, length: usize, score: Score) {
+    fn explore_node(
+        &mut self,
+        node: &Node<NodePayload, ExtraPayload>,
+        length: usize,
+        score: Score,
+        // The percentage which will be covered once this node finishes
+        percentage_covered_by_this_node: f64,
+    ) {
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
 
@@ -375,14 +470,35 @@ impl EngineWorker {
         // example, the new node is false against the composition).
         let should_prune = self.load_node(node, length_after_this_node, score_after_this_node);
         if should_prune {
+            // If this node was pruned, then tree search has made progress so add this node's
+            // percentage to the progress counter.  This is correct because we split the percentage
+            // at each level, meaning that updating the counter at every level would result in
+            // massive over-counting.
+            self.percentage_left -= percentage_covered_by_this_node;
             return;
         }
+
+        // Every so often, update the atomic percentage counters (not too often because we don't
+        // want to be doing atomic writes all the time).
+        if self.stats.nodes_loaded % 1_000_000 == 0 {
+            self.percentage_left_atomic
+                .store(self.percentage_left, atomic::Ordering::Relaxed);
+        }
+
+        // Split the percentage evenly between the successors
+        let percentage_per_successor =
+            percentage_covered_by_this_node / node.successors().len() as f64;
 
         // Expand successor nodes
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            self.expand_node(succ, length_after_this_node, score_after_this_node);
+            self.explore_node(
+                succ,
+                length_after_this_node,
+                score_after_this_node,
+                percentage_per_successor,
+            );
             self.comp_prefix.pop();
         }
 
@@ -581,6 +697,38 @@ impl PartialEq for Comp {
 }
 
 impl Eq for Comp {}
+
+/// The float number here represents the percentage of the search space that each prefix
+/// corresponds to.  This is calculated naively: if a `CompPrefix` has `n` successors, then its
+/// percentage is split into `n` parts.
+type PrefixQueue = Mutex<VecDeque<QueueElem>>;
+
+/// An element stored in the [`PrefixQueue`]
+#[derive(Debug, Clone)]
+pub(crate) struct QueueElem {
+    prefix: CompPrefix,
+    percentage: f64,
+}
+
+impl QueueElem {
+    pub(crate) fn new(prefix: CompPrefix, percentage: f64) -> Self {
+        Self { prefix, percentage }
+    }
+
+    pub(crate) fn just_start_node(id: NodeId, num_start_nodes: usize) -> Self {
+        QueueElem {
+            prefix: CompPrefix::just_start_node(id),
+            /// Split the percentage equally between each start node
+            percentage: 100.0 / num_start_nodes as f64,
+        }
+    }
+
+    pub(crate) fn push(&mut self, succ_idx: usize, num_successors: usize) {
+        self.prefix.push(succ_idx);
+        // Split the percentage among all the successors
+        self.percentage /= num_successors as f64;
+    }
+}
 
 /// The prefix of a composition, or a branch of the search tree.
 #[derive(Debug, Clone)]
