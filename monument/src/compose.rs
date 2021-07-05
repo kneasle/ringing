@@ -25,6 +25,13 @@ use crate::{
     Config, SegmentId, Spec,
 };
 
+/// Type alias for the queue of so-far-unexpanded prefixes.
+///
+/// The float number here represents the percentage of the search space that each prefix
+/// corresponds to.  This is calculated naively: if a `CompPrefix` has `n` successors, then its
+/// percentage is split into `n` parts.
+type PrefixQueue = Mutex<VecDeque<QueueElem>>;
+
 /// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
 /// best compositions have been found and returned.
 pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
@@ -38,9 +45,9 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
 
     /* COMMUNICATION BETWEEN THREADS */
 
-    // A set of atomic floats used by threads to store what percentage (of the overall search) of
-    // their current `QueueElem` has been explored.  This, plus the percentage derived from the
-    // queue itself, gives an overall percentage
+    // A set of atomic floats used by threads to store what percentage (as a proportion of the
+    // overall search) of their current `QueueElem` is yet to be explored.  This, plus the
+    // percentage derived from the queue itself, gives the overall completion percentage
     let percentage_left_per_thread = std::iter::repeat_with(|| Arc::new(AtomicF64::new(0.0)))
         .take(num_threads)
         .collect_vec();
@@ -156,8 +163,7 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
     // the channel alive and preventing `shortlist_thread` from terminating.
     drop(engine);
 
-    // Wait for the worker threads to finish, then merge all the individual shortlists into one
-    // overall shortlist for the `n` best comps
+    // Wait for the worker threads to finish, then total up all their statistics
     let mut all_stats = Stats::zero();
     for t in threads {
         all_stats += t.join().unwrap();
@@ -173,12 +179,16 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
     has_finished.store(true, atomic::Ordering::Relaxed);
     stats_thread.join().unwrap();
 
-    comps
+    SearchResults {
+        comps,
+        stats: all_stats,
+        time_taken: Instant::now() - start_time,
+    }
 }
 
 /// 'Immutable' data shared between all the workers.  This also includes types with interior
-/// mutability (like channels and atomic integers), but the important thing is that they only
-/// require immutable references in order to function.
+/// mutability (like channels and atomic integers), but the important thing is that they don't
+/// require the [`EngineWorker`]s to hold mutable references to them.
 #[derive(Debug, Clone)]
 struct Engine {
     // Immutable lookup data
@@ -392,9 +402,9 @@ impl EngineWorker {
         // either part of the prefix (represented in `percentage`) or have only one successor (and
         // therefore pass the percentage straight to their children).
         let percentage_per_branch = percentage / successors.len() as f64;
-        // Because these successors are sorted by 'goodness', we always want to get to the good
-        // comps as quickly as possible.  We'll assume that pushing prefixes to the queue is the
-        // slowest way of expanding them, so therefore we push the last successor back to the queue
+        // These successors are sorted by 'goodness', and we always want to get to the good comps
+        // as quickly as possible.  We'll assume that pushing prefixes to the queue is the slowest
+        // way of expanding them, so therefore we push the last successor back to the queue
         let mut prefix_to_push = self.comp_prefix.clone();
         prefix_to_push.push(successors.len() - 1);
 
@@ -403,7 +413,7 @@ impl EngineWorker {
         // the other threads
         drop(queue);
 
-        /* ===== SEARCH THE OTHER BRANCHES ===== */
+        /* ===== RUN DFS ON THE BRANCHES THAT WEREN'T PUSHED BACK TO THE QUEUE ===== */
 
         // Initialise percentage_left counters before starting tree search
         self.percentage_left = percentage_per_branch * (successors.len() - 1) as f64;
@@ -556,8 +566,8 @@ impl EngineWorker {
         false
     }
 
-    /// Unload a node from the composition.  Provided that all the load/unload calls are well
-    /// balanced, this will precisely undo the effect of [`Self::load_node`].
+    /// Unload a node from the graph.  Provided that all the load/unload calls are well balanced,
+    /// this will precisely undo the effect of [`Self::load_node`].
     #[inline(always)]
     fn unload_node(&mut self, node: &Node<NodePayload, ExtraPayload>) {
         // Decrement the falseness counters on all the nodes false against this one
@@ -707,11 +717,6 @@ impl PartialEq for Comp {
 }
 
 impl Eq for Comp {}
-
-/// The float number here represents the percentage of the search space that each prefix
-/// corresponds to.  This is calculated naively: if a `CompPrefix` has `n` successors, then its
-/// percentage is split into `n` parts.
-type PrefixQueue = Mutex<VecDeque<QueueElem>>;
 
 /// An element stored in the [`PrefixQueue`]
 #[derive(Debug, Clone)]
