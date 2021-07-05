@@ -1,6 +1,6 @@
 //! Use the `examples/` folder as test cases/benchmarks
 
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use glob::glob;
 use itertools::Itertools;
@@ -10,7 +10,7 @@ use monument_cli::{
     test_data::{CompResult, TestData},
 };
 
-pub fn main() -> std::io::Result<()> {
+pub fn main(max_runtime: Duration) -> std::io::Result<()> {
     let mut testing_dir = std::env::current_dir()?;
     // This always runs in the `<project root>/cli` directory not the git repo
     // root so we pop the `/cli` dir off the end of the path
@@ -37,9 +37,23 @@ pub fn main() -> std::io::Result<()> {
         runtime_a.partial_cmp(&runtime_b).unwrap()
     });
 
+    // Repeatedly remove long tests until the runtime drops below the required amount.  This is a
+    // really dumb quadratic time algorithm (which could be done in linear time) but I don't care -
+    // this is **really** unlikely to ever be a bottleneck
+    let max_runtime_secs = max_runtime.as_secs_f32();
+    while test_cases
+        .iter()
+        .map(|c| c.test_data.runtime_estimate)
+        .sum::<f32>()
+        > max_runtime_secs
+    {
+        test_cases.pop();
+    }
+
     // Run the test cases
+    let config = Config::default();
     for t in test_cases {
-        run_test_case(t, Config::default());
+        run_test_case(t, config.clone());
     }
 
     Ok(())
