@@ -19,7 +19,7 @@ use log::Level;
 use shortlist::Shortlist;
 
 use crate::{
-    graph::{Graph, Node, NodeId},
+    graph::{Graph, Node, NodeId, ProtoGraph},
     score::{AtomicScore, Score},
     stats::Stats,
     Config, SegmentId, Spec,
@@ -227,9 +227,10 @@ impl EngineWorker {
         // Generate a compact **copy** of the node graph where links are represented as pointers.
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
+        let prototype_graph = &self.engine.spec.prototype_graph;
         let graph = Graph::from_prototype(
-            &self.engine.spec.prototype_graph,
-            |node_id| NodePayload::new(node_id),
+            prototype_graph,
+            |node_id| NodePayload::new(node_id, prototype_graph),
             |_node_id| ExtraPayload(),
         );
 
@@ -526,8 +527,10 @@ impl EngineWorker {
             self.stats.nodes_proven_false += 1;
             return true;
         }
-        // If the node would make the comp too long, then prune
-        if length_after_this_node >= self.engine.spec.len_range.end {
+        // If the node can't reach rounds in time to make the comp come round, then prune
+        if length_after_this_node + payload.dist_from_end_to_rounds as usize
+            >= self.engine.spec.len_range.end
+        {
             return true;
         }
         // If we've found an end node, then this must be the end of the composition
@@ -617,11 +620,18 @@ pub struct NodePayload {
     /// The number of nodes which are false against this one and are already in the composition.
     /// Nodes will only be expanded if this is 0
     falseness_count: Cell<u32>,
+    /// Assuming no falseness, the minimum number of rows required to get from the first row
+    /// **after** this node to rounds.  Note the word 'after': this is the opposite way to how they
+    /// are calculated by [`ProtoGraph`] when reducing the graph size
+    dist_from_end_to_rounds: u32,
 }
 
 impl NodePayload {
-    fn new(_node_id: &NodeId) -> Self {
+    fn new(node_id: &NodeId, prototype_graph: &ProtoGraph) -> Self {
         Self {
+            dist_from_end_to_rounds: prototype_graph
+                .get_min_dist_from_end_to_rounds(node_id)
+                .unwrap() as u32,
             falseness_count: Cell::new(0),
         }
     }

@@ -494,6 +494,20 @@ impl ProtoGraph {
         (path, node_id.clone())
     }
 
+    /// Gets the distance to rounds of a given [`NodeId`] (if a corresponding [`ProtoNode`]
+    /// exists).
+    pub fn get_min_dist_from_end_to_rounds(&self, node_id: &NodeId) -> Option<usize> {
+        self.nodes
+            .get(node_id)
+            // `n.min_distance_to_rounds` can't be `None` because all distances are generated
+            // during optimisation, and a value of `None` would cause the node to be removed from
+            // the graph.
+            //
+            // Also, note that we subtract the node's length so that the distance refers to the
+            // first row **after** this node.
+            .map(|n| n.min_distance_to_rounds.unwrap() - n.length)
+    }
+
     /// Creates `num_prefixes` unique prefixes which are as short as possible (i.e. distribute the
     /// composing work as evenly as possible).  **NOTE**: This doesn't check the truth of the
     /// resulting prefixes (yet), so it's worth generating more prefixes than you have threads.
