@@ -18,7 +18,7 @@ mod stats;
 use bellframe::Row;
 
 // Top level re-exports for the convenience of people using this as a library (i.e. me)
-pub use compose::{compose, Comp};
+pub use compose::{compose, Comp, SearchResults};
 pub use layout::*;
 use log::LevelFilter;
 pub use music::MusicType;

@@ -1,8 +1,10 @@
+//! Use the `examples/` folder as test cases/benchmarks
+
 use std::{path::PathBuf, sync::Arc};
 
 use glob::glob;
 use itertools::Itertools;
-use monument::Config;
+use monument::{Config, SearchResults};
 use monument_cli::{
     spec::AbstractSpec,
     test_data::{CompResult, TestData},
@@ -49,9 +51,10 @@ fn run_test_case(test_case: TestCase, config: Config) {
     let arc_config = Arc::new(config);
 
     let spec = test_case.spec.to_spec(&arc_config).unwrap();
-    let mut comps = monument::compose(&spec, &arc_config)
+    let results = monument::compose(&spec, &arc_config);
+    let mut comps = results
         .comps
-        .into_iter()
+        .iter()
         .map(|c| CompResult::from_comp(c, &spec))
         .collect_vec();
 
@@ -62,7 +65,7 @@ fn run_test_case(test_case: TestCase, config: Config) {
                 .into_iter()
                 .map(CompResult::from)
                 .collect_vec();
-            are_results_compatible(&mut expected_comps, &mut comps)
+            are_results_compatible(&mut expected_comps, &mut comps, &results)
         }
         // If there weren't any then we assume that this test case hasn't been made yet, so we
         // print out the results in such a way that they can be copy/pasted into the TOML file
@@ -72,7 +75,11 @@ fn run_test_case(test_case: TestCase, config: Config) {
 
 /// Check the compatibility of two sets of compositions.  This is essentially element-wise
 /// equality, but taking into account that the order that comps are generated is non-deterministic.
-fn are_results_compatible(expected_comps: &mut [CompResult], comps: &mut [CompResult]) {
+fn are_results_compatible(
+    expected_comps: &mut [CompResult],
+    comps: &mut [CompResult],
+    results: &SearchResults,
+) {
     let mut error_messages: Vec<String> = Vec::new();
 
     // Check that both comp lists are the same length
@@ -125,7 +132,11 @@ fn are_results_compatible(expected_comps: &mut [CompResult], comps: &mut [CompRe
 
     // Print error messages, or an OK message
     if error_messages.is_empty() {
-        println!("Results OK ({} comps)", comps.len());
+        println!(
+            "Results OK ({} comps in {:.2?})",
+            comps.len(),
+            results.time_taken
+        );
     } else {
         println!("");
         println!("FAILED TEST!");

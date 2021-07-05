@@ -26,8 +26,9 @@ fn main() {
     // Use this concrete specification to generate compositions
     let results = monument::compose(&comp_spec, &config);
 
+    // Print the results
+    println!("Completed in {:.2?}", results.time_taken);
     dbg!(&results.stats);
-
     for c in results.comps {
         println!("{}", c.to_string(&comp_spec));
     }

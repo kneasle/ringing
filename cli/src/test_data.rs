@@ -29,7 +29,7 @@ pub struct CompResult {
 }
 
 impl CompResult {
-    pub fn from_comp(comp: Comp, spec: &Spec) -> Self {
+    pub fn from_comp(comp: &Comp, spec: &Spec) -> Self {
         Self {
             call_string: comp.call_string(spec),
             length: comp.length,
