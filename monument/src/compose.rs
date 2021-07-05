@@ -177,10 +177,14 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
         all_stats += t.join().unwrap();
     }
 
+    // Stop the timer **before** waiting for the auxiliary threads to finish.  The stats/percentage
+    // thread only checks the termination condition 5x a second, so waiting for it essentially
+    // rounds all times to the nearest 5th of a second, which is not useful for short benchmarks
+    let time_taken = Instant::now() - start_time;
+
     // Once all the workers have finished, wait for the shortlist thread to finish and get its
     // composition list
     let comps = shortlist_thread.join().unwrap();
-
     // Stop the stats thread
     has_finished.store(true, atomic::Ordering::Relaxed);
     stats_thread.join().unwrap();
@@ -188,7 +192,7 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     SearchResults {
         comps,
         stats: all_stats,
-        time_taken: Instant::now() - start_time,
+        time_taken,
     }
 }
 
