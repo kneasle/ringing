@@ -8,3 +8,29 @@ stage = 8
 
 [[music]]
 run_length = 4
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 13.57 # seconds
+results = [
+    { length = 1344, score = 395136991232, call_string = "5:sHsMsMsWHsHBsHBHsWHBHMWsH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "7:MsWsHBHMWsWHWsWHHBHH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "7:sHsMsWWsHHBHMWsWHsHBHH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "7:MsWsHBHsMWsWHWsWHsHBHH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "5:sHsMWHBHsHBHBsHsWHBHMWsH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "5:sHsMWsWHBHBsHBHsWHBHMWsH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "5:sHsMWHBHsHBsHBHsWHBHMWsH", ranking_score = 294000737 },
+    { length = 1344, score = 395136991232, call_string = "5:sHsMsMsWHsHBHBsHsWHBHMWsH", ranking_score = 294000737 },
+    { length = 1312, score = 386547056640, call_string = "5:sHsMsMsWHsHBsHBHsHHBWsH", ranking_score = 294624280 },
+    { length = 1312, score = 386547056640, call_string = "5:sWsHHsHBsHBHsWsHBsHMWsH", ranking_score = 294624280 },
+    { length = 1312, score = 386547056640, call_string = "7:MWsWHMBsHBWsWHsHBHH", ranking_score = 294624280 },
+    { length = 1312, score = 386547056640, call_string = "7:sHsMWBHMWHWHHBHH", ranking_score = 294624280 },
+    { length = 1312, score = 386547056640, call_string = "5:sHsMWHBHsHBsHBHsHHBWsH", ranking_score = 294624280 },
+    { length = 1312, score = 386547056640, call_string = "5:sWsHHsHBHBsHsWsHBsHMWsH", ranking_score = 294624280 },
+    { length = 1280, score = 377957122048, call_string = "7:HBsHBHBHHHBsHBHBHH", ranking_score = 295279001 },
+    { length = 1280, score = 377957122048, call_string = "5:sWsHHsHBHsHHBsHBWsH", ranking_score = 295279001 },
+    { length = 1280, score = 377957122048, call_string = "7:HBsHBHBHHHBHBsHBHH", ranking_score = 295279001 },
+    { length = 1312, score = 395136991232, call_string = "5:sWsHHsHBHBsHsWHBHMWsH", ranking_score = 301171487 },
+    { length = 1312, score = 395136991232, call_string = "5:sWsHHsHBsHBHsWHBHMWsH", ranking_score = 301171487 },
+    { length = 1280, score = 386547056640, call_string = "5:sWsHHsHBsHBHsHHBWsH", ranking_score = 301989888 },
+]

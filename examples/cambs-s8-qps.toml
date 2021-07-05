@@ -12,8 +12,9 @@ run_lengths = [4, 5, 6, 7]
 [[music]]
 patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
 
+# This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]
-runtime_estimate = 0.43 # seconds
+runtime_estimate = 0.043 # seconds
 results = [
     { length = 1282, score = 382252089344, call_string = "5:HHBHBMWWMsW", ranking_score = 298168556 },
     { length = 1280, score = 382252089344, call_string = "5:HHMsWsHBHWHBHBH", ranking_score = 298634444 },

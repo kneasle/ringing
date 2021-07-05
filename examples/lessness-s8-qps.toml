@@ -11,3 +11,39 @@ run_length = 4
 
 [[music]]
 patterns = [ "*6578", "*5678", "*8765", "5678*", "8765*" ]
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 2.04 # seconds
+results = [
+    { length = 1344, score = 481036337152, call_string = "5:BsWsMBWsHsMBsHMBWsHBHBWsHMBWsH", ranking_score = 357913941 },
+    { length = 1344, score = 481036337152, call_string = "5:MBWsHBsWsHsMBWsHMBsHBWsHsMBsHBWsH", ranking_score = 357913941 },
+    { length = 1344, score = 481036337152, call_string = "5:MBWsHsMBHsMBsHBWsHMBsWBWHsMBsH", ranking_score = 357913941 },
+    { length = 1344, score = 481036337152, call_string = "5:BsWsHsMBWsHMBsHMBWsHBHBWsHMBWsH", ranking_score = 357913941 },
+    { length = 1344, score = 481036337152, call_string = "5:MBWHBsWsHsMBWsHMBHBWsHMBsWsHsMBH", ranking_score = 357913941 },
+    { length = 1344, score = 481036337152, call_string = "5:BWHsMBsHsMBsHBWsHMBsHBWsHMBWsH", ranking_score = 357913941 },
+    { length = 1280, score = 459561500672, call_string = "5:HBsWsHMWHWHMBHH", ranking_score = 359032422 },
+    { length = 1278, score = 459561500672, call_string = "7:HHBsWsHsMBWsHMBsHMWsHMWsH", ranking_score = 359594288 },
+    { length = 1278, score = 459561500672, call_string = "7:HHsMBsWHsMBWsHMBsHMWsHMWsH", ranking_score = 359594288 },
+    { length = 1278, score = 459561500672, call_string = "7:HHsMBsWHsMBWsHMBsHMWMsWsH", ranking_score = 359594288 },
+    { length = 1278, score = 459561500672, call_string = "7:HHBsWsHsMBWsHMBsHMWMsWsH", ranking_score = 359594288 },
+    { length = 1344, score = 485331304448, call_string = "5:BsWsHsMBsWsHMBHBWsHMBHBWsHMBWsH", ranking_score = 361109601 },
+    { length = 1344, score = 485331304448, call_string = "5:BWsHsMBsWsHsMBWsHMBHBHBWsHMBWsH", ranking_score = 361109601 },
+    { length = 1344, score = 485331304448, call_string = "5:MBWsHBsWsHsMBWsHMBBWsHMBsHBWsH", ranking_score = 361109601 },
+    { length = 1344, score = 485331304448, call_string = "5:MBWsHsMBHsMBWsHMBHBWsHsMBsWsHsMBsH", ranking_score = 361109601 },
+    { length = 1278, score = 463856467968, call_string = "7:HMBsHsWBsMsWMHMBWsH", ranking_score = 362954982 },
+    { length = 1344, score = 489626271744, call_string = "5:MBWsHBsWsHsMBWsHMBsHMBWsHBHBWsH", ranking_score = 364305261 },
+    { length = 1344, score = 489626271744, call_string = "5:MBWsHBWsHMBsWsHsMBsHBWsHMBHBWsH", ranking_score = 364305261 },
+    { length = 1344, score = 489626271744, call_string = "5:BsWsHsMBWsHMBsHBWsHsMBsHBWsHMBWsH", ranking_score = 364305261 },
+    { length = 1344, score = 489626271744, call_string = "5:BsWsHsMBsWsHMBBWsHsMBsHBWsHMBWsH", ranking_score = 364305261 },
+    { length = 1344, score = 493921239040, call_string = "5:BWsHsMBsWsHsMBHBWsHMBHBWsHMBWsH", ranking_score = 367500921 },
+    { length = 1344, score = 493921239040, call_string = "5:MBWsHBsWsHsMBsWsHMBHBWsHMBHBWsH", ranking_score = 367500921 },
+    { length = 1344, score = 493921239040, call_string = "5:MBWHMBHBBWsHMBsWsHsMBHMBWH", ranking_score = 367500921 },
+    { length = 1280, score = 472446402560, call_string = "5:sHBsWsHsMWBMWMsWsH", ranking_score = 369098752 },
+    { length = 1280, score = 472446402560, call_string = "5:sHBsWsHsMWBMWsHMWsH", ranking_score = 369098752 },
+    { length = 1280, score = 472446402560, call_string = "5:sHsMBsWHsMWBMWsHMWsH", ranking_score = 369098752 },
+    { length = 1280, score = 472446402560, call_string = "5:sHsMBsWHsMWBMWMsWsH", ranking_score = 369098752 },
+    { length = 1344, score = 498216206336, call_string = "5:BsWsHsMBsWsHMBsHBWsHMBsHBWsHMBWsH", ranking_score = 370696582 },
+    { length = 1344, score = 498216206336, call_string = "5:BsWsHsMBWsHMBBWsHMBsHBWsHMBWsH", ranking_score = 370696582 },
+    { length = 1344, score = 506806140928, call_string = "5:BWsHsMBsWsHsMBsHBWsHMBsHBWsHMBWsH", ranking_score = 377087902 },
+]

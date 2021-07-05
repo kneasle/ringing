@@ -12,7 +12,7 @@ run_lengths = [4, 5, 6, 7, 8]
 
 # This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]
-runtime_estimate = 0.18 # seconds
+runtime_estimate = 0.0018 # seconds
 results = [
     { length = 1294, score = 1249835483136, call_string = "6:sHsHMsWHM", ranking_score = 965869770 },
     { length = 1294, score = 1249835483136, call_string = "6:sHHMsWHsM", ranking_score = 965869770 },
