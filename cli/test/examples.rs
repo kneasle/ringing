@@ -50,6 +50,7 @@ fn run_test_case(test_case: TestCase, config: Config) {
 
     let spec = test_case.spec.to_spec(&arc_config).unwrap();
     let mut comps = monument::compose(&spec, &arc_config)
+        .comps
         .into_iter()
         .map(|c| CompResult::from_comp(c, &spec))
         .collect_vec();

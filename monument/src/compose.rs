@@ -9,7 +9,7 @@ use std::{
         Arc, Mutex, MutexGuard,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use atomic_float::AtomicF64;
@@ -34,7 +34,9 @@ type PrefixQueue = Mutex<VecDeque<QueueElem>>;
 
 /// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
 /// best compositions have been found and returned.
-pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
+pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
+    let start_time = Instant::now();
+
     // Decide how many threads to use (defaulting to the number of CPU cores)
     let num_threads = config.num_threads.unwrap_or_else(num_cpus::get);
     if num_threads == 1 {
@@ -168,8 +170,6 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> Vec<Comp> {
     for t in threads {
         all_stats += t.join().unwrap();
     }
-
-    dbg!(all_stats);
 
     // Once all the workers have finished, wait for the shortlist thread to finish and get its
     // composition list
@@ -651,6 +651,14 @@ impl NodePayload {
 /// only be used outside of the composing loop).
 #[derive(Debug, Clone)]
 pub struct ExtraPayload();
+
+/// The results of a single search run
+#[derive(Debug, Clone)]
+pub struct SearchResults {
+    pub time_taken: Duration,
+    pub comps: Vec<Comp>,
+    pub stats: Stats,
+}
 
 /// A completed composition
 #[derive(Debug, Clone)]
