@@ -142,18 +142,22 @@ impl EngineWorker {
         unexplored_prefix_queue: &Mutex<VecDeque<CompPrefix>>,
         thread_id: usize,
     ) -> Stats {
-        let mut worker = EngineWorker {
+        let worker = EngineWorker {
             thread_id,
             engine,
             stats: Stats::zero(),
             comp_prefix: CompPrefix::empty(),
         };
+        worker._compose(unexplored_prefix_queue)
+    }
 
+    /// Compose function which takes the worker as a `self` parameter for convenience
+    fn _compose(mut self, unexplored_prefix_queue: &PrefixQueue) -> Stats {
         // Generate a compact **copy** of the node graph where links are represented as pointers.
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
         let graph = Graph::from_prototype(
-            &worker.engine.spec.prototype_graph,
+            &self.engine.spec.prototype_graph,
             |node_id| NodePayload::new(node_id),
             |_node_id| ExtraPayload(),
         );
@@ -163,13 +167,13 @@ impl EngineWorker {
             // to explore
             let mut queue = unexplored_prefix_queue.lock().unwrap();
 
-            if worker.engine.config.log_level >= Level::Debug {
-                println!("[{:>2}] Queue len: {}", worker.thread_id, queue.len());
+            if self.engine.config.log_level >= Level::Debug {
+                println!("[{:>2}] Queue len: {}", self.thread_id, queue.len());
             }
 
             match queue.pop_front() {
                 // If the queue isn't empty yet, then pick a new prefix to explore
-                Some(new_prefix) => worker.explore_prefix(&graph, new_prefix, queue),
+                Some(queue_head) => self.explore_prefix(&graph, queue_head, queue),
                 // If the queue is empty, then the search is almost over so exit the loop and stop
                 // the thread
                 None => break,
@@ -179,12 +183,12 @@ impl EngineWorker {
         // If the shortlist has no values left, then the search must be nearly finished and there's
         // no point keeping this thread running any longer.  Therefore we return, stopping this
         // thread and letting the others finish the search.
-        if worker.engine.config.log_level >= Level::Debug {
-            println!("[{:>2}] Terminating", worker.thread_id);
+        if self.engine.config.log_level >= Level::Debug {
+            println!("[{:>2}] Terminating", self.thread_id);
         }
 
         // Return the worker's statistics
-        worker.stats
+        self.stats
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one

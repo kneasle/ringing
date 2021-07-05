@@ -14,33 +14,6 @@ use crate::{graph::NodeId, mask::Mask};
 #[allow(unused_imports)]
 use crate::graph::Node;
 
-/// A newtyped integer which is used to refer to a specific composition segment
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(transparent)]
-pub struct SegmentId {
-    pub(crate) idx: usize,
-}
-
-impl From<usize> for SegmentId {
-    #[inline(always)]
-    fn from(idx: usize) -> Self {
-        SegmentId { idx }
-    }
-}
-
-impl From<SegmentId> for usize {
-    #[inline(always)]
-    fn from(seg_id: SegmentId) -> usize {
-        seg_id.idx
-    }
-}
-
-impl Debug for SegmentId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SegId({})", self.idx)
-    }
-}
-
 /// A mid-level representation of the course layout of a composition.  In this representation, a
 /// layout is a set of [`Segment`]s, which are sequences of [`Row`]s combined with links to the
 /// [`Segment`]s which can come after them.  Every useful composition structure (that I know of)
@@ -212,7 +185,7 @@ impl Layout {
             for mask in &self.get_segment(truncated_id).course_head_masks {
                 if !mask.matches(&node_id.row) {
                     // If any mask fails then this segment can't be truncated, so skip to the next
-                    // one
+                    // truncation
                     continue 'truncate_loop;
                 }
             }
@@ -330,4 +303,31 @@ pub struct SegmentLink {
     pub debug_name: String,
     pub end_segment: SegmentId,
     pub transposition: RowBuf,
+}
+
+/// A newtyped integer which is used to refer to a specific composition segment
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
+pub struct SegmentId {
+    pub(crate) idx: usize,
+}
+
+impl From<usize> for SegmentId {
+    #[inline(always)]
+    fn from(idx: usize) -> Self {
+        SegmentId { idx }
+    }
+}
+
+impl From<SegmentId> for usize {
+    #[inline(always)]
+    fn from(seg_id: SegmentId) -> usize {
+        seg_id.idx
+    }
+}
+
+impl Debug for SegmentId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SegId({})", self.idx)
+    }
 }
