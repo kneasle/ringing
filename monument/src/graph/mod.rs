@@ -138,6 +138,9 @@ impl<P, E> Graph<P, E> {
     }
 
     /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
+    // This function is used in code that only compiles on debug builds, so without this
+    // suppression a (pointless) warning is generated when compiling in release mode
+    #[allow(dead_code)]
     pub fn all_nodes(&self) -> impl Iterator<Item = Pin<&'_ Node<P, E>>> {
         self.nodes.values().map(|x| x.as_ref())
     }
@@ -245,6 +248,9 @@ impl<P, E> Node<P, E> {
         self.score
     }
 
+    // This function is used in code that only compiles on debug builds, so without this
+    // suppression a (pointless) warning is generated when compiling in release mode
+    #[allow(dead_code)]
     #[inline(always)]
     pub fn id(&self) -> &NodeId {
         &self.extras.id
