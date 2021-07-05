@@ -3,3 +3,6 @@ members = [ "cli", "monument" ]
 
 [profile.dev]
 opt-level = 3
+
+[profile.release]
+debug = true
