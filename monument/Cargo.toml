@@ -10,6 +10,7 @@ bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
 log = "0.4"
 num_cpus = "1.13"
+number_prefix = "0.4"
 shortlist = "0.2"
 
 [dev-dependencies]

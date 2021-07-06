@@ -113,6 +113,8 @@ pub struct Config {
     /// The maximum number of compositions which can be stored in the channel over which
     /// compositions are sent from the worker threads to the main thread
     pub comp_buffer_length: usize,
+    /// The maximum number of stats updates which can be stored in the channel
+    pub stats_buffer_length: usize,
 }
 
 impl Default for Config {
@@ -123,6 +125,7 @@ impl Default for Config {
             successor_link_sort_depth: 2,
             successor_link_sort_strategy: SuccSortStrat::Max,
             comp_buffer_length: 1000,
+            stats_buffer_length: 1000,
         }
     }
 }

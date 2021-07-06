@@ -5,8 +5,9 @@ use std::{
     collections::VecDeque,
     fmt::Write,
     io::Write as IoWrite,
+    iter,
     sync::{
-        atomic::{self, AtomicBool},
+        atomic,
         mpsc::{sync_channel, Receiver},
         Arc, Mutex,
     },
@@ -17,6 +18,7 @@ use std::{
 use atomic_float::AtomicF64;
 use bellframe::RowBuf;
 use itertools::Itertools;
+use number_prefix::NumberPrefix;
 use shortlist::Shortlist;
 
 use crate::{
@@ -50,34 +52,38 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
         println!("Using {} threads.", num_threads);
     }
 
-    /* COMMUNICATION PRIMITIVES */
+    /* CREATE COMMUNICATION PRIMITIVES */
 
     // A set of atomic floats used by threads to store what percentage (as a proportion of the
     // overall search) of their current `QueueElem` is yet to be explored.  This, plus the
     // percentage derived from the queue itself, gives the overall completion percentage
-    let percentage_left_per_thread = std::iter::repeat_with(|| Arc::new(AtomicF64::new(0.0)))
+    let percentage_left_per_thread = iter::repeat_with(|| Arc::new(AtomicF64::new(0.0)))
         .take(num_threads)
         .collect_vec();
     // A channel down which compositions will be sent when discovered
     let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
+    // A channel down which statistics will periodically be sent
+    let (stats_channel_tx, stats_channel_rx) = sync_channel(config.stats_buffer_length);
     // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
     // always have compositions to explore.
     let unexplored_prefix_queue = Arc::new(Mutex::new(
         spec.prototype_graph.generate_prefixes(num_threads * 2),
     ));
-
-    let shared_data = SharedData::new(spec.clone(), config.clone(), comp_channel_tx);
+    // 'Immutable' data shared between all the threads
+    let shared_data = SharedData::new(
+        spec.clone(),
+        config.clone(),
+        comp_channel_tx,
+        stats_channel_tx,
+    );
 
     /* SPAWN THREADS */
 
-    // This flag gets set to `true` once all the workers have returned and the composition is
-    // finished
-    let has_finished = Arc::new(AtomicBool::new(false));
     // Spawn a thread to track the progress of the other threads
     let stats_thread = spawn_stats_thread(
-        has_finished.clone(),
         percentage_left_per_thread.clone(),
         unexplored_prefix_queue.clone(),
+        stats_channel_rx,
     )
     .unwrap();
     // Spawn a thread which will read the compositions output by the other threads
@@ -116,10 +122,9 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     // terminating.
     drop(shared_data);
 
-    // Wait for the worker threads to finish, then total up all their statistics
-    let mut all_stats = Stats::zero();
+    // Wait for the worker threads to finish
     for t in threads {
-        all_stats += t.join().unwrap();
+        t.join().unwrap();
     }
 
     // Stop the timer **before** waiting for the auxiliary threads to finish.  The stats/percentage
@@ -127,40 +132,40 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     // rounds all times to the nearest 5th of a second, which is not useful for short benchmarks
     let time_taken = Instant::now() - start_time;
 
-    // Once all the workers have finished, wait for the shortlist thread to finish and get its
-    // composition list
+    // Collect accumulated data from the stats & comp threads
     let comps = shortlist_thread.join().unwrap();
-    // Stop the stats thread
-    has_finished.store(true, atomic::Ordering::Relaxed);
-    stats_thread.join().unwrap();
+    let stats = stats_thread.join().unwrap();
 
     // Collect all the results and return
     SearchResults {
         comps,
-        stats: all_stats,
+        stats,
         time_taken,
     }
 }
 
 /// Spawn a thread which will handle collection and periodic printing of stats
 fn spawn_stats_thread(
-    has_finished: Arc<AtomicBool>,
     percentage_left_per_thread: Vec<Arc<AtomicF64>>,
     unexplored_prefix_queue: Arc<PrefixQueue>,
-) -> Result<JoinHandle<()>, std::io::Error> {
+    stats_channel_rx: Receiver<StatsUpdate>,
+) -> Result<JoinHandle<Stats>, std::io::Error> {
+    /// Format a big number using Giga, Mega, Kilo, etc.
+    fn fmt_with_prefix(num: usize) -> String {
+        match NumberPrefix::decimal(num as f64) {
+            NumberPrefix::Standalone(n) => format!("{:>6.0}", n),
+            NumberPrefix::Prefixed(prefix, n) => format!("{:>5.1}{}", n, prefix),
+        }
+    }
+
     thread::Builder::new()
         .name("Stats".to_owned())
         .spawn(move || {
             let mut stdout = std::io::stdout();
-            loop {
-                // Sleep for a while before updating the stats.  We start by sleeping so that
-                // very short (<0.2s) searches don't print any statistics at all
-                thread::sleep(Duration::from_secs_f64(0.2));
 
-                // Check if the computation has finished
-                if has_finished.load(atomic::Ordering::Relaxed) {
-                    break;
-                }
+            let mut stats_accum = Stats::zero();
+            while let Ok(stat_update) = stats_channel_rx.recv() {
+                stats_accum += stat_update.stats_since_last_signal;
 
                 // Compute the percentage
                 let percentage_left_in_queue = unexplored_prefix_queue
@@ -175,13 +180,31 @@ fn spawn_stats_thread(
                     .sum::<f64>();
                 let percentage = 100.0 - (percentage_left_in_queue + percentage_left_in_threads);
 
-                // End the percentage with just a carriage return, so that the next percentage
-                // gets drawn over the top of this one.  However, because we didn't print a
-                // newline we have to flush stdout manually so that our changes appear on the
-                // screen
-                print!("  {:>6.2}%\r", percentage);
+                // End the progress line with just a carriage return, so that the next progress
+                // line gets drawn over the top of this one.
+                print!(
+                    "  {:>6.2}% done: {} nodes searched, {} comps found\r",
+                    percentage,
+                    fmt_with_prefix(stats_accum.nodes_considered),
+                    fmt_with_prefix(stats_accum.comps_found)
+                );
+                // We have to flush stdout manually because we didn't print a newline
                 stdout.flush().unwrap();
             }
+
+            // Finish by printing `100%`, and forcing through a newline so that any future printing
+            // doesn't jankily overwrite the status line
+            println!(
+                "  {:>6.2}% done: {} nodes searched, {} comps found",
+                100.0,
+                fmt_with_prefix(stats_accum.nodes_considered),
+                fmt_with_prefix(stats_accum.comps_found)
+            );
+
+            // Once all the worker threads have terminated, all the senders on `stats_channel` will
+            // be dropped and `recv()` will return an `Err`.  This will break the loop, allowing us
+            // to return the final stats
+            stats_accum
         })
 }
 
@@ -291,6 +314,18 @@ impl PartialEq for Comp {
 }
 
 impl Eq for Comp {}
+
+/// The type sent down the `stats_channel`
+#[derive(Debug, Clone)]
+struct StatsUpdate {
+    /// Which thread sent this `StatsUpdate`
+    thread_id: usize,
+    /// The statistics accumulated by the thread **since the last `StatsUpdate` sent down the
+    /// `stats_channel`**
+    stats_since_last_signal: Stats,
+    /// The prefix that is loaded by the thread
+    current_prefix: CompPrefix,
+}
 
 /// An element stored in the [`PrefixQueue`]
 #[derive(Debug, Clone)]

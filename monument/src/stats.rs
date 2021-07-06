@@ -1,7 +1,7 @@
 use std::ops::AddAssign;
 
 /// Statistics about Monument's progress
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Copy)]
 pub struct Stats {
     /// The number of nodes which were _considered_ - i.e. had `explore_node` called on them.
     pub nodes_considered: usize,
@@ -18,6 +18,11 @@ impl Stats {
     /// Creates a `Stats` representing no progress
     pub(crate) fn zero() -> Self {
         Self::default()
+    }
+
+    /// Resets `self` to be equal to [`Stats::zero`]
+    pub fn reset(&mut self) {
+        *self = Self::zero();
     }
 
     #[inline(always)]

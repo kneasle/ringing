@@ -7,6 +7,9 @@ use std::{
 };
 
 use atomic_float::AtomicF64;
+// Itertools is used only in debug builds by the graph reset check, but causes a warning in release
+// mode
+#[allow(unused_imports)]
 use itertools::Itertools;
 use log::Level;
 
@@ -17,7 +20,7 @@ use crate::{
     Comp, Config, Score, Spec,
 };
 
-use super::{CompPrefix, PrefixQueue, QueueElem};
+use super::{CompPrefix, PrefixQueue, QueueElem, StatsUpdate};
 
 /// 'Immutable' data shared between all the workers.  This also includes types with interior
 /// mutability (like channels and atomic integers), but the important thing is that they don't
@@ -29,20 +32,23 @@ pub(super) struct SharedData {
     config: Arc<Config>,
     // Shared state with interior mutability
     pub shortlist_min_score: Arc<AtomicScore>,
-    comp_channel: SyncSender<Comp>,
+    comp_channel_tx: SyncSender<Comp>,
+    stats_channel_tx: SyncSender<StatsUpdate>,
 }
 
 impl SharedData {
     pub(super) fn new(
         spec: Arc<Spec>,
         config: Arc<Config>,
-        comp_channel: SyncSender<Comp>,
+        comp_channel_tx: SyncSender<Comp>,
+        stats_channel_tx: SyncSender<StatsUpdate>,
     ) -> Self {
         Self {
             spec,
             config,
             shortlist_min_score: Arc::new(AtomicScore::new(Score::MIN)),
-            comp_channel,
+            comp_channel_tx,
+            stats_channel_tx,
         }
     }
 }
@@ -51,7 +57,7 @@ impl SharedData {
 #[derive(Debug)]
 pub(super) struct Worker {
     thread_id: usize,
-    engine: SharedData,
+    shared_data: SharedData,
     stats: Stats,
     percentage_left: f64,
     percentage_left_atomic: Arc<AtomicF64>,
@@ -63,28 +69,28 @@ impl Worker {
     /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
     /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
     pub(super) fn compose(
-        engine: SharedData,
+        shared_data: SharedData,
         unexplored_prefix_queue: &PrefixQueue,
         thread_id: usize,
         percentage_left_atomic: Arc<AtomicF64>,
-    ) -> Stats {
+    ) {
         let worker = Worker {
             thread_id,
-            engine,
+            shared_data,
             percentage_left: 0.0,
             percentage_left_atomic,
             stats: Stats::zero(),
             comp_prefix: CompPrefix::empty(),
         };
-        worker._compose(unexplored_prefix_queue)
+        worker._compose(unexplored_prefix_queue);
     }
 
     /// Compose function which takes the worker as a `self` parameter for convenience
-    fn _compose(mut self, unexplored_prefix_queue: &PrefixQueue) -> Stats {
+    fn _compose(mut self, unexplored_prefix_queue: &PrefixQueue) {
         // Generate a compact **copy** of the node graph where links are represented as pointers.
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
-        let prototype_graph = &self.engine.spec.prototype_graph;
+        let prototype_graph = &self.shared_data.spec.prototype_graph;
         let graph = Graph::from_prototype(
             prototype_graph,
             |node_id| NodePayload::new(node_id, prototype_graph),
@@ -96,7 +102,7 @@ impl Worker {
             // to explore
             let mut queue = unexplored_prefix_queue.lock().unwrap();
 
-            if self.engine.config.log_level >= Level::Debug {
+            if self.shared_data.config.log_level >= Level::Debug {
                 println!("[{:>2}] Queue len: {}", self.thread_id, queue.len());
             }
 
@@ -112,12 +118,12 @@ impl Worker {
         // If the shortlist has no values left, then the search must be nearly finished and there's
         // no point keeping this thread running any longer.  Therefore we return, stopping this
         // thread and letting the others finish the search.
-        if self.engine.config.log_level >= Level::Debug {
+        if self.shared_data.config.log_level >= Level::Debug {
             println!("[{:>2}] Terminating", self.thread_id);
         }
 
-        // Return the worker's statistics
-        self.stats
+        // Make sure to send any final stats to the statistics thread
+        self.send_stats_update();
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one
@@ -338,9 +344,11 @@ impl Worker {
 
         // Every so often, update the atomic percentage counters (not too often because we don't
         // want to be doing atomic writes all the time).
-        if self.stats.nodes_loaded % 1_000_000 == 0 {
+        if self.stats.nodes_loaded % (1 << 21) == 0 {
             self.percentage_left_atomic
                 .store(self.percentage_left, atomic::Ordering::Relaxed);
+
+            self.send_stats_update();
         }
 
         // Split the percentage evenly between the successors
@@ -362,6 +370,20 @@ impl Worker {
 
         // Remove this node from the composition
         self.unload_node(node);
+    }
+
+    /// Send a [`StatsUpdate`] down the stats_channel
+    fn send_stats_update(&mut self) {
+        self.shared_data
+            .stats_channel_tx
+            .send(StatsUpdate {
+                thread_id: self.thread_id,
+                stats_since_last_signal: self.stats,
+                current_prefix: self.comp_prefix.clone(),
+            })
+            .unwrap();
+        // We need to reset the stats counter to make sure that stats are only counted once
+        self.stats.reset();
     }
 
     /// Load a new [`Node`] into the composition prefix, updating the state of the [`Graph`]
@@ -386,12 +408,18 @@ impl Worker {
         }
         // If the node can't reach rounds in time to make the comp come round, then prune
         if length_after_this_node + payload.dist_from_end_to_rounds as usize
-            >= self.engine.spec.len_range.end
+            >= self.shared_data.spec.len_range.end
         {
             return true;
         }
         // If we've found an end node, then this must be the end of the composition
-        if node.is_end() && self.engine.spec.len_range.contains(&length_after_this_node) {
+        if node.is_end()
+            && self
+                .shared_data
+                .spec
+                .len_range
+                .contains(&length_after_this_node)
+        {
             self.save_comp(length_after_this_node, score_after_this_node);
             return true;
         }
@@ -432,19 +460,19 @@ impl Worker {
     fn save_comp(&mut self, length: usize, score: Score) {
         self.stats.on_find_comp();
         // If enabled, normalise the music scores by length
-        let ranking_score = if self.engine.spec.normalise_music {
+        let ranking_score = if self.shared_data.spec.normalise_music {
             score / length
         } else {
             score
         };
         // If the composition wouldn't make it into the shortlist, then there's no point creating
         // the `Comp` struct (which is quite time intensive)
-        if self.engine.shortlist_min_score.get() >= ranking_score {
+        if self.shared_data.shortlist_min_score.get() >= ranking_score {
             return;
         }
 
         // Traverse the prototype graph and generate the comp
-        let (links_taken, end_id) = self.engine.spec.prototype_graph.generate_path(
+        let (links_taken, end_id) = self.shared_data.spec.prototype_graph.generate_path(
             &self.comp_prefix.start_node,
             self.comp_prefix.successor_idxs.iter().cloned(),
         );
@@ -456,16 +484,16 @@ impl Worker {
             ranking_score,
         };
 
-        if self.engine.config.log_level >= Level::Debug {
+        if self.shared_data.config.log_level >= Level::Debug {
             println!(
                 "[{:>2}] FOUND COMP! {}",
                 self.thread_id,
-                comp.to_string(&self.engine.spec)
+                comp.to_string(&self.shared_data.spec)
             );
         }
 
-        self.engine
-            .comp_channel
+        self.shared_data
+            .comp_channel_tx
             .send(comp)
             .expect("Shortlist thread terminated before workers");
     }
