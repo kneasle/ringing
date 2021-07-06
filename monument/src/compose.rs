@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     collections::VecDeque,
     fmt::Write,
+    io::Write as IoWrite,
     sync::{
         atomic::{self, AtomicBool},
         mpsc::{sync_channel, SyncSender},
@@ -82,6 +83,7 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
             let queue_clone = unexplored_prefix_queue.clone();
 
             move || {
+                let mut stdout = std::io::stdout();
                 loop {
                     // Sleep for a while before updating the stats.  We start by sleeping so that
                     // very short (<0.2s) searches don't print any statistics at all
@@ -105,7 +107,12 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
                     let percentage =
                         100.0 - (percentage_left_in_queue + percentage_left_in_threads);
 
-                    println!("{:>6.2}%", percentage);
+                    // End the percentage with just a carriage return, so that the next percentage
+                    // gets drawn over the top of this one.  However, because we didn't print a
+                    // newline we have to flush stdout manually so that our changes appear on the
+                    // screen
+                    print!("  {:>6.2}%\r", percentage);
+                    stdout.flush().unwrap();
                 }
             }
         })

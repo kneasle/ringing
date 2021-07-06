@@ -223,7 +223,8 @@ impl<P, E> Node<P, E> {
         init_field!(num_successors, num_successors);
         init_field!(num_false_nodes, num_false_nodes);
 
-        // Initialise *all* the pointers to `null`
+        // Initialise *all* the pointers to `null`.  This way, we can easily check if the nodes
+        // have been correctly initialised.
         unsafe {
             for i in 0..num_pointers {
                 *((*new_node).ptrs.get_unchecked_mut(i) as *mut *const Self) = std::ptr::null_mut();
