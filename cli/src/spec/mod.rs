@@ -36,6 +36,7 @@ pub struct AbstractSpec {
     /// The range of lengths of composition which are allowed
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
+    #[serde(default = "get_30")]
     num_comps: usize,
     /// The call type specified by the `base_calls` argument
     base_calls: Option<BaseCalls>,
@@ -212,6 +213,11 @@ impl MusicSpec {
 #[inline(always)]
 fn get_one() -> f32 {
     1.0
+}
+
+#[inline(always)]
+fn get_30() -> usize {
+    30
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
