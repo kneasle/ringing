@@ -9,14 +9,16 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    compose::QueueElem,
-    layout::{Layout, Position, SegmentId},
+    // compose::QueueElem,
+    layout::Layout,
     music::Breakdown,
     score::Score,
-    Config, MusicType, SuccSortStrat,
+    Config,
+    MusicType,
+    SuccSortStrat,
 };
 
-use super::{falseness::FalsenessTable, NodeId};
+use super::{NodeId, Position};
 
 /// A 'prototype' node graph that is inefficient to traverse but easy to modify.  This is used to
 /// build and optimise the node graph before being converted into an efficient [`Graph`] structure
@@ -24,7 +26,8 @@ use super::{falseness::FalsenessTable, NodeId};
 #[derive(Debug, Clone)]
 pub(crate) struct ProtoGraph {
     // NOTE: References between nodes don't have to be valid (i.e. they can point to a
-    // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored).
+    // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored or
+    // discarded during the optimisation process).
     pub(super) nodes: HashMap<NodeId, ProtoNode>,
 }
 
@@ -73,6 +76,8 @@ impl ProtoGraph {
 
     /// Generate a graph of all nodes which are reachable within a given length constraint.
     fn reachable_graph(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
+        todo!();
+        /*
         // The set of reachable nodes (each mapping to a distance from rounds)
         let mut expanded_nodes: HashMap<NodeId, usize> = HashMap::new();
 
@@ -196,6 +201,7 @@ impl ProtoGraph {
         }
 
         Self { nodes }
+        */
     }
 
     /// Run Dijkstra's algorithm to update `min_distance_from_rounds` on every node
@@ -511,7 +517,9 @@ impl ProtoGraph {
     /// Creates `num_prefixes` unique prefixes which are as short as possible (i.e. distribute the
     /// composing work as evenly as possible).  **NOTE**: This doesn't check the truth of the
     /// resulting prefixes (yet), so it's worth generating more prefixes than you have threads.
-    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<QueueElem> {
+    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<() /* QueueElem */> {
+        todo!();
+        /*
         // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
         // than `num_prefixes` in length, at which point it becomes our prefix list.
         let num_start_nodes = self.start_nodes().count();
@@ -547,6 +555,7 @@ impl ProtoGraph {
         }
 
         frontier.into_iter().map(|(prefix, _node)| prefix).collect()
+        */
     }
 }
 

@@ -53,6 +53,15 @@ impl Mask {
         Self { bells }
     }
 
+    /// Returns an [`Iterator`] over the indices of locations where this `Mask` contains an `x`
+    pub fn unspecified_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        self.bells
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.is_none())
+            .map(|(i, _)| i)
+    }
+
     /// Returns the [`Stage`] of [`Row`] that this `Mask` matches
     #[inline(always)]
     pub fn stage(&self) -> Stage {
@@ -70,12 +79,30 @@ impl Mask {
             if let Some(b) = expected_bell {
                 if b != real_bell {
                     // If the mask specifically requested a different bell in this location, then
-                    // the rows doesn't match
+                    // the row doesn't match
                     return false;
                 }
             }
         }
         true
+    }
+
+    /// Returns the place of a [`Bell`] within this `Mask`.  If that [`Bell`] isn't found (either
+    /// because it's outside the [`Stage`] or because the `Mask` doesn't specify a location) this
+    /// returns `None`.
+    pub fn place_of(&self, bell: Bell) -> Option<usize> {
+        for (i, b) in self.bells.iter().enumerate() {
+            if *b == Some(bell) {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    /// Updates this `Mask` so that a given [`Bell`] is required at a given place.
+    pub fn require_bell_at(&mut self, bell: Bell, place: usize) {
+        // TODO: Check that this operation preserves the validity of the mask
+        self.bells[place] = Some(bell);
     }
 
     /// If this mask matches exactly one [`Row`], then return that [`Row`] (otherwise `None`).
@@ -87,6 +114,34 @@ impl Mask {
         } else {
             None
         }
+    }
+
+    /// Returns `true` if the set of [`Row`]s satisfying `self` is a subset of those satisfying
+    /// `other`.
+    pub fn is_subset_of(&self, other: &Mask) -> bool {
+        // Two rows which are of different stages can't have a superset/subset relation
+        if self.stage() != other.stage() {
+            return false;
+        }
+
+        // Now check that every bell required by `other` is also required by `self`
+        for (b1, b2) in self.bells.iter().zip_eq(&other.bells) {
+            match (*b1, *b2) {
+                // If `other` specifies a bell, then `self` must agree
+                (None, Some(_)) => return false,
+                (Some(b_self), Some(b_other)) => {
+                    if b_self != b_other {
+                        return false;
+                    }
+                }
+                // If `other` doesn't require a specific bell, then it doesn't matter what's in
+                // `self`
+                (_, None) => {}
+            }
+        }
+
+        // If none of the bells caused a disagreement, then `self` is a subset of `other`
+        true
     }
 
     /// Check if there exist any [`Row`]s which can satisfy both `Mask`s.  `a.is_compatible_with(b)`

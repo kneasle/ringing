@@ -13,17 +13,13 @@ use std::{
 use bellframe::RowBuf;
 use itertools::Itertools;
 
-use crate::{
-    graph::prototype::ProtoNode,
-    layout::{Position, SegmentId},
-    score::Score,
-};
+use crate::{graph::prototype::ProtoNode, layout::NodeId, score::Score};
 
 // Re-export `ProtoGraph` as an opaque type (the prototype only has to be computed once and then
 // can be shared between all the threads)
 pub(crate) use prototype::ProtoGraph;
 
-mod falseness;
+// mod falseness;
 mod prototype;
 
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries
@@ -319,30 +315,13 @@ pub struct ExtraNode<P> {
     link_map: Vec<usize>,
 }
 
-/// The ID of a [`Node`] that isn't at the start or end of a composition.  Start and end nodes will
-/// be subsections of a 'central' node
-// PERF: These get cloned a lot but are rarely get mutated, so we could replace `RowBuf` with
-// `Rc<Row>` and avoid tons of allocations.
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub(crate) struct NodeId {
-    pub row: RowBuf,
-    pub seg: SegmentId,
-}
-
-impl NodeId {
-    pub fn new(seg: SegmentId, row: RowBuf) -> Self {
-        NodeId { row, seg }
-    }
-}
-
-impl Debug for NodeId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NodeId({}, {})", self.row, self.seg.idx)
-    }
-}
-
-impl Display for NodeId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NodeId({}, {})", self.row, self.seg.idx)
-    }
+/// The `Position` of a [`Node`] within the composition
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Position {
+    /// This [`Node`] can only appear as the start of a composition
+    Start,
+    /// This [`Node`] can only appear in the middle of a composition
+    Central,
+    /// This [`Node`] can only appear as the end of a composition
+    End,
 }

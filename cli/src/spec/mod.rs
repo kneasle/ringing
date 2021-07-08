@@ -9,6 +9,7 @@ use bellframe::{
 use hmap::hmap;
 use itertools::Itertools;
 use monument::{
+    mask::Mask,
     single_method::{single_method_layout, SingleMethodError},
     Config, MusicType, Spec,
 };
@@ -31,15 +32,15 @@ mod length;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AbstractSpec {
-    /// Which bells are allowed to be affected by calls
-    non_fixed_bells: Option<Vec<Bell>>,
     /// The range of lengths of composition which are allowed
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "get_30")]
     num_comps: usize,
-    /// The call type specified by the `base_calls` argument
+    /// Which calls should be used by default
     base_calls: Option<BaseCalls>,
+    /// Which course heads masks are allowed
+    course_heads: Option<Vec<String>>,
 
     /// The [`Method`] who's compositions we are after
     method: MethodSpec,
@@ -61,27 +62,37 @@ impl AbstractSpec {
         toml::from_str(&spec_toml)
     }
 
-    /// Create an [`Engine`] which generates compositions according to this `Spec`
+    /// Convert this abstract specification into a concrete [`Spec`] that uniquely defines a set of
+    /// compositions.
     pub fn to_spec(&self, config: &Config) -> Result<Arc<Spec>, SpecConvertError> {
+        // This unwrap will only trigger if the method has `Stage` of zero, which I don't think is
+        // possible.  Even if it is possible, there aren't any possible compositions on 0 bells so
+        // I think a panic is justified.
+        let tenor = Bell::tenor(self.method.stage).unwrap();
+
         // Parse and verify into its fully specified form
         let method = self.method.gen_method()?;
         let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
-        let non_fixed_bells = self.non_fixed_bells.as_ref().map_or_else(
-            || tenors_together_non_fixed_bells(self.method.stage),
-            Vec::clone,
-        );
         let music_types = self
             .music
             .iter()
             .map(|b| b.to_music_type(method.stage()))
             .collect_vec();
-        // For the time being, just use the default plain calling positions.  These will be wrong
-        // for anything other than lead end calls, but are only used for debugging so that's
-        // probably fine.  TODO: Make these specifiable
-        let plain_lead_positions = None;
+        let course_head_masks = self.course_heads.as_ref().map_or_else(
+            // Default to tenors together, with the tenor as 'calling bell'
+            || vec![(gen_tenors_together_mask(self.method.stage), tenor)],
+            // Otherwise parse all the course head mask strings into `Mask`s, again defaulting to
+            // the tenor as calling bell
+            |ch_mask_strings| {
+                ch_mask_strings
+                    .iter()
+                    .map(|s| (Mask::parse(s), tenor))
+                    .collect_vec()
+            },
+        );
 
         // Generate a `Layout` from the data about the method and calls
-        let layout = single_method_layout(&method, plain_lead_positions, &calls, &non_fixed_bells)
+        let layout = single_method_layout(&method, &calls, &course_head_masks, config)
             .map_err(SpecConvertError::LayoutGenError)?;
 
         Ok(Spec::new(
@@ -96,12 +107,14 @@ impl AbstractSpec {
     }
 }
 
-fn tenors_together_non_fixed_bells(stage: Stage) -> Vec<Bell> {
+/// Generate the course head mask representing the tenors together.  This corresponds to
+/// `1xxxxx7890ET...`, truncated to the correct stage.
+fn gen_tenors_together_mask(stage: Stage) -> Mask {
     // By default, fix the treble and >=7.  Also, make sure to always fix the tenor even on Minor
-    // or lower.  Note that we're using 1-indexed bell 'numbers' here
-    (2..=(stage.as_usize() - 1).min(6))
-        .map(|num| Bell::from_number(num).unwrap())
-        .collect_vec()
+    // or lower.  Note that we're numbering the bells where the treble is `0`
+    let mut fixed_bells = vec![Bell::TREBLE];
+    fixed_bells.extend((6..stage.as_usize()).map(Bell::from_index));
+    Mask::fix_bells(stage, fixed_bells)
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail

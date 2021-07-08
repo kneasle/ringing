@@ -1,0 +1,13 @@
+length = "QP"
+# length = { min = 0, max = 400 }
+num_comps = 16
+base_calls = "near"
+# Allow Monument to affect the tenors if the resulting course preserves 2-7
+course_heads = ["1xxxxx7890", "1234567xxx", "1674523xxx"]
+
+[method]
+stage = "Royal"
+place_notation = "x30x14x50x16x1270x38x14x50x16x90,12"
+
+[[music]]
+run_lengths = [4, 5, 6]

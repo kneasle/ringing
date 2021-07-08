@@ -23,6 +23,7 @@ fn main() {
     // engine
     let comp_spec = abstr_spec.to_spec(&config).unwrap();
 
+    /*
     // Use this concrete specification to generate compositions
     let results = monument::compose(&comp_spec, &config);
 
@@ -32,4 +33,5 @@ fn main() {
     for c in results.comps {
         println!("{}", c.to_string(&comp_spec));
     }
+    */
 }
