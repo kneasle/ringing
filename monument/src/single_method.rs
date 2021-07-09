@@ -5,7 +5,7 @@ use itertools::Itertools;
 use log::Level;
 
 use crate::{
-    layout::{Layout, Link, NodeId, RowIdx},
+    layout::{Layout, Link, RowIdx},
     mask::Mask,
     Config,
 };
@@ -241,8 +241,8 @@ pub fn single_method_layout(
 
                         // The `Link` referring to the call happening at this lead
                         links.push(Link {
-                            row_idx_from: RowIdx::new(BLOCK_IDX, from_idx),
-                            row_idx_to: RowIdx::new(BLOCK_IDX, call_end.row_idx),
+                            from: RowIdx::new(BLOCK_IDX, from_idx),
+                            to: RowIdx::new(BLOCK_IDX, call_end.row_idx),
                             course_head_mask: source_mask.clone(),
                             course_head_transposition,
                             debug_name: format!("{}{}", call.debug_symbol, calling_position),
@@ -253,8 +253,8 @@ pub fn single_method_layout(
                         // same location), but the links will be de-duplicated anyway and this way
                         // makes it very difficult to accidentally miss plain leads
                         links.push(Link {
-                            row_idx_from: RowIdx::new(BLOCK_IDX, from_idx),
-                            row_idx_to: RowIdx::new(BLOCK_IDX, (from_idx + 1) % course_len),
+                            from: RowIdx::new(BLOCK_IDX, from_idx),
+                            to: RowIdx::new(BLOCK_IDX, (from_idx + 1) % course_len),
                             course_head_mask: source_mask,
                             // Plain leads don't cause a course head transposition
                             course_head_transposition: RowBuf::rounds(method.stage()),
@@ -291,8 +291,8 @@ pub fn single_method_layout(
             // We don't check the names, since it's possible (often in the case of plain leads)
             // that the same link is given two different names (also if the user inputs two
             // identical but differently named calls).
-            let are_links_otherwise_equal = link.row_idx_from == link2.row_idx_from
-                && link.row_idx_to == link2.row_idx_to
+            let are_links_otherwise_equal = link.from == link2.from
+                && link.to == link2.to
                 && link.course_head_transposition == link2.course_head_transposition;
 
             if are_links_otherwise_equal {
@@ -325,10 +325,10 @@ pub fn single_method_layout(
                     ""
                 },
                 l.course_head_mask,
-                l.row_idx_from.row_idx,
+                l.from.row,
                 l.debug_name,
                 l.course_head_mask.mul(&l.course_head_transposition),
-                l.row_idx_to.row_idx
+                l.to.row
             );
         }
     }
@@ -348,10 +348,10 @@ pub fn single_method_layout(
                 "({:>2}):    {} {:>3}   --[{:>2}]->   {} {:>3}",
                 i,
                 l.course_head_mask,
-                l.row_idx_from.row_idx,
+                l.from.row,
                 l.debug_name,
                 l.course_head_mask.mul(&l.course_head_transposition),
-                l.row_idx_to.row_idx
+                l.to.row
             );
         }
     }
@@ -359,7 +359,7 @@ pub fn single_method_layout(
     /* STEP 6: GENERATE STARTS/ENDS, AND CREATE A LAYOUT */
 
     // Figure out where rounds can appear in courses which satisfy the course head masks
-    let mut rounds_locations = Vec::<NodeId>::new();
+    let mut rounds_locations = Vec::<(RowBuf, RowIdx)>::new();
 
     let rounds = RowBuf::rounds(method.stage());
     for (ch_mask, _) in course_head_masks {
@@ -368,10 +368,10 @@ pub fn single_method_layout(
             // If rounds satisfies `transposed_mask`, then this location can contain rounds
             if transposed_mask.matches(&rounds) {
                 let course_head_containing_rounds = annot_row.row().inv();
-                rounds_locations.push(NodeId {
-                    course_head: course_head_containing_rounds,
-                    row_idx: RowIdx::new(BLOCK_IDX, row_idx),
-                });
+                rounds_locations.push((
+                    course_head_containing_rounds.clone(),
+                    RowIdx::new(BLOCK_IDX, row_idx),
+                ));
             }
         }
     }

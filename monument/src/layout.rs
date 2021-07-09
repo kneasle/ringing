@@ -1,4 +1,10 @@
-use bellframe::RowBuf;
+use std::{
+    cmp::Ordering,
+    fmt::{Debug, Display, Formatter},
+    ops::Deref,
+};
+
+use bellframe::{Row, RowBuf};
 
 use crate::mask::Mask;
 
@@ -26,23 +32,150 @@ pub struct Layout {
     /// [`Link`] which contains a matching course head [`Mask`].
     pub links: Vec<Link>,
     /// The [`RowIdx`]s and course heads where the composition can be started
-    pub starts: Vec<NodeId>,
+    pub starts: Vec<(RowBuf, RowIdx)>,
     /// The [`RowIdx`]s and course heads where the composition can be finished.  If the composition
     /// starts and finishes at the same [`Row`], then `starts` and `ends` are likely to be equal
-    /// (because every possible starting point is also an endpoint).  The only exception to this is
-    /// cases where e.g. snap finishes are allowed but snap starts are not.
-    pub ends: Vec<NodeId>,
+    /// (because every possible starting point is also an end point).  The only exceptions to this
+    /// are cases where e.g. snap finishes are allowed but snap starts are not.
+    pub ends: Vec<(RowBuf, RowIdx)>,
 }
 
-/// A link between two courses
+impl Layout {
+    /// Returns the [`Segment`], starting at a given [`NodeId`].  If this [`Segment`] would never
+    /// terminate (because no [`Link`]s can be applied to it), then `None` is returned.
+    pub(crate) fn get_segment(&self, id: &NodeId) -> Option<Segment> {
+        // println!("\n{:?}", id);
+
+        let block_len = self.blocks[id.row_idx.block].len();
+        let length_between = |from: usize, to: usize| (to + block_len - from) % block_len;
+
+        // Figure out which links are going to finish this segment
+        let mut end_links = Vec::<(usize, NodeId)>::new();
+        let mut shortest_length: Option<usize> = None;
+
+        for (link_idx, link) in self.links.iter().enumerate() {
+            // If this link doesn't come from the correct block, then it can't finish the segment
+            if link.from.block != id.row_idx.block {
+                continue;
+            }
+            // If this link's course head mask doesn't match the current course, then it can't be
+            // called
+            if !link.course_head_mask.matches(&id.course_head) {
+                continue;
+            }
+
+            let length = length_between(id.row_idx.row, link.from.row);
+            // Add one to the length, because `link.from` refers to the lead **end** not the lead
+            // **head**
+            let length = length + 1;
+
+            let cmp_to_shortest_len = match shortest_length {
+                Some(best_len) => length.cmp(&best_len),
+                // If no lengths have been found, then all lengths are strictly better than no
+                // length
+                None => Ordering::Less,
+            };
+
+            // If this length is strictly better than the existing ones, then all the accumulated
+            // links are no longer the best.  Additionally, this segment can no longer be an end
+            // node if this link is taken before the end is reached.
+            if cmp_to_shortest_len == Ordering::Less {
+                end_links.clear();
+                shortest_length = Some(length);
+            }
+            // If this node is at least as good as the current best, then add this link to the list
+            if cmp_to_shortest_len != Ordering::Greater {
+                end_links.push((link_idx, link.id_after(&id.course_head)));
+
+                /* println!(
+                    "{:>3} --[{}]-> {:>3} = {} ({:?})",
+                    id.row_idx.row_idx,
+                    link.debug_name,
+                    link.from.row_idx,
+                    length,
+                    cmp_to_shortest_len
+                ); */
+            }
+        }
+
+        let mut is_end = false;
+        // Determine whether or not this segment can end the composition before any calls
+        for (end_ch, end_row_idx) in &self.ends {
+            if end_ch == &id.course_head && end_row_idx.block == id.row_idx.block {
+                let len = length_between(id.row_idx.row, end_row_idx.row);
+                // If this segment is a start segment, then it will almost always also be an end
+                // segment.  However, we don't want to end all compositions immediately, so we make
+                // a special case that zero-length start-and-end blocks aren't allowed
+                if len == 0 && id.is_start {
+                    continue;
+                }
+
+                let is_improvement = match shortest_length {
+                    // If this node ends at the same location that a link could be taken, then the
+                    // links take precedence (hence the strict inequality)
+                    Some(l) => len < l,
+                    // Any length is an improvement over an infinite length
+                    None => true,
+                };
+                if is_improvement {
+                    is_end = true;
+                    shortest_length = Some(len);
+                }
+            }
+        }
+
+        // If some way of ending this segment was found (i.e. a Link or an end-point), then build a
+        // new Some(Segment), otherwise bubble the `None` value
+        shortest_length.map(|length| Segment {
+            links: end_links,
+            length,
+            node_id: id.clone(),
+            is_start: id.is_start,
+            is_end,
+        })
+    }
+
+    /// Gets the [`RowIdx`] of the last row within a [`RowRange`] (or `None` if that range has size
+    /// 0).
+    pub(crate) fn last_row_idx(&self, row_range: RowRange) -> Option<RowIdx> {
+        if row_range.length == 0 {
+            None
+        } else {
+            let block_len = self.blocks[row_range.start.block].len();
+            Some(RowIdx::new(
+                row_range.start.block,
+                // The subtraction here cannot overflow, because the outer `if` statement
+                // guarantees that `row_range.length > 0`
+                (row_range.start.row + row_range.length - 1) % block_len,
+            ))
+        }
+    }
+
+    /// Return the [`Row`]s covered by a given range
+    pub(crate) fn untransposed_rows(
+        &self,
+        row_idx: RowIdx,
+        length: usize,
+    ) -> impl Iterator<Item = &'_ Row> {
+        let block = &self.blocks[row_idx.block];
+        block
+            .iter()
+            .cycle()
+            .skip(row_idx.row)
+            .take(length)
+            .map(Deref::deref)
+    }
+}
+
+/// A link between two segments of a course
 #[derive(Debug, Clone)]
 pub struct Link {
     /// Which [`Row`] in the [`Layout`] this `Link` starts from.  This is a half-open bound - for
     /// example, if this `Link` represents a call over the lead end then this index refers to the
     /// lead **head**, not the lead **end**.
-    pub row_idx_from: RowIdx,
+    pub from: RowIdx,
     /// Which [`Row`] the composition will be at after this `Link` is taken
-    pub row_idx_to: RowIdx,
+    pub to: RowIdx,
 
     /// A [`Mask`] which determines which course heads this `Link` can be applied to
     pub course_head_mask: Mask,
@@ -55,25 +188,108 @@ pub struct Link {
     pub display_name: String,
 }
 
+impl Link {
+    /// Gets the [`NodeId`] of the node that would appear after this [`Link`] is applied to a given
+    /// course.
+    fn id_after(&self, course_head: &Row) -> NodeId {
+        // Sanity check that this link could actually be applied in this location.
+        assert!(self.course_head_mask.matches(course_head));
+        NodeId::new(
+            course_head * self.course_head_transposition.as_row(),
+            self.to,
+            // Nodes reached by taking a link can't be start nodes
+            false,
+        )
+    }
+}
+
 /// The unique index of a [`Row`] within a [`Layout`].  This is essentially a `(block_idx,
 /// row_idx)` pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RowIdx {
-    pub block_idx: usize,
-    pub row_idx: usize,
+    pub block: usize,
+    pub row: usize,
 }
 
 impl RowIdx {
     pub fn new(block_idx: usize, row_idx: usize) -> Self {
-        Self { block_idx, row_idx }
+        Self {
+            block: block_idx,
+            row: row_idx,
+        }
     }
 }
 
 /// The unique identifier for a single node (i.e. an instantiated course segment) in the
 /// composition.  This node is assumed to end at the closest [`Link`] where the course head matches
 /// one of the supplied [course head masks](Link::course_head_masks).
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct NodeId {
     pub course_head: RowBuf,
     pub row_idx: RowIdx,
+    /// Start nodes have to be treated separately in the case where the rounds can appear as the
+    /// first [`Row`] of a segment.  In this case, the start segment is full-length whereas any
+    /// non-start segments become 0-length end segments (because the composition comes round
+    /// instantly).
+    pub is_start: bool,
+}
+
+impl NodeId {
+    pub fn new(course_head: RowBuf, row_idx: RowIdx, is_start: bool) -> Self {
+        Self {
+            course_head,
+            row_idx,
+            is_start,
+        }
+    }
+}
+
+impl Debug for NodeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NodeId({})", self)
+    }
+}
+
+impl Display for NodeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{},{}:{}{}",
+            self.course_head,
+            self.row_idx.block,
+            self.row_idx.row,
+            if self.is_start { ",is_start" } else { "" }
+        )
+    }
+}
+
+/// A range of [`Row`]s covered by a [`Segment`]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct RowRange {
+    pub(crate) start: RowIdx,
+    pub(crate) length: usize,
+}
+
+impl RowRange {
+    pub(crate) fn new(start: RowIdx, length: usize) -> Self {
+        Self { start, length }
+    }
+}
+
+/// A section of a composition with no internal links, uniquely determined by a [`NodeId`].
+#[derive(Debug, Clone)]
+pub(crate) struct Segment {
+    pub(crate) node_id: NodeId,
+    pub(crate) length: usize,
+    pub(crate) links: Vec<(usize, NodeId)>,
+
+    pub(crate) is_start: bool,
+    pub(crate) is_end: bool,
+}
+
+impl Segment {
+    /// Returns the [`Row`]s covered this [`Segment`] **of the plain course**
+    pub fn untransposed_rows<'l>(&self, layout: &'l Layout) -> impl Iterator<Item = &'l Row> {
+        layout.untransposed_rows(self.node_id.row_idx, self.length)
+    }
 }

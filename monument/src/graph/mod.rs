@@ -19,7 +19,7 @@ use crate::{graph::prototype::ProtoNode, layout::NodeId, score::Score};
 // can be shared between all the threads)
 pub(crate) use prototype::ProtoGraph;
 
-// mod falseness;
+mod falseness;
 mod prototype;
 
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries
@@ -46,7 +46,7 @@ impl<P, E> Graph<P, E> {
         // Check that the only nodes with no successors are the end nodes (this fact is used for
         // checking that a comp has come round)
         for node in prototype_graph.nodes.values() {
-            assert_eq!(node.successors.is_empty(), node.position == Position::End);
+            assert_eq!(node.successors.is_empty(), node.is_end);
         }
         // For each reachable node ID, generate a blank node (i.e. a node where all the
         // succession/falseness pointers are `null`, but everything else is initialised) along with
@@ -111,7 +111,7 @@ impl<P, E> Graph<P, E> {
         // Get the pointers for the possible starting nodes
         let start_nodes: HashMap<NodeId, *const Node<P, E>> = nodes
             .iter()
-            .filter(|(_id, (_node, proto_node))| proto_node.position == Position::Start)
+            .filter(|(_id, (_node, proto_node))| proto_node.is_start)
             .map(|(&id, (node, _proto_node))| (id.clone(), *node as *const Node<P, E>))
             .collect();
 

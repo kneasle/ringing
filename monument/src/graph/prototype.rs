@@ -1,24 +1,20 @@
-//! A 'prototype' node graph that is inefficient to traverse but easy to modify
+//! A 'prototype' node graph that is inefficient to traverse but easy to modify.  This is generated
+//! from the [`Layout`], then optimised and finally converted into in-memory node graphs for each
+//! thread.
 
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    ops::Mul,
 };
 
 use itertools::Itertools;
 
 use crate::{
-    // compose::QueueElem,
-    layout::Layout,
-    music::Breakdown,
-    score::Score,
-    Config,
-    MusicType,
-    SuccSortStrat,
+    graph::falseness::FalsenessTable, layout::Layout, music::Breakdown, score::Score, Config,
+    MusicType, Segment, SuccSortStrat,
 };
 
-use super::{NodeId, Position};
+use super::NodeId;
 
 /// A 'prototype' node graph that is inefficient to traverse but easy to modify.  This is used to
 /// build and optimise the node graph before being converted into an efficient [`Graph`] structure
@@ -76,10 +72,9 @@ impl ProtoGraph {
 
     /// Generate a graph of all nodes which are reachable within a given length constraint.
     fn reachable_graph(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
-        todo!();
-        /*
-        // The set of reachable nodes (each mapping to a distance from rounds)
-        let mut expanded_nodes: HashMap<NodeId, usize> = HashMap::new();
+        // The set of reachable nodes and whether or not they are a start node (each mapping to a
+        // distance from rounds)
+        let mut expanded_nodes: HashMap<NodeId, (Segment, usize)> = HashMap::new();
 
         // Unexplored nodes, ordered by distance from rounds (i.e. the minimum number of rows required
         // to reach them from rounds)
@@ -90,14 +85,11 @@ impl ProtoGraph {
         // Populate the frontier with all the possible start nodes, each with distance 0
         frontier.extend(
             layout
-                .segments
+                .starts
                 .iter()
-                .enumerate()
-                .filter(|(_i, seg)| seg.position == Position::Start)
-                .map(|(i, seg)| {
+                .map(|(start_course_head, start_row_idx)| {
                     FrontierNode(
-                        seg.as_node_id(SegmentId::from(i))
-                            .expect("Start segments should only be able to exist in one course"),
+                        NodeId::new(start_course_head.to_owned(), *start_row_idx, true),
                         0,
                     )
                 })
@@ -112,25 +104,23 @@ impl ProtoGraph {
                 continue;
             }
             // If the node hasn't been expanded yet, then add its reachable nodes to the frontier
-            let table = layout.get_segment(node_id.seg);
+            let segment = layout
+                .get_segment(&node_id)
+                .expect("Infinite segment found");
+
             // If the shortest composition including this node is longer the length limit, then don't
             // include it in the node graph
-            let new_dist = distance + table.row_range.length;
+            let new_dist = distance + segment.length;
             if new_dist > max_length {
                 continue;
             }
             // Expand the node by adding its successors to the frontier
-            for link in &table.links {
-                // Find the Central ID of the segment reachable by this link
-                let new_central_id =
-                    NodeId::new(link.end_segment, node_id.row.mul(&link.transposition));
-                // If the new segment contains rounds, truncate it to an end node
-                let new_id = layout.truncate(new_central_id);
+            for (_link_idx, id_after_link) in &segment.links {
                 // Add the new node to the frontier
-                frontier.push(Reverse(FrontierNode(new_id, new_dist)));
+                frontier.push(Reverse(FrontierNode(id_after_link.to_owned(), new_dist)));
             }
             // Mark this node as expanded
-            expanded_nodes.insert(node_id, distance);
+            expanded_nodes.insert(node_id, (segment, distance));
         }
 
         // Once Dijkstra's finishes, `expanded_nodes` contains every node reachable from rounds
@@ -139,35 +129,25 @@ impl ProtoGraph {
         // etc.).
         let mut nodes: HashMap<NodeId, ProtoNode> = expanded_nodes
             .iter()
-            .map(|(node_id, distance)| {
-                let segment = layout.get_segment(node_id.seg);
+            .map(|(node_id, (segment, distance))| {
                 let score = Breakdown::from_rows(
-                    layout.segment_rows(node_id.seg),
-                    &node_id.row,
+                    segment.untransposed_rows(layout),
+                    &node_id.course_head,
                     music_types,
                 );
 
                 let new_node = ProtoNode {
+                    length: segment.length,
+                    score,
+
+                    is_start: segment.is_start,
+                    is_end: segment.is_end,
+
                     min_distance_from_rounds: *distance,
                     // Distances to rounds are computed during optimisation
                     min_distance_to_rounds: None,
-                    length: segment.row_range.length,
-                    score,
-                    position: segment.position,
-                    successors: segment
-                        .links
-                        .iter()
-                        .enumerate()
-                        .map(|(i, link)| {
-                            (
-                                i,
-                                layout.truncate(NodeId::new(
-                                    link.end_segment,
-                                    node_id.row.mul(&link.transposition),
-                                )),
-                            )
-                        })
-                        .collect_vec(),
+
+                    successors: segment.links.to_owned(),
                     // These are populated in separate passes over the graph
                     false_nodes: Vec::new(),
                     predecessors: Vec::new(),
@@ -176,15 +156,20 @@ impl ProtoGraph {
             })
             .collect();
 
-        // Compute falseness between the nodes (by naively testing every pair of nodes in a lookup
-        // table).
-        let all_node_ids = nodes.keys().cloned().collect_vec();
-        let falseness_table = FalsenessTable::from_layout(layout);
+        // We need to clone the `NodeId`s, because otherwise they would borrow from `nodes` whilst
+        // the loop is modifying the contents (i.e. breaking reference aliasing)
+        let node_ids_and_lengths = nodes
+            .iter()
+            .map(|(id, node)| (id.to_owned(), node.length))
+            .collect_vec();
+
+        // Compute falseness between the nodes
+        let table = FalsenessTable::from_layout(layout, &node_ids_and_lengths);
         for (id, node) in nodes.iter_mut() {
-            node.false_nodes = all_node_ids
+            node.false_nodes = node_ids_and_lengths
                 .iter()
-                .filter(|&id2| falseness_table.are_false(id, id2))
-                .cloned()
+                .filter(|(id2, length2)| table.are_false(id, node.length, id2, *length2))
+                .map(|(id2, _)| id2.to_owned())
                 .collect_vec();
         }
 
@@ -201,7 +186,6 @@ impl ProtoGraph {
         }
 
         Self { nodes }
-        */
     }
 
     /// Run Dijkstra's algorithm to update `min_distance_from_rounds` on every node
@@ -316,7 +300,7 @@ impl ProtoGraph {
                 // checking if end nodes are given a distance, and if not then panic).
                 None => {
                     assert!(
-                        node.position != Position::End,
+                        node.is_end,
                         "End node marked as being unable to reach rounds!"
                     );
                     nodes_to_remove.insert(id.clone());
@@ -450,15 +434,11 @@ impl ProtoGraph {
     /* ===== OPTIMISATION HELPER FUNCTIONS ===== */
 
     pub(super) fn start_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
-        self.nodes
-            .iter()
-            .filter(|(_id, node)| node.position == Position::Start)
+        self.nodes.iter().filter(|(_id, node)| node.is_start)
     }
 
     fn end_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
-        self.nodes
-            .iter()
-            .filter(|(_id, node)| node.position == Position::End)
+        self.nodes.iter().filter(|(_id, node)| node.is_end)
     }
 
     /// Remove nodes from the graph by reference
@@ -562,11 +542,15 @@ impl ProtoGraph {
 /// A node in a prototype graph
 #[derive(Debug, Clone)]
 pub(super) struct ProtoNode {
-    pub position: Position,
+    pub is_start: bool,
+    pub is_end: bool,
+
     /// The number of rows in this node
     pub length: usize,
     /// The music generated by this node in the composition
     pub score: Breakdown,
+    pub false_nodes: Vec<NodeId>,
+
     /// A lower bound on the number of rows required to go from any rounds to the first row of
     /// `self`
     min_distance_from_rounds: usize,
@@ -574,7 +558,7 @@ pub(super) struct ProtoNode {
     /// (or `None` if rounds is unreachable - a distance of infinity - or the distances haven't
     /// been computed yet).
     min_distance_to_rounds: Option<usize>,
-    pub false_nodes: Vec<NodeId>,
+
     /// The `usize` here denotes which link in the [`Layout`] has generated this succession.  This
     /// is required so that a human-friendly representation of the composition can be generated.
     pub successors: Vec<(usize, NodeId)>,
