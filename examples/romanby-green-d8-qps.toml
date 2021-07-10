@@ -1,6 +1,7 @@
 length = "qp"
 num_comps = 15
 base_calls = "near"
+course_heads = ["1xxxxx78", "1xxx7856", "1xxx8765", "13456782", "18234567"]
 
 [method]
 stage = 8
@@ -15,20 +16,3 @@ patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
 # This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]
 runtime_estimate = 23 # seconds
-results = [
-    { length = 1312, score = 721554505728, call_string = "5:BBHWHBHMsHsWHHH", ranking_score = 549965324 },
-    { length = 1280, score = 704374636544, call_string = "7:HBsHBWBBBBsHWHH", ranking_score = 550292684 },
-    { length = 1280, score = 704374636544, call_string = "7:HBsHBWBBBBHsWHH", ranking_score = 550292684 },
-    { length = 1312, score = 725849473024, call_string = "5:BBHWBWHHsMsMH", ranking_score = 553238927 },
-    { length = 1312, score = 725849473024, call_string = "5:BBsHsWBWHHsMsMH", ranking_score = 553238927 },
-    { length = 1278, score = 708669603840, call_string = "7:HHsWsMsWsWsMsWsH", ranking_score = 554514556 },
-    { length = 1312, score = 730144440320, call_string = "5:BBHWHBHsMsHWHHH", ranking_score = 556512530 },
-    { length = 1312, score = 730144440320, call_string = "5:BBsHsWHBHsMsHWHHH", ranking_score = 556512530 },
-    { length = 1280, score = 712964571136, call_string = "5:BBBBHsWBsHBWHHH", ranking_score = 557003571 },
-    { length = 1280, score = 712964571136, call_string = "5:BBBBsHWBsHBWHHH", ranking_score = 557003571 },
-    { length = 1312, score = 738734374912, call_string = "5:BBBMHWHHsMsMH", ranking_score = 563059736 },
-    { length = 1312, score = 743029342208, call_string = "5:BBsHsWsHBsHMHWHHH", ranking_score = 566333340 },
-    { length = 1312, score = 743029342208, call_string = "5:BBHWsHBsHMHWHHH", ranking_score = 566333340 },
-    { length = 1312, score = 751619276800, call_string = "5:BBsHsWHBHMHWHHH", ranking_score = 572880546 },
-    { length = 1312, score = 751619276800, call_string = "5:BBHWHBHMHWHHH", ranking_score = 572880546 },
-]

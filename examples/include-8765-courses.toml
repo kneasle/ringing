@@ -1,0 +1,41 @@
+length = "QP"
+num_comps = 20
+base_calls = "near"
+# Monument will deduplicate the CH masks, removing `1xxx5678` because it is a subset of `1xxxxx78`.
+course_heads = ["1xxx5678", "1xxxxx78", "1xxx8765", "15678xxx"]
+
+[method]
+place_notation = "x38x14x58x16x12x38x14x78,12"
+stage = 8
+
+[[music]]
+run_length = 4
+
+[[music]]
+patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 0.022 # seconds
+results = [
+    { length = 1344, score = 429496729600, call_string = "sHsWHBHVsMsMFsWBsH", ranking_score = 319566019 },
+    { length = 1312, score = 420906795008, call_string = "MsHsVMMsFMHsMWsHsH", ranking_score = 320813105 },
+    { length = 1280, score = 412316860416, call_string = "BBsWsHBsHsHWsHsH", ranking_score = 322122547 },
+    { length = 1280, score = 412316860416, call_string = "sHsWHBHsMsMsHBHBsH", ranking_score = 322122547 },
+    { length = 1344, score = 433791696896, call_string = "sHBVMMMFsHBsMsH", ranking_score = 322761679 },
+    { length = 1344, score = 433791696896, call_string = "sHBVsMMsFsHBHsMWMsH", ranking_score = 322761679 },
+    { length = 1344, score = 433791696896, call_string = "sHsWHBHVsMMFsHsWHBsH", ranking_score = 322761679 },
+    { length = 1344, score = 433791696896, call_string = "BsMVsMsMFBsWHW", ranking_score = 322761679 },
+    { length = 1312, score = 425201762304, call_string = "MsWHWsVMMsFsHWsHsH", ranking_score = 324086709 },
+    { length = 1344, score = 438086664192, call_string = "sHBsMVsMMFsHBsHMsH", ranking_score = 325957339 },
+    { length = 1344, score = 438086664192, call_string = "sHsWsHBsHsMVsMsMFBsH", ranking_score = 325957339 },
+    { length = 1344, score = 438086664192, call_string = "BsHBsMsWsVMMsFsHWsHsH", ranking_score = 325957339 },
+    { length = 1312, score = 429496729600, call_string = "MsHsVMMsFsMsHsMWsHsH", ranking_score = 327360312 },
+    { length = 1344, score = 442381631488, call_string = "sHBsMVsMsMFHBHsMsH", ranking_score = 329152999 },
+    { length = 1344, score = 442381631488, call_string = "sHsWBsHVMMMFBsH", ranking_score = 329152999 },
+    { length = 1312, score = 433791696896, call_string = "MsWsHsWsVMMsFsHWsHsH", ranking_score = 330633915 },
+    { length = 1280, score = 425201762304, call_string = "sHsWHHBsHBBsHMsWsH", ranking_score = 332188876 },
+    { length = 1280, score = 425201762304, call_string = "sHsMWsHBBsHBHHsMsH", ranking_score = 332188876 },
+    { length = 1344, score = 455266533376, call_string = "sHsWHBHsMVsMsMFBsH", ranking_score = 338739980 },
+    { length = 1344, score = 455266533376, call_string = "BBsWsVMMsFsHWsHsH", ranking_score = 338739980 },
+]
