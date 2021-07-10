@@ -32,12 +32,12 @@ pub struct Layout {
     /// [`Link`] which contains a matching course head [`Mask`].
     pub links: Vec<Link>,
     /// The [`RowIdx`]s and course heads where the composition can be started
-    pub starts: Vec<(RowBuf, RowIdx)>,
+    pub starts: Vec<(RowBuf, RowIdx, String)>,
     /// The [`RowIdx`]s and course heads where the composition can be finished.  If the composition
     /// starts and finishes at the same [`Row`], then `starts` and `ends` are likely to be equal
     /// (because every possible starting point is also an end point).  The only exceptions to this
     /// are cases where e.g. snap finishes are allowed but snap starts are not.
-    pub ends: Vec<(RowBuf, RowIdx)>,
+    pub ends: Vec<(RowBuf, RowIdx, String)>,
 }
 
 impl Layout {
@@ -98,14 +98,17 @@ impl Layout {
             }
         }
 
-        let mut is_end = false;
+        let mut end_idx = None;
         // Determine whether or not this segment can end the composition before any calls
-        for (end_ch, end_row_idx) in &self.ends {
+        for (idx, (end_ch, end_row_idx, _name)) in self.ends.iter().enumerate() {
             if end_ch == &id.course_head && end_row_idx.block == id.row_idx.block {
                 let len = length_between(id.row_idx.row, end_row_idx.row);
-                // If this segment is a start segment, then it will almost always also be an end
-                // segment.  However, we don't want to end all compositions immediately, so we make
-                // a special case that zero-length start-and-end blocks aren't allowed
+                // Make a special case to disallow 0-length blocks which are both starts and ends.
+                // This happens a lot because almost all compositions start and end at the same row
+                // (i.e. rounds), and therefore the starts and ends will happen at the same
+                // locations.  Therefore, each start node would generate a 0-length segment,
+                // corresponding to a 0-length composition which immediately comes round.  This is
+                // clearly not useful, hence the special case.
                 if len == 0 && id.is_start {
                     continue;
                 }
@@ -118,11 +121,30 @@ impl Layout {
                     None => true,
                 };
                 if is_improvement {
-                    is_end = true;
+                    end_idx = Some(idx);
                     shortest_length = Some(len);
+                    end_links.clear();
                 }
             }
         }
+
+        // Decide what start this node corresponds to (if it is a start)
+        let start_idx = if id.is_start {
+            let idx = self
+                .starts
+                .iter()
+                .position(|(course_head, row_idx, _name)| {
+                    course_head == &id.course_head && *row_idx == id.row_idx
+                });
+            // Sanity check that nodes marked `is_start` actually do correspond to a start node
+            assert!(
+                idx.is_some(),
+                "NodeId has `is_start`, but it doesn't come from `Layout::starts`"
+            );
+            idx
+        } else {
+            None
+        };
 
         // If some way of ending this segment was found (i.e. a Link or an end-point), then build a
         // new Some(Segment), otherwise bubble the `None` value
@@ -130,8 +152,8 @@ impl Layout {
             links: end_links,
             length,
             node_id: id.clone(),
-            is_start: id.is_start,
-            is_end,
+            start_idx,
+            end_idx,
         })
     }
 
@@ -283,8 +305,8 @@ pub(crate) struct Segment {
     pub(crate) length: usize,
     pub(crate) links: Vec<(usize, NodeId)>,
 
-    pub(crate) is_start: bool,
-    pub(crate) is_end: bool,
+    pub(crate) start_idx: Option<usize>,
+    pub(crate) end_idx: Option<usize>,
 }
 
 impl Segment {

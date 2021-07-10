@@ -14,7 +14,8 @@ use itertools::Itertools;
 use log::Level;
 
 use crate::{
-    graph::{Graph, Node, NodeId, ProtoGraph},
+    graph::{Graph, Node, ProtoGraph},
+    layout::NodeId,
     score::AtomicScore,
     stats::Stats,
     Comp, Config, Score, Spec,
@@ -140,7 +141,7 @@ impl Worker {
         /* ===== MOVE TO START NODE ===== */
 
         // Update the internal state to point to the start node of the `prefix`
-        let start_node = graph.get_start_node(&prefix.start_node).unwrap();
+        let start_node = graph.get_start_node(prefix.start_node).unwrap();
         self.comp_prefix.start_node = prefix.start_node;
         self.comp_prefix.successor_idxs.clear();
 
@@ -472,13 +473,16 @@ impl Worker {
         }
 
         // Traverse the prototype graph and generate the comp
-        let (links_taken, end_id) = self.shared_data.spec.prototype_graph.generate_path(
-            &self.comp_prefix.start_node,
-            self.comp_prefix.successor_idxs.iter().cloned(),
-        );
+        let (start_idx, links_taken, end_idx) =
+            self.shared_data.spec.prototype_graph.generate_path(
+                self.comp_prefix.start_node,
+                self.comp_prefix.successor_idxs.iter().cloned(),
+                &self.shared_data.spec.layout,
+            );
         let comp = Comp {
+            start_idx,
             links_taken,
-            end_id,
+            end_idx,
             length,
             score,
             ranking_score,
@@ -488,7 +492,7 @@ impl Worker {
             println!(
                 "[{:>2}] FOUND COMP! {}",
                 self.thread_id,
-                comp.to_string(&self.shared_data.spec)
+                comp.to_string(&self.shared_data.spec.layout)
             );
         }
 

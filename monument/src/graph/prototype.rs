@@ -10,8 +10,8 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    graph::falseness::FalsenessTable, layout::Layout, music::Breakdown, score::Score, Config,
-    MusicType, Segment, SuccSortStrat,
+    compose::QueueElem, graph::falseness::FalsenessTable, layout::Layout, music::Breakdown,
+    score::Score, Config, MusicType, Segment, SuccSortStrat,
 };
 
 use super::NodeId;
@@ -87,7 +87,7 @@ impl ProtoGraph {
             layout
                 .starts
                 .iter()
-                .map(|(start_course_head, start_row_idx)| {
+                .map(|(start_course_head, start_row_idx, _name)| {
                     FrontierNode(
                         NodeId::new(start_course_head.to_owned(), *start_row_idx, true),
                         0,
@@ -140,8 +140,8 @@ impl ProtoGraph {
                     length: segment.length,
                     score,
 
-                    is_start: segment.is_start,
-                    is_end: segment.is_end,
+                    start_idx: segment.start_idx,
+                    end_idx: segment.end_idx,
 
                     min_distance_from_rounds: *distance,
                     // Distances to rounds are computed during optimisation
@@ -192,7 +192,7 @@ impl ProtoGraph {
     fn recompute_distances_from_rounds(&mut self) {
         // Initialise the frontier with all the starting nodes (with distance 0)
         let mut frontier: BinaryHeap<Reverse<FrontierNode>> = self
-            .start_nodes()
+            .unordered_start_nodes()
             .map(|(id, _node)| Reverse(FrontierNode(id.clone(), 0)))
             .collect();
 
@@ -268,7 +268,7 @@ impl ProtoGraph {
         let mut reachable_nodes: HashSet<NodeId> = HashSet::with_capacity(self.nodes.len());
 
         // Run DFA on the graph starting from rounds, adding the nodes to `reachable_nodes`
-        for (id, _node) in self.start_nodes() {
+        for (id, _node) in self.unordered_start_nodes() {
             self.explore(id, &mut reachable_nodes);
         }
 
@@ -300,7 +300,7 @@ impl ProtoGraph {
                 // checking if end nodes are given a distance, and if not then panic).
                 None => {
                     assert!(
-                        node.is_end,
+                        node.is_end(),
                         "End node marked as being unable to reach rounds!"
                     );
                     nodes_to_remove.insert(id.clone());
@@ -433,12 +433,12 @@ impl ProtoGraph {
 
     /* ===== OPTIMISATION HELPER FUNCTIONS ===== */
 
-    pub(super) fn start_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
-        self.nodes.iter().filter(|(_id, node)| node.is_start)
+    pub(super) fn unordered_start_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
+        self.nodes.iter().filter(|(_id, node)| node.is_start())
     }
 
     fn end_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
-        self.nodes.iter().filter(|(_id, node)| node.is_end)
+        self.nodes.iter().filter(|(_id, node)| node.is_end())
     }
 
     /// Remove nodes from the graph by reference
@@ -461,23 +461,34 @@ impl ProtoGraph {
     /// the compositions.
     pub fn generate_path(
         &self,
-        start_node: &NodeId,
+        start_idx: usize,
         succ_idxs: impl IntoIterator<Item = usize>,
-    ) -> (Vec<(NodeId, usize)>, NodeId) {
+        layout: &Layout,
+    ) -> (usize, Vec<usize>, usize) {
         // Start the traversal at the start node
-        let mut node_id = start_node;
+        let mut node_id = &{
+            let (start_ch, start_row_idx, _start_name) = &layout.starts[start_idx];
+            NodeId::new(start_ch.to_owned(), *start_row_idx, true)
+        };
         // Follow succession references until the path finishes
         let path = succ_idxs
             .into_iter()
             .map(|succ_idx| {
                 let (link_idx, succ_id) = &self.nodes.get(node_id).unwrap().successors[succ_idx];
-                let res = (node_id.clone(), *link_idx);
                 node_id = succ_id;
-                res
+                *link_idx
             })
             .collect_vec();
-        // Return this and the start node
-        (path, node_id.clone())
+        // Get the `end_idx` from the last node of the path (which, if this is a complete
+        // composition, should be an end node)
+        let end_idx = self
+            .nodes
+            .get(node_id)
+            .unwrap()
+            .end_idx
+            .expect("Composition should end at an end node");
+        // Return the whole path
+        (start_idx, path, end_idx)
     }
 
     /// Gets the distance to rounds of a given [`NodeId`] (if a corresponding [`ProtoNode`]
@@ -497,19 +508,16 @@ impl ProtoGraph {
     /// Creates `num_prefixes` unique prefixes which are as short as possible (i.e. distribute the
     /// composing work as evenly as possible).  **NOTE**: This doesn't check the truth of the
     /// resulting prefixes (yet), so it's worth generating more prefixes than you have threads.
-    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<() /* QueueElem */> {
-        todo!();
-        /*
+    pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<QueueElem> {
         // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
         // than `num_prefixes` in length, at which point it becomes our prefix list.
-        let num_start_nodes = self.start_nodes().count();
+        let num_start_nodes = self.unordered_start_nodes().count();
         let mut frontier: VecDeque<(QueueElem, &ProtoNode)> = self
-            .start_nodes()
-            .map(|(id, node)| {
-                (
-                    QueueElem::just_start_node(id.clone(), num_start_nodes),
-                    node,
-                )
+            .nodes
+            .iter()
+            .filter_map(|(_id, node)| {
+                node.start_idx
+                    .map(|start_idx| (QueueElem::just_start_node(start_idx, num_start_nodes), node))
             })
             .collect();
 
@@ -525,7 +533,7 @@ impl ProtoGraph {
                     // Add the new prefix to the back of the frontier
                     frontier.push_back((new_prefix, succ_node));
                 } else {
-                    println!("!Successor node {} doesn't exist", succ_id);
+                    println!("ERROR! Successor node {} doesn't exist", succ_id);
                 }
             }
 
@@ -535,15 +543,14 @@ impl ProtoGraph {
         }
 
         frontier.into_iter().map(|(prefix, _node)| prefix).collect()
-        */
     }
 }
 
 /// A node in a prototype graph
 #[derive(Debug, Clone)]
 pub(super) struct ProtoNode {
-    pub is_start: bool,
-    pub is_end: bool,
+    pub start_idx: Option<usize>,
+    pub end_idx: Option<usize>,
 
     /// The number of rows in this node
     pub length: usize,
@@ -563,6 +570,18 @@ pub(super) struct ProtoNode {
     /// is required so that a human-friendly representation of the composition can be generated.
     pub successors: Vec<(usize, NodeId)>,
     pub predecessors: Vec<NodeId>,
+}
+
+impl ProtoNode {
+    /// Is this `ProtoNode` a start node?
+    pub fn is_start(&self) -> bool {
+        self.start_idx.is_some()
+    }
+
+    /// Is this `ProtoNode` a start node?
+    pub fn is_end(&self) -> bool {
+        self.end_idx.is_some()
+    }
 }
 
 /// An orderable type for storing nodes on Dijkstra's Algorithm's frontier

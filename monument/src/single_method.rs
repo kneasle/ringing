@@ -288,9 +288,11 @@ pub fn single_method_layout(
             }
 
             // This is 'true' if `link` and `link2` are equal apart from their course head masks.
-            // We don't check the names, since it's possible (often in the case of plain leads)
-            // that the same link is given two different names (also if the user inputs two
-            // identical but differently named calls).
+            // We don't check the names, since it's possible that the same link is given two
+            // different names (often in the case of plain leads or if the user inputs two
+            // identical but differently named calls).  The tree search will likely treat these two
+            // paths as different and search them separately (i.e. run that part of the search
+            // twice), so it's worth de-duplicating them here.
             let are_links_otherwise_equal = link.from == link2.from
                 && link.to == link2.to
                 && link.course_head_transposition == link2.course_head_transposition;
@@ -358,8 +360,16 @@ pub fn single_method_layout(
 
     /* STEP 6: GENERATE STARTS/ENDS, AND CREATE A LAYOUT */
 
+    #[derive(Debug, Clone)]
+    struct RoundsLoc {
+        course_head: RowBuf,
+        row_idx: RowIdx,
+        start_name: &'static str,
+        end_name: &'static str,
+    }
+
     // Figure out where rounds can appear in courses which satisfy the course head masks
-    let mut rounds_locations = Vec::<(RowBuf, RowIdx)>::new();
+    let mut rounds_locations = Vec::<RoundsLoc>::new();
 
     let rounds = RowBuf::rounds(method.stage());
     for (ch_mask, _) in course_head_masks {
@@ -367,11 +377,17 @@ pub fn single_method_layout(
             let transposed_mask = ch_mask.mul(annot_row.row());
             // If rounds satisfies `transposed_mask`, then this location can contain rounds
             if transposed_mask.matches(&rounds) {
+                // Decide whether this is snap start/finish
+                let is_snap = annot_row.annot().0 != 0;
                 let course_head_containing_rounds = annot_row.row().inv();
-                rounds_locations.push((
-                    course_head_containing_rounds.clone(),
-                    RowIdx::new(BLOCK_IDX, row_idx),
-                ));
+                rounds_locations.push(RoundsLoc {
+                    course_head: course_head_containing_rounds,
+                    row_idx: RowIdx::new(BLOCK_IDX, row_idx),
+                    // We name snap starts with `<` and snap finishes with `>`, to show that some
+                    // leads aren't fully rung
+                    start_name: if is_snap { "<" } else { "" },
+                    end_name: if is_snap { ">" } else { "" },
+                });
             }
         }
     }
@@ -384,8 +400,21 @@ pub fn single_method_layout(
     Ok(Layout {
         blocks: vec![plain_rows],
         links,
-        starts: rounds_locations.clone(),
-        ends: rounds_locations,
+        // Convert the `rounds_locations` into starts and finishes
+        starts: rounds_locations
+            .iter()
+            .map(|loc| {
+                (
+                    loc.course_head.to_owned(),
+                    loc.row_idx,
+                    loc.start_name.to_owned(),
+                )
+            })
+            .collect_vec(),
+        ends: rounds_locations
+            .into_iter()
+            .map(|loc| (loc.course_head, loc.row_idx, loc.end_name.to_owned()))
+            .collect_vec(),
     })
 }
 

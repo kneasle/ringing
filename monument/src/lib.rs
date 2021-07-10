@@ -2,9 +2,11 @@
 
 use std::{ops::Range, sync::Arc};
 
+use log::LevelFilter;
+
 use graph::ProtoGraph;
 
-// mod compose;
+mod compose;
 mod graph;
 mod layout;
 pub mod mask;
@@ -18,9 +20,8 @@ mod stats;
 use bellframe::Row;
 
 // Top level re-exports for the convenience of people using this as a library (i.e. me)
-// pub use compose::{compose, Comp, SearchResults};
+pub use compose::{compose, Comp, SearchResults};
 pub use layout::*;
-use log::LevelFilter;
 pub use music::MusicType;
 pub use score::Score;
 
@@ -68,6 +69,12 @@ impl Spec {
             music_types,
             normalise_music,
         })
+    }
+
+    /// Gets the [`Layout`] of this `Spec`
+    #[inline]
+    pub fn layout(&self) -> &Layout {
+        &self.layout
     }
 }
 

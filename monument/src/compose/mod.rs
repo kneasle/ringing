@@ -3,7 +3,6 @@
 use std::{
     cmp::Ordering,
     collections::VecDeque,
-    fmt::Write,
     io::Write as IoWrite,
     iter,
     sync::{
@@ -16,16 +15,14 @@ use std::{
 };
 
 use atomic_float::AtomicF64;
-use bellframe::RowBuf;
 use itertools::Itertools;
 use number_prefix::NumberPrefix;
 use shortlist::Shortlist;
 
 use crate::{
-    graph::NodeId,
     score::{AtomicScore, Score},
     stats::Stats,
-    Config, SegmentId, Spec,
+    Config, Layout, Spec,
 };
 
 use worker::{SharedData, Worker};
@@ -252,8 +249,9 @@ pub struct SearchResults {
 /// order to provide human-friendly data (like the calling string).
 #[derive(Debug, Clone)]
 pub struct Comp {
-    pub(crate) links_taken: Vec<(NodeId, usize)>,
-    pub(crate) end_id: NodeId,
+    pub(crate) start_idx: usize,
+    pub(crate) links_taken: Vec<usize>,
+    pub(crate) end_idx: usize,
     pub length: usize,
     /// The absolute score of the composition
     pub score: Score,
@@ -264,28 +262,28 @@ pub struct Comp {
 
 impl Comp {
     /// Generates the call string for this `Comp`
-    pub fn call_string(&self, spec: &Spec) -> String {
+    pub fn call_string(&self, layout: &Layout) -> String {
         let mut string = String::new();
 
-        write!(&mut string, "{}:", usize::from(self.links_taken[0].0.seg)).unwrap();
-
-        for (id, link_idx) in &self.links_taken {
-            let segment = spec.layout.get_segment(id.seg);
-            string.push_str(&segment.name);
-            string.push_str(&segment.links[*link_idx].display_name);
+        // Push the `start`'s name (e.g. for snap starts)
+        string.push_str(&layout.starts[self.start_idx].2);
+        // Push the `display_name` of each link taken
+        for link_idx in &self.links_taken {
+            string.push_str(&layout.links[*link_idx].display_name);
         }
-        string.push_str(&spec.layout.get_segment(self.end_id.seg).name);
+        // Push the `end`'s name (e.g. for snap finishes)
+        string.push_str(&layout.ends[self.end_idx].2);
 
         string
     }
 
     /// Generates a 1-line summary string of this `Comp`
-    pub fn to_string(&self, spec: &Spec) -> String {
+    pub fn to_string(&self, layout: &Layout) -> String {
         format!(
             "(len: {}, score: {}) {}",
             self.length,
             self.score,
-            self.call_string(spec)
+            self.call_string(layout)
         )
     }
 }
@@ -339,9 +337,9 @@ impl QueueElem {
         Self { prefix, percentage }
     }
 
-    pub(crate) fn just_start_node(id: NodeId, num_start_nodes: usize) -> Self {
+    pub(crate) fn just_start_node(start_idx: usize, num_start_nodes: usize) -> Self {
         QueueElem {
-            prefix: CompPrefix::just_start_node(id),
+            prefix: CompPrefix::just_start_node(start_idx),
             /// Split the percentage equally between each start node
             percentage: 100.0 / num_start_nodes as f64,
         }
@@ -358,7 +356,8 @@ impl QueueElem {
 #[derive(Debug, Clone)]
 pub(crate) struct CompPrefix {
     /// Which of the possible starting nodes was used to start the currently exploring composition
-    start_node: NodeId,
+    /// (as an index into the [`Layout`]'s list of starts
+    start_node: usize,
     /// Which links where chosen after each node.  These are indices into the `successors` array in
     /// each [`Node`].  This is really cheap to track during the composing loop, but means that
     /// recovering a human-friendly representation requires traversing the node graph and
@@ -370,12 +369,14 @@ impl CompPrefix {
     /// Creates a new `CompPrefix` with an empty start [`NodeId`] and no links taken.  The empty
     /// [`NodeId`] must be overwritten before search commences otherwise the code will panic.
     pub fn empty() -> Self {
-        Self::just_start_node(NodeId::new(SegmentId::from(0), RowBuf::empty()))
+        // We leave a 'poison' value of `usize::MAX` to ensure that this is overwritten before
+        // being used
+        Self::just_start_node(usize::MAX)
     }
 
     /// Creates a new `CompPrefix` with an empty start [`NodeId`] and no links taken.  The empty
     /// [`NodeId`] must be overwritten before search commences otherwise the code will panic.
-    pub fn just_start_node(start_node: NodeId) -> Self {
+    pub fn just_start_node(start_node: usize) -> Self {
         Self {
             start_node,
             successor_idxs: Vec::new(),

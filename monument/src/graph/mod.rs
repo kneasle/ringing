@@ -2,15 +2,8 @@
 //! the details of how the node graph is represented in memory, and provides a safe interface to
 //! that graph to the rest of the code.
 
-use std::{
-    alloc,
-    collections::HashMap,
-    fmt::{Debug, Display, Formatter},
-    pin::Pin,
-    ptr::addr_of_mut,
-};
+use std::{alloc, collections::HashMap, fmt::Debug, pin::Pin, ptr::addr_of_mut};
 
-use bellframe::RowBuf;
 use itertools::Itertools;
 
 use crate::{graph::prototype::ProtoNode, layout::NodeId, score::Score};
@@ -29,8 +22,9 @@ pub(crate) struct Graph<P, E> {
     /// The set of nodes reachable in the graph.  For the rest of the code, these are entirely
     /// owned by the `Graph` (which acts like an arena for dynamically sized [`Node`]s).
     nodes: HashMap<NodeId, Pin<Box<Node<P, E>>>>,
-    /// The [`Node`]s which can start a composition
-    start_nodes: HashMap<NodeId, *const Node<P, E>>,
+    /// The [`Node`]s which can start a composition, referred to by their index from
+    /// [`Layout::starts`]
+    start_nodes: HashMap<usize, *const Node<P, E>>,
 }
 
 impl<P, E> Graph<P, E> {
@@ -43,10 +37,11 @@ impl<P, E> Graph<P, E> {
     where
         P: Unpin,
     {
-        // Check that the only nodes with no successors are the end nodes (this fact is used for
-        // checking that a comp has come round)
+        // Check that the only nodes with no successors are the end nodes (this is used by the
+        // composing loop as a way to test for end nodes without storing extra data in the
+        // `NodePayload`)
         for node in prototype_graph.nodes.values() {
-            assert_eq!(node.successors.is_empty(), node.is_end);
+            assert_eq!(node.successors.is_empty(), node.is_end());
         }
         // For each reachable node ID, generate a blank node (i.e. a node where all the
         // succession/falseness pointers are `null`, but everything else is initialised) along with
@@ -108,11 +103,15 @@ impl<P, E> Graph<P, E> {
             std::alloc::Layout::new::<&Node<P, E>>()
         );
 
-        // Get the pointers for the possible starting nodes
-        let start_nodes: HashMap<NodeId, *const Node<P, E>> = nodes
+        // Get the pointers for the possible starting nodes, along with the indices pointing to
+        // which starts they correspond to
+        let start_nodes: HashMap<usize, *const Node<P, E>> = nodes
             .iter()
-            .filter(|(_id, (_node, proto_node))| proto_node.is_start)
-            .map(|(&id, (node, _proto_node))| (id.clone(), *node as *const Node<P, E>))
+            .filter_map(|(_id, (node, proto_node))| {
+                proto_node
+                    .start_idx
+                    .map(|idx| (idx, *node as *const Node<P, E>))
+            })
             .collect();
 
         // Now that we've initialised all the nodes, we wrap the nodes into pinned boxes (so that
@@ -127,9 +126,9 @@ impl<P, E> Graph<P, E> {
     }
 
     /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
-    pub fn get_start_node(&self, id: &NodeId) -> Option<&Node<P, E>> {
+    pub fn get_start_node(&self, idx: usize) -> Option<&Node<P, E>> {
         self.start_nodes
-            .get(id)
+            .get(&idx)
             .map(|ptr| unsafe { ptr.as_ref() }.unwrap())
     }
 
@@ -313,15 +312,4 @@ pub struct ExtraNode<P> {
     /// it originally refers to (because links may be reordered or removed during graph
     /// optimisation).
     link_map: Vec<usize>,
-}
-
-/// The `Position` of a [`Node`] within the composition
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum Position {
-    /// This [`Node`] can only appear as the start of a composition
-    Start,
-    /// This [`Node`] can only appear in the middle of a composition
-    Central,
-    /// This [`Node`] can only appear as the end of a composition
-    End,
 }

@@ -1,5 +1,6 @@
-// use monument::Comp;
-use monument::{Score, Spec};
+use monument::Comp;
+use monument::Layout;
+use monument::Score;
 use serde::Deserialize;
 
 /// The data required to turn this input file into a test case for the test/benchmark harness
@@ -30,16 +31,14 @@ pub struct CompResult {
 }
 
 impl CompResult {
-    /*
-    pub fn from_comp(comp: &Comp, spec: &Spec) -> Self {
+    pub fn from_comp(comp: &Comp, layout: &Layout) -> Self {
         Self {
-            call_string: comp.call_string(spec),
+            call_string: comp.call_string(layout),
             length: comp.length,
             score: comp.score,
             ranking_score: comp.ranking_score,
         }
     }
-    */
 }
 
 impl From<CompResultIsize> for CompResult {

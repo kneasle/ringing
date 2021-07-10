@@ -69,7 +69,7 @@ fn run_test_case(test_case: TestCase, config: Config) {
     let mut comps = results
         .comps
         .iter()
-        .map(|c| CompResult::from_comp(c, &spec))
+        .map(|c| CompResult::from_comp(c, spec.layout()))
         .collect_vec();
 
     match test_case.test_data.results {
