@@ -293,14 +293,13 @@ pub fn single_method_layout(
             // identical but differently named calls).  The tree search will likely treat these two
             // paths as different and search them separately (i.e. run that part of the search
             // twice), so it's worth de-duplicating them here.
-            let are_links_otherwise_equal = link.from == link2.from
-                && link.to == link2.to
-                && link.course_head_transposition == link2.course_head_transposition;
+            let are_links_otherwise_equal = link.eq_without_name_or_ch_mask(link2);
 
             if are_links_otherwise_equal {
                 if link.course_head_mask == link2.course_head_mask {
                     // If the links are identical, then we remove the one with the least index.
-                    // This way, only the highest indexed link will survive
+                    // This way, exactly one link from a group of identical links (the one with the
+                    // highest index) will survive
                     if i < i2 {
                         redundant_link_idxs.push(i);
                     }
