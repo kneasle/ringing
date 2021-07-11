@@ -299,10 +299,11 @@ impl ProtoGraph {
                 // hasn't been run after `recompute_distances_to_rounds` (which we can detect by
                 // checking if end nodes are given a distance, and if not then panic).
                 None => {
-                    assert!(
-                        node.is_end(),
-                        "End node marked as being unable to reach rounds!"
-                    );
+                    if node.is_end() {
+                        // If an end node wasn't given a distance, then the distances to rounds are
+                        // presumed invalid
+                        panic!("End node marked as being unable to reach rounds!");
+                    }
                     nodes_to_remove.insert(id.clone());
                 }
             }
