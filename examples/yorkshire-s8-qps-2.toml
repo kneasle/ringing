@@ -1,0 +1,14 @@
+length = "QP"
+base_calls = "near"
+
+[method]
+stage = 8
+place_notation = "x38x14x58x16x12x38x14x78,12"
+
+[[music]]
+run_lengths = [4, 5, 6, 7]
+# weight defaults to 1.0
+
+[[music]]
+patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
+weight = 0.5

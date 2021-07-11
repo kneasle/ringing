@@ -3,7 +3,10 @@
 A general-purpose, music-oriented composing engine for [Change
 Ringing](https://en.wikipedia.org/wiki/Change_ringing).
 
+A tutorial can be found [here](tutorial.md), but the tutorial is just as W.I.P. as Monument itself.
+
 ## Features
+
 - **General purpose**: The core composing engine makes no assumptions about the compositions that
   it's generating - it just takes as input a set of blocks of rows and information about how they
   can be joined together (see the `Layout` type).  Therefore Monument can, in theory, handle
@@ -13,8 +16,7 @@ Ringing](https://en.wikipedia.org/wiki/Change_ringing).
   not terminate until it has generated the `n` _best_ compositions according to that definition
   (which satisfy the other constraints, e.g.  length).  It might take a long time to completely rule
   out the possibility of better compositions, so Monument tries to reorder the search as much as
-  possible to generate good compositions quickly (so even partial runs will produce some decent
-  results).
+  possible to generate good compositions quickly (so even partial runs will produce good results).
 - **Human-friendly**: The input format should be as human friendly as possible, with shortcuts to do
   common tasks (e.g. asking for 4-, 5-, 6- and 7-bell runs) and sane defaults (e.g. generate
   standard calling positions by default).  Monument uses [TOML](https://toml.io/en/) for its input
@@ -29,6 +31,7 @@ Ringing](https://en.wikipedia.org/wiki/Change_ringing).
   will only become noticeable if you have at least thousands of CPU cores (which seems unachievable).
 
 ## Intended Features
+
 - Course head/coursing order patters (e.g. bias towards courses with handbell pairs coursing)
 - Adding weights to calling patterns (e.g. to bias towards sparser callings, or to prevent blocks of
   5 in Bristol Major)
@@ -36,6 +39,7 @@ Ringing](https://en.wikipedia.org/wiki/Change_ringing).
 - Require specific blocks (to run linkage search)
 
 ## Intentional Non-Features
+
 - Rotational search: This is a search technique employed by [SMC](https://github.com/GACJ/smc)
   where you only search one rotation of every possible composition (e.g. only generate one of
   `WWWHHH`, `HWWWHH`, `HHWWWH`) and rotate them afterwards.  This is clearly an advantageous way to
@@ -46,7 +50,7 @@ Ringing](https://en.wikipedia.org/wiki/Change_ringing).
      composition.  But Monument is only trying to find the **best** compositions, meaning that it
      can optimise the search by removing large swathes of the search space.
   2. Rotational search can't be easily parallelised, immediately missing out on a guaranteed
-     speedup of at least 8x on modern machines (speedup which will apply uniformly to all searches).
+     speedup of at least 8x on modern machines (speedup which always apply to any search).
   3. Additionally, rotational search always outputs the compositions in a specific, deterministic
      order.  Therefore, if the best composition exists near the end of a rotational search there is
      no way for the algorithm to produce it faster - you always have to wait for the entire search
