@@ -16,7 +16,7 @@ patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
 
 # This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]
-runtime_estimate = 0.022 # seconds
+runtime_estimate = 0.22 # seconds
 results = [
     { length = 1344, score = 429496729600, call_string = "sHsWHBHVsMsMFsWBsH", ranking_score = 319566019 },
     { length = 1312, score = 420906795008, call_string = "MsHsVMMsFMHsMWsHsH", ranking_score = 320813105 },
