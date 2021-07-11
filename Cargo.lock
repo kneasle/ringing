@@ -195,6 +195,7 @@ dependencies = [
  "itertools",
  "log",
  "monument",
+ "number_prefix",
  "separator",
  "serde",
  "serde_derive",
