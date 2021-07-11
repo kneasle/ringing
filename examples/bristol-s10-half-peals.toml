@@ -1,0 +1,78 @@
+length = 2520
+num_comps = 50
+base_calls = "far"
+
+[method]
+place_notation = "-50-14.50-50.36.14-70.58.16-16.70-16-10,10"
+name = "Bristol"
+stage = "Royal"
+
+[[music]]
+run_lengths = [4, 5, 6, 7]
+
+# Counting 67890s as 5-bell runs tends to make Monument generate very static compositions, leaving 6
+# unaffected for as long as possible
+[[music]]
+patterns = ["09876*", "*67890"]
+weight = -0.8
+
+# Boost scores of LB5s in order to make Monument generate more of them
+[[music]]
+patterns = ["65432*", "*23456", "23456*", "65432*"]
+weight = 2
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 0.460 # seconds
+results = [
+    { length = 2520, score = 1955069110784, call_string = "BIVVsBIsVIVIsVsIsVsB", ranking_score = 775821075 },
+    { length = 2520, score = 1956787098624, call_string = "sVsIBVVsBIsVIBIV", ranking_score = 776502816 },
+    { length = 2520, score = 1958505084416, call_string = "BIVsVBVsIVsVsIsVsB", ranking_score = 777184557 },
+    { length = 2520, score = 1958505083904, call_string = "sBsIVsVsBsBVsIsVsIsVsB", ranking_score = 777184557 },
+    { length = 2520, score = 1958505084928, call_string = "sBsIVsBsIsVsIsBsIVsVsIsVsB", ranking_score = 777184557 },
+    { length = 2520, score = 1958505084416, call_string = "sBsIVsVVsIsVsBsBsIsVsB", ranking_score = 777184557 },
+    { length = 2520, score = 1960223072768, call_string = "sVsBBBIIsVsBsVsBsIsV", ranking_score = 777866298 },
+    { length = 2520, score = 1962800051712, call_string = "sBsIVsVBsIsVsBIVsVsIsVsB", ranking_score = 778888909 },
+    { length = 2520, score = 1962800050688, call_string = "IBVsVsBsIsVsVIsI", ranking_score = 778888909 },
+    { length = 2520, score = 1963659045376, call_string = "IsVsBsVsIsVsBsBsIVsIsVsBsI", ranking_score = 779229779 },
+    { length = 2520, score = 1963659045888, call_string = "sBVVsBIIsVsBsVsIsVsB", ranking_score = 779229780 },
+    { length = 2520, score = 1965377032704, call_string = "sBsIVVBsIsVBIVsVsIsVsB", ranking_score = 779911520 },
+    { length = 2520, score = 1967954012160, call_string = "BIVsVsIBVVIVI", ranking_score = 780934131 },
+    { length = 2520, score = 1967954013184, call_string = "BsVVsBIsBsIVsVsIsVsB", ranking_score = 780934132 },
+    { length = 2520, score = 1967954012672, call_string = "BIVBIBIsVsBIVsBsIsVsIsVsB", ranking_score = 780934132 },
+    { length = 2520, score = 1971389986304, call_string = "BIVsVsBIVsBsIsVsBsBsIsVsB", ranking_score = 782297613 },
+    { length = 2520, score = 1972248979456, call_string = "sBsIVsVsIsVsBsVBsIVsVsB", ranking_score = 782638483 },
+    { length = 2520, score = 1972248980480, call_string = "sBsIsVsIVsIVsBIIsBsIsVsB", ranking_score = 782638484 },
+    { length = 2520, score = 1973107973632, call_string = "sVsBsVIVsBsVsIsVsBBIV", ranking_score = 782979354 },
+    { length = 2520, score = 1973966967808, call_string = "sVsIBVVIVIBIV", ranking_score = 783320225 },
+    { length = 2520, score = 1973966967808, call_string = "sVsIBVsVsBIIBIV", ranking_score = 783320225 },
+    { length = 2520, score = 1975684953600, call_string = "sBsIVsVsIsVsBIsVsBsVsIsVsB", ranking_score = 784001965 },
+    { length = 2520, score = 1975684952576, call_string = "BIVsVsIBVsVsBII", ranking_score = 784001965 },
+    { length = 2520, score = 1976543947776, call_string = "sBsIsVsIIVBVBsIsVIsVsB", ranking_score = 784342836 },
+    { length = 2520, score = 1976543946752, call_string = "sBsIVsVsBsBsIsVsBBsIVsB", ranking_score = 784342836 },
+    { length = 2520, score = 1979979921408, call_string = "BsIVsBsBsIVsVsBsBsIsVsB", ranking_score = 785706318 },
+    { length = 2520, score = 1980838915072, call_string = "sBVVsBIsBsIVsVsIsVsB", ranking_score = 786047188 },
+    { length = 2520, score = 1984274888192, call_string = "BIVsVsBsVsIVsVsIsVsB", ranking_score = 787410669 },
+    { length = 2520, score = 1984274888704, call_string = "sBsIVsIsVsBsIIsVsBsVsIsVsB", ranking_score = 787410670 },
+    { length = 2520, score = 1985133881856, call_string = "BIVVIVVsBsIsVsIsVsB", ranking_score = 787751540 },
+    { length = 2520, score = 1985992875520, call_string = "sVBVsIVsVsIsVsBBIV", ranking_score = 788092410 },
+    { length = 2520, score = 1987710862848, call_string = "sBsIsVsIIVBBsIsVBIsVsB", ranking_score = 788774151 },
+    { length = 2520, score = 1989428848640, call_string = "sBsIVsVsBsIsVsVBsIVsVsB", ranking_score = 789455892 },
+    { length = 2520, score = 1989428849152, call_string = "BIVsVsIsVsBsBsIsVBsIsVsB", ranking_score = 789455892 },
+    { length = 2520, score = 1992864822784, call_string = "sBsIVsVsIsVsIVsVsIsVsB", ranking_score = 790819374 },
+    { length = 2520, score = 1992864822784, call_string = "sBsIVsVsBsIsVIsVsBsVsIsVsB", ranking_score = 790819374 },
+    { length = 2520, score = 2001454757888, call_string = "sBsIVsIsVsBsIsBsIVsVsIsVsB", ranking_score = 794228078 },
+    { length = 2520, score = 2002313751552, call_string = "sVsIBsVsIsVsIsVsBBIV", ranking_score = 794568949 },
+    { length = 2520, score = 2005749723648, call_string = "sBsIVsVsIsVsBsVsIBsIsB", ranking_score = 795932430 },
+    { length = 2520, score = 2005749724160, call_string = "BIVsVsIBsVsIsVsIsVsB", ranking_score = 795932430 },
+    { length = 2520, score = 2010044691968, call_string = "sBsIVsVsBsIsVsBsIVsVsIsVsB", ranking_score = 797636782 },
+    { length = 2520, score = 2013480666112, call_string = "BIVsVsBsIsVVBsIsVIsVsB", ranking_score = 799000264 },
+    { length = 2520, score = 2018634626048, call_string = "BIVsVsBIIVIsVsIsVsB", ranking_score = 801045486 },
+    { length = 2520, score = 2019493620736, call_string = "BVBBIIsVsBsVsIsVsB", ranking_score = 801386357 },
+    { length = 2520, score = 2022929592832, call_string = "sBsIVsVsBsIsVsVsIBsIsB", ranking_score = 802749838 },
+    { length = 2520, score = 2030660535808, call_string = "VIVIVIsVsIsVsBBIV", ranking_score = 805817672 },
+    { length = 2520, score = 2032378522624, call_string = "sBsVBBIIsVsBsVsIsVsB", ranking_score = 806499413 },
+    { length = 2520, score = 2037532483072, call_string = "BIVsVsIsVsBBsIsVBIsVsB", ranking_score = 808544636 },
+    { length = 2520, score = 2071892221440, call_string = "sVsBsVsIVsVsIsVsBBIV", ranking_score = 822179452 },
+    { length = 2520, score = 2075328195072, call_string = "BIVVIVIVIsVsIsVsB", ranking_score = 823542934 },
+]
