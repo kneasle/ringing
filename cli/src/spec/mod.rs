@@ -37,9 +37,18 @@ pub struct AbstractSpec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "get_30")]
     num_comps: usize,
+
     /// Which calls should be used by default
     base_calls: Option<BaseCalls>,
-    /// Which course heads masks are allowed
+    /// Should Monument normalise music scores by length when generating comps.
+    #[serde(default = "get_true")]
+    normalise_music: bool,
+
+    /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
+    /// large stages)
+    #[serde(default)]
+    split_tenors: bool,
+    /// Which course heads masks are allowed (overrides `split_tenors`)
     course_heads: Option<Vec<String>>,
 
     /// The [`Method`] who's compositions we are after
@@ -78,18 +87,21 @@ impl AbstractSpec {
             .iter()
             .map(|b| b.to_music_type(method.stage()))
             .collect_vec();
-        let course_head_masks = self.course_heads.as_ref().map_or_else(
+        let course_head_masks = match (self.course_heads.as_ref(), self.split_tenors) {
+            // If masks are specified, parse all the course head mask strings into `Mask`s,
+            // defaulting to the tenor as calling bell
+            (Some(ch_mask_strings), _) => ch_mask_strings
+                .iter()
+                .map(|s| (Mask::parse(s), tenor))
+                .collect_vec(),
+            // If no masks were given but `split_tenors` was `true`, then only fix tenor and treble
+            (None, true) => vec![(
+                Mask::fix_bells(method.stage(), vec![Bell::TREBLE, tenor]),
+                tenor,
+            )],
             // Default to tenors together, with the tenor as 'calling bell'
-            || vec![(gen_tenors_together_mask(self.method.stage), tenor)],
-            // Otherwise parse all the course head mask strings into `Mask`s, again defaulting to
-            // the tenor as calling bell
-            |ch_mask_strings| {
-                ch_mask_strings
-                    .iter()
-                    .map(|s| (Mask::parse(s), tenor))
-                    .collect_vec()
-            },
-        );
+            (None, false) => vec![(gen_tenors_together_mask(self.method.stage), tenor)],
+        };
 
         // Generate a `Layout` from the data about the method and calls
         let layout = single_method_layout(&method, &calls, &course_head_masks, config)
@@ -101,7 +113,7 @@ impl AbstractSpec {
             self.num_comps,
             music_types,
             // Always normalise music
-            true,
+            self.normalise_music,
             config,
         ))
     }
@@ -223,14 +235,16 @@ impl MusicSpec {
 
 /* Deserialization helpers */
 
-#[inline(always)]
 fn get_one() -> f32 {
     1.0
 }
 
-#[inline(always)]
 fn get_30() -> usize {
     30
+}
+
+fn get_true() -> bool {
+    true
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
