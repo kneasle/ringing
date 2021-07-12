@@ -1,30 +1,36 @@
 //! Use the `examples/` folder as test cases/benchmarks
 
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
+use colored::Colorize;
 use glob::glob;
 use itertools::Itertools;
-use monument::{Config, SearchResults};
+use monument::Config;
 use monument_cli::{
     spec::AbstractSpec,
     test_data::{CompResult, TestData},
 };
 
-pub fn main(max_runtime: Duration) -> std::io::Result<()> {
-    let mut testing_dir = std::env::current_dir()?;
+pub fn main(max_runtime: Duration, is_bench: bool) -> std::io::Result<()> {
+    let mut repo_root_path = std::env::current_dir()?;
     // This always runs in the `<project root>/cli` directory not the git repo
     // root so we pop the `/cli` dir off the end of the path
-    testing_dir.pop();
-    testing_dir.push("examples/");
+    repo_root_path.pop();
+    let examples_dir = repo_root_path.join("examples/");
 
-    let mut test_file_glob = testing_dir
+    // Read all the `.toml` files from `test-cases/`, and parse them into `Spec`s
+    let mut test_file_glob = examples_dir
         .as_os_str()
         .to_owned()
         .into_string()
         .expect("Failed to convert OS string");
     test_file_glob.push_str("/**/*.toml");
-
-    // Read all the `.toml` files from `test-cases/`, and parse them into `Spec`s
     let mut test_cases = glob(&test_file_glob)
         .expect("Failed to parse glob")
         .filter_map(|file_path| TestCase::from_path(file_path.unwrap()))
@@ -38,8 +44,8 @@ pub fn main(max_runtime: Duration) -> std::io::Result<()> {
     });
 
     // Repeatedly remove long tests until the runtime drops below the required amount.  This is a
-    // really dumb quadratic time algorithm (which could be done in linear time) but I don't care -
-    // this is **really** unlikely to ever be a bottleneck
+    // really dumb quadratic time algorithm (which could easily be done in linear time) but I don't
+    // care - this is **really** unlikely to ever be a bottleneck
     let max_runtime_secs = max_runtime.as_secs_f32();
     while test_cases
         .iter()
@@ -50,20 +56,62 @@ pub fn main(max_runtime: Duration) -> std::io::Result<()> {
         test_cases.pop();
     }
 
+    // Load previous & pinned benchmark results
+    let prev_bench_file_path = repo_root_path.join(".benches_prev.json");
+    let prev_benches = load_saved_benches(&prev_bench_file_path).unwrap_or_else(HashMap::new);
+    let pinned_benches = load_saved_benches(&repo_root_path.join(".benches_pinned.json"));
+
+    // The bench results of this run will be accumulated here
+    let mut bench_results: HashMap<String, f64> = prev_benches
+        .iter()
+        .map(|(k, v)| (k.to_owned(), v.as_secs_f64()))
+        .collect();
+
     // Run the test cases
     let config = Config::default();
     for t in test_cases {
-        run_test_case(t, config.clone());
+        // Get previous benchmark results
+        let relative_path = pathdiff::diff_paths(&t.file_path, &repo_root_path).unwrap();
+        let relative_path_str = relative_path.as_os_str().to_owned().into_string().unwrap();
+
+        let prev_time = prev_benches.get(&relative_path_str).copied();
+        let pinned_time = pinned_benches
+            .as_ref()
+            .and_then(|map| map.get(&relative_path_str).copied());
+
+        // Run the test case
+        let time = run_test_case(&relative_path, t, config.clone(), prev_time, pinned_time);
+        bench_results.insert(relative_path_str, time.as_secs_f64());
+
+        // Save the bench results to disk as the previous results for the next benchmark test.  We
+        // do this after every test case, so that if the user terminates a benchmark run early,
+        // those results will be preserved
+        if is_bench {
+            std::fs::write(
+                &prev_bench_file_path,
+                serde_json::to_string(&bench_results).unwrap(),
+            )
+            .unwrap();
+        }
     }
 
     Ok(())
 }
 
-fn run_test_case(test_case: TestCase, config: Config) {
-    println!("\n\nTesting {:?}", test_case.file_path);
+fn run_test_case(
+    relative_path: &Path,
+    test_case: TestCase,
+    config: Config,
+    prev_time: Option<Duration>,
+    pinned_time: Option<Duration>,
+) -> Duration {
+    println!(
+        "\n\nTesting {}",
+        format!("{:?}", relative_path).white().bold()
+    );
 
+    // Run the test
     let arc_config = Arc::new(config);
-
     let spec = test_case.spec.to_spec(&arc_config).unwrap();
     let results = monument::compose(&spec, &arc_config);
     let mut comps = results
@@ -72,19 +120,60 @@ fn run_test_case(test_case: TestCase, config: Config) {
         .map(|c| CompResult::from_comp(c, spec.layout()))
         .collect_vec();
 
+    // Print the results
+    let summary = summary_message(comps.len(), results.time_taken, prev_time, pinned_time);
     match test_case.test_data.results {
+        // If there weren't any then we assume that this test case hasn't been made yet, so we
+        // print out the results in such a way that they can be copy/pasted into the TOML file
+        None => {
+            println!("No results ({})", summary);
+            print_toml_string(comps);
+        }
+
         // If the test file specifies some compositions, check that our results were compatible
         Some(expected_comps_float) => {
             let mut expected_comps = expected_comps_float
                 .into_iter()
                 .map(CompResult::from)
                 .collect_vec();
-            are_results_compatible(&mut expected_comps, &mut comps, &results)
+
+            match are_results_compatible(&mut expected_comps, &mut comps) {
+                // If the results are OK, say so and carry on
+                Ok(()) => println!("Results OK ({})", summary),
+                // If the results are invalid, then print a longer explanation
+                Err(error_messages) => {
+                    println!("FAILED TEST! ({})", summary);
+                    println!("");
+                    for m in error_messages {
+                        println!("ERROR: {}", m);
+                    }
+                    println!("");
+                    println!("These comps were generated:");
+                    for c in comps {
+                        println!(
+                            "(len: {}, rank score: {}) {}",
+                            c.length, c.ranking_score, c.call_string
+                        );
+                    }
+                }
+            }
         }
-        // If there weren't any then we assume that this test case hasn't been made yet, so we
-        // print out the results in such a way that they can be copy/pasted into the TOML file
-        None => print_test_string(comps),
     }
+
+    results.time_taken
+}
+
+/// Load the saved benchmark stats from `<repo_root>/.benches`.  Each item in the tuple is a
+/// mapping from file paths (relative to the repo root) to the time taken in seconds.
+fn load_saved_benches(path: &Path) -> Option<HashMap<String, Duration>> {
+    let json = std::fs::read_to_string(path).ok()?;
+    let float_map: HashMap<String, f64> = serde_json::from_str(&json).unwrap();
+    Some(
+        float_map
+            .into_iter()
+            .map(|(k, v)| (k, Duration::from_secs_f64(v)))
+            .collect(),
+    )
 }
 
 /// Check the compatibility of two sets of compositions.  This is essentially element-wise
@@ -92,8 +181,7 @@ fn run_test_case(test_case: TestCase, config: Config) {
 fn are_results_compatible(
     expected_comps: &mut [CompResult],
     comps: &mut [CompResult],
-    results: &SearchResults,
-) {
+) -> Result<(), Vec<String>> {
     let mut error_messages: Vec<String> = Vec::new();
 
     // Check that both comp lists are the same length
@@ -146,31 +234,61 @@ fn are_results_compatible(
 
     // Print error messages, or an OK message
     if error_messages.is_empty() {
-        println!(
-            "Results OK ({} comps in {:.2?})",
-            comps.len(),
-            results.time_taken
-        );
+        Ok(())
     } else {
-        println!("");
-        println!("FAILED TEST!");
-        println!("");
-        for m in error_messages {
-            println!("ERROR: {}", m);
-        }
-        println!("");
-        println!("These comps were generated:");
-        for c in comps {
-            println!(
-                "(len: {}, rank score: {}) {}",
-                c.length, c.ranking_score, c.call_string
-            );
-        }
+        Err(error_messages)
     }
 }
 
+fn summary_message(
+    num_comps: usize,
+    time_taken: Duration,
+    prev_time: Option<Duration>,
+    pinned_time: Option<Duration>,
+) -> String {
+    /// Format a scaling factor with fancy colouring
+    fn color_scaling(factor: f64) -> String {
+        let s = format!("{:.2}x", factor);
+        if factor < 0.9 {
+            // >10% slower is considered a slowdown, and should be red
+            s.bright_red().bold().to_string()
+        } else if factor > 1.1 {
+            // >10% faster is considered a speedup, and should be green
+            s.bright_green().bold().to_string()
+        } else {
+            // Otherwise, the time has not changed noticeably and so we don't colour the string
+            s
+        }
+    }
+
+    let mut s = format!("{} comps in ", num_comps);
+    s.push_str(&format!("{:.2?}", time_taken).white().bold().to_string());
+    if let Some(prev) = prev_time {
+        write!(
+            s,
+            ": {} prev",
+            color_scaling(prev.as_secs_f64() / time_taken.as_secs_f64())
+        )
+        .unwrap();
+    }
+    if let Some(pinned) = pinned_time {
+        // Change the delimiter depending on whether or not there was a previous time
+        s.push_str(match prev_time {
+            Some(_) => ", ",
+            None => ": ",
+        });
+        write!(
+            s,
+            "{} pinned",
+            color_scaling(pinned.as_secs_f64() / time_taken.as_secs_f64())
+        )
+        .unwrap();
+    }
+    s
+}
+
 /// Print a test string that can be copied back into the TOML file to make the test pass
-fn print_test_string(comps: Vec<CompResult>) {
+fn print_toml_string(comps: Vec<CompResult>) {
     println!(
         "No expected results found.  It looks like you want to copy this into the `.toml` file:"
     );

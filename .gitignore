@@ -1,4 +1,8 @@
 /target
 
+# Files storing local benchmark runs
+.benches_pinned.json
+.benches_prev.json
+
 # Ignore all callgrind files
 **/callgrind*
