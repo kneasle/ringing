@@ -14,7 +14,7 @@ use itertools::Itertools;
 use log::Level;
 
 use crate::{
-    graph::{Graph, Node, ProtoGraph},
+    graph::{self, ProtoGraph},
     layout::NodeId,
     score::AtomicScore,
     stats::Stats,
@@ -22,6 +22,11 @@ use crate::{
 };
 
 use super::{CompPrefix, PrefixQueue, QueueElem, StatsUpdate};
+
+// Type aliases for the specific payload types that we use.  It makes no sense for us to fully
+// specify the same type parameters every time we use `Graph` or `Node`
+type Graph = graph::Graph<NodePayload, ExtraPayload>;
+type Node = graph::Node<NodePayload, ExtraPayload>;
 
 /// 'Immutable' data shared between all the workers.  This also includes types with interior
 /// mutability (like channels and atomic integers), but the important thing is that they don't
@@ -132,7 +137,7 @@ impl Worker {
     /// only starts getting shorter when there are only very short branches left.
     fn explore_prefix(
         &mut self,
-        graph: &Graph<NodePayload, ExtraPayload>,
+        graph: &Graph,
         queue_elem: QueueElem,
         mut queue: MutexGuard<VecDeque<QueueElem>>,
     ) {
@@ -153,7 +158,7 @@ impl Worker {
         // commences.  These will then be unloaded in reverse order before returning, so it is
         // **VERY** important that every node that is loaded is pushed onto this stack.  All nodes
         // are loaded through `add_node!`, which takes care of this.
-        let mut loaded_node_stack: Vec<&Node<NodePayload, ExtraPayload>> = Vec::new();
+        let mut loaded_node_stack: Vec<&Node> = Vec::new();
 
         /* ===== DEFINE A LOAD OF USEFUL MACROS ===== */
 
@@ -298,11 +303,11 @@ impl Worker {
     /// Does nothing (in release builds)
     #[cfg(not(debug_assertions))]
     #[inline(always)]
-    fn assert_graph_reset(_graph: &Graph<NodePayload, ExtraPayload>) {}
+    fn assert_graph_reset(_graph: &Graph) {}
 
     /// Checks that the state of the graph is reset
     #[cfg(debug_assertions)]
-    fn assert_graph_reset(graph: &Graph<NodePayload, ExtraPayload>) {
+    fn assert_graph_reset(graph: &Graph) {
         // Assert that the graph is properly reset
         let bad_nodes = graph
             .all_nodes()
@@ -322,7 +327,7 @@ impl Worker {
     /// explored up to the first row of `node`.
     fn explore_node(
         &mut self,
-        node: &Node<NodePayload, ExtraPayload>,
+        node: &Node,
         length: usize,
         score: Score,
         // The percentage which will be covered once this node finishes
@@ -394,7 +399,7 @@ impl Worker {
     #[must_use]
     fn load_node(
         &mut self,
-        node: &Node<NodePayload, ExtraPayload>,
+        node: &Node,
         length_after_this_node: usize,
         score_after_this_node: Score,
     ) -> bool {
@@ -445,7 +450,7 @@ impl Worker {
     /// Unload a node from the graph.  Provided that all the load/unload calls are well balanced,
     /// this will precisely undo the effect of [`Self::load_node`].
     #[inline(always)]
-    fn unload_node(&mut self, node: &Node<NodePayload, ExtraPayload>) {
+    fn unload_node(&mut self, node: &Node) {
         // Decrement the falseness counters on all the nodes false against this one
         for &n in node.false_nodes() {
             let false_count_cell = &n.payload().falseness_count;
@@ -506,12 +511,13 @@ impl Worker {
 /// The payload stored in each [`Node`] in the [`Graph`]
 #[derive(Debug, Clone)]
 pub struct NodePayload {
-    /// The number of nodes which are false against this one and are already in the composition.
+    /// The number of nodes which are false against this one and are already in the composition
+    /// (including itself).
     /// Nodes will only be expanded if this is 0
     falseness_count: Cell<u32>,
     /// Assuming no falseness, the minimum number of rows required to get from the first row
     /// **after** this node to rounds.  Note the word 'after': this is the opposite way to how they
-    /// are calculated by [`ProtoGraph`] when reducing the graph size
+    /// are defined when reducing the graph size in [`ProtoGraph`]
     dist_from_end_to_rounds: u32,
 }
 
