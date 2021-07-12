@@ -9,3 +9,49 @@ place_notation = "-5T-14.5T-5T.36.14-7T.58.16-9T.70.18-18.9T-18-1T,1T"
 
 [[music]]
 run_lengths = [4, 5, 6, 7, 8]
+
+# This data is only used by the test/benchmark runner and will be ignored by Monument
+[test_data]
+runtime_estimate = 900 # second (around 15 minutes)
+results = [
+    { length = 5184, score = 5317169512448, call_string = "MHWWHMMsHsMWsMsWWsWsHsWsH", ranking_score = 1025688563 },
+    { length = 5136, score = 5269924872192, call_string = "sWsHsMsWMHsMsMWWHHsMsWHsHsMMsWsH", ranking_score = 1026075714 },
+    { length = 5136, score = 5269924872192, call_string = "WHHsMsWsMsWMWHWHsMsWsHsMWMWH", ranking_score = 1026075714 },
+    { length = 5136, score = 5269924872192, call_string = "sHsMWWHHWWHHsHsMsWsHHsHsMMsWsH", ranking_score = 1026075714 },
+    { length = 5088, score = 5222680231936, call_string = "MHWsMsWWMsMsWMHW", ranking_score = 1026470171 },
+    { length = 5184, score = 5321464479744, call_string = "WWsHsMMWHWHsMsWsMsHWMWH", ranking_score = 1026517067 },
+    { length = 5090, score = 5226975199232, call_string = "WWHHsMsWMHWMHWsW>", ranking_score = 1026910648 },
+    { length = 5136, score = 5274219839488, call_string = "HWWHWHsMsWsHsMWWHHsHsMWHWH", ranking_score = 1026911962 },
+    { length = 5136, score = 5274219839488, call_string = "WWHMMsWsHHMWMWHWWsHsMMWH", ranking_score = 1026911962 },
+    { length = 5184, score = 5325759447040, call_string = "sWsHsWsMWWHHsHsMsHsMWsMWsHH", ranking_score = 1027345572 },
+    { length = 5040, score = 5179730558976, call_string = "WHHsWsHHHsMsWMHWMWH", ranking_score = 1027724317 },
+    { length = 5136, score = 5278514806784, call_string = "WHHsHsWsHsMMWHWHsMsWMsWsHMWH", ranking_score = 1027748210 },
+    { length = 5186, score = 5330054414336, call_string = "WHHsHsMsMsWHHsMsWMsMsWMWHsW>", ranking_score = 1027777557 },
+    { length = 5136, score = 5282809774080, call_string = "WHHWWHWHMWHHMWMsWsHMWH", ranking_score = 1028584457 },
+    { length = 5186, score = 5334349381632, call_string = "WHHsMsWMMsHsMWsMsWsHsMMWHsW>", ranking_score = 1028605742 },
+    { length = 5184, score = 5334349381632, call_string = "WWsHsMMsMsWMHWWHWHMWH", ranking_score = 1029002581 },
+    { length = 5136, score = 5287104741376, call_string = "sWsHHsWsHsMsWHsHsMsHsMWsWsHsMsWMsWsH", ranking_score = 1029420705 },
+    { length = 5136, score = 5287104741376, call_string = "MWHWHHsMsWHWsWsHsMsWMsMsWMsWsH", ranking_score = 1029420705 },
+    { length = 5136, score = 5291399708672, call_string = "WHsMsWsHsMWMWHWHHsHsWsHsMMWH", ranking_score = 1030256952 },
+    { length = 5186, score = 5342939316224, call_string = "WHHsMsWsWsHsWsHMMHMWMWHsW>", ranking_score = 1030262112 },
+    { length = 5040, score = 5192615460864, call_string = "WWsHsWWWHsMsWMHWMWH", ranking_score = 1030280845 },
+    { length = 5184, score = 5342939316224, call_string = "MHsWsHsHsMHsMWsHMWHWHHW", ranking_score = 1030659590 },
+    { length = 5138, score = 5295694675968, call_string = "WHHsMsWHsHsMsHsMWsHsMsWsHsHsMMWHsW>", ranking_score = 1030691840 },
+    { length = 5186, score = 5347234283520, call_string = "WHHsMsWHWsWsHMMHMWMWHsW>", ranking_score = 1031090297 },
+    { length = 5136, score = 5295694675968, call_string = "WHHWWHWHsMsWWHMWMsWsHMWH", ranking_score = 1031093200 },
+    { length = 5136, score = 5295694675968, call_string = "sHsMsWsMsHsMWWHHsHsMsWsHHsHsMMsWsH", ranking_score = 1031093200 },
+    { length = 5138, score = 5299989643264, call_string = "WHWsHsMsWsHMsHsMWsHsMsWsHsHsMMWHsW>", ranking_score = 1031527762 },
+    { length = 5136, score = 5299989643264, call_string = "MWHHMWsHsMWMWHWHHWWHWH", ranking_score = 1031929447 },
+    { length = 5184, score = 5355824218112, call_string = "sMsWWsWsHMMHMWMWHWHHW", ranking_score = 1033145103 },
+    { length = 5184, score = 5355824218112, call_string = "MWHWWsHsMMsMsWMWHWHHW", ranking_score = 1033145103 },
+    { length = 5042, score = 5209795330048, call_string = "WHHsWsHHHsMsWMsMsWMWHsW>", ranking_score = 1033279518 },
+    { length = 5136, score = 5308579577856, call_string = "WHsMsWsHsMWMWHWHHsWsHsHsMMWH", ranking_score = 1033601942 },
+    { length = 5040, score = 5209795330048, call_string = "WWsWsHWWHsMsWMHWMWH", ranking_score = 1033689549 },
+    { length = 5136, score = 5312874545152, call_string = "sHsMWWHHsHsMsHsMWWHHsHsMsWsHsWsH", ranking_score = 1034438190 },
+    { length = 5088, score = 5265629904896, call_string = "MHsWsHWMHWWHHW", ranking_score = 1034911537 },
+    { length = 5184, score = 5368709120000, call_string = "WWsHsMsMsWWWHsMsWMHWMWH", ranking_score = 1035630617 },
+    { length = 5186, score = 5381594021888, call_string = "WHHsMsWHsHsMsHsMWsMsWHHWHsW>", ranking_score = 1037715777 },
+    { length = 5136, score = 5338644348928, call_string = "WHHsWsHsHsMMWHWHsMsWsHsMWMWH", ranking_score = 1039455675 },
+    { length = 5136, score = 5355824218112, call_string = "WHHsWsHsHsMMWHWHsMsWMsWsHMWH", ranking_score = 1042800665 },
+    { length = 5184, score = 5441723564032, call_string = "WWsHsMMWHWHsMsWMHWMWH", ranking_score = 1049715193 },
+]
