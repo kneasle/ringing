@@ -80,7 +80,14 @@ pub fn main(max_runtime: Duration, is_bench: bool) -> std::io::Result<()> {
             .and_then(|map| map.get(&relative_path_str).copied());
 
         // Run the test case
-        let time = run_test_case(&relative_path, t, config.clone(), prev_time, pinned_time);
+        let time = run_test_case(
+            &relative_path,
+            t,
+            config.clone(),
+            prev_time,
+            pinned_time,
+            is_bench,
+        );
         bench_results.insert(relative_path_str, time.as_secs_f64());
 
         // Save the bench results to disk as the previous results for the next benchmark test.  We
@@ -104,9 +111,10 @@ fn run_test_case(
     config: Config,
     prev_time: Option<Duration>,
     pinned_time: Option<Duration>,
+    is_bench: bool,
 ) -> Duration {
     println!(
-        "\n\nTesting {}",
+        "\nTesting {}",
         format!("{:?}", relative_path).white().bold()
     );
 
@@ -121,12 +129,18 @@ fn run_test_case(
         .collect_vec();
 
     // Print the results
-    let summary = summary_message(comps.len(), results.time_taken, prev_time, pinned_time);
+    let summary = summary_message(
+        comps.len(),
+        results.time_taken,
+        prev_time,
+        pinned_time,
+        is_bench,
+    );
     match test_case.test_data.results {
         // If there weren't any then we assume that this test case hasn't been made yet, so we
         // print out the results in such a way that they can be copy/pasted into the TOML file
         None => {
-            println!("No results ({})", summary);
+            println!("{} ({})", "No results".bright_cyan().bold(), summary);
             print_toml_string(comps);
         }
 
@@ -139,10 +153,10 @@ fn run_test_case(
 
             match are_results_compatible(&mut expected_comps, &mut comps) {
                 // If the results are OK, say so and carry on
-                Ok(()) => println!("Results OK ({})", summary),
+                Ok(()) => println!("{} ({})", "Results OK".bright_green().bold(), summary),
                 // If the results are invalid, then print a longer explanation
                 Err(error_messages) => {
-                    println!("FAILED TEST! ({})", summary);
+                    println!("{} ({})", "FAILED TEST!".bright_red().bold(), summary);
                     println!("");
                     for m in error_messages {
                         println!("ERROR: {}", m);
@@ -245,6 +259,7 @@ fn summary_message(
     time_taken: Duration,
     prev_time: Option<Duration>,
     pinned_time: Option<Duration>,
+    is_bench: bool,
 ) -> String {
     /// Format a scaling factor with fancy colouring
     fn color_scaling(factor: f64) -> String {
@@ -262,28 +277,40 @@ fn summary_message(
     }
 
     let mut s = format!("{} comps in ", num_comps);
-    s.push_str(&format!("{:.2?}", time_taken).white().bold().to_string());
-    if let Some(prev) = prev_time {
-        write!(
-            s,
-            ": {} prev",
-            color_scaling(prev.as_secs_f64() / time_taken.as_secs_f64())
-        )
-        .unwrap();
+
+    // Print the timing string, making it bold if we're benchmarking
+    let time_string = format!("{:.2?}", time_taken);
+    if is_bench {
+        s.push_str(&time_string.white().bold().to_string());
+    } else {
+        s.push_str(&time_string);
     }
-    if let Some(pinned) = pinned_time {
-        // Change the delimiter depending on whether or not there was a previous time
-        s.push_str(match prev_time {
-            Some(_) => ", ",
-            None => ": ",
-        });
-        write!(
-            s,
-            "{} pinned",
-            color_scaling(pinned.as_secs_f64() / time_taken.as_secs_f64())
-        )
-        .unwrap();
+
+    // Print timing comparison (but only in benchmark mode)
+    if is_bench {
+        if let Some(prev) = prev_time {
+            write!(
+                s,
+                ": {} prev",
+                color_scaling(prev.as_secs_f64() / time_taken.as_secs_f64())
+            )
+            .unwrap();
+        }
+        if let Some(pinned) = pinned_time {
+            // Change the delimiter depending on whether or not there was a previous time
+            s.push_str(match prev_time {
+                Some(_) => ", ",
+                None => ": ",
+            });
+            write!(
+                s,
+                "{} pinned",
+                color_scaling(pinned.as_secs_f64() / time_taken.as_secs_f64())
+            )
+            .unwrap();
+        }
     }
+
     s
 }
 
