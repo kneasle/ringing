@@ -1,0 +1,21 @@
+length = "QP"
+course_heads = ["1xxx87xx", "1xxx5678"]
+
+[method]
+place_notation = "x5x4x5x1x4x5x4x5,4"
+stage = 8
+
+[[music]]
+run_lengths = [4, 5, 6, 7]
+
+[[music]]
+patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
+
+[[calls]]
+debug_symbol = "-"
+symbol = ""
+place_notation = "12"
+
+[[calls]]
+symbol = "s"
+place_notation = "1234"
