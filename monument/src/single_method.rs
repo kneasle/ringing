@@ -19,6 +19,10 @@ pub fn single_method_layout(
     // courses of e.g. `1xxxxx0987`.
     input_course_head_masks: &[(Mask, Bell)],
     config: &Config,
+    // Which sub-lead indices are considered valid starting or finishing points for the
+    // composition.  If these are `None`, then any location is allowed
+    allowed_start_indices: Option<&[usize]>,
+    allowed_end_indices: Option<&[usize]>,
 ) -> Result<Layout, SingleMethodError> {
     // Generate useful values
     let plain_course = method.plain_course();
@@ -169,8 +173,8 @@ pub fn single_method_layout(
     }
 
     // Sanity check that any compatible call-end masks also agree on `row_idx`.  This should be
-    // guaranteed by the `unambiguity` check, but it is required for the rest of the code to work -
-    // so we may as well check here
+    // guaranteed if the course heads are unambiguous, but it is required for the rest of the code
+    // to work - so we may as well check here
     for call_end1 in &call_ends {
         for call_end2 in &call_ends {
             if call_end1.row_mask.is_compatible_with(&call_end2.row_mask) {
@@ -270,11 +274,11 @@ pub fn single_method_layout(
 
     /* STEP 5: REMOVE REDUNDANT LINKS */
 
-    /* If there are overlapping course head definitions (e.g. `1234567xxx` and `1xxxxx7890`) then
-     * this algorithm produces a large number of essentially identical call links.  This is not
-     * technically incorrect (it will generate a correct but woefully inefficient node graph) and
-     * modifying the algorithm to prevent this is quite hard (and the result would be less
-     * readable).  Therefore, we de-duplicate the call links before generating the `Layout`. */
+    /* This algorithm produces a large number of essentially identical plain call links if there
+     * are multiple calls at the same position.  This is not technically wrong (the graph
+     * generation code has to de-duplicate node links anyway), including loads of duplicate links
+     * makes the `Layout` much harder to debug.  Therefore, we de-duplicate the call links before
+     * generating the `Layout`. */
 
     // The indices of links which are special cases of some other link (or are identical to other
     // links)
@@ -359,16 +363,9 @@ pub fn single_method_layout(
 
     /* STEP 6: GENERATE STARTS/ENDS, AND CREATE A LAYOUT */
 
-    #[derive(Debug, Clone)]
-    struct RoundsLoc {
-        course_head: RowBuf,
-        row_idx: RowIdx,
-        start_name: &'static str,
-        end_name: &'static str,
-    }
-
     // Figure out where rounds can appear in courses which satisfy the course head masks
-    let mut rounds_locations = Vec::<RoundsLoc>::new();
+    let mut starts = Vec::<(RowBuf, RowIdx, String)>::new();
+    let mut ends = Vec::<(RowBuf, RowIdx, String)>::new();
 
     let rounds = RowBuf::rounds(method.stage());
     for (ch_mask, _) in course_head_masks {
@@ -377,16 +374,30 @@ pub fn single_method_layout(
             // If rounds satisfies `transposed_mask`, then this location can contain rounds
             if transposed_mask.matches(&rounds) {
                 // Decide whether this is snap start/finish
-                let is_snap = annot_row.annot().0 != 0;
+                let sub_lead_index = annot_row.annot().0;
+                let is_snap = sub_lead_index != 0;
                 let course_head_containing_rounds = annot_row.row().inv();
-                rounds_locations.push(RoundsLoc {
-                    course_head: course_head_containing_rounds,
-                    row_idx: RowIdx::new(BLOCK_IDX, row_idx),
-                    // We name snap starts with `<` and snap finishes with `>`, to show that some
-                    // leads aren't fully rung
-                    start_name: if is_snap { "<" } else { "" },
-                    end_name: if is_snap { ">" } else { "" },
-                });
+
+                if allowed_start_indices
+                    .as_ref()
+                    .map_or(true, |idxs| idxs.contains(&sub_lead_index))
+                {
+                    starts.push((
+                        course_head_containing_rounds.clone(),
+                        RowIdx::new(BLOCK_IDX, row_idx),
+                        (if is_snap { "<" } else { "" }).to_owned(),
+                    ));
+                }
+                if allowed_end_indices
+                    .as_ref()
+                    .map_or(true, |idxs| idxs.contains(&sub_lead_index))
+                {
+                    ends.push((
+                        course_head_containing_rounds,
+                        RowIdx::new(BLOCK_IDX, row_idx),
+                        (if is_snap { ">" } else { "" }).to_owned(),
+                    ));
+                }
             }
         }
     }
@@ -400,20 +411,8 @@ pub fn single_method_layout(
         blocks: vec![plain_rows],
         links,
         // Convert the `rounds_locations` into starts and finishes
-        starts: rounds_locations
-            .iter()
-            .map(|loc| {
-                (
-                    loc.course_head.to_owned(),
-                    loc.row_idx,
-                    loc.start_name.to_owned(),
-                )
-            })
-            .collect_vec(),
-        ends: rounds_locations
-            .into_iter()
-            .map(|loc| (loc.course_head, loc.row_idx, loc.end_name.to_owned()))
-            .collect_vec(),
+        starts,
+        ends,
     })
 }
 

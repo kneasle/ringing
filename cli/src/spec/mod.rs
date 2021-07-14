@@ -38,6 +38,13 @@ pub struct AbstractSpec {
     #[serde(default = "get_30")]
     num_comps: usize,
 
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed
+    start_indices: Option<Vec<usize>>,
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed
+    end_indices: Option<Vec<usize>>,
+
     /// Which calls should be used by default
     base_calls: Option<BaseCalls>,
     /// Should Monument normalise music scores by length when generating comps.
@@ -104,8 +111,15 @@ impl AbstractSpec {
         };
 
         // Generate a `Layout` from the data about the method and calls
-        let layout = single_method_layout(&method, &calls, &course_head_masks, config)
-            .map_err(SpecConvertError::LayoutGenError)?;
+        let layout = single_method_layout(
+            &method,
+            &calls,
+            &course_head_masks,
+            config,
+            self.start_indices.as_deref(),
+            self.end_indices.as_deref(),
+        )
+        .map_err(SpecConvertError::LayoutGenError)?;
 
         Ok(Spec::new(
             layout,
