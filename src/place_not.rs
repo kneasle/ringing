@@ -236,6 +236,16 @@ impl PlaceNot {
         self.stage
     }
 
+    /// Returns a [`RowBuf`] representing the same transposition as this `PlaceNot`.
+    pub fn transposition(&self) -> RowBuf {
+        let mut row = RowBuf::rounds(self.stage());
+        // This unsafety is OK because the `row` has the same stage as `self`
+        unsafe {
+            self.permute_unchecked(&mut row);
+        }
+        row
+    }
+
     /// Uses this `PlaceNot` to perform an in-place permutation of a given [`Row`].  If you want to
     /// to preserve the old [`Row`], then use [`permute_new`](Self::permute_new).
     pub fn permute(&self, row: &mut Row) -> Result<(), IncompatibleStages> {
