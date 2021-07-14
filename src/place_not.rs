@@ -3,7 +3,7 @@
 use crate::{AnnotBlock, AnnotRow, Bell, IncompatibleStages, Row, RowBuf, Stage};
 use itertools::Itertools;
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     ops::Range,
 };
 
@@ -48,7 +48,7 @@ impl Display for ParseError {
 }
 
 /// A single piece of place notation on any [`Stage`].
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct PlaceNot {
     /// A **0-indexed** list of which places are made during this `PlaceNot`.  We maintain the
     /// following invariants:
@@ -289,6 +289,12 @@ impl PlaceNot {
     }
 }
 
+impl Debug for PlaceNot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PlaceNot({})", self)
+    }
+}
+
 impl Display for PlaceNot {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_cross() {
@@ -296,14 +302,10 @@ impl Display for PlaceNot {
             write!(f, "-")
         } else {
             // Otherwise concatenate all the bell names together
-            write!(
-                f,
-                "{}",
-                self.places
-                    .iter()
-                    .map(|&x| Bell::from_index(x).name())
-                    .join("")
-            )
+            for p in &self.places {
+                write!(f, "{}", Bell::from_index(*p))?;
+            }
+            Ok(())
         }
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     iter::once,
 };
 
@@ -304,7 +304,7 @@ impl Display for Regex {
     }
 }
 
-impl std::fmt::Debug for Regex {
+impl Debug for Regex {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Regex({})", self)
     }

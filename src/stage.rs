@@ -1,5 +1,7 @@
 //! A representation of a stage, with human-friendly `const`s and display names.
 
+use std::fmt::{Debug, Display, Formatter};
+
 #[cfg(feature = "serde")]
 use serde_crate::{
     de::{Error, Visitor},
@@ -34,7 +36,7 @@ use crate::Row;
 /// assert_eq!(&format!("{}", Stage::MAXIMUS), "Maximus");
 /// assert_eq!(&format!("{}", Stage::from(9)), "Caters");
 /// ```
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Stage(usize);
 
@@ -125,9 +127,36 @@ impl Stage {
     pub const SIXTEEN: Stage = Stage(16);
 }
 
-impl std::fmt::Display for Stage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Debug for Stage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let const_name = match self.0 {
+            0 => "ZERO",
+            1 => "ONE",
+            2 => "TWO",
+            3 => "SINGLES",
+            4 => "MINIMUS",
+            5 => "DOUBLES",
+            6 => "MINOR",
+            7 => "TRIPLES",
+            8 => "MAJOR",
+            9 => "CATERS",
+            10 => "ROYAL",
+            11 => "CINQUES",
+            12 => "MAXIMUS",
+            13 => "SEXTUPLES",
+            14 => "FOURTEEN",
+            15 => "SEPTUPLES",
+            16 => "SIXTEEN",
+            num_bells => return write!(f, "Stage({})", num_bells),
+        };
+        write!(f, "Stage::{}", const_name)
+    }
+}
+
+impl Display for Stage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.0 {
+            1 => write!(f, "One"),
             2 => write!(f, "Two"),
             3 => write!(f, "Singles"),
             4 => write!(f, "Minimus"),
@@ -143,7 +172,7 @@ impl std::fmt::Display for Stage {
             14 => write!(f, "Fourteen"),
             15 => write!(f, "Sextuples"),
             16 => write!(f, "Sixteen"),
-            x => write!(f, "Stage {}", x),
+            x => write!(f, "{} bells", x),
         }
     }
 }
@@ -331,8 +360,8 @@ impl IncompatibleStages {
     }
 }
 
-impl std::fmt::Display for IncompatibleStages {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for IncompatibleStages {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "Incompatible stages: {} (lhs), {} (rhs)",

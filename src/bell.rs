@@ -1,5 +1,7 @@
 //! A type-safe representation of a bell.
 
+use std::fmt::{Debug, Display, Formatter};
+
 #[cfg(feature = "serde")]
 use serde_crate::{
     de::{Error, Visitor},
@@ -17,7 +19,7 @@ const BELL_NAMES: &str = "1234567890ETABCDFGHJKLMNPQRSUVWYZ";
 
 /// A type-safe representation of a 'bell', which adds things like conversions to and from
 /// commonly-used bell names.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Bell {
     /// A zero-indexed number representing the `Bell`.  I.e the treble is always
     /// `Bell { index: 0 }`, and the 12th is `Bell { index: 11 }` but would be
@@ -230,8 +232,14 @@ impl Bell {
     }
 }
 
-impl std::fmt::Display for Bell {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Debug for Bell {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bell({})", self)
+    }
+}
+
+impl Display for Bell {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
     }
 }

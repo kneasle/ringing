@@ -14,7 +14,7 @@ use crate::{Row, RowBuf, Stage};
 /// would result in less-than ideal data layouts and doesn't fit with the 'only pay for what you
 /// use' design goal of this library.
 #[repr(u8)]
-#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Parity {
     /// A given [`Row`] requires an **even** number of [`swap`](Row::swap)s to return to
     /// [`rounds`](RowBuf::rounds).  This is also often called _in course_ or _positive_.  The
