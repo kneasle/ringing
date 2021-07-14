@@ -498,9 +498,26 @@ impl Row {
         }
     }
 
+    /// Computes the value of `x` which satisfies `a * x = b` - i.e. the `Row` which
+    /// post-transposes `a` to `b`.
+    #[inline]
+    pub fn solve_ax_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
+        a.inv().mul_result(b)
+    }
+
+    /// Computes the value of `x` which satisfies `x * a = b` - i.e. the `Row` which
+    /// pre-transposes `a` to `b`.  This is equivalent to `a.transposition_to(b)`.
+    #[inline]
+    pub fn solve_xa_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
+        b.mul_result(&a.inv())
+    }
+
     /// Computes the value of `r` which satisfies `r * self = other` - i.e. the `Row` which
     /// pre-transposes `self` to `other`.
     #[inline]
+    #[deprecated(
+        note = "This function's name is confusing, so please use `Row::solve_xa_equals_b` instead"
+    )]
     pub fn tranposition_to(&self, other: &Self) -> Result<RowBuf, IncompatibleStages> {
         other.mul_result(&self.inv())
     }
@@ -512,6 +529,9 @@ impl Row {
     ///
     /// This is safe if `self` and `other` have the same [`Stage`].
     #[inline]
+    #[deprecated(
+        note = "This function's name is confusing, so please use `Row::solve_xa_equals_b` instead"
+    )]
     pub unsafe fn tranposition_to_unchecked(&self, other: &Self) -> RowBuf {
         other.mul_unchecked(&self.inv())
     }

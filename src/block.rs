@@ -478,9 +478,8 @@ impl<A> AnnotBlock<A> {
                 // overwrite the current leftover row in-place (bypassing the transposition
                 // because we know that it will have no effect)
                 None => {
-                    transposition = Some(unsafe {
-                        annot_r.row().tranposition_to_unchecked(self.leftover_row())
-                    });
+                    transposition =
+                        Some(Row::solve_xa_equals_b(annot_r.row(), self.leftover_row()).unwrap());
                     self.rows.last_mut().unwrap().annot = annot_r.annot;
                 }
             };
