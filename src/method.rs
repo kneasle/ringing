@@ -262,6 +262,11 @@ impl FullClass {
         }
     }
 
+    /// Compute the [`FullClass`] of a [`Method`], given an [`AnnotBlock`] representing its first lead.
+    pub fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
+        todo!();
+    }
+
     /// Returns `true` if this represents a 'Jump' method
     #[inline]
     pub fn is_jump(self) -> bool {
