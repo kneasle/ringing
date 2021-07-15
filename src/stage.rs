@@ -333,7 +333,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     {
         let lower_str = v.to_lowercase();
         Stage::from_lower_case_name(&lower_str)
-            .ok_or_else(|| Err(E::custom(format!("'{}' is not a stage name", v))))
+            .ok_or_else(|| E::custom(format!("'{}' is not a stage name", v)))
     }
 }
 
