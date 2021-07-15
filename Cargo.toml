@@ -8,12 +8,25 @@ license = "MIT"
 repository = "https://github.com/kneasle/bellframe"
 
 [features]
+default = ["cc_lib"]
+
 serde = ["serde_crate"]
+# Feature flag for accessing the CC's method library, to look up methods by name.  This pulls in a
+# large dependency tree (because it needs to make HTTP requests), so is optional but enabled by
+# default.
+cc_lib = ["serde_crate", "shortlist", "edit-distance"]
+# Add the code required to parse the Central Council's XML format and generate your own condensed
+# method library files
+cc_lib_gen = ["cc_lib", "minidom"]
 
 [dependencies]
 itertools = "0.10.0"
+# Dependencies which are required by the CC library
+minidom = { version = "0.13", optional = true }
+shortlist = { version = "0.2", optional = true }
+edit-distance = { version = "2.1", optional = true }
 
-# Reimport `serde` as `serde_crate` so we can use `serde` as a feature
+# Reimport `serde` as `serde_crate` so we can use `serde` as a feature name
 [dependencies.serde_crate]
 package = "serde"
 version = "1.0"

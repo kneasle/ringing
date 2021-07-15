@@ -4,6 +4,7 @@ mod bell;
 pub mod block;
 pub mod call;
 pub mod method;
+mod method_lib;
 pub mod music;
 mod parity;
 pub mod place_not;
@@ -21,3 +22,6 @@ pub use place_not::{PlaceNot, PnBlock};
 pub use row::{InvalidRowError, Row, RowBuf};
 pub use stage::{IncompatibleStages, Stage};
 pub use utils::run_len;
+
+#[cfg(feature = "cc_lib_gen")]
+pub use method_lib::parse_cc_lib::parse_cc_lib;
