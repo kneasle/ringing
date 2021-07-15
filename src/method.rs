@@ -21,14 +21,37 @@ pub const LABEL_LEAD_END: &str = "LE";
 /// follows how complib.org's composition input works.
 #[derive(Debug, Clone)]
 pub struct Method {
+    title: String,
     name: String,
+    class: FullClass,
     first_lead: AnnotBlock<Option<String>>,
 }
 
 impl Method {
-    /// Creates a new `Method` given its name and a [`Block`]
-    pub fn new(name: String, first_lead: AnnotBlock<Option<String>>) -> Self {
-        Method { name, first_lead }
+    /// Creates a new `Method` from its raw parts
+    pub fn new(
+        title: String,
+        name: String,
+        class: FullClass,
+        first_lead: AnnotBlock<Option<String>>,
+    ) -> Self {
+        Self {
+            title,
+            name,
+            class,
+            first_lead,
+        }
+    }
+
+    /// Create and classify a new `Method`, given its name and first lead
+    pub fn with_name(name: String, first_lead: AnnotBlock<Option<String>>) -> Self {
+        let class = FullClass::classify(&first_lead);
+        Self {
+            title: generate_title(&name, class, first_lead.stage()),
+            name,
+            class,
+            first_lead,
+        }
     }
 
     /// Parses a place notation string and creates a `Method` with that place notation and no lead
@@ -38,17 +61,17 @@ impl Method {
         stage: Stage,
         place_notation: &str,
     ) -> Result<Self, PnBlockParseError> {
-        Ok(Method {
+        Ok(Self::with_name(
             name,
-            first_lead: PnBlock::parse(place_notation, stage)?.to_block(),
-        })
+            PnBlock::parse(place_notation, stage)?.to_block(),
+        ))
     }
 
     /// Creates a new `Method` from some place notation, adding a lead end annotation.
     pub fn with_lead_end(name: String, block: &PnBlock) -> Self {
         let mut first_lead: AnnotBlock<Option<String>> = block.to_block();
         *first_lead.get_annot_mut(first_lead.len() - 1).unwrap() = Some(LABEL_LEAD_END.to_owned());
-        Method { name, first_lead }
+        Self::with_name(name, first_lead)
     }
 
     /// Returns an `AnnotBlock` of the first lead of this `Method`
