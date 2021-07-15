@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Write};
+
 use crate::{
     block::AnnotRowIter, place_not::PnBlockParseError, AnnotBlock, AnnotRow, PnBlock, Row, RowBuf,
     Stage,
@@ -189,5 +191,175 @@ impl<'m> Iterator for CourseIter<'m> {
             // guarutees that its rows have the same stage
             unsafe { self.current_lead_head.mul_unchecked(annot_r.row()) },
         ))
+    }
+}
+
+/// Generate the (standard) title of a [`Method`] from its parts, according to the Framework's
+/// rules.  Some methods (e.g. Grandsire and Union) do not follow this convention, and therefore
+/// their titles must be stored separately.
+pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
+    let mut s = String::new();
+
+    // Push the name, followed by a space (if the name is non-empty)
+    s.push_str(name);
+    if !name.is_empty() {
+        s.push(' ');
+    }
+    // Push the classification, and add another space if the classification wasn't the empty string
+    // (which we check indirectly by measuring the length of `s` before and after adding the
+    // classification string)
+    let len_before_class = s.len();
+    write!(s, "{}", class).unwrap();
+    if s.len() > len_before_class {
+        // If the class made the string longer, we need another space before the stage
+        s.push(' ');
+    }
+    // Always push the stage
+    s.push_str(stage.name().expect("Stage was too big to generate a name"));
+
+    s
+}
+
+/// The full class of a [`Method`], including flags for little and differential
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct FullClass {
+    is_jump: bool,
+    is_little: bool,
+    is_differential: bool,
+    class: Class,
+}
+
+impl FullClass {
+    pub fn new(is_jump: bool, is_little: bool, is_differential: bool, class: Class) -> Self {
+        Self {
+            is_jump,
+            is_little,
+            is_differential,
+            class,
+        }
+    }
+}
+
+impl Display for FullClass {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // The `add_space` macro generates writes to `is_first_segment`, but this value is never
+        // used for the last call
+        #![allow(unused_assignments)]
+
+        let mut is_first_segment = true;
+
+        /// Adds a space between two parts of a name (but doesn't place an erroneous space at the
+        /// start of a class).
+        macro_rules! add_space {
+            () => {
+                if !is_first_segment {
+                    write!(f, " ")?;
+                }
+                is_first_segment = false;
+            };
+        }
+
+        // Write optional classes
+        if self.is_jump {
+            add_space!();
+            write!(f, "Jump")?;
+        }
+        if self.is_differential {
+            add_space!();
+            write!(f, "Differential")?;
+        }
+        // 'Little' should only be used for symmetric hunt methods
+        if self.class.is_symmetric_hunter() {
+            if self.is_little {
+                add_space!();
+                write!(f, "Little")?;
+            }
+
+            // Write the main class
+            if let Some(name) = self.class.name() {
+                add_space!();
+                write!(f, "{}", name)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// The `Class` of a [`Method`].
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Class {
+    /// A method with no hunt bells
+    Principle,
+
+    /* Plain Methods */
+    /// A plain method where every change in direction has places made
+    Place,
+    /// A plain method that isn't a `Place` method
+    Bob,
+
+    /* Treble Dodging */
+    /// A treble dodging method in which internal places are **never** made between dodges
+    TrebleBob,
+    /// A treble dodging method in which internal places are **sometimes** made between dodges
+    Delight,
+    /// A treble dodging method in which internal places are **always** made between dodges
+    Surprise,
+
+    /* Other hunter classes */
+    /// A method where the hunt bell makes places more than twice per lead
+    TreblePlace,
+    /// A method where the hunt bell makes a symmetric but not well-formed path
+    Alliance,
+    /// A method where the hunt bell makes an asymmetric path
+    Hybrid,
+}
+
+impl Class {
+    /// Returns `true` if `self` is either [`Class::Place`] or [`Class::Bob`].
+    #[inline]
+    pub fn is_plain(self) -> bool {
+        matches!(self, Self::Place | Self::Bob)
+    }
+
+    /// Returns `true` if `self` is either [`Class::TrebleBob`], [`Class::Delight`] or
+    /// [`Class::Surprise`].
+    #[inline]
+    pub fn is_treble_dodging(self) -> bool {
+        matches!(self, Self::TrebleBob | Self::Delight | Self::Surprise)
+    }
+
+    /// Returns `true` if `self` denotes a method who's dominant hunt bell follows a symmetric
+    /// path.
+    #[inline]
+    pub fn is_symmetric_hunter(self) -> bool {
+        self.is_plain()
+            || self.is_treble_dodging()
+            || matches!(self, Self::TreblePlace | Self::Alliance)
+    }
+
+    /// Returns the printable name of this `Class`, or `None` if `self` is [`Class::Principle`].
+    pub fn name(self) -> Option<&'static str> {
+        Some(match self {
+            Class::Principle => return None,
+
+            Class::Place => "Place",
+            Class::Bob => "Bob",
+
+            Class::TrebleBob => "Treble Bob",
+            Class::Delight => "Delight",
+            Class::Surprise => "Surprise",
+
+            Class::TreblePlace => "Treble Place",
+            Class::Alliance => "Alliance",
+            Class::Hybrid => "Hybrid",
+        })
+    }
+}
+
+impl Display for Class {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name().unwrap_or(""))
     }
 }
