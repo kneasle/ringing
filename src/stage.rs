@@ -60,6 +60,80 @@ impl Stage {
     pub fn is_even(self) -> bool {
         self.as_usize() % 2 == 0
     }
+
+    /// Creates a [`Stage`] from the lower case version of the human-friendly name (e.g.
+    /// `"royal"`, `"triples"` or `"twenty-two"`).
+    pub fn from_lower_case_name(name: &str) -> Option<Stage> {
+        Some(match name {
+            "zero" => Stage::ZERO,
+
+            "one" => Stage::ONE,
+            "two" => Stage::TWO,
+            "singles" => Stage::SINGLES,
+            "minimus" => Stage::MINIMUS,
+
+            "doubles" => Stage::DOUBLES,
+            "minor" => Stage::MINOR,
+            "triples" => Stage::TRIPLES,
+            "major" => Stage::MAJOR,
+
+            "caters" => Stage::CATERS,
+            "royal" => Stage::ROYAL,
+            "cinques" => Stage::CINQUES,
+            "maximus" => Stage::MAXIMUS,
+
+            "sextuples" => Stage::SEXTUPLES,
+            "fourteen" => Stage::FOURTEEN,
+            "septuples" => Stage::SEPTUPLES,
+            "sixteen" => Stage::SIXTEEN,
+
+            "octuples" => Stage(17),
+            "eighteen" => Stage(18),
+            "nonuples" => Stage(19),
+            "twenty" => Stage(20),
+
+            "decuples" => Stage(21),
+            "twenty-two" => Stage(22),
+
+            _ => return None,
+        })
+    }
+
+    /// Gets the human-friendly name of this [`Stage`], as would be used in [`Method`] names (or
+    /// `None` if `self` is too big to have a name).
+    pub fn name(self) -> Option<&'static str> {
+        Some(match self.0 {
+            1 => "One",
+            2 => "Two",
+            3 => "Singles",
+            4 => "Minimus",
+
+            5 => "Doubles",
+            6 => "Minor",
+            7 => "Triples",
+            8 => "Major",
+
+            9 => "Caters",
+            10 => "Royal",
+            11 => "Cinques",
+            12 => "Maximus",
+
+            13 => "Sextuples",
+            14 => "Fourteen",
+            15 => "Septuples",
+            16 => "Sixteen",
+
+            17 => "Octuples",
+            18 => "Eighteen",
+            19 => "Nonuples",
+            20 => "Twenty",
+
+            21 => "Decuples",
+            22 => "Twenty-two",
+
+            _ => return None,
+        })
+    }
 }
 
 /// User-friendly constants for commonly used `Stage`s.
@@ -155,24 +229,9 @@ impl Debug for Stage {
 
 impl Display for Stage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            1 => write!(f, "One"),
-            2 => write!(f, "Two"),
-            3 => write!(f, "Singles"),
-            4 => write!(f, "Minimus"),
-            5 => write!(f, "Doubles"),
-            6 => write!(f, "Minor"),
-            7 => write!(f, "Triples"),
-            8 => write!(f, "Major"),
-            9 => write!(f, "Caters"),
-            10 => write!(f, "Royal"),
-            11 => write!(f, "Cinques"),
-            12 => write!(f, "Maximus"),
-            13 => write!(f, "Septuples"),
-            14 => write!(f, "Fourteen"),
-            15 => write!(f, "Sextuples"),
-            16 => write!(f, "Sixteen"),
-            x => write!(f, "{} bells", x),
+        match self.name() {
+            Some(n) => write!(f, "{}", n),
+            None => write!(f, "{} bells", self.0),
         }
     }
 }
@@ -273,31 +332,8 @@ impl<'de> Visitor<'de> for StageVisitor {
         E: Error,
     {
         let lower_str = v.to_lowercase();
-        Ok(match lower_str.as_str() {
-            "zero" => Stage::ZERO,
-
-            "one" => Stage::ONE,
-            "two" => Stage::TWO,
-            "singles" => Stage::SINGLES,
-            "minimus" => Stage::MINIMUS,
-
-            "doubles" => Stage::DOUBLES,
-            "minor" => Stage::MINOR,
-            "triples" => Stage::TRIPLES,
-            "major" => Stage::MAJOR,
-
-            "caters" => Stage::CATERS,
-            "royal" => Stage::ROYAL,
-            "cinques" => Stage::CINQUES,
-            "maximus" => Stage::MAXIMUS,
-
-            "sextuples" => Stage::SEXTUPLES,
-            "fourteen" => Stage::FOURTEEN,
-            "septuples" => Stage::SEPTUPLES,
-            "sixteen" => Stage::SIXTEEN,
-
-            _ => return Err(E::custom(format!("'{}' is not a stage name", v))),
-        })
+        Stage::from_lower_case_name(&lower_str)
+            .ok_or_else(|| Err(E::custom(format!("'{}' is not a stage name", v))))
     }
 }
 
