@@ -22,15 +22,15 @@ pub struct MethodLibSerde {
 impl From<&MethodLib> for MethodLibSerde {
     /// Converting from [`MethodLib`] -> `MethodLibSerde` (ready to be serialized)
     fn from(lib: &MethodLib) -> Self {
-        let mut groups: HashMap<(Stage, FullClass), Vec<(&str, &CompactMethod)>> = HashMap::new();
+        let mut groups: HashMap<(Stage, FullClass), Vec<&CompactMethod>> = HashMap::new();
 
         // Group the methods by their stage and class
         for (stage, methods) in &lib.method_map {
-            for (title, method) in methods {
+            for method in methods.values() {
                 groups
                     .entry((*stage, method.full_class))
                     .or_insert_with(Vec::new)
-                    .push((title, method));
+                    .push(method);
             }
         }
 
@@ -45,10 +45,11 @@ impl From<&MethodLib> for MethodLibSerde {
                     class_id: to_class_id(full_class.class()),
                     methods: methods
                         .into_iter()
-                        .map(|(title, comp_method)| {
+                        .map(|comp_method| {
                             // Check if the title follows the standard construction.  If it does,
                             // we don't store the title explicitly, but if it isn't standard (e.g.
                             // for Grandsire) then we need to store it explicitly
+                            let title = &comp_method.title;
                             let override_title =
                                 if &generate_title(&comp_method.name, full_class, stage) == title {
                                     None
@@ -97,10 +98,12 @@ impl From<MethodLibSerde> for MethodLib {
                     name,
                     place_notation,
                 } = m;
+                let title = title.unwrap_or_else(|| generate_title(&name, full_class, stage));
 
                 method_map.insert(
-                    title.unwrap_or_else(|| generate_title(&name, full_class, stage)),
+                    title.to_lowercase(),
                     CompactMethod {
+                        title,
                         name,
                         full_class,
                         place_notation,

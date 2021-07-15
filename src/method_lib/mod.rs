@@ -24,7 +24,7 @@ impl MethodLib {
     /// to provide useful suggestions for your user, then consider using
     /// [`MethodLib::get_by_title_with_suggestions`].
     pub fn get_by_title<'s>(&'s self, title: &str) -> QueryResult<'s, ()> {
-        match self.get_by_title_option(title) {
+        match self.get_by_title_option(&title.to_lowercase()) {
             Some(Ok(method)) => QueryResult::Success(method),
             Some(Err((pn, error))) => QueryResult::PnParseErr { pn, error },
             None => QueryResult::NotFound(()),
@@ -37,22 +37,22 @@ impl MethodLib {
     /// bellframe get to use the `?` operator.
     fn get_by_title_option<'s>(
         &'s self,
-        title: &str,
+        lower_case_title: &str,
     ) -> Option<Result<Method, (&'s str, PnBlockParseError)>> {
         // Firstly, we extract the stage name from the title.  If the stage can't be extracted,
         // then the title must be invalid and therefore can't correspond to a method.
         //
         // This unwrap is safe, because `rsplit` always yields at least one value (even if that
         // value is just the empty string).
-        let stage_name = title.rsplit(' ').next().unwrap().to_lowercase();
-        let stage = Stage::from_lower_case_name(&stage_name)?;
+        let stage_name = lower_case_title.rsplit(' ').next().unwrap();
+        let stage = Stage::from_lower_case_name(stage_name)?;
 
         // Once we know the stage, we can directly look up the method
         let method = self
             .method_map
             .get(&stage)?
-            .get(title)?
-            .to_method(stage, title.to_owned());
+            .get(lower_case_title)?
+            .to_method(stage);
         Some(method)
     }
 
@@ -66,14 +66,15 @@ impl MethodLib {
         title: &str,
         num_suggestions: usize,
     ) -> QueryResult<Vec<(&'s str, usize)>> {
-        self.get_by_title(title)
-            .map_not_found(|()| self.generate_suggestions(title, num_suggestions))
+        let lower_case_title = title.to_lowercase();
+        self.get_by_title(&lower_case_title)
+            .map_not_found(|()| self.generate_suggestions(&lower_case_title, num_suggestions))
     }
 
     /// Generate a list of method title suggestions based on the Levenstein edit from a given title
     fn generate_suggestions<'lib>(
         &'lib self,
-        title: &str,
+        lower_case_title: &str,
         num_suggestions: usize,
     ) -> Vec<(&'lib str, usize)> {
         /// A new-type over the suggestions, which is ordered by the edit distance
@@ -85,8 +86,15 @@ impl MethodLib {
         struct Suggestion<'s>((&'s str, usize));
 
         impl<'s> Suggestion<'s> {
-            fn new(actual: &str, suggestion: &'s str) -> Self {
-                Suggestion((suggestion, edit_distance(actual, suggestion)))
+            fn new(
+                actual_title: &str,
+                suggestion_title_lower: &str,
+                suggestion_title: &'s str,
+            ) -> Self {
+                Suggestion((
+                    suggestion_title,
+                    edit_distance(actual_title, suggestion_title_lower),
+                ))
             }
         }
 
@@ -115,11 +123,9 @@ impl MethodLib {
         // Test each method as a suggestion, pushing the suggestions into a shortlist
         let mut suggestion_shortlist = Shortlist::new(num_suggestions);
         for methods in self.method_map.values() {
-            suggestion_shortlist.append(
-                methods
-                    .keys()
-                    .map(|stored_title| Suggestion::new(title, stored_title)),
-            );
+            suggestion_shortlist.append(methods.iter().map(|(stored_title, method)| {
+                Suggestion::new(lower_case_title, stored_title, &method.title)
+            }));
         }
 
         let mut best_suggestions = suggestion_shortlist.into_sorted_vec();
@@ -152,14 +158,15 @@ impl MethodLib {
 #[derive(Debug, Clone)]
 struct CompactMethod {
     name: String,
+    title: String,
     full_class: FullClass,
     place_notation: String,
 }
 
 impl CompactMethod {
-    fn to_method(&self, stage: Stage, title: String) -> Result<Method, (&str, PnBlockParseError)> {
+    fn to_method(&self, stage: Stage) -> Result<Method, (&str, PnBlockParseError)> {
         Ok(Method::new(
-            title,
+            self.title.to_owned(),
             self.name.to_owned(),
             self.full_class,
             PnBlock::parse(&self.place_notation, stage)
