@@ -12,7 +12,7 @@ default = ["cc_lib"]
 # Enables code to parse the CCCBR's XML format into a `MethodLib`
 cc_lib_gen = ["method_lib_serde", "minidom"]
 # Enables easy access to the CCCBR method library
-cc_lib = ["method_lib_serde"]
+cc_lib = ["method_lib_serde", "dirs", "reqwest"]
 # Enables (de)?serialize for `MethodLib`s into condensed JSON
 method_lib_serde = ["serde_crate", "serde_json"]
 # Enables serde implementations for commonly used data-types (Bell, Stage, Row, etc.)
@@ -22,6 +22,8 @@ serde = ["serde_crate"]
 itertools = "0.10.0"
 shortlist = "0.2"
 edit-distance = "2.1"
+dirs = { version = "3.0", optional = true }
+reqwest = { version = "0.11", optional = true, features = ["blocking"] }
 serde_json = { version = "1.0", optional = true }
 # Dependencies which are only required to generate the CC library
 minidom = { version = "0.13", optional = true }

@@ -153,6 +153,56 @@ impl MethodLib {
     }
 }
 
+#[cfg(feature = "cc_lib")]
+use std::path::PathBuf;
+
+/// Fetch the CCCBR method library, or load it from a cached file
+#[cfg(feature = "cc_lib")]
+impl MethodLib {
+    /// Create a `MethodLib` containing the latest version of the Central Council method library
+    pub fn cc_lib() -> Option<MethodLib> {
+        // Load the CCCBR library from the cache, if it exists
+        if let Some(lib_from_cache) = Self::load_cc_lib_from_cache() {
+            return Some(lib_from_cache);
+        }
+        // If the cached version couldn't be loaded, then fetch it from the `kneasle/cc-method-lib`
+        // repository.  This also saves it to a file
+        Self::fetch_cc_lib()
+    }
+
+    /// Try to load a cached copy of the CC method library, returning `None` if it couldn't be
+    /// loaded.
+    fn load_cc_lib_from_cache() -> Option<MethodLib> {
+        let cache_path = Self::cache_file_path()?;
+        let json = std::fs::read_to_string(cache_path).ok()?;
+        Self::from_json(&json).ok()
+    }
+
+    /// Fetch the CC library from the web
+    fn fetch_cc_lib() -> Option<MethodLib> {
+        let response = reqwest::blocking::get(
+            "https://raw.githubusercontent.com/kneasle/cc-method-lib/master/cccbr-methods.json",
+        )
+        .ok()?;
+        let json = response.text().ok()?;
+        let lib = Self::from_json(&json).ok()?;
+        // Save the JSON **after** creating the library, so we don't cache an invalid method
+        // library
+        if let Some(path) = Self::cache_file_path() {
+            let _ = std::fs::write(path, &json);
+        }
+        Some(lib)
+    }
+
+    /// Returns the expected location of the CC library's cache file
+    fn cache_file_path() -> Option<PathBuf> {
+        // Look for the cache directory in `$CACHE_DIR/cccbr-methods.json`
+        let mut path = dirs::cache_dir()?;
+        path.push("cccbr-methods.json");
+        Some(path)
+    }
+}
+
 /// A light-weight version of [`Method`] that can be easily stored in a method library.  This is
 /// not intended to be used outside of [`MethodLib`]
 #[derive(Debug, Clone)]
