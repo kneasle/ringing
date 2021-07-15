@@ -261,6 +261,30 @@ impl FullClass {
             class,
         }
     }
+
+    /// Returns `true` if this represents a 'Jump' method
+    #[inline]
+    pub fn is_jump(self) -> bool {
+        self.is_jump
+    }
+
+    /// Returns `true` if this represents a 'Little' method
+    #[inline]
+    pub fn is_little(self) -> bool {
+        self.is_little
+    }
+
+    /// Returns `true` if this represents a 'Differential' method
+    #[inline]
+    pub fn is_differential(self) -> bool {
+        self.is_differential
+    }
+
+    /// Gets the main [`Class`]
+    #[inline]
+    pub fn class(self) -> Class {
+        self.class
+    }
 }
 
 impl Display for FullClass {
@@ -311,6 +335,7 @@ impl Display for FullClass {
 
 /// The `Class` of a [`Method`].
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[repr(u8)]
 pub enum Class {
     /// A method with no hunt bells
     Principle,
