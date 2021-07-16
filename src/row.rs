@@ -343,11 +343,11 @@ impl Row {
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), storing the result in an
     /// existing [`RowBuf`].  This will change the [`Stage`] of the output [`RowBuf`] if needed.
-    pub fn mul_into_buf(&self, rhs: &Row, out: &mut RowBuf) -> Result<(), IncompatibleStages> {
+    pub fn mul_into(&self, rhs: &Row, out: &mut RowBuf) -> Result<(), IncompatibleStages> {
         // Test that the stages match
         IncompatibleStages::test_err(self.stage(), rhs.stage())?;
         // This unsafety is OK because we've just checked that the stages match
-        unsafe { self.mul_into_buf_unchecked(rhs, out) }
+        unsafe { self.mul_into_unchecked(rhs, out) }
         Ok(())
     }
 
@@ -357,7 +357,7 @@ impl Row {
     /// # Safety
     ///
     /// This function is safe if `self` and `rhs` have the same stage
-    pub unsafe fn mul_into_buf_unchecked(&self, rhs: &Row, out: &mut RowBuf) {
+    pub unsafe fn mul_into_unchecked(&self, rhs: &Row, out: &mut RowBuf) {
         // Replace `out.bell_vec` with `self * rhs`
         out.bell_vec.clear();
         out.bell_vec
@@ -367,12 +367,12 @@ impl Row {
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), storing the result in an
     /// existing `Row`.  If any of the [`Stage`]s don't match, then a [`MulIntoError`] specifying
     /// the mismatch is returned.
-    pub fn mul_into(&self, rhs: &Row, out: &mut Row) -> Result<(), MulIntoError> {
+    pub fn mul_into_row(&self, rhs: &Row, out: &mut Row) -> Result<(), MulIntoError> {
         // Test that all 3 stages match
         IncompatibleStages::test_err(self.stage(), rhs.stage()).map_err(MulIntoError::RhsStage)?;
         IncompatibleStages::test_err(self.stage(), out.stage()).map_err(MulIntoError::IntoStage)?;
         // This unsafety is OK because we've just checked that the stages match
-        unsafe { self.mul_into_unchecked(rhs, out) }
+        unsafe { self.mul_into_row_unchecked(rhs, out) }
         Ok(())
     }
 
@@ -382,7 +382,7 @@ impl Row {
     /// # Safety
     ///
     /// This is safe if `self`, `rhs` and `out` all share the same [`Stage`].
-    pub unsafe fn mul_into_unchecked(&self, rhs: &Row, out: &mut Row) {
+    pub unsafe fn mul_into_row_unchecked(&self, rhs: &Row, out: &mut Row) {
         // We bypass the validity check because if two Rows are valid, then so is their product.
         // However, this function is also unsafe because permuting two rows of different Stages
         // causes undefined behaviour
@@ -745,7 +745,7 @@ impl Row {
             for &a in &row_set {
                 // This unsafety is OK because we checked that all the stages match at the start of
                 // this function
-                unsafe { a.mul_into_buf_unchecked(&b_inv, &mut a_mul_b_inv) }
+                unsafe { a.mul_into_unchecked(&b_inv, &mut a_mul_b_inv) }
                 // If `a * !b` is not in `row_set`, then this can't be a group so we return false
                 if !row_set.contains(&*a_mul_b_inv) {
                     return Ok(false);
