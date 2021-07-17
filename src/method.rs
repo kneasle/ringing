@@ -238,7 +238,7 @@ pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
     // (which we check indirectly by measuring the length of `s` before and after adding the
     // classification string)
     let len_before_class = s.len();
-    write!(s, "{}", class).unwrap();
+    class.fmt_name(&mut s, true).unwrap();
     if s.len() > len_before_class {
         // If the class made the string longer, we need another space before the stage
         s.push(' ');
@@ -384,6 +384,61 @@ impl FullClass {
         }
     }
 
+    /// Format the name of this class, either for a title (which won't display Principles and
+    /// Hybrids) or for display (which will display all classes differently).
+    fn fmt_name(&self, f: &mut impl Write, is_for_title: bool) -> std::fmt::Result {
+        // The `add_space` macro always generates a write to `is_first_segment`, but the value
+        // written by the last call is never used.  The compiler will almost certainly optimise
+        // that away, and we just don't need the error.
+        #![allow(unused_assignments)]
+
+        let mut is_first_segment = true;
+
+        /// Adds a space between two parts of a name (but doesn't place an erroneous space at the
+        /// start of a class).
+        macro_rules! add_space {
+            () => {
+                if !is_first_segment {
+                    write!(f, " ")?;
+                }
+                is_first_segment = false;
+            };
+        }
+
+        // Write optional classes
+        if self.is_jump {
+            add_space!();
+            write!(f, "Jump")?;
+        }
+        if self.is_differential {
+            add_space!();
+            write!(f, "Differential")?;
+        }
+        // Write 'Little' in the main class name
+        if is_for_title {
+            // In method titles, 'Little' should only be used for symmetric hunt methods
+            if let Some(name) = self.class.name_in_title() {
+                if self.is_little {
+                    add_space!();
+                    write!(f, "Little")?;
+                }
+
+                add_space!();
+                write!(f, "{}", name)?;
+            }
+        } else {
+            if self.is_little {
+                add_space!();
+                write!(f, "Little")?;
+            }
+
+            add_space!();
+            write!(f, "{}", self.class)?;
+        }
+
+        Ok(())
+    }
+
     /// Returns `true` if this represents a 'Jump' method
     #[inline]
     pub fn is_jump(self) -> bool {
@@ -411,47 +466,7 @@ impl FullClass {
 
 impl Display for FullClass {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // The `add_space` macro generates writes to `is_first_segment`, but this value is never
-        // used for the last call
-        #![allow(unused_assignments)]
-
-        let mut is_first_segment = true;
-
-        /// Adds a space between two parts of a name (but doesn't place an erroneous space at the
-        /// start of a class).
-        macro_rules! add_space {
-            () => {
-                if !is_first_segment {
-                    write!(f, " ")?;
-                }
-                is_first_segment = false;
-            };
-        }
-
-        // Write optional classes
-        if self.is_jump {
-            add_space!();
-            write!(f, "Jump")?;
-        }
-        if self.is_differential {
-            add_space!();
-            write!(f, "Differential")?;
-        }
-        // 'Little' should only be used for symmetric hunt methods
-        if self.class.is_symmetric_hunter() {
-            if self.is_little {
-                add_space!();
-                write!(f, "Little")?;
-            }
-
-            // Write the main class
-            if let Some(name) = self.class.name() {
-                add_space!();
-                write!(f, "{}", name)?;
-            }
-        }
-
-        Ok(())
+        self.fmt_name(f, false)
     }
 }
 
@@ -609,7 +624,19 @@ fn sub_classify_plain<A>(first_lead: &AnnotBlock<A>, working_bell_cycles: &[Vec<
 /// giving a roughly quadratic algorithm.  This should be fine, but if someone knows of or wants to
 /// implement a faster algorithm then that'd be great :).
 fn is_palindromic(path: &[usize]) -> bool {
-    true
+    // Try rotating `reversed_path` by each amount, and test if the result is equal to
+    // `is_palindromic`
+    for i in 0..path.len() {
+        let rotated_reversed_path = path.iter().rev().cycle().skip(i);
+        if rotated_reversed_path.zip(path).all(|(p1, p2)| p1 == p2) {
+            // If the reversed & rotated path is equal to the forward path, then this path is
+            // palindromic
+            return true;
+        }
+    }
+    // If all the rotations of the reversed path are non-equal to the forward path, then the path
+    // isn't palindromic
+    false
 }
 
 /// The class of a hunt bell path, ordered by dominance (i.e. if a method has two hunt bell paths,
@@ -691,8 +718,9 @@ impl Class {
         })
     }
 
-    /// Returns the printable name of this `Class`, or `None` if `self` is [`Class::Principle`].
-    pub fn name(self) -> Option<&'static str> {
+    /// Returns the human-friendly name of this `Class` as used in [`Method`] titles (i.e. where no
+    /// name is given for `Principle` or `Hybrid`
+    pub fn name_in_title(self) -> Option<&'static str> {
         Some(match self {
             Class::Principle => return None,
 
@@ -705,15 +733,34 @@ impl Class {
 
             Class::TreblePlace => "Treble Place",
             Class::Alliance => "Alliance",
-            Class::Hybrid => "Hybrid",
+            Class::Hybrid => return None,
         })
+    }
+
+    /// Returns the human-friendly name of this `Class`, including names for `Principle` and
+    /// `Hybrid`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Class::Principle => "Principle",
+
+            Class::Place => "Place",
+            Class::Bob => "Bob",
+
+            Class::TrebleBob => "Treble Bob",
+            Class::Delight => "Delight",
+            Class::Surprise => "Surprise",
+
+            Class::TreblePlace => "Treble Place",
+            Class::Alliance => "Alliance",
+            Class::Hybrid => "Hybrid",
+        }
     }
 }
 
 impl Display for Class {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name().unwrap_or(""))
+        write!(f, "{}", self.name())
     }
 }
 
@@ -728,7 +775,10 @@ mod tests {
             let plain_lead: Block = pn.to_block();
             let computed_class = FullClass::classify(&plain_lead);
             if computed_class != class {
-                println!("Misclassified {} as '{}'", name, computed_class);
+                println!(
+                    "Misclassified {} as '{}' (should be '{}')",
+                    name, computed_class, class
+                );
                 num_misclassifications += 1;
             }
         }
