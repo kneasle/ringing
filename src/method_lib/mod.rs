@@ -136,6 +136,20 @@ impl MethodLib {
             .map(|Suggestion(vs)| vs)
             .collect_vec()
     }
+
+    pub(crate) fn all_pns_and_classes(&self) -> Vec<(&str, PnBlock, FullClass)> {
+        let mut v = Vec::new();
+        for (stage, meths) in &self.method_map {
+            for m in meths.values() {
+                v.push((
+                    m.title.as_str(),
+                    PnBlock::parse(&m.place_notation, *stage).unwrap(),
+                    m.full_class,
+                ));
+            }
+        }
+        v
+    }
 }
 
 /// (De)serialising libraries to and from JSON

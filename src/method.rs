@@ -1,8 +1,14 @@
-use std::fmt::{Display, Formatter, Write};
+use std::{
+    cmp::Ordering,
+    collections::HashSet,
+    fmt::{Display, Formatter, Write},
+};
+
+use itertools::Itertools;
 
 use crate::{
-    block::AnnotRowIter, place_not::PnBlockParseError, AnnotBlock, AnnotRow, PnBlock, Row, RowBuf,
-    Stage,
+    block::AnnotRowIter, place_not::PnBlockParseError, AnnotBlock, AnnotRow, Bell, PlaceNot,
+    PnBlock, Row, RowBuf, Stage,
 };
 
 // Imports used solely for doc comments
@@ -264,7 +270,118 @@ impl FullClass {
 
     /// Compute the [`FullClass`] of a [`Method`], given an [`AnnotBlock`] representing its first lead.
     pub fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
-        todo!();
+        let lead_head = first_lead.leftover_row();
+        let stage = first_lead.stage();
+
+        // Partition bells into hunts & working bells
+        let (hunt_bells, working_bells) = partition_bells(lead_head);
+
+        // A method is differential iff the working bell cycles don't have the same length
+        let cycles = {
+            let mut cycles = Vec::<Vec<Bell>>::new();
+            let mut working_bell_left = vec![false; stage.as_usize()];
+            for b in &working_bells {
+                working_bell_left[b.index()] = true;
+            }
+
+            // Repeatedly follow cycles until all working bells have been found
+            while let Some(starting_bell_idx) = working_bell_left.iter().position(|v| *v) {
+                let starting_bell = Bell::from_index(starting_bell_idx);
+                let mut bells_in_cycle = Vec::new();
+                // Follow the cycle which contains `starting_bell_idx`, marking those bells as
+                // found
+                let mut bell = starting_bell;
+                loop {
+                    // Mark that we've covered this bell
+                    working_bell_left[bell.index()] = false;
+                    // Move a step down the cycle, and check if we've returned to the start bell
+                    bell = Bell::from_index(lead_head.place_of(bell).unwrap());
+                    bells_in_cycle.push(bell);
+                    if bell == starting_bell {
+                        break;
+                    }
+                }
+                cycles.push(bells_in_cycle);
+            }
+
+            cycles
+        };
+
+        // If all the cycles have the same lengths, then the method is not differential
+        let is_differential = !cycles
+            .iter()
+            .tuple_windows()
+            .all(|(set1, set2)| set1.len() == set2.len());
+
+        // If there are no hunt bells, then the method is a Principle
+        if hunt_bells.is_empty() {
+            return FullClass {
+                is_jump: false,
+                is_little: false, // principles can't be little
+                is_differential,
+                class: Class::Principle,
+            };
+        }
+
+        // Classify all the hunt bell paths, and use the dominant class for the method
+        let (mut best_is_little, mut best_hunt_bell_class) =
+            classify_hunt_bell_path(first_lead, hunt_bells[0]);
+        let mut hunt_bells_in_best_class = vec![hunt_bells[0]];
+        for &b in &hunt_bells[1..] {
+            let (is_little, class) = classify_hunt_bell_path(first_lead, b);
+
+            match class.cmp(&best_hunt_bell_class) {
+                // If this class is strictly better than the last one, then overwrite
+                // best_hunt_bell_class directly
+                Ordering::Less => {
+                    best_is_little = is_little;
+                    best_hunt_bell_class = class;
+                    hunt_bells_in_best_class.clear();
+                    hunt_bells_in_best_class.push(b);
+                }
+                // If this hunt bell is equal to the current best class, then we only name the
+                // method 'Little' if **all** its best-classed hunt bells are Little
+                Ordering::Equal => {
+                    best_is_little &= is_little;
+                    hunt_bells_in_best_class.push(b);
+                }
+                // If this class is strictly worse than the current best, then it can't contribute
+                // to the Method's class
+                Ordering::Greater => {}
+            }
+        }
+
+        // Convert the HuntBellClass into a `Class` for the whole method (sub-classifying if
+        // necessary)
+        let class = match best_hunt_bell_class {
+            HuntBellClass::Plain => {
+                // All paths except the dominant hunt bell count towards making a method `Bob` or
+                // `Place`, so we have to add in the non-dominant hunt bells to the cycles checked
+                // by `sub_classify_plain`
+                let mut cycles = cycles;
+                cycles.extend(
+                    hunt_bells
+                        .iter()
+                        .filter(|b| !hunt_bells_in_best_class.contains(b))
+                        .map(|b| vec![*b]),
+                );
+                sub_classify_plain(first_lead, &cycles)
+            }
+            HuntBellClass::TrebleDodging => {
+                sub_classify_treble_dodging(&first_lead, &hunt_bells_in_best_class)
+            }
+            HuntBellClass::TreblePlace => Class::TreblePlace,
+            HuntBellClass::Alliance => Class::Alliance,
+            HuntBellClass::Hybrid => Class::Hybrid,
+        };
+
+        // Build a `FullClass` for this method
+        FullClass {
+            is_jump: false,
+            is_little: best_is_little,
+            is_differential,
+            class,
+        }
     }
 
     /// Returns `true` if this represents a 'Jump' method
@@ -338,6 +455,176 @@ impl Display for FullClass {
     }
 }
 
+/* CLASSIFICATION HELPER FUNCTIONS */
+
+/// Classify and partition [`Bell`]s according to (hunt, working).
+fn partition_bells(lead_head: &Row) -> (Vec<Bell>, Vec<Bell>) {
+    let mut hunt_bells = Vec::new();
+    let mut working_bells = Vec::new();
+
+    for (i, b) in lead_head.bell_iter().enumerate() {
+        if i == b.index() {
+            // If this bell is at its home position at the lead head, then it must be a hunt bell
+            hunt_bells.push(b);
+        } else {
+            working_bells.push(b);
+        }
+    }
+
+    (hunt_bells, working_bells)
+}
+
+/// Classify a hunt bell path (and whether or not the method is Little)
+fn classify_hunt_bell_path<A>(first_lead: &AnnotBlock<A>, bell: Bell) -> (bool, HuntBellClass) {
+    let path = first_lead.path_of(bell).unwrap();
+    let stage = first_lead.stage();
+
+    // Count the number of rows spent in each place (we ignore the first element of the path
+    // because the `path` includes the leftover row and therefore counts the first place twice).
+    let mut num_rows_in_each_place = vec![0usize; stage.as_usize()];
+    for p in &path {
+        num_rows_in_each_place[*p] += 1;
+    }
+
+    // A method is Little if some places are not visited by this hunt bell
+    let is_little = num_rows_in_each_place.contains(&0);
+    // A method is stationary if exactly one place is visited
+    let is_stationary = num_rows_in_each_place.iter().filter(|v| **v > 0).count() == 1;
+    let are_places_visited_exactly_twice =
+        num_rows_in_each_place.iter().all(|&n| matches!(n, 0 | 2));
+
+    // If a hunt bell path is stationary, then it classifies as Treble Place
+    // (from Framework):
+    // ... or
+    // a) The Hunt Bell is a Stationary Bell
+    // b) The Method does not use Jump Changes.
+    if is_stationary {
+        return (is_little, HuntBellClass::TreblePlace);
+    }
+
+    // A method is Plain iff:
+    // a) The Hunt Bell rings exactly twice in each Place of the Path during a Plain Lead
+    //    [condition of the if statement]
+    // b) The Hunt Bell is not a Stationary Bell [early return]
+    // c) The Method does not use Jump Changes [pre-check for jump methods]
+    if are_places_visited_exactly_twice {
+        return (is_little, HuntBellClass::Plain);
+    }
+
+    let is_path_palindromic = is_palindromic(&path);
+    let num_places_made = path
+        .iter()
+        .circular_tuple_windows()
+        .filter(|(a, b)| a == b)
+        .count();
+    let are_all_places_equally_covered = num_rows_in_each_place
+        .iter()
+        .filter(|v| **v != 0)
+        .tuple_windows()
+        .all(|(a, b)| a == b);
+
+    let class = match (
+        is_path_palindromic,
+        are_all_places_equally_covered,
+        num_places_made.cmp(&2),
+    ) {
+        (true, true, Ordering::Greater) => HuntBellClass::TreblePlace,
+        (true, true, Ordering::Equal) => HuntBellClass::TrebleDodging,
+        (true, true, Ordering::Less) => HuntBellClass::Hybrid,
+        // Paths where places aren't evenly covered are also Alliance
+        (true, false, _) => HuntBellClass::Alliance,
+        // Non-palindromic paths are always Hybrid
+        (false, _, _) => HuntBellClass::Hybrid,
+    };
+
+    (is_little, class)
+}
+
+/// Given a Treble Bob method, sub-classify it into either Surprise, Delight or Treble Bob
+fn sub_classify_treble_dodging<A>(first_lead: &AnnotBlock<A>, hunt_bells: &[Bell]) -> Class {
+    let mut cross_indices = HashSet::<usize>::new();
+    // Use the hunt bell paths to figure out in which places the hunt bells hunt between dodges
+    for &h in hunt_bells {
+        let path = first_lead.path_of(h).unwrap();
+        let min_place = *path.iter().min().unwrap();
+        // Find the cross sections
+        cross_indices.extend(
+            path.iter()
+                .circular_tuple_windows()
+                .positions(|(a, b)| (a - min_place) / 2 != (b - min_place) / 2),
+        );
+    }
+
+    // Check for internal places at each of the cross locations
+    let mut all_internal_places = true;
+    let mut all_no_internal_places = true;
+    for i in cross_indices {
+        let r1 = first_lead.get_row(i).unwrap();
+        let r2 = first_lead.get_row(i + 1).unwrap();
+        let has_internal_places = PlaceNot::pn_between(r1, r2).unwrap().has_internal_places();
+        if has_internal_places {
+            all_no_internal_places = false;
+        } else {
+            all_internal_places = false;
+        }
+    }
+
+    match (all_internal_places, all_no_internal_places) {
+        (false, false) => Class::Delight,
+        (false, true) => Class::TrebleBob,
+        (true, false) => Class::Surprise,
+        // In this case, there must be no cross points and in this case the method defaults to
+        // Treble Bob
+        (true, true) => Class::TrebleBob,
+    }
+}
+
+/// Given a Plain method, sub-classify it into either Bob or Place
+fn sub_classify_plain<A>(first_lead: &AnnotBlock<A>, working_bell_cycles: &[Vec<Bell>]) -> Class {
+    // Follow each cycle of working bells, and generate the full path of that cycle for detecting
+    // points
+    for bells_in_cycle in working_bell_cycles {
+        // Generate the full path of this cycle
+        let mut path = Vec::<usize>::with_capacity(bells_in_cycle.len() * first_lead.len());
+        for b in bells_in_cycle {
+            path.extend(first_lead.path_of(*b).unwrap());
+        }
+        // Check for a change in direction without an intervening place.  I.e. we're looking for:
+        // b          b
+        //   b  or  b
+        // b          b
+        // If this happens, we know that the method is a Bob, not a Place
+        for (a, b, c) in path.into_iter().circular_tuple_windows() {
+            if a == c && (b as isize == a as isize - 1 || b == a + 1) {
+                return Class::Bob;
+            }
+        }
+    }
+
+    Class::Place
+}
+
+/// Determines if a sequence of places is the same forwards as it is backwards.  This currently
+/// uses a fairly naive algorithm of generating the reverse path and then repeatedly rotating it,
+/// giving a roughly quadratic algorithm.  This should be fine, but if someone knows of or wants to
+/// implement a faster algorithm then that'd be great :).
+fn is_palindromic(path: &[usize]) -> bool {
+    true
+}
+
+/// The class of a hunt bell path, ordered by dominance (i.e. if a method has two hunt bell paths,
+/// the first class specified in this enum is used for the method - so for example, given an option
+/// between Plain and Alliance, the method will be named 'Plain').
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[repr(u8)]
+pub enum HuntBellClass {
+    Plain,
+    TrebleDodging,
+    TreblePlace,
+    Alliance,
+    Hybrid,
+}
+
 /// The `Class` of a [`Method`].
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(u8)]
@@ -391,6 +678,19 @@ impl Class {
             || matches!(self, Self::TreblePlace | Self::Alliance)
     }
 
+    /// Returns the [`HuntBellClass`] of the dominant hunt bell of a [`Method`] with this `Class`
+    pub fn hunt_bell_class(self) -> Option<HuntBellClass> {
+        Some(match self {
+            Class::Bob | Class::Place => HuntBellClass::Plain,
+            Class::TrebleBob | Class::Delight | Class::Surprise => HuntBellClass::TrebleDodging,
+            Class::TreblePlace => HuntBellClass::TreblePlace,
+            Class::Alliance => HuntBellClass::Alliance,
+            Class::Hybrid => HuntBellClass::Hybrid,
+            // Principles have no hunt bells, and therefore no valid `HuntBellClass`
+            Class::Principle => return None,
+        })
+    }
+
     /// Returns the printable name of this `Class`, or `None` if `self` is [`Class::Principle`].
     pub fn name(self) -> Option<&'static str> {
         Some(match self {
@@ -414,5 +714,28 @@ impl Display for Class {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name().unwrap_or(""))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{method::FullClass, Block, MethodLib};
+
+    #[test]
+    fn classification() {
+        let mut num_misclassifications = 0usize;
+        for (name, pn, class) in MethodLib::cc_lib().unwrap().all_pns_and_classes() {
+            let plain_lead: Block = pn.to_block();
+            let computed_class = FullClass::classify(&plain_lead);
+            if computed_class != class {
+                println!("Misclassified {} as '{}'", name, computed_class);
+                num_misclassifications += 1;
+            }
+        }
+        println!("{} methods misclassified", num_misclassifications);
+
+        if num_misclassifications > 0 {
+            panic!();
+        }
     }
 }

@@ -6,7 +6,9 @@ use std::{
     ops::Index,
 };
 
-use crate::{IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+use itertools::Itertools;
+
+use crate::{Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
 
 /// All the possible ways that parsing a [`Block`] could fail
 #[derive(Debug, Clone)]
@@ -411,6 +413,34 @@ impl<A> AnnotBlock<A> {
                 self.rows.iter().cloned().take(limit + 1).collect(),
             )
         }
+    }
+
+    /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`, **excluding**
+    /// the leftover row.
+    pub fn path_of(&self, bell: Bell) -> Option<Vec<usize>> {
+        if bell.number() > self.stage().as_usize() {
+            return None;
+        }
+        Some(
+            self.annot_rows()[..self.len()]
+                .iter()
+                .map(|r| r.row.place_of(bell).unwrap())
+                .collect_vec(),
+        )
+    }
+
+    /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`, **including**
+    /// the leftover row.
+    pub fn full_path_of(&self, bell: Bell) -> Option<Vec<usize>> {
+        if bell.number() > self.stage().as_usize() {
+            return None;
+        }
+        Some(
+            self.annot_rows()
+                .iter()
+                .map(|r| r.row.place_of(bell).unwrap())
+                .collect_vec(),
+        )
     }
 
     /// Splits this `AnnotBlock` into two separate `AnnotBlock`s at a specified index.  This makes

@@ -58,7 +58,7 @@ pub struct PlaceNot {
     ///   For example, suppose the [`Stage`] is [`MAJOR`](Stage::MAJOR).
     ///    - The place notation "4" has an implicit place made at lead and so would be stored as
     ///      `vec![0, 3]`.
-    ///    - The place notation "146" has an implicit/ambiguous place made in 5ths, so would be
+    ///    - The place notation "146" has an implicit place made in 5ths, so would be
     ///      stored as `vec![0, 3, 4, 5]`.
     /// - The places are stored **in ascending order**.  So "4817" would be stored as
     ///   `vec![0, 3, 6, 7]`.
@@ -230,10 +230,49 @@ impl PlaceNot {
         self.places.contains(&place)
     }
 
+    /// Checks whether internal places are made in this `PlaceNot`
+    #[inline(always)]
+    pub fn has_internal_places(&self) -> bool {
+        let has_lead = self.places.first() == Some(&0);
+        let has_lie = self.places.last() == Some(&(self.stage.as_usize() - 1));
+        let num_external_places = if has_lead { 1 } else { 0 } + if has_lie { 1 } else { 0 };
+        self.places.len() > num_external_places
+    }
+
     /// Returns the [`Stage`] of this `PlaceNot`
     #[inline(always)]
     pub fn stage(&self) -> Stage {
         self.stage
+    }
+
+    /// Returns the [`PlaceNot`] that goes between two [`Row`]s, or `None` if the [`Row`]s are not
+    /// adjacent.
+    pub fn pn_between(r1: &Row, r2: &Row) -> Option<PlaceNot> {
+        if r1.stage() != r2.stage() {
+            return None;
+        }
+
+        let mut places = Vec::<usize>::new();
+        let mut bell_pair_iter = r1.bell_iter().zip_eq(r2.bell_iter()).enumerate();
+        while let Some((place, (b1, b2))) = bell_pair_iter.next() {
+            // If b1 and b2 are the same, then a place must be made
+            if b1 == b2 {
+                places.push(place);
+            } else {
+                // Otherwise, we expect b1 and b2 to swap round in the next place:
+                // ... b1  b2 ...
+                //      (to)
+                // ... b2  b1 ...
+                if Some((place + 1, (b2, b1))) != bell_pair_iter.next() {
+                    return None;
+                }
+            }
+        }
+
+        Some(Self {
+            places,
+            stage: r1.stage(),
+        })
     }
 
     /// Returns a [`RowBuf`] representing the same transposition as this `PlaceNot`.
@@ -626,7 +665,7 @@ impl From<char> for CharMeaning {
 #[cfg(test)]
 mod tests {
     use super::ParseError;
-    use crate::{Block, PlaceNot, PnBlock, Stage};
+    use crate::{Block, PlaceNot, PnBlock, RowBuf, Stage};
 
     #[test]
     fn parse_ok() {
@@ -814,5 +853,20 @@ mod tests {
             let b2 = Block::parse(block).unwrap();
             assert_eq!(b1, b2);
         }
+    }
+
+    #[test]
+    fn pn_between_rows() {
+        #[track_caller]
+        fn check_ok(r1: &str, r2: &str, exp_pn: &str) {
+            let row1 = RowBuf::parse(r1).unwrap();
+            let row2 = RowBuf::parse(r2).unwrap();
+            let exp_pn = PlaceNot::parse(exp_pn, row1.stage()).unwrap();
+            assert_eq!(PlaceNot::pn_between(&row1, &row2), Some(exp_pn));
+        }
+
+        check_ok("12345678", "13245678", "145678");
+        check_ok("12345678", "13246587", "14");
+        check_ok("18247653", "81246753", "3478");
     }
 }
