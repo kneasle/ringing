@@ -12,10 +12,16 @@ base_calls = "near"
 [method]
 place_notation = "-50-14.50-50.36.14-70.58.16-16.70-16-10,10"
 name = "Bristol"
-stage = "Royal"
+stage = 10
+# These don't work (due to what I believe is a bug in serde):
+# stage = "Royal"
 # stage = "royal"
-# stage = 10
 #(opt) lead_locations = { 0 = "LE", 20 = "HL" }
+
+# [or]
+# [method]
+# title = "Bristol Surprise Royal"
+# lead_locations = { .. }
 
 [[calls]]
 place_notation = "16"

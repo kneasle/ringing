@@ -1,10 +1,7 @@
 length = "QP"
 num_comps = 30
 base_calls = "near"
-
-[method]
-place_notation = "x38x1456x56x16x34x18x34x58,12"
-stage = 8
+method.title = "Birthday Delight Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

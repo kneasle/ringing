@@ -2,10 +2,7 @@ length = "qp"
 num_comps = 15
 base_calls = "near"
 course_heads = ["1xxxxx78", "1xxx7856", "1xxx8765", "13456782", "18234567"]
-
-[method]
-stage = 8
-place_notation = "-38-14-1256-18-3478-58-16-78,12"
+method.title = "Romanby Green Delight Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

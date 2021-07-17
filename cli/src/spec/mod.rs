@@ -4,7 +4,7 @@ use bellframe::{
     method::LABEL_LEAD_END,
     music::Regex,
     place_not::{self, PnBlockParseError},
-    Bell, Method, Stage,
+    Bell, Method, MethodLib, Stage,
 };
 use hmap::hmap;
 use itertools::Itertools;
@@ -81,14 +81,16 @@ impl AbstractSpec {
     /// Convert this abstract specification into a concrete [`Spec`] that uniquely defines a set of
     /// compositions.
     pub fn to_spec(&self, config: &Config) -> Result<Arc<Spec>, SpecConvertError> {
+        // Parse and verify into its fully specified form
+        let method = self.method.gen_method()?;
+        let stage = method.stage();
+
         // This unwrap will only trigger if the method has `Stage` of zero, which I don't think is
         // possible.  Even if it is possible, there aren't any possible compositions on 0 bells so
         // I think a panic is justified.
-        let tenor = Bell::tenor(self.method.stage).unwrap();
+        let tenor = Bell::tenor(stage).unwrap();
 
-        // Parse and verify into its fully specified form
-        let method = self.method.gen_method()?;
-        let calls = calls::gen_calls(self.method.stage, self.base_calls.as_ref(), &self.calls)?;
+        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
         let music_types = self
             .music
             .iter()
@@ -107,7 +109,7 @@ impl AbstractSpec {
                 tenor,
             )],
             // Default to tenors together, with the tenor as 'calling bell'
-            (None, false) => vec![(gen_tenors_together_mask(self.method.stage), tenor)],
+            (None, false) => vec![(gen_tenors_together_mask(stage), tenor)],
         };
 
         // Generate a `Layout` from the data about the method and calls
@@ -147,6 +149,8 @@ fn gen_tenors_together_mask(stage: Stage) -> Mask {
 #[derive(Debug, Clone)]
 pub enum SpecConvertError<'s> {
     NoCalls,
+    CcLibNotFound,
+    MethodNotFound { suggestions: Vec<String> },
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
@@ -155,24 +159,32 @@ pub enum SpecConvertError<'s> {
 
 /// The contents of the `[method]` header in the input TOML file
 #[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct MethodSpec {
-    #[serde(default)]
-    name: String,
-    place_notation: String,
-    stage: Stage,
-    /// The inputs to this map are numerical strings representing sub-lead indices, and the outputs
-    /// are the lead location names
-    #[serde(default = "default_lead_locations")]
-    lead_locations: HashMap<String, String>,
+#[serde(untagged, deny_unknown_fields)]
+pub enum MethodSpec {
+    Lib {
+        title: String,
+        /// The inputs to this map are numerical strings representing sub-lead indices, and the
+        /// outputs are the lead location names
+        #[serde(default = "default_lead_locations")]
+        lead_locations: HashMap<String, String>,
+    },
+    Custom {
+        #[serde(default)]
+        name: String,
+        place_notation: String,
+        stage: Stage,
+        /// The inputs to this map are numerical strings representing sub-lead indices, and the
+        /// outputs are the lead location names
+        #[serde(default = "default_lead_locations")]
+        lead_locations: HashMap<String, String>,
+    },
 }
 
 impl MethodSpec {
     fn gen_method(&self) -> Result<Method, SpecConvertError<'_>> {
-        let mut m =
-            Method::from_place_not_string(self.name.clone(), self.stage, &self.place_notation)
-                .map_err(SpecConvertError::MethodPnParse)?;
-        for (index_str, name) in &self.lead_locations {
+        let mut m = self.get_method_without_lead_locations()?;
+
+        for (index_str, name) in self.get_lead_locations() {
             let index = index_str
                 .parse::<isize>()
                 .map_err(|e| SpecConvertError::LeadLocationIndex(&index_str, e))?;
@@ -182,6 +194,44 @@ impl MethodSpec {
             m.set_label(wrapped_index as usize, Some(name.clone()));
         }
         Ok(m)
+    }
+
+    fn get_lead_locations(&self) -> &HashMap<String, String> {
+        match self {
+            MethodSpec::Lib { lead_locations, .. } => lead_locations,
+            MethodSpec::Custom { lead_locations, .. } => lead_locations,
+        }
+    }
+
+    /// Attempt to generate a new [`Method`] with no lead location annotations
+    fn get_method_without_lead_locations(&self) -> Result<Method, SpecConvertError<'_>> {
+        match self {
+            MethodSpec::Lib { title, .. } => {
+                let lib = MethodLib::cc_lib().ok_or(SpecConvertError::CcLibNotFound)?;
+                lib.get_by_title_with_suggestions(title, 5)
+                    .unwrap_parse_err()
+                    .map_err(|suggestions| {
+                        // Only suggest the suggestions which (perhaps jointly) have the best edit
+                        // distance
+                        let first_suggestion_edit_dist = suggestions[0].1;
+                        let best_suggestions = suggestions
+                            .into_iter()
+                            .take_while(|&(_s, i)| i == first_suggestion_edit_dist)
+                            .map(|(s, _i)| s.to_owned())
+                            .collect_vec();
+                        SpecConvertError::MethodNotFound {
+                            suggestions: best_suggestions,
+                        }
+                    })
+            }
+            MethodSpec::Custom {
+                name,
+                stage,
+                place_notation,
+                ..
+            } => Method::from_place_not_string(name.clone(), *stage, place_notation)
+                .map_err(SpecConvertError::MethodPnParse),
+        }
     }
 }
 

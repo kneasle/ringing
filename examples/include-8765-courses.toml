@@ -1,12 +1,9 @@
 length = "QP"
 num_comps = 20
 base_calls = "near"
+method.title = "Yorkshire Surprise Major"
 # Monument will deduplicate the CH masks, removing `1xxx5678` because it is a subset of `1xxxxx78`.
 course_heads = ["1xxx5678", "1xxxxx78", "1xxx8765", "15678xxx"]
-
-[method]
-place_notation = "x38x14x58x16x12x38x14x78,12"
-stage = 8
 
 [[music]]
 run_length = 4

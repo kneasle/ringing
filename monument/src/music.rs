@@ -63,7 +63,7 @@ impl Breakdown {
         let mut breakdown = vec![0; music_types.len()];
         // For every (transposed) row ...
         for r in rows {
-            course_head.mul_into_buf(r, &mut temp_row).unwrap();
+            course_head.mul_into(r, &mut temp_row).unwrap();
             // ... for every music type ...
             for (num_instances, ty) in breakdown.iter_mut().zip_eq(music_types) {
                 // ... count the number of instances of that type of music

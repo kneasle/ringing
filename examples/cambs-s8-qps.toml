@@ -1,10 +1,7 @@
 length = "qp"
 num_comps = 15
 base_calls = "near"
-
-[method]
-stage = 8
-place_notation = "x38x14x1258x36x14x58x16x78,12"
+method.title = "Cambridge Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

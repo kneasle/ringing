@@ -347,7 +347,17 @@ impl TestCase {
         let mut spec = match AbstractSpec::read_from_file(&file_path) {
             Ok(f) => f,
             Err(e) => {
-                println!("Parsing error: {}", e);
+                println!(
+                    "Error parsing {}: {}",
+                    file_path
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .white()
+                        .bold(),
+                    e
+                );
                 return None;
             }
         };

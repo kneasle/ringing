@@ -1,10 +1,7 @@
 length = "QP"
 base_calls = "near"
 course_heads = ["1xxxxx78", "1xxx8765", "15678xxx"]
-
-[method]
-place_notation = "x38x14x12.58.16x34x58x16x58,12"
-stage = 8
+method.title = "Jovium Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

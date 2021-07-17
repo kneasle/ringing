@@ -1,9 +1,6 @@
 length = "QP"
 base_calls = "near"
-
-[method]
-stage = 8
-place_notation = "x38x14x58x16x12x38x14x78,12"
+method.title = "Yorkshire Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

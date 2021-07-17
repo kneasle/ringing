@@ -1,10 +1,7 @@
 length = "QP"
 base_calls = "near"
 start_indices = [2]
-
-[method]
-place_notation = "x36x14x58x36x14x58x36x78,12"
-stage = 8
+method.title = "Superlative Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

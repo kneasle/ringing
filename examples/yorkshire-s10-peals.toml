@@ -1,10 +1,7 @@
 length = 5040
 num_comps = 50
 base_calls = "near"
-
-[method]
-stage = "Royal"
-place_notation = "x30x14x50x16x1270x38x14x50x16x90,12"
+method.title = "Yorkshire Surprise Royal"
 
 [[music]]
 run_length = 4

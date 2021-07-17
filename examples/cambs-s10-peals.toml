@@ -1,11 +1,8 @@
 length = "peal"
 base_calls = "near"
+method.title = "Cambridge Surprise Royal"
 # Allow Monument to affect the tenors if the resulting course has 6-bell runs of 2-7
 course_heads = ["1xxxxx7890", "1234567xxx", "1674523xxx"]
-
-[method]
-stage = "Royal"
-place_notation = "-30-14-1250-36-1470-58-16-70-18-90,12"
 
 [[music]]
 run_lengths = [4, 5, 6, 7, 8]
