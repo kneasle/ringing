@@ -10,8 +10,12 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    compose::QueueElem, graph::falseness::FalsenessTable, layout::Layout, music::Breakdown,
-    score::Score, Config, MusicType, Segment, SuccSortStrat,
+    compose::{CompPrefix, QueueElem},
+    graph::falseness::FalsenessTable,
+    layout::Layout,
+    music::Breakdown,
+    score::Score,
+    Config, MusicType, Segment, SuccSortStrat,
 };
 
 use super::NodeId;
@@ -25,6 +29,7 @@ pub(crate) struct ProtoGraph {
     // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored or
     // discarded during the optimisation process).
     pub(super) nodes: HashMap<NodeId, ProtoNode>,
+    start_nodes: Vec<NodeId>,
 }
 
 impl ProtoGraph {
@@ -83,16 +88,18 @@ impl ProtoGraph {
         /* Run Dijkstra's algorithm using comp length as edge weights */
 
         // Populate the frontier with all the possible start nodes, each with distance 0
+        let start_nodes = layout
+            .starts
+            .iter()
+            .map(|(start_course_head, start_row_idx, _name)| {
+                NodeId::new(start_course_head.to_owned(), *start_row_idx, true)
+            })
+            .collect_vec();
         frontier.extend(
-            layout
-                .starts
+            start_nodes
                 .iter()
-                .map(|(start_course_head, start_row_idx, _name)| {
-                    FrontierNode(
-                        NodeId::new(start_course_head.to_owned(), *start_row_idx, true),
-                        0,
-                    )
-                })
+                .cloned()
+                .map(|id| FrontierNode(id, 0))
                 .map(Reverse),
         );
 
@@ -185,15 +192,16 @@ impl ProtoGraph {
             }
         }
 
-        Self { nodes }
+        Self { nodes, start_nodes }
     }
 
     /// Run Dijkstra's algorithm to update `min_distance_from_rounds` on every node
     fn recompute_distances_from_rounds(&mut self) {
         // Initialise the frontier with all the starting nodes (with distance 0)
         let mut frontier: BinaryHeap<Reverse<FrontierNode>> = self
-            .unordered_start_nodes()
-            .map(|(id, _node)| Reverse(FrontierNode(id.clone(), 0)))
+            .start_nodes
+            .iter()
+            .map(|id| Reverse(FrontierNode(id.to_owned(), 0)))
             .collect();
 
         while let Some(Reverse(FrontierNode(node_id, distance))) = frontier.pop() {
@@ -268,7 +276,7 @@ impl ProtoGraph {
         let mut reachable_nodes: HashSet<NodeId> = HashSet::with_capacity(self.nodes.len());
 
         // Run DFA on the graph starting from rounds, adding the nodes to `reachable_nodes`
-        for (id, _node) in self.unordered_start_nodes() {
+        for id in &self.start_nodes {
             self.explore(id, &mut reachable_nodes);
         }
 
@@ -434,10 +442,6 @@ impl ProtoGraph {
 
     /* ===== OPTIMISATION HELPER FUNCTIONS ===== */
 
-    pub(super) fn unordered_start_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
-        self.nodes.iter().filter(|(_id, node)| node.is_start())
-    }
-
     fn end_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
         self.nodes.iter().filter(|(_id, node)| node.is_end())
     }
@@ -512,7 +516,7 @@ impl ProtoGraph {
     pub fn generate_prefixes(&self, num_prefixes: usize) -> VecDeque<QueueElem> {
         // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
         // than `num_prefixes` in length, at which point it becomes our prefix list.
-        let num_start_nodes = self.unordered_start_nodes().count();
+        let num_start_nodes = self.start_nodes.len();
         let mut frontier: VecDeque<(QueueElem, &ProtoNode)> = self
             .nodes
             .iter()
@@ -545,6 +549,32 @@ impl ProtoGraph {
 
         frontier.into_iter().map(|(prefix, _node)| prefix).collect()
     }
+
+    /// Compute the percentage (of the overall search) left to be computed after some prefix below
+    /// a certain depth
+    pub fn compute_percentage(&self, prefix: &CompPrefix, min_depth: usize) -> f64 {
+        let mut percentage = 0f64;
+
+        // Traverse down the prefix, dividing the percentage equally between the branches at each
+        // depth
+        let mut percentage_covered_by_node = 100.0 / self.start_nodes.len() as f64;
+        let mut node_id = &self.start_nodes[prefix.start_idx];
+        for (depth, &succ_idx) in prefix.successor_idxs.iter().enumerate() {
+            let node = &self.nodes[node_id];
+            let percentage_per_successor =
+                percentage_covered_by_node / node.successors.len() as f64;
+
+            if depth >= min_depth {
+                percentage += percentage_per_successor * succ_idx as f64;
+            }
+
+            // Move to the successor, and divide the percentage
+            node_id = &node.successors[succ_idx].1;
+            percentage_covered_by_node = percentage_per_successor;
+        }
+
+        percentage
+    }
 }
 
 /// A node in a prototype graph
@@ -574,11 +604,6 @@ pub(super) struct ProtoNode {
 }
 
 impl ProtoNode {
-    /// Is this `ProtoNode` a start node?
-    pub fn is_start(&self) -> bool {
-        self.start_idx.is_some()
-    }
-
     /// Is this `ProtoNode` a start node?
     pub fn is_end(&self) -> bool {
         self.end_idx.is_some()

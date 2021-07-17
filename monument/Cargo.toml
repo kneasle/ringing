@@ -5,7 +5,6 @@ authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-atomic_float = "0.1"
 bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
 log = "0.4"

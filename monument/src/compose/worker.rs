@@ -3,10 +3,9 @@
 use std::{
     cell::Cell,
     collections::VecDeque,
-    sync::{atomic, mpsc::SyncSender, Arc, MutexGuard},
+    sync::{mpsc::SyncSender, Arc, MutexGuard},
 };
 
-use atomic_float::AtomicF64;
 // Itertools is used only in debug builds by the graph reset check, but causes a warning in release
 // mode
 #[allow(unused_imports)]
@@ -21,7 +20,7 @@ use crate::{
     Comp, Config, Score, Spec,
 };
 
-use super::{CompPrefix, PrefixQueue, QueueElem, StatsUpdate};
+use super::{CompPrefix, PrefixQueue, QueueElem, StatsPayload, StatsUpdate};
 
 // Type aliases for the specific payload types that we use.  It makes no sense for us to fully
 // specify the same type parameters every time we use `Graph` or `Node`
@@ -63,12 +62,13 @@ impl SharedData {
 #[derive(Debug)]
 pub(super) struct Worker {
     thread_id: usize,
-    shared_data: SharedData,
-    stats: Stats,
-    percentage_left: f64,
-    percentage_left_atomic: Arc<AtomicF64>,
     /// The [`CompPrefix`] currently loaded by this Worker
     comp_prefix: CompPrefix,
+    shared_data: SharedData,
+    stats: Stats,
+    /// The length of the prefix popped from the job queue that this `Worker` is currently
+    /// exploring
+    prefix_len_from_queue: usize,
 }
 
 impl Worker {
@@ -78,15 +78,13 @@ impl Worker {
         shared_data: SharedData,
         unexplored_prefix_queue: &PrefixQueue,
         thread_id: usize,
-        percentage_left_atomic: Arc<AtomicF64>,
     ) {
         let worker = Worker {
             thread_id,
             shared_data,
-            percentage_left: 0.0,
-            percentage_left_atomic,
             stats: Stats::zero(),
             comp_prefix: CompPrefix::empty(),
+            prefix_len_from_queue: 0,
         };
         worker._compose(unexplored_prefix_queue);
     }
@@ -127,9 +125,6 @@ impl Worker {
         if self.shared_data.config.log_level >= Level::Debug {
             println!("[{:>2}] Terminating", self.thread_id);
         }
-
-        // Make sure to send any final stats to the statistics thread
-        self.send_stats_update();
     }
 
     /// Load a composition prefix, explore until the branch splits into two, then explore one
@@ -146,8 +141,8 @@ impl Worker {
         /* ===== MOVE TO START NODE ===== */
 
         // Update the internal state to point to the start node of the `prefix`
-        let start_node = graph.get_start_node(prefix.start_node).unwrap();
-        self.comp_prefix.start_node = prefix.start_node;
+        let start_node = graph.get_start_node(prefix.start_idx).unwrap();
+        self.comp_prefix.start_idx = prefix.start_idx;
         self.comp_prefix.successor_idxs.clear();
 
         // Declare variables to track the state of the nodes explored so far
@@ -257,6 +252,7 @@ impl Worker {
         /* ===== SAVE ONE OF THE BRANCHES BACK TO THE QUEUE ===== */
 
         let successors = node.successors();
+
         // We only take the final branch into account here, because all the previous branches are
         // either part of the prefix (represented in `percentage`) or have only one successor (and
         // therefore pass the percentage straight to their children).
@@ -266,27 +262,21 @@ impl Worker {
         // way of expanding them, so therefore we push the last successor back to the queue
         let mut prefix_to_push = self.comp_prefix.clone();
         prefix_to_push.push(successors.len() - 1);
-
         queue.push_back(QueueElem::new(prefix_to_push, percentage_per_branch));
+
         // Drop the mutex lock on the queue as soon as possible to prevent unnecessary locking of
         // the other threads
         drop(queue);
 
-        /* ===== RUN DFS ON THE BRANCHES THAT WEREN'T PUSHED BACK TO THE QUEUE ===== */
+        // Before starting tree search, store the length of the comp_prefix from the queue (which
+        // will be used later in percentage calculations).
+        self.prefix_len_from_queue = self.comp_prefix.successor_idxs.len();
 
-        // Initialise percentage_left counters before starting tree search
-        self.percentage_left = percentage_per_branch * (successors.len() - 1) as f64;
-        self.percentage_left_atomic
-            .store(self.percentage_left, atomic::Ordering::Relaxed);
+        /* ===== RUN DFS ON THE BRANCHES THAT WEREN'T PUSHED BACK TO THE QUEUE ===== */
 
         for (succ_idx, succ_node) in successors[..successors.len() - 1].iter().enumerate() {
             self.comp_prefix.push(succ_idx);
-            self.explore_node(
-                succ_node,
-                length_after_node,
-                score_after_node,
-                percentage_per_branch,
-            );
+            self.explore_node(succ_node, length_after_node, score_after_node);
             self.comp_prefix.pop();
         }
 
@@ -298,11 +288,25 @@ impl Worker {
 
         // Check that the graph is reset (but only in debug mode)
         Self::assert_graph_reset(graph);
+
+        // Tell the stats thread that we've finished this prefix
+        self.shared_data
+            .stats_channel_tx
+            .send(StatsUpdate {
+                thread_id: self.thread_id,
+                stats_since_last_signal: self.stats,
+                payload: StatsPayload::FinishedPrefix {
+                    // We've finished the percentage from our allocated prefix, except the portion
+                    // that we pushed back to the queue
+                    percentage_done: percentage - percentage_per_branch,
+                },
+            })
+            .unwrap();
+        self.stats.reset();
     }
 
     /// Does nothing (in release builds)
     #[cfg(not(debug_assertions))]
-    #[inline(always)]
     fn assert_graph_reset(_graph: &Graph) {}
 
     /// Checks that the state of the graph is reset
@@ -325,14 +329,7 @@ impl Worker {
 
     /// Test a node, and either expand it or prune.  All arguments apply to the composition
     /// explored up to the first row of `node`.
-    fn explore_node(
-        &mut self,
-        node: &Node,
-        length: usize,
-        score: Score,
-        // The percentage which will be covered once this node finishes
-        percentage_covered_by_this_node: f64,
-    ) {
+    fn explore_node(&mut self, node: &Node, length: usize, score: Score) {
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
 
@@ -340,37 +337,20 @@ impl Worker {
         // example, the new node is false against the composition).
         let should_prune = self.load_node(node, length_after_this_node, score_after_this_node);
         if should_prune {
-            // If this node was pruned, then tree search has made progress so add this node's
-            // percentage to the progress counter.  This is correct because we split the percentage
-            // at each level, meaning that updating the counter at every level would result in
-            // massive over-counting.
-            self.percentage_left -= percentage_covered_by_this_node;
             return;
         }
 
-        // Every so often, update the atomic percentage counters (not too often because we don't
-        // want to be doing atomic writes all the time).
+        // Every so often, send an update to the stats thread (not too often because we don't want
+        // to spam the channel with loads of messages).
         if self.stats.nodes_loaded % (1 << 21) == 0 {
-            self.percentage_left_atomic
-                .store(self.percentage_left, atomic::Ordering::Relaxed);
-
             self.send_stats_update();
         }
-
-        // Split the percentage evenly between the successors
-        let percentage_per_successor =
-            percentage_covered_by_this_node / node.successors().len() as f64;
 
         // Expand successor nodes
         for (i, &succ) in node.successors().iter().enumerate() {
             self.comp_prefix.push(i);
             // Add the new link to the composition
-            self.explore_node(
-                succ,
-                length_after_this_node,
-                score_after_this_node,
-                percentage_per_successor,
-            );
+            self.explore_node(succ, length_after_this_node, score_after_this_node);
             self.comp_prefix.pop();
         }
 
@@ -379,15 +359,23 @@ impl Worker {
     }
 
     /// Send a [`StatsUpdate`] down the stats_channel
+    #[inline(never)]
     fn send_stats_update(&mut self) {
+        let prototype_graph = &self.shared_data.spec.prototype_graph;
+
         self.shared_data
             .stats_channel_tx
             .send(StatsUpdate {
                 thread_id: self.thread_id,
                 stats_since_last_signal: self.stats,
-                current_prefix: self.comp_prefix.clone(),
+                payload: StatsPayload::Update {
+                    current_prefix: self.comp_prefix.clone(),
+                    percentage_so_far: prototype_graph
+                        .compute_percentage(&self.comp_prefix, self.prefix_len_from_queue),
+                },
             })
             .unwrap();
+
         // We need to reset the stats counter to make sure that stats are only counted once
         self.stats.reset();
     }
@@ -480,7 +468,7 @@ impl Worker {
         // Traverse the prototype graph and generate the comp
         let (start_idx, links_taken, end_idx) =
             self.shared_data.spec.prototype_graph.generate_path(
-                self.comp_prefix.start_node,
+                self.comp_prefix.start_idx,
                 self.comp_prefix.successor_idxs.iter().cloned(),
                 &self.shared_data.spec.layout,
             );

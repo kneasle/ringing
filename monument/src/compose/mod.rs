@@ -4,9 +4,7 @@ use std::{
     cmp::Ordering,
     collections::VecDeque,
     io::Write as IoWrite,
-    iter,
     sync::{
-        atomic,
         mpsc::{sync_channel, Receiver},
         Arc, Mutex,
     },
@@ -14,7 +12,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use atomic_float::AtomicF64;
 use itertools::Itertools;
 use number_prefix::NumberPrefix;
 use shortlist::Shortlist;
@@ -51,12 +48,6 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
 
     /* CREATE COMMUNICATION PRIMITIVES */
 
-    // A set of atomic floats used by threads to store what percentage (as a proportion of the
-    // overall search) of their current `QueueElem` is yet to be explored.  This, plus the
-    // percentage derived from the queue itself, gives the overall completion percentage
-    let percentage_left_per_thread = iter::repeat_with(|| Arc::new(AtomicF64::new(0.0)))
-        .take(num_threads)
-        .collect_vec();
     // A channel down which compositions will be sent when discovered
     let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
     // A channel down which statistics will periodically be sent
@@ -77,12 +68,7 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     /* SPAWN THREADS */
 
     // Spawn a thread to track the progress of the other threads
-    let stats_thread = spawn_stats_thread(
-        percentage_left_per_thread.clone(),
-        unexplored_prefix_queue.clone(),
-        stats_channel_rx,
-    )
-    .unwrap();
+    let stats_thread = spawn_stats_thread(stats_channel_rx, num_threads).unwrap();
     // Spawn a thread which will read the compositions output by the other threads
     let shortlist_thread = spawn_shortlist_thread(
         spec.num_comps,
@@ -98,14 +84,11 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
             // of the new thread
             let thread_engine = shared_data.clone();
             let thread_queue = unexplored_prefix_queue.clone();
-            let thread_percentage_left_var = percentage_left_per_thread[i].clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || {
-                    Worker::compose(thread_engine, &thread_queue, i, thread_percentage_left_var)
-                })
+                .spawn(move || Worker::compose(thread_engine, &thread_queue, i))
                 .unwrap()
         })
         .collect_vec();
@@ -143,9 +126,8 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
 
 /// Spawn a thread which will handle collection and periodic printing of stats
 fn spawn_stats_thread(
-    percentage_left_per_thread: Vec<Arc<AtomicF64>>,
-    unexplored_prefix_queue: Arc<PrefixQueue>,
     stats_channel_rx: Receiver<StatsUpdate>,
+    num_workers: usize,
 ) -> Result<JoinHandle<Stats>, std::io::Error> {
     /// Format a big number using Giga, Mega, Kilo, etc.
     fn fmt_with_prefix(num: usize) -> String {
@@ -160,22 +142,29 @@ fn spawn_stats_thread(
         .spawn(move || {
             let mut stdout = std::io::stdout();
 
+            let mut percentage_per_thread = vec![0f64; num_workers];
+            let mut total_percentage_completed = 0f64;
+            // The accumulation of every `Stats` update that's been sent by the `Worker`s
             let mut stats_accum = Stats::zero();
             while let Ok(stat_update) = stats_channel_rx.recv() {
+                // Update stats and percentage counters
                 stats_accum += stat_update.stats_since_last_signal;
+                match stat_update.payload {
+                    StatsPayload::Update {
+                        percentage_so_far, ..
+                    } => {
+                        percentage_per_thread[stat_update.thread_id] = percentage_so_far;
+                    }
+                    StatsPayload::FinishedPrefix {
+                        percentage_done, ..
+                    } => {
+                        total_percentage_completed += percentage_done;
+                    }
+                }
 
                 // Compute the percentage
-                let percentage_left_in_queue = unexplored_prefix_queue
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .map(|elem| elem.percentage)
-                    .sum::<f64>();
-                let percentage_left_in_threads = percentage_left_per_thread
-                    .iter()
-                    .map(|p| p.load(atomic::Ordering::Relaxed))
-                    .sum::<f64>();
-                let percentage = 100.0 - (percentage_left_in_queue + percentage_left_in_threads);
+                let percentage =
+                    total_percentage_completed + percentage_per_thread.iter().sum::<f64>();
 
                 // End the progress line with just a carriage return, so that the next progress
                 // line gets drawn over the top of this one.
@@ -321,8 +310,25 @@ struct StatsUpdate {
     /// The statistics accumulated by the thread **since the last `StatsUpdate` sent down the
     /// `stats_channel`**
     stats_since_last_signal: Stats,
-    /// The prefix that is loaded by the thread
-    current_prefix: CompPrefix,
+    /// The remaining contents of this message
+    payload: StatsPayload,
+}
+
+#[derive(Debug, Clone)]
+enum StatsPayload {
+    /// An update sent partway through the composing task
+    Update {
+        /// The prefix that is loaded by the thread
+        current_prefix: CompPrefix,
+        /// What percentage this thread has done on its current `QueueElem` (as a proportion of the
+        /// total composition task)
+        percentage_so_far: f64,
+    },
+    /// An update sent when a thread finishes a prefix
+    FinishedPrefix {
+        /// What percentage of the overall task this prefix corresponded to
+        percentage_done: f64,
+    },
 }
 
 /// An element stored in the [`PrefixQueue`]
@@ -357,12 +363,12 @@ impl QueueElem {
 pub(crate) struct CompPrefix {
     /// Which of the possible starting nodes was used to start the currently exploring composition
     /// (as an index into the [`Layout`]'s list of starts
-    start_node: usize,
+    pub(crate) start_idx: usize,
     /// Which links where chosen after each node.  These are indices into the `successors` array in
     /// each [`Node`].  This is really cheap to track during the composing loop, but means that
     /// recovering a human-friendly representation requires traversing the node graph and
     /// performing lots of lookups into the [`Layout`].  I think this is an acceptable trade-off.
-    successor_idxs: Vec<usize>,
+    pub(crate) successor_idxs: Vec<usize>,
 }
 
 impl CompPrefix {
@@ -376,9 +382,9 @@ impl CompPrefix {
 
     /// Creates a new `CompPrefix` with an empty start [`NodeId`] and no links taken.  The empty
     /// [`NodeId`] must be overwritten before search commences otherwise the code will panic.
-    pub fn just_start_node(start_node: usize) -> Self {
+    pub fn just_start_node(start_idx: usize) -> Self {
         Self {
-            start_node,
+            start_idx,
             successor_idxs: Vec::new(),
         }
     }
