@@ -11,15 +11,16 @@ use itertools::Itertools;
 
 use crate::{
     compose::{CompPrefix, QueueElem},
-    layout::Layout,
     music::Breakdown,
     score::Score,
-    Config, MusicType, Segment, SuccSortStrat,
+    spec::{
+        layout::{Layout, NodeId, Segment},
+        Config, SuccSortStrat,
+    },
+    MusicType,
 };
 
 use falseness::FalsenessTable;
-
-use super::NodeId;
 
 /// Fast falseness computations used whilst generating node graphs
 mod falseness;

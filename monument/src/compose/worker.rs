@@ -13,8 +13,12 @@ use itertools::Itertools;
 use log::Level;
 
 use crate::{
-    graph, graph2::ProtoGraph, layout::NodeId, score::AtomicScore, stats::Stats, Comp, Config,
-    Score, Spec,
+    graph,
+    graph2::ProtoGraph,
+    score::AtomicScore,
+    spec::{layout::NodeId, Config, Spec},
+    stats::Stats,
+    Comp, Score,
 };
 
 use super::{CompPrefix, PrefixQueue, QueueElem, StatsPayload, StatsUpdate};

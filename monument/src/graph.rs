@@ -8,8 +8,8 @@ use itertools::Itertools;
 
 use crate::{
     graph2::{ProtoGraph, ProtoNode},
-    layout::NodeId,
     score::Score,
+    spec::layout::NodeId,
 };
 
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries

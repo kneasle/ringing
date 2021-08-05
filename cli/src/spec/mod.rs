@@ -10,8 +10,8 @@ use hmap::hmap;
 use itertools::Itertools;
 use monument::{
     mask::Mask,
-    single_method::{single_method_layout, SingleMethodError},
-    Config, MusicType, Spec,
+    spec::{single_method::SingleMethodError, Config, Layout, Spec},
+    MusicType,
 };
 use serde_derive::Deserialize;
 
@@ -113,7 +113,7 @@ impl AbstractSpec {
         };
 
         // Generate a `Layout` from the data about the method and calls
-        let layout = single_method_layout(
+        let layout = Layout::single_method(
             &method,
             &calls,
             &course_head_masks,

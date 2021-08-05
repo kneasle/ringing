@@ -4,9 +4,14 @@ use std::{
     ops::Deref,
 };
 
-use bellframe::{Row, RowBuf};
+use bellframe::{Bell, Method, Row, RowBuf};
 
 use crate::mask::Mask;
+
+use super::{
+    single_method::{CallSpec, SingleMethodError},
+    Config,
+};
 
 /// A representation of the course layout of a composition, and how Monument understands
 /// composition structure.  In this representation, a
@@ -41,6 +46,31 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// Create a new `Layout` for a single [`Method`].
+    pub fn single_method(
+        method: &Method,
+        calls: &[CallSpec],
+        // The course head masks, along with which bell is 'calling bell' during that course.
+        // Allowing different calling bells allows us to do things like keep using W,M,H during
+        // courses of e.g. `1xxxxx0987`.
+        input_course_head_masks: &[(Mask, Bell)],
+        config: &Config,
+        // Which sub-lead indices are considered valid starting or finishing points for the
+        // composition.  If these are `None`, then any location is allowed
+        allowed_start_indices: Option<&[usize]>,
+        allowed_end_indices: Option<&[usize]>,
+    ) -> Result<Self, SingleMethodError> {
+        // Delegate to the `single_method` module
+        super::single_method::single_method_layout(
+            method,
+            calls,
+            input_course_head_masks,
+            config,
+            allowed_start_indices,
+            allowed_end_indices,
+        )
+    }
+
     /// Returns the [`Segment`], starting at a given [`NodeId`].  If this [`Segment`] would never
     /// terminate (because no [`Link`]s can be applied to it), then `None` is returned.
     pub(crate) fn get_segment(&self, id: &NodeId) -> Option<Segment> {

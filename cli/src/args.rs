@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use log::LevelFilter;
-use monument::Config;
+use monument::spec::Config;
 use structopt::StructOpt;
 
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument

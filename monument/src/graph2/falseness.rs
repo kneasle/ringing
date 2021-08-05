@@ -5,8 +5,10 @@ use std::collections::{HashMap, HashSet};
 use bellframe::{Row, RowBuf};
 use itertools::Itertools;
 
-use super::NodeId;
-use crate::{layout::Layout, mask::Mask, RowIdx, RowRange};
+use crate::{
+    mask::Mask,
+    spec::layout::{Layout, NodeId, RowIdx, RowRange},
+};
 
 #[derive(Debug, Clone)]
 pub(super) struct FalsenessTable {

@@ -11,7 +11,7 @@ use std::{
 use colored::Colorize;
 use glob::glob;
 use itertools::Itertools;
-use monument::Config;
+use monument::spec::Config;
 use monument_cli::{
     spec::AbstractSpec,
     test_data::{CompResult, TestData},

@@ -4,14 +4,15 @@ use bellframe::{method::LABEL_LEAD_END, Bell, Method, PlaceNot, Row, RowBuf, Sta
 use itertools::Itertools;
 use log::Level;
 
-use crate::{
+use crate::mask::Mask;
+
+use super::{
     layout::{Layout, Link, RowIdx},
-    mask::Mask,
     Config,
 };
 
 /// Helper function to generate a [`Layout`] for a single [`Method`]
-pub fn single_method_layout(
+pub(super) fn single_method_layout(
     method: &Method,
     calls: &[CallSpec],
     // The course head masks, along with which bell is 'calling bell' during that course.

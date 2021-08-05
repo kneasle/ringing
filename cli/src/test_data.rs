@@ -1,5 +1,5 @@
+use monument::spec::Layout;
 use monument::Comp;
-use monument::Layout;
 use monument::Score;
 use serde::Deserialize;
 

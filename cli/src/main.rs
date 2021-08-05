@@ -1,7 +1,7 @@
 use std::{fmt::Write, sync::Arc, time::Duration};
 
 use log::LevelFilter;
-use monument::Config;
+use monument::spec::Config;
 use monument_cli::{args::CliArgs, spec::AbstractSpec};
 use number_prefix::NumberPrefix;
 use structopt::StructOpt;

@@ -18,8 +18,9 @@ use shortlist::Shortlist;
 
 use crate::{
     score::{AtomicScore, Score},
+    spec::Config,
+    spec::{Layout, Spec},
     stats::Stats,
-    Config, Layout, Spec,
 };
 
 use worker::{SharedData, Worker};
@@ -33,7 +34,7 @@ mod worker;
 /// percentage is split into `n` parts.
 type PrefixQueue = Mutex<VecDeque<QueueElem>>;
 
-/// Generate compositions specified by the [`Engine`].  The current thread is blocked until the
+/// Generate the best compositions that satisfy a given [`Spec`].  The current thread is blocked until the
 /// best compositions have been found and returned.
 pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     let start_time = Instant::now();

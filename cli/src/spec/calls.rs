@@ -1,5 +1,5 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
-use monument::single_method::CallSpec;
+use monument::spec::single_method::CallSpec;
 use serde::{de::Error, Deserialize, Deserializer};
 
 use super::SpecConvertError;
