@@ -9,16 +9,16 @@ pub struct TestData {
     /// Number of seconds that this test is expected to run for
     pub runtime_estimate: f32,
     /// A list of the expected composition results
-    pub results: Option<Vec<CompResultIsize>>,
+    pub results: Option<Vec<CompResultI64>>,
 }
 
 /// An easily testable form of a [`Comp`] which can be easily compared
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct CompResultIsize {
+pub struct CompResultI64 {
     call_string: String,
     length: usize,
-    score: isize,
-    ranking_score: isize,
+    score: i64,
+    ranking_score: i64,
 }
 
 /// An easily testable form of a [`Comp`] which can be easily compared
@@ -41,8 +41,8 @@ impl CompResult {
     }
 }
 
-impl From<CompResultIsize> for CompResult {
-    fn from(v: CompResultIsize) -> Self {
+impl From<CompResultI64> for CompResult {
+    fn from(v: CompResultI64) -> Self {
         CompResult {
             call_string: v.call_string,
             length: v.length,

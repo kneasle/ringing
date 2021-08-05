@@ -2,13 +2,13 @@ use std::{
     fmt::{Debug, Display, Formatter},
     iter::Sum,
     ops::{Add, AddAssign, Div, Mul, MulAssign},
-    sync::atomic::{AtomicIsize, Ordering},
+    sync::atomic::{AtomicI64, Ordering},
 };
 
 /// Bit index of the radix point in a [`Score`].  This is exactly half-way through the number,
 /// trading off evenly between resolution (how close can two [`Score`]s get be before they are
 /// indistinguishable) and range (how big can [`Score`]s get before becoming unrepresentable).
-const RADIX_POINT_IDX: usize = std::mem::size_of::<isize>() * 8 / 2;
+const RADIX_POINT_IDX: usize = std::mem::size_of::<i64>() * 8 / 2;
 
 /// The representation of music score used by Monument.  These are fixed point numbers, meaning
 /// that operations compile to integer arithmetic but Monument can still provide fractional scores
@@ -17,32 +17,42 @@ const RADIX_POINT_IDX: usize = std::mem::size_of::<isize>() * 8 / 2;
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Score {
-    value: isize,
+    value: i64,
 }
 
 impl Score {
-    pub const ZERO: Score = Self::from_isize_truncating(0);
-    pub const ONE: Score = Self::from_isize_truncating(1);
+    pub const ZERO: Score = Self::from_i64_truncating(0);
+    pub const ONE: Score = Self::from_i64_truncating(1);
 
-    pub const MIN: Score = Score { value: isize::MIN };
-    pub const MAX: Score = Score { value: isize::MAX };
+    pub const MIN: Score = Score { value: i64::MIN };
+    pub const MAX: Score = Score { value: i64::MAX };
 
-    /// Creates a new [`Score`] from an [`isize`], truncating it if it doesn't fit.
+    /// Creates a new [`Score`] from an [`i64`], truncating it if it doesn't fit.
     #[inline(always)]
-    const fn from_isize_truncating(v: isize) -> Self {
+    const fn from_i64_truncating(v: i64) -> Self {
         Self {
             value: v << RADIX_POINT_IDX,
         }
     }
 
     /// Creates a `Score` from an integer representing a fraction over (2^32).
-    pub fn from_numerator(value: isize) -> Self {
+    pub fn from_numerator(value: i64) -> Self {
         Self { value }
     }
 
     /// Converts a `Score` to an integer representing a fraction over (2^32).
-    pub fn to_radix(self) -> isize {
+    pub fn to_radix(self) -> i64 {
         self.value
+    }
+
+    /// Converts this `Score` to a [`u64`]
+    pub fn to_u64(self) -> u64 {
+        self.value as u64
+    }
+
+    /// Converts a [`u64`] (from [`Score::to_u64`]) into a `Score`
+    pub fn from_u64(v: u64) -> Self {
+        Self { value: v as i64 }
     }
 }
 
@@ -65,7 +75,7 @@ impl Display for Score {
 impl From<f64> for Score {
     #[inline(always)]
     fn from(v: f64) -> Self {
-        Self::from_numerator((Self::ONE.value as f64 * v) as isize)
+        Self::from_numerator((Self::ONE.value as f64 * v) as i64)
     }
 }
 
@@ -79,7 +89,7 @@ impl From<Score> for f64 {
 impl From<f32> for Score {
     #[inline(always)]
     fn from(v: f32) -> Self {
-        Self::from_numerator((Self::ONE.value as f32 * v) as isize)
+        Self::from_numerator((Self::ONE.value as f32 * v) as i64)
     }
 }
 
@@ -90,10 +100,10 @@ impl From<Score> for f32 {
     }
 }
 
-impl From<isize> for Score {
+impl From<i64> for Score {
     #[inline(always)]
-    fn from(v: isize) -> Self {
-        Self::from_isize_truncating(v)
+    fn from(v: i64) -> Self {
+        Self::from_i64_truncating(v)
     }
 }
 
@@ -121,7 +131,7 @@ impl Mul<usize> for Score {
 
     #[inline(always)]
     fn mul(self, rhs: usize) -> Self::Output {
-        Self::from_numerator(self.to_radix() * rhs as isize)
+        Self::from_numerator(self.to_radix() * rhs as i64)
     }
 }
 
@@ -130,14 +140,14 @@ impl Mul<Score> for usize {
 
     #[inline(always)]
     fn mul(self, rhs: Score) -> Self::Output {
-        Score::from_numerator(rhs.to_radix() * self as isize)
+        Score::from_numerator(rhs.to_radix() * self as i64)
     }
 }
 
 impl MulAssign<usize> for Score {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: usize) {
-        self.value *= rhs as isize;
+        self.value *= rhs as i64;
     }
 }
 
@@ -146,7 +156,7 @@ impl Div<usize> for Score {
 
     #[inline(always)]
     fn div(self, rhs: usize) -> Self::Output {
-        Score::from_numerator(self.to_radix() / rhs as isize)
+        Score::from_numerator(self.to_radix() / rhs as i64)
     }
 }
 
@@ -164,14 +174,14 @@ impl Sum for Score {
 /// [`Relaxed`](Ordering::Relaxed) memory ordering.
 #[derive(Debug)]
 pub struct AtomicScore {
-    value: AtomicIsize,
+    value: AtomicI64,
 }
 
 impl AtomicScore {
     /// Creates a new `AtomicScore` containing a given [`Score`]
     pub fn new(score: Score) -> Self {
         AtomicScore {
-            value: AtomicIsize::new(score.value),
+            value: AtomicI64::new(score.value),
         }
     }
 

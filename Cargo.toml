@@ -2,7 +2,7 @@
 members = [ "cli", "monument" ]
 
 [profile.dev]
-opt-level = 3
+opt-level = 2
 
 [profile.release]
 debug = true
