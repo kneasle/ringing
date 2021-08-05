@@ -4,7 +4,7 @@ use std::{ops::Range, sync::Arc};
 
 use log::LevelFilter;
 
-use crate::{graph2::ProtoGraph, MusicType};
+use crate::{graph::Graph, MusicType};
 
 pub use layout::Layout;
 
@@ -19,7 +19,7 @@ pub struct Spec {
     /// The course [`Layout`] describing the compositions' structure
     pub(crate) layout: Layout,
     /// The prototype graph, derived from the [`Layout`]
-    pub(crate) prototype_graph: ProtoGraph,
+    pub(crate) prototype_graph: Graph,
 
     /* COMPOSITION ATTRIBUTES */
     /// The range of composition lengths that are permitted
@@ -45,7 +45,7 @@ impl Spec {
         normalise_music: bool,
         config: &Config,
     ) -> Arc<Self> {
-        let prototype_graph = ProtoGraph::from_layout(&layout, &music_types, len_range.end, config);
+        let prototype_graph = Graph::from_layout(&layout, &music_types, len_range.end, config);
 
         Arc::new(Self {
             layout,

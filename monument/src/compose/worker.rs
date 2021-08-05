@@ -13,20 +13,19 @@ use itertools::Itertools;
 use log::Level;
 
 use crate::{
-    graph,
-    graph2::ProtoGraph,
+    graph::Graph,
     score::AtomicScore,
     spec::{layout::NodeId, Config, Spec},
     stats::Stats,
     Comp, Score,
 };
 
-use super::{CompPrefix, PrefixQueue, QueueElem, StatsPayload, StatsUpdate};
+use super::{graph, CompPrefix, PrefixQueue, QueueElem, StatsPayload, StatsUpdate};
 
 // Type aliases for the specific payload types that we use.  It makes no sense for us to fully
 // specify the same type parameters every time we use `Graph` or `Node`
-type Graph = graph::Graph<NodePayload, ExtraPayload>;
-type Node = graph::Node<NodePayload, ExtraPayload>;
+type PtrGraph = graph::PtrGraph<NodePayload, ExtraPayload>;
+type PtrNode = graph::PtrNode<NodePayload, ExtraPayload>;
 
 /// 'Immutable' data shared between all the workers.  This also includes types with interior
 /// mutability (like channels and atomic integers), but the important thing is that they don't
@@ -97,7 +96,7 @@ impl Worker {
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
         let prototype_graph = &self.shared_data.spec.prototype_graph;
-        let graph = Graph::from_prototype(
+        let graph = PtrGraph::from_prototype(
             prototype_graph,
             |node_id| NodePayload::new(node_id, prototype_graph),
             |_node_id| ExtraPayload(),
@@ -140,7 +139,7 @@ impl Worker {
     /// Load a composition prefix, explore until the branch splits into two, then explore one
     /// branch whilst pushing the other back to the queue.  Thus no branches are lost and the queue
     /// only starts getting shorter when there are only very short branches left.
-    fn explore_prefix(&mut self, graph: &Graph, queue_elem: QueueElem, queue: &PrefixQueue) {
+    fn explore_prefix(&mut self, graph: &PtrGraph, queue_elem: QueueElem, queue: &PrefixQueue) {
         let QueueElem { prefix, percentage } = queue_elem;
 
         /* ===== MOVE TO START NODE ===== */
@@ -158,7 +157,7 @@ impl Worker {
         // commences.  These will then be unloaded in reverse order before returning, so it is
         // **VERY** important that every node that is loaded is pushed onto this stack.  All nodes
         // are loaded through `add_node!`, which takes care of this.
-        let mut loaded_node_stack: Vec<&Node> = Vec::new();
+        let mut loaded_node_stack: Vec<&PtrNode> = Vec::new();
 
         /* ===== DEFINE A LOAD OF USEFUL MACROS ===== */
 
@@ -312,11 +311,11 @@ impl Worker {
 
     /// Does nothing (in release builds)
     #[cfg(not(debug_assertions))]
-    fn assert_graph_reset(_graph: &Graph) {}
+    fn assert_graph_reset(_graph: &PtrGraph) {}
 
     /// Checks that the state of the graph is reset
     #[cfg(debug_assertions)]
-    fn assert_graph_reset(graph: &Graph) {
+    fn assert_graph_reset(graph: &PtrGraph) {
         // Assert that the graph is properly reset
         let bad_nodes = graph
             .all_nodes()
@@ -334,7 +333,7 @@ impl Worker {
 
     /// Test a node, and either expand it or prune.  All arguments apply to the composition
     /// explored up to the first row of `node`.
-    fn explore_node(&mut self, node: &Node, length: usize, score: Score) {
+    fn explore_node(&mut self, node: &PtrNode, length: usize, score: Score) {
         let length_after_this_node = length + node.length();
         let score_after_this_node = score + node.score();
 
@@ -392,7 +391,7 @@ impl Worker {
     #[must_use]
     fn load_node(
         &mut self,
-        node: &Node,
+        node: &PtrNode,
         length_after_this_node: usize,
         score_after_this_node: Score,
     ) -> bool {
@@ -443,7 +442,7 @@ impl Worker {
     /// Unload a node from the graph.  Provided that all the load/unload calls are well balanced,
     /// this will precisely undo the effect of [`Self::load_node`].
     #[inline(always)]
-    fn unload_node(&mut self, node: &Node) {
+    fn unload_node(&mut self, node: &PtrNode) {
         // Decrement the falseness counters on all the nodes false against this one
         for &n in node.false_nodes() {
             let false_count_cell = &n.payload().falseness_count;
@@ -515,7 +514,7 @@ pub struct NodePayload {
 }
 
 impl NodePayload {
-    fn new(node_id: &NodeId, prototype_graph: &ProtoGraph) -> Self {
+    fn new(node_id: &NodeId, prototype_graph: &Graph) -> Self {
         Self {
             dist_from_end_to_rounds: prototype_graph
                 .get_min_dist_from_end_to_rounds(node_id)

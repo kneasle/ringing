@@ -29,15 +29,15 @@ mod falseness;
 /// build and optimise the node graph before being converted into an efficient [`Graph`] structure
 /// for use in tree search.
 #[derive(Debug, Clone)]
-pub struct ProtoGraph {
+pub struct Graph {
     // NOTE: References between nodes don't have to be valid (i.e. they can point to a
     // [`ProtoNode`] that isn't actually in the graph - in this case they will be ignored or
     // discarded during the optimisation process).
-    pub(crate) nodes: HashMap<NodeId, ProtoNode>,
+    pub(crate) nodes: HashMap<NodeId, Node>,
     start_nodes: Vec<NodeId>,
 }
 
-impl ProtoGraph {
+impl Graph {
     /// Generate and optimise a graph from a [`Layout`]
     pub fn from_layout(
         layout: &Layout,
@@ -139,7 +139,7 @@ impl ProtoGraph {
         // within the length of the composition.  However, we're still not done because we have to
         // build a graph over these IDs (which requires computing falseness, music, connections,
         // etc.).
-        let mut nodes: HashMap<NodeId, ProtoNode> = expanded_nodes
+        let mut nodes: HashMap<NodeId, Node> = expanded_nodes
             .iter()
             .map(|(node_id, (segment, distance))| {
                 let score = Breakdown::from_rows(
@@ -148,7 +148,7 @@ impl ProtoGraph {
                     music_types,
                 );
 
-                let new_node = ProtoNode {
+                let new_node = Node {
                     length: segment.length,
                     score,
 
@@ -447,7 +447,7 @@ impl ProtoGraph {
 
     /* ===== OPTIMISATION HELPER FUNCTIONS ===== */
 
-    fn end_nodes(&self) -> impl Iterator<Item = (&NodeId, &ProtoNode)> {
+    fn end_nodes(&self) -> impl Iterator<Item = (&NodeId, &Node)> {
         self.nodes.iter().filter(|(_id, node)| node.is_end())
     }
 
@@ -522,7 +522,7 @@ impl ProtoGraph {
         // We calculate the prefixes by running BFS on the graph until the frontier becomes larger
         // than `num_prefixes` in length, at which point it becomes our prefix list.
         let num_start_nodes = self.start_nodes.len();
-        let mut frontier: VecDeque<(QueueElem, &ProtoNode)> = self
+        let mut frontier: VecDeque<(QueueElem, &Node)> = self
             .nodes
             .iter()
             .filter_map(|(_id, node)| {
@@ -584,7 +584,7 @@ impl ProtoGraph {
 
 /// A node in a prototype graph
 #[derive(Debug, Clone)]
-pub(super) struct ProtoNode {
+pub(super) struct Node {
     pub start_idx: Option<usize>,
     pub end_idx: Option<usize>,
 
@@ -608,7 +608,7 @@ pub(super) struct ProtoNode {
     pub predecessors: Vec<NodeId>,
 }
 
-impl ProtoNode {
+impl Node {
     /// Is this `ProtoNode` a start node?
     pub fn is_end(&self) -> bool {
         self.end_idx.is_some()

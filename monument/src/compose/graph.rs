@@ -7,7 +7,7 @@ use std::{alloc, collections::HashMap, fmt::Debug, pin::Pin, ptr::addr_of_mut};
 use itertools::Itertools;
 
 use crate::{
-    graph2::{ProtoGraph, ProtoNode},
+    graph::{Graph, Node},
     score::Score,
     spec::layout::NodeId,
 };
@@ -15,19 +15,19 @@ use crate::{
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries
 /// a custom payload (`P`), which can be used as annotations.
 #[derive(Debug)]
-pub(crate) struct Graph<P, E> {
+pub(crate) struct PtrGraph<P, E> {
     /// The set of nodes reachable in the graph.  For the rest of the code, these are entirely
     /// owned by the `Graph` (which acts like an arena for dynamically sized [`Node`]s).
-    nodes: HashMap<NodeId, Pin<Box<Node<P, E>>>>,
+    nodes: HashMap<NodeId, Pin<Box<PtrNode<P, E>>>>,
     /// The [`Node`]s which can start a composition, referred to by their index from
     /// [`Layout::starts`]
-    start_nodes: HashMap<usize, *const Node<P, E>>,
+    start_nodes: HashMap<usize, *const PtrNode<P, E>>,
 }
 
-impl<P, E> Graph<P, E> {
+impl<P, E> PtrGraph<P, E> {
     /// Create a new `Graph` containing enough nodes to generate all comps of the [`Engine`].
     pub fn from_prototype(
-        prototype_graph: &ProtoGraph,
+        prototype_graph: &Graph,
         mut gen_payload: impl FnMut(&NodeId) -> P,
         mut gen_extra_payload: impl FnMut(&NodeId) -> E,
     ) -> Self
@@ -43,14 +43,14 @@ impl<P, E> Graph<P, E> {
         // For each reachable node ID, generate a blank node (i.e. a node where all the
         // succession/falseness pointers are `null`, but everything else is initialised) along with
         // additional information about which successors/false nodes are reachable
-        let nodes: HashMap<&NodeId, (*mut Node<P, E>, &ProtoNode)> = prototype_graph
+        let nodes: HashMap<&NodeId, (*mut PtrNode<P, E>, &Node)> = prototype_graph
             .nodes
             .iter()
             .map(|(id, proto_node)| {
                 (
                     id,
                     (
-                        Node::blank(
+                        PtrNode::blank(
                             gen_payload(&id),
                             gen_extra_payload(&id),
                             id.clone(),
@@ -96,18 +96,18 @@ impl<P, E> Graph<P, E> {
         // Before returning the nodes, check that the `*const Node<P>` and `&Node<P>` can be safely
         // transmuted (if they can't then traversing the graph causes UB)
         assert_eq!(
-            std::alloc::Layout::new::<*const Node<P, E>>(),
-            std::alloc::Layout::new::<&Node<P, E>>()
+            std::alloc::Layout::new::<*const PtrNode<P, E>>(),
+            std::alloc::Layout::new::<&PtrNode<P, E>>()
         );
 
         // Get the pointers for the possible starting nodes, along with the indices pointing to
         // which starts they correspond to
-        let start_nodes: HashMap<usize, *const Node<P, E>> = nodes
+        let start_nodes: HashMap<usize, *const PtrNode<P, E>> = nodes
             .iter()
             .filter_map(|(_id, (node, proto_node))| {
                 proto_node
                     .start_idx
-                    .map(|idx| (idx, *node as *const Node<P, E>))
+                    .map(|idx| (idx, *node as *const PtrNode<P, E>))
             })
             .collect();
 
@@ -123,7 +123,7 @@ impl<P, E> Graph<P, E> {
     }
 
     /// Gets a start node by ID, returning `None` if no start nodes have that [`NodeId`].
-    pub fn get_start_node(&self, idx: usize) -> Option<&Node<P, E>> {
+    pub fn get_start_node(&self, idx: usize) -> Option<&PtrNode<P, E>> {
         self.start_nodes
             .get(&idx)
             .map(|ptr| unsafe { ptr.as_ref() }.unwrap())
@@ -133,7 +133,7 @@ impl<P, E> Graph<P, E> {
     // This function is used in code that only compiles on debug builds, so without this
     // suppression a (pointless) warning is generated when compiling in release mode
     #[allow(dead_code)]
-    pub fn all_nodes(&self) -> impl Iterator<Item = Pin<&'_ Node<P, E>>> {
+    pub fn all_nodes(&self) -> impl Iterator<Item = Pin<&'_ PtrNode<P, E>>> {
         self.nodes.values().map(|x| x.as_ref())
     }
 }
@@ -144,7 +144,7 @@ impl<P, E> Graph<P, E> {
 // repr(C) guarantees that the pointer array is the last element (and thus can be extended whist
 // allocating).
 #[repr(C)]
-pub(crate) struct Node<P, E> {
+pub(crate) struct PtrNode<P, E> {
     // NOTE: If you add fields to this, you must remember to initialise them in `Node::blank`
     // otherwise their values will be undefined.
     payload: P,
@@ -164,7 +164,7 @@ pub(crate) struct Node<P, E> {
     ptrs: [*const Self; 1],
 }
 
-impl<P, E> Node<P, E> {
+impl<P, E> PtrNode<P, E> {
     /// Allocate a `Node` where all the successor pointers are [`null`](std::ptr::null).
     fn blank(
         payload: P,

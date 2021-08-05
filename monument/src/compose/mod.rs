@@ -25,6 +25,7 @@ use crate::{
 
 use worker::{SharedData, Worker};
 
+mod graph;
 mod worker;
 
 /// Type alias for the queue of so-far-unexpanded prefixes.
