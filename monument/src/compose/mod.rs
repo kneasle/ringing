@@ -1,17 +1,17 @@
-//! Code for the composition search algorithm
+//! Code for the composition search algorithm(s)
 
 use std::{
     cmp::Ordering,
-    collections::VecDeque,
     io::Write as IoWrite,
     sync::{
         mpsc::{sync_channel, Receiver},
-        Arc, Mutex,
+        Arc,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
+use crossbeam_deque::Injector;
 use itertools::Itertools;
 use number_prefix::NumberPrefix;
 use shortlist::Shortlist;
@@ -32,7 +32,7 @@ mod worker;
 /// The float number here represents the percentage of the search space that each prefix
 /// corresponds to.  This is calculated naively: if a `CompPrefix` has `n` successors, then its
 /// percentage is split into `n` parts.
-type PrefixQueue = Mutex<VecDeque<QueueElem>>;
+type PrefixQueue = Injector<QueueElem>;
 
 /// Generate the best compositions that satisfy a given [`Spec`].  The current thread is blocked until the
 /// best compositions have been found and returned.
@@ -53,11 +53,12 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
     let (comp_channel_tx, comp_channel_rx) = sync_channel(config.comp_buffer_length);
     // A channel down which statistics will periodically be sent
     let (stats_channel_tx, stats_channel_rx) = sync_channel(config.stats_buffer_length);
-    // We use a Mutex-locked global queue of unexplored prefixes to make sure that the workers
-    // always have compositions to explore.
-    let unexplored_prefix_queue = Arc::new(Mutex::new(
-        spec.prototype_graph.generate_prefixes(num_threads * 2),
-    ));
+    // We use a global queue of unexplored prefixes to make sure that the workers always have
+    // compositions to explore.
+    let unexplored_prefix_queue = Arc::new(Injector::<QueueElem>::new());
+    for e in spec.prototype_graph.generate_prefixes(num_threads * 2) {
+        unexplored_prefix_queue.push(e);
+    }
     // 'Immutable' data shared between all the threads
     let shared_data = SharedData::new(
         spec.clone(),
@@ -83,13 +84,13 @@ pub fn compose(spec: &Arc<Spec>, config: &Arc<Config>) -> SearchResults {
         .map(|i| {
             // Create thread-local copies of the shared data which will be captured by the closure
             // of the new thread
-            let thread_engine = shared_data.clone();
+            let thread_shared_data = shared_data.clone();
             let thread_queue = unexplored_prefix_queue.clone();
 
             // Spawn a new worker thread, which will immediately start generating compositions
             thread::Builder::new()
                 .name(format!("Worker{}", i))
-                .spawn(move || Worker::compose(thread_engine, &thread_queue, i))
+                .spawn(move || Worker::start(thread_shared_data, &thread_queue, i))
                 .unwrap()
         })
         .collect_vec();

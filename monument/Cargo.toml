@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bellframe = { path = "../../bellframe/", features = ["serde"] }
+crossbeam-deque = "0.8"
 itertools = "0.10"
 log = "0.4"
 num_cpus = "1.13"

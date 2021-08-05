@@ -2,10 +2,10 @@
 
 use std::{
     cell::Cell,
-    collections::VecDeque,
-    sync::{mpsc::SyncSender, Arc, MutexGuard},
+    sync::{mpsc::SyncSender, Arc},
 };
 
+use crossbeam_deque::Steal;
 // Itertools is used only in debug builds by the graph reset check, but causes a warning in release
 // mode
 #[allow(unused_imports)]
@@ -73,9 +73,10 @@ pub(super) struct Worker {
 }
 
 impl Worker {
-    /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and start
-    /// tree searching.  `EngineWorker::compose` is called once for each worker thread.
-    pub(super) fn compose(
+    /// Creates a `EngineWorker` and in-memory node [`Graph`] for the current thread, and pops
+    /// elements off the queue for tree searching.  `EngineWorker::compose` is called once for each
+    /// worker thread.
+    pub(super) fn start(
         shared_data: SharedData,
         unexplored_prefix_queue: &PrefixQueue,
         thread_id: usize,
@@ -87,11 +88,11 @@ impl Worker {
             comp_prefix: CompPrefix::empty(),
             prefix_len_from_queue: 0,
         };
-        worker._compose(unexplored_prefix_queue);
+        worker._start(unexplored_prefix_queue);
     }
 
-    /// Compose function which takes the worker as a `self` parameter for convenience
-    fn _compose(mut self, unexplored_prefix_queue: &PrefixQueue) {
+    /// Version of `Self::start` which takes the worker as a `self` parameter for convenience
+    fn _start(mut self, unexplored_prefix_queue: &PrefixQueue) {
         // Generate a compact **copy** of the node graph where links are represented as pointers.
         // It is very important that this is an exact copy, otherwise the composition callings will
         // not be recovered correctly.
@@ -102,22 +103,30 @@ impl Worker {
             |_node_id| ExtraPayload(),
         );
 
-        loop {
+        'compose_loop: loop {
             // If this thread has nothing to do, then see if the global queue has any more prefixes
             // to explore
-            let mut queue = unexplored_prefix_queue.lock().unwrap();
-
             if self.shared_data.config.log_level >= Level::Debug {
-                println!("[{:>2}] Queue len: {}", self.thread_id, queue.len());
+                println!(
+                    "[{:>2}] Queue len: {}",
+                    self.thread_id,
+                    unexplored_prefix_queue.len()
+                );
             }
 
-            match queue.pop_front() {
-                // If the queue isn't empty yet, then pick a new prefix to explore
-                Some(queue_head) => self.explore_prefix(&graph, queue_head, queue),
-                // If the queue is empty, then the search is almost over so exit the loop and stop
-                // the thread
-                None => break,
-            }
+            let queue_head = loop {
+                match unexplored_prefix_queue.steal() {
+                    // If the queue isn't empty yet, then pick a new prefix to explore
+                    Steal::Success(queue_head) => break queue_head,
+                    // If the queue is empty, then the search is almost over so exit the outer
+                    // loop (thus allowing this thread to terminate)
+                    Steal::Empty => break 'compose_loop,
+                    // If the queue gave a spurious retry, then go round the loop again
+                    Steal::Retry => {}
+                }
+            };
+
+            self.explore_prefix(&graph, queue_head, unexplored_prefix_queue);
         }
 
         // If the shortlist has no values left, then the search must be nearly finished and there's
@@ -131,12 +140,7 @@ impl Worker {
     /// Load a composition prefix, explore until the branch splits into two, then explore one
     /// branch whilst pushing the other back to the queue.  Thus no branches are lost and the queue
     /// only starts getting shorter when there are only very short branches left.
-    fn explore_prefix(
-        &mut self,
-        graph: &Graph,
-        queue_elem: QueueElem,
-        mut queue: MutexGuard<VecDeque<QueueElem>>,
-    ) {
+    fn explore_prefix(&mut self, graph: &Graph, queue_elem: QueueElem, queue: &PrefixQueue) {
         let QueueElem { prefix, percentage } = queue_elem;
 
         /* ===== MOVE TO START NODE ===== */
@@ -263,7 +267,7 @@ impl Worker {
         // way of expanding them, so therefore we push the last successor back to the queue
         let mut prefix_to_push = self.comp_prefix.clone();
         prefix_to_push.push(successors.len() - 1);
-        queue.push_back(QueueElem::new(prefix_to_push, percentage_per_branch));
+        queue.push(QueueElem::new(prefix_to_push, percentage_per_branch));
 
         // Drop the mutex lock on the queue as soon as possible to prevent unnecessary locking of
         // the other threads
@@ -343,7 +347,7 @@ impl Worker {
 
         // Every so often, send an update to the stats thread (not too often because we don't want
         // to spam the channel with loads of messages).
-        if self.stats.nodes_loaded % (1 << 21) == 0 {
+        if self.stats.nodes_loaded % (1 << 23) == 0 {
             self.send_stats_update();
         }
 
