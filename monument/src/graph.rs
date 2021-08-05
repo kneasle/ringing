@@ -6,14 +6,11 @@ use std::{alloc, collections::HashMap, fmt::Debug, pin::Pin, ptr::addr_of_mut};
 
 use itertools::Itertools;
 
-use crate::{graph::prototype::ProtoNode, layout::NodeId, score::Score};
-
-// Re-export `ProtoGraph` as an opaque type (the prototype only has to be computed once and then
-// can be shared between all the threads)
-pub(crate) use prototype::ProtoGraph;
-
-mod falseness;
-mod prototype;
+use crate::{
+    graph2::{ProtoGraph, ProtoNode},
+    layout::NodeId,
+    score::Score,
+};
 
 /// An in-memory graph of [`Node`]s which is explored to find compositions.  Each [`Node`] carries
 /// a custom payload (`P`), which can be used as annotations.

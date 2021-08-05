@@ -4,10 +4,11 @@ use std::{ops::Range, sync::Arc};
 
 use log::LevelFilter;
 
-use graph::ProtoGraph;
+use graph2::ProtoGraph;
 
 mod compose;
 mod graph;
+mod graph2;
 mod layout;
 pub mod mask;
 mod music;
