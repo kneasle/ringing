@@ -2,82 +2,25 @@ use std::{
     borrow::{Borrow, BorrowMut},
     cmp::Ordering,
     collections::{HashSet, VecDeque},
-    error::Error,
-    fmt::{Display, Formatter},
-    ops::{Deref, DerefMut},
+    fmt::{Debug, Display, Formatter},
+    ops::{Deref, DerefMut, Index, Mul, Not},
 };
 
 use itertools::Itertools;
 
-use crate::{Bell, IncompatibleStages, Parity, Stage};
+use crate::{Bell, IncompatibleStages, InvalidRowError, Parity, Stage};
 
 // Imports used solely for doc comments
 #[allow(unused_imports)]
 use crate::Block;
 
-/* ===== ERRORS ===== */
-
-/// All the possible ways that a [`Row`] could be invalid.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum InvalidRowError {
-    /// A [`Bell`] would appear twice in the new [`Row`] (for example in `113456` or `4152357`)
-    DuplicateBell(Bell),
-    /// A [`Bell`] is not within the range of the [`Stage`] of the new [`Row`] (for example `7` in
-    /// `12745` or `5` in `5432`).
-    BellOutOfStage(Bell, Stage),
-    /// A given Bell would be missing from the [`Row`].  Note that this is only generated if we
-    /// already know the [`Stage`] of the new [`Row`], otherwise the other two variants are
-    /// sufficient for every case.
-    MissingBell(Bell),
-}
-
-impl std::fmt::Display for InvalidRowError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            InvalidRowError::DuplicateBell(bell) => {
-                write!(f, "Bell '{}' appears twice.", bell)
-            }
-            InvalidRowError::BellOutOfStage(bell, stage) => {
-                write!(f, "Bell '{}' is not within stage {}", bell, stage)
-            }
-            InvalidRowError::MissingBell(bell) => {
-                write!(f, "Bell '{}' is missing", bell)
-            }
-        }
-    }
-}
-
-impl Error for InvalidRowError {}
-
-/// The possible ways that the [`Stage`]s can't match when using `mul_into`
-#[derive(Debug, Copy, Clone)]
-pub enum MulIntoError {
-    RhsStage(IncompatibleStages),
-    IntoStage(IncompatibleStages),
-}
-
-impl Display for MulIntoError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::RhsStage(IncompatibleStages {
-                lhs_stage,
-                rhs_stage,
-            }) => write!(f, "Can't multiply stage {} with {}", lhs_stage, rhs_stage),
-            Self::IntoStage(IncompatibleStages {
-                lhs_stage,
-                rhs_stage,
-            }) => write!(f, "Can't write stage {} into {}", lhs_stage, rhs_stage),
-        }
-    }
-}
-
-impl Error for MulIntoError {}
+use super::MulIntoError;
 
 /* ===== BORROWED ROW ===== */
 
 pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
 
-/// A `Row` as a slice of [`Bell`]s.
+/// A borrowed `Row` of [`Bell`]s.
 ///
 /// This can be viewed as a permutation of [rounds](RowBuf::rounds) on a given [`Stage`].
 ///
@@ -114,7 +57,7 @@ pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
 /// # Ok::<(), InvalidRowError>(())
 /// ```
 #[derive(Eq, PartialEq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
+#[repr(transparent)] // Required so we can cast between &[Bell] and &Row in a memory-safe way
 pub struct Row {
     /// The [`Bell`]s in the order that they would be rung.  Because of the 'valid row' invariant,
     /// this can't contain duplicate [`Bell`]s or any [`Bell`]s with number greater than the
@@ -222,6 +165,26 @@ impl Row {
     /// ```
     pub fn is_rounds(&self) -> bool {
         self.bell_iter().enumerate().all(|(i, b)| b.index() == i)
+    }
+
+    /// Perform an in-place check that this `Row` is equal to [backrounds](Self::backrounds).
+    /// `x.is_rounds()` is an optimised version of `x == RowBuf::backrounds(x.stage())`.
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::{RowBuf, Stage};
+    ///
+    /// // Backrounds is ... backrounds (DOH)
+    /// assert!(RowBuf::backrounds(Stage::MAXIMUS).is_backrounds());
+    /// // This is not backrounds
+    /// assert!(!RowBuf::parse("18423756")?.is_backrounds());
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    pub fn is_backrounds(&self) -> bool {
+        self.bell_iter()
+            .rev() // Assert that the bells are in reverse order
+            .enumerate()
+            .all(|(i, b)| b.index() == i)
     }
 
     /// Return the [`Stage`] of the shortest prefix of `self` that is still a valid `Row`.  This is
@@ -775,9 +738,24 @@ impl Row {
         }
         accum
     }
+
+    /// Creates a `&Row` from a slice of [`Bell`]s, **without** checking that they form a valid
+    /// [`Row`].
+    ///
+    /// # Safety
+    ///
+    /// This is safe if the [`Bell`]s in `slice` are a valid [`Row`] according to the Framework.
+    /// See [`Row`]'s docs for more information about this invariant.
+    #[inline]
+    pub unsafe fn from_slice_unchecked(slice: &[Bell]) -> &Row {
+        // The unsafe pointer cast here is OK, because Row a `#[repr(transparent)]` wrapper around
+        // slices of `Bell`s and the pointer cast doesn't change the lifetime of the underlying
+        // data.
+        &*(slice as *const [Bell] as *const Row)
+    }
 }
 
-impl std::ops::Index<usize> for Row {
+impl Index<usize> for Row {
     type Output = Bell;
 
     fn index(&self, index: usize) -> &Bell {
@@ -785,7 +763,7 @@ impl std::ops::Index<usize> for Row {
     }
 }
 
-impl std::ops::Not for &RowBuf {
+impl Not for &RowBuf {
     type Output = RowBuf;
 
     /// Find the inverse of a [`Row`].  If `X` is the input [`Row`], and `Y = !X`, then
@@ -810,7 +788,7 @@ impl std::ops::Not for &RowBuf {
     }
 }
 
-impl std::ops::Not for &Row {
+impl Not for &Row {
     type Output = RowBuf;
 
     /// Find the inverse of a [`Row`].  If `X` is the input [`Row`], and `Y = !X`, then
@@ -835,7 +813,7 @@ impl std::ops::Not for &Row {
     }
 }
 
-impl std::ops::Mul for &RowBuf {
+impl Mul for &RowBuf {
     type Output = RowBuf;
 
     /// Uses the RHS to permute the LHS without consuming either argument.
@@ -868,7 +846,7 @@ impl std::ops::Mul for &RowBuf {
     }
 }
 
-impl std::ops::Mul for &Row {
+impl Mul for &Row {
     type Output = RowBuf;
 
     /// Uses the RHS to permute the LHS without consuming either argument.
@@ -1254,9 +1232,9 @@ impl RowBuf {
     /// inference.
     #[inline]
     pub fn as_row(&self) -> &Row {
-        // The unsafety here is OK, because Row is `#[repr(transparent)]` and the pointer cast
-        // doesn't change the lifetime of the underlying data.
-        unsafe { &*(self.bell_vec.as_slice() as *const [Bell] as *const Row) }
+        // This unsafety is OK, because `RowBuf` requires its bells to form a valid row according
+        // to the Framework
+        unsafe { Row::from_slice_unchecked(&self.bell_vec) }
     }
 
     /* MUTATING OPERATIONS */
@@ -1320,7 +1298,7 @@ impl ToOwned for Row {
 
 /* FORMATTING */
 
-impl std::fmt::Debug for Row {
+impl Debug for Row {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Row({})", self)
     }
@@ -1335,7 +1313,7 @@ impl Display for Row {
     }
 }
 
-impl std::fmt::Debug for RowBuf {
+impl Debug for RowBuf {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "RowBuf({})", self)
     }
@@ -1344,7 +1322,7 @@ impl std::fmt::Debug for RowBuf {
 impl Display for RowBuf {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Delegate to `Row`'s implementation
-        self.deref().fmt(f)
+        Display::fmt(self.deref(), f)
     }
 }
 
