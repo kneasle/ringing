@@ -32,7 +32,7 @@ impl Call {
             NOTATION_BOB,
             LABEL_LEAD_END.to_owned(),
             pn_block.len(),
-            pn_block.to_block(),
+            pn_block.to_block_from_rounds(),
         )
     }
 
@@ -42,7 +42,7 @@ impl Call {
             NOTATION_SINGLE,
             LABEL_LEAD_END.to_owned(),
             pn_block.len(),
-            pn_block.to_block(),
+            pn_block.to_block_from_rounds(),
         )
     }
 

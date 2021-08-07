@@ -6,10 +6,9 @@ use std::{
 use crate::{Bell, IncompatibleStages, Stage};
 
 mod row;
-mod same_stage_vec;
+pub mod same_stage_vec;
 
 pub use row::{BellIter, Row, RowBuf};
-pub use same_stage_vec::SameStageVec;
 
 /// All the possible ways that a [`Row`] could be invalid.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

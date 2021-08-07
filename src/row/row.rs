@@ -129,6 +129,16 @@ impl Row {
         self.bell_iter().position(|b| b == bell)
     }
 
+    /// Gets the [`Bell`] at a given place in this [`Row`], **without** bounds checks.
+    ///
+    /// # Safety
+    ///
+    /// This function is safe if `place < self.stage.as_usize()`.
+    #[inline]
+    pub unsafe fn get_bell_unchecked(&self, place: usize) -> Bell {
+        *self.bell_slice.get_unchecked(place)
+    }
+
     /// Returns the [`Parity`] of this [`Row`].  In order to avoid allocations, this function uses
     /// mutates `self` - specifically `self` is left as rounds, but this is an implementation
     /// detail and should not be relied upon.
@@ -739,7 +749,7 @@ impl Row {
         accum
     }
 
-    /// Creates a `&Row` from a slice of [`Bell`]s, **without** checking that they form a valid
+    /// Creates a `&Row` from a `&[Bell]`, **without** checking that that slice forms a valid
     /// [`Row`].
     ///
     /// # Safety
@@ -752,6 +762,21 @@ impl Row {
         // slices of `Bell`s and the pointer cast doesn't change the lifetime of the underlying
         // data.
         &*(slice as *const [Bell] as *const Row)
+    }
+
+    /// Creates a `&mut Row` from a `&mut [Bell]`, **without** checking that the slice forms a
+    /// valid [`Row`].
+    ///
+    /// # Safety
+    ///
+    /// This is safe if the [`Bell`]s in `slice` are a valid [`Row`] according to the Framework.
+    /// See [`Row`]'s docs for more information about this invariant.
+    #[inline]
+    pub unsafe fn from_mut_slice_unchecked(slice: &mut [Bell]) -> &mut Row {
+        // The unsafe pointer cast here is OK, because Row a `#[repr(transparent)]` wrapper around
+        // slices of `Bell`s and the pointer cast doesn't change the lifetime of the underlying
+        // data.
+        &mut *(slice as *mut [Bell] as *mut Row)
     }
 }
 
@@ -1226,6 +1251,12 @@ impl RowBuf {
         // If no errors were generated so far, then extend the row and return
         self.extend_to_stage(stage);
         Ok(self)
+    }
+
+    /// Consumes this `RowBuf` and returns the underlying [`Vec`] of [`Bell`]s
+    #[inline]
+    pub fn to_bell_vec(self) -> Vec<Bell> {
+        self.bell_vec
     }
 
     /// Converts a [`RowBuf`] into a [`Row`].  Equivalent to `&*self`, but doesn't rely on type

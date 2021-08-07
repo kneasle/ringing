@@ -4,7 +4,7 @@ use edit_distance::edit_distance;
 use itertools::Itertools;
 use shortlist::Shortlist;
 
-use crate::{method::FullClass, place_not::PnBlockParseError, Method, PnBlock, Stage};
+use crate::{method::class::FullClass, place_not::PnBlockParseError, Method, PnBlock, Stage};
 
 mod lib_serde;
 pub(crate) mod parse_cc_lib;
@@ -137,6 +137,8 @@ impl MethodLib {
             .collect_vec()
     }
 
+    // This method is only used by the method classification test suite
+    #[cfg(test)]
     pub(crate) fn all_pns_and_classes(&self) -> Vec<(&str, PnBlock, FullClass)> {
         let mut v = Vec::new();
         for (stage, meths) in &self.method_map {
@@ -235,7 +237,7 @@ impl CompactMethod {
             self.full_class,
             PnBlock::parse(&self.place_notation, stage)
                 .map_err(|e| (self.place_notation.as_str(), e))?
-                .to_block(),
+                .to_block_from_rounds(),
         ))
     }
 }

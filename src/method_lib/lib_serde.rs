@@ -6,7 +6,10 @@ use itertools::Itertools;
 use serde_crate::{Deserialize, Serialize};
 
 use crate::{
-    method::{generate_title, Class, FullClass},
+    method::{
+        class::{Class, FullClass},
+        generate_title,
+    },
     Stage,
 };
 

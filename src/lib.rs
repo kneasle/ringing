@@ -20,7 +20,7 @@ pub use method::Method;
 pub use method_lib::MethodLib;
 pub use parity::Parity;
 pub use place_not::{PlaceNot, PnBlock};
-pub use row::{InvalidRowError, Row, RowBuf, SameStageVec};
+pub use row::{same_stage_vec::SameStageVec, InvalidRowError, Row, RowBuf};
 pub use stage::{IncompatibleStages, Stage};
 pub use utils::run_len;
 

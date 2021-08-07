@@ -1,6 +1,8 @@
-use std::ops::Index;
+use std::ops::{Index, Range};
 
-use crate::{Bell, IncompatibleStages, Row, RowBuf, Stage};
+use itertools::Itertools;
+
+use crate::{utils::split_vec, Bell, IncompatibleStages, Row, RowBuf, Stage};
 
 /// A heap-allocated buffer of [`Row`]s which are required to have the same [`Stage`].  Collecting
 /// [`Row`]s of the same [`Stage`] is nearly always what we want, and having a type to enforce this
@@ -32,7 +34,7 @@ use crate::{Bell, IncompatibleStages, Row, RowBuf, Stage};
 /// // The 3rd row is backrounds
 /// assert!(new_buffer[2].is_backrounds());
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SameStageVec {
     /// A contiguous chunk of [`Bell`]s, containing all the [`Row`]s concatenated together.  For
     /// example, the start of a plain course of Cambridge Surprise Minor would be stored as
@@ -54,6 +56,10 @@ pub struct SameStageVec {
 }
 
 impl SameStageVec {
+    //////////////////
+    // CONSTRUCTORS //
+    //////////////////
+
     /// Creates a new `SameStageVec`, where all the [`Row`]s are expected to have a given
     /// [`Stage`].
     ///
@@ -84,6 +90,33 @@ impl SameStageVec {
         }
     }
 
+    /// Creates a `SameStageVec` containing exactly one row, reusing the allocation from an
+    /// existing [`RowBuf`].
+    #[inline]
+    pub fn from_row_buf(row: RowBuf) -> Self {
+        let stage = row.stage();
+        // This unsafety is OK because `row.to_bell_vec()` generates a Vec containing only one
+        // `Row`, which is required to be valid by `RowBuf`'s invariants
+        unsafe { Self::from_bell_vec_unchecked(row.to_bell_vec(), stage) }
+    }
+
+    /// Creates a `SameStageVec` from a [`Vec`] of [`Bell`]s (containing the [`Row`]s concatenated
+    /// together), without checking that they correspond to valid [`Row`]s
+    #[inline]
+    pub unsafe fn from_bell_vec_unchecked(bells: Vec<Bell>, stage: Stage) -> Self {
+        Self { bells, stage }
+    }
+
+    //////////////////
+    // SIZE GETTERS //
+    //////////////////
+
+    /// The [`Stage`] of every [`Row`] in this `SameStageVec`.
+    #[inline]
+    pub fn stage(&self) -> Stage {
+        self.stage
+    }
+
     /// Gets the number of [`Row`]s contained in this `SameStageVec`
     #[inline]
     pub fn len(&self) -> usize {
@@ -98,6 +131,73 @@ impl SameStageVec {
     pub fn is_empty(&self) -> bool {
         self.bells.is_empty()
     }
+
+    /////////////////
+    // ROW GETTERS //
+    /////////////////
+
+    /// Gets a reference to the [`Row`] at a given `index`, or `None` if `index >= self.len()`.
+    pub fn get(&self, index: usize) -> Option<&Row> {
+        let bell_slice = self.bells.get(self.get_range_of_row(index))?;
+        // This unsafety is OK, because we uphold an invariant that each stage-aligned segment of
+        // `self.bells` is a valid `Row`
+        Some(unsafe { Row::from_slice_unchecked(bell_slice) })
+    }
+
+    /// Gets a mutable reference to the [`Row`] at a given `index`, or `None` if
+    /// `index >= self.len()`.
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Row> {
+        let range = self.get_range_of_row(index);
+        let bell_slice = self.bells.get_mut(range)?;
+        // This unsafety is OK, because we uphold an invariant that each stage-aligned segment of
+        // `self.bells` is a valid `Row`
+        Some(unsafe { Row::from_mut_slice_unchecked(bell_slice) })
+    }
+
+    /// Gets a reference to the first [`Row`], if it exists.
+    pub fn first(&self) -> Option<&Row> {
+        self.get(0)
+    }
+
+    /// Gets a mutable reference to the first [`Row`], if it exists.
+    pub fn first_mut(&mut self) -> Option<&mut Row> {
+        self.get_mut(0)
+    }
+
+    /// Gets a reference to the last [`Row`], if it exists.
+    pub fn last(&self) -> Option<&Row> {
+        self.get(self.len().checked_sub(1)?)
+    }
+
+    /// Gets a mutable reference to the last [`Row`], if it exists.
+    pub fn last_mut(&mut self) -> Option<&mut Row> {
+        self.get_mut(self.len().checked_sub(1)?)
+    }
+
+    /// Returns an [`Iterator`] over the [`Row`]s in this buffer.
+    #[inline]
+    pub fn iter(&self) -> Iter {
+        Iter {
+            // The invariant on `bells_left` follows because there is an identical invariant on
+            // `SameStageVec.bells`
+            bells_left: &self.bells,
+            stage: self.stage,
+        }
+    }
+
+    /// Returns a [`Vec`] containing the place of a [`Bell`] in each [`Row`] in this
+    /// `SameStageVec`.  Returns `None` if the [`Bell`] exceeds the [`Stage`] of `self`.
+    pub fn path_of(&self, bell: Bell) -> Option<Vec<usize>> {
+        if bell.number() > self.stage().as_usize() {
+            return None;
+        }
+        // TODO: Write a vectorised routine for this
+        Some(self.iter().map(|r| r.place_of(bell).unwrap()).collect_vec())
+    }
+
+    ////////////////
+    // OPERATIONS //
+    ////////////////
 
     /// Adds a new [`Row`] to the end of the buffer, checking that its [`Stage`] is as expected.
     #[inline]
@@ -148,16 +248,71 @@ impl SameStageVec {
         self.bells.extend(other.bells.iter().copied()); // Copy bells across in one go
         Ok(())
     }
+
+    /// Take a range of `self`, pre-multiply all the `Row`s and extend `self` with them.
+    #[inline]
+    pub fn extend_transposed_from_within(
+        &mut self,
+        range: Range<usize>,
+        transposition: &Row,
+    ) -> Result<(), IncompatibleStages> {
+        IncompatibleStages::test_err(self.stage, transposition.stage())?;
+        // Copy the bells one-by-one, because otherwise we'd have to borrow `self.bells` twice and
+        // the borrow checker doesn't like that.
+        for i in range {
+            let transposed_bell = transposition[self.bells[i].index()];
+            self.bells.push(transposed_bell);
+        }
+        Ok(())
+    }
+
+    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`].
+    pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
+        IncompatibleStages::test_err(lhs_row.stage(), self.stage())?;
+        // TODO: Write vectorised routine for this
+        for b in &mut self.bells {
+            // This function is safe because:
+            // - We know that `self.stage() == lhs_row.stage()`
+            // - Because of the `Row` invariants, `b.index() < self.stage()` for all `b` in
+            //   `self.bells`
+            // => `b.index() < lhs_row.stage()` for every `b`
+            // => calling `get_bell_unchecked` is safe
+            *b = unsafe { lhs_row.get_bell_unchecked(b.index()) };
+        }
+        Ok(())
+    }
+
+    /// Splits `self` into two `SameStageVec`s (`a` and `b`) where:
+    /// - `a.len() == index`, and
+    /// - `self == a.extend_from_buf(&b)` (i.e. no rows are created or destroyed)
+    pub fn split(self, index: usize) -> Option<(Self, Self)> {
+        let (left_bells, right_bells) = split_vec(self.bells, index * self.stage.as_usize())?;
+        Some((
+            // Both of these are safe because we split `self.bells` at an integer multiple of
+            // `self.stage`, thus preserving the row boundaries and upholding the invariants
+            unsafe { Self::from_bell_vec_unchecked(left_bells, self.stage) },
+            unsafe { Self::from_bell_vec_unchecked(right_bells, self.stage) },
+        ))
+    }
+
+    //////////////////////
+    // HELPER FUNCTIONS //
+    //////////////////////
+
+    /// Gets the [`Range`] of `self.bells` which would contain the [`Row`] at a given `index`.
+    fn get_range_of_row(&self, index: usize) -> Range<usize> {
+        let s = self.stage.as_usize();
+        index * s..(index + 1) * s
+    }
 }
 
 impl Index<usize> for SameStageVec {
     type Output = Row;
 
     fn index(&self, index: usize) -> &Self::Output {
-        let s = self.stage.as_usize();
         // This unsafety is fine, because we require that every stage-aligned chunk of bells forms
         // a valid row according to the Framework
-        unsafe { Row::from_slice_unchecked(&self.bells[index * s..(index + 1) * s]) }
+        unsafe { Row::from_slice_unchecked(&self.bells[self.get_range_of_row(index)]) }
     }
 }
 
@@ -167,12 +322,7 @@ impl<'v> IntoIterator for &'v SameStageVec {
     type IntoIter = Iter<'v>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            // The invariant on `bells_left` follows because there is an identical invariant on
-            // `SameStageVec.bells`
-            bells_left: &self.bells,
-            stage: self.stage,
-        }
+        self.iter()
     }
 }
 

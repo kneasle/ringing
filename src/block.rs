@@ -3,12 +3,16 @@
 
 use std::{
     fmt::{Display, Formatter},
-    ops::Index,
+    iter::repeat_with,
+    ops::Range,
 };
 
 use itertools::Itertools;
 
-use crate::{Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+use crate::{
+    row::same_stage_vec, utils::split_vec, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf,
+    SameStageVec, Stage,
+};
 
 /// All the possible ways that parsing a [`Block`] could fail
 #[derive(Debug, Clone)]
@@ -19,7 +23,7 @@ pub enum ParseError {
         err: InvalidRowError,
     },
     IncompatibleStages {
-        line: usize,
+        line_index: usize,
         first_stage: Stage,
         different_stage: Stage,
     },
@@ -33,7 +37,7 @@ impl Display for ParseError {
                 write!(f, "Error parsing line {}: {}", line, err)
             }
             ParseError::IncompatibleStages {
-                line,
+                line_index: line,
                 first_stage,
                 different_stage,
             } => {
@@ -49,217 +53,112 @@ impl Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct AnnotRow<A> {
-    row: RowBuf,
-    annot: A,
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct AnnotRow<'b, A> {
+    row: &'b Row,
+    annot: &'b A,
 }
 
-impl<A> AnnotRow<A> {
-    /// Creates a new `AnnotRow` from its parts
-    #[inline]
-    pub fn new(row: RowBuf, annot: A) -> Self {
-        AnnotRow { row, annot }
+impl<'b, A> AnnotRow<'b, A> {
+    pub fn row(self) -> &'b Row {
+        self.row
     }
 
-    /// Creates a new `Row` with the default annotations
-    #[inline]
-    pub fn with_default(row: RowBuf) -> Self
-    where
-        A: Default,
-    {
-        Self::new(row, A::default())
-    }
-
-    /// Gets the [`Row`] contained in this `AnnotRow`
-    #[inline]
-    pub fn row(&self) -> &Row {
-        &self.row
-    }
-
-    /// Gets the [`Stage`] of this `AnnotRow`
-    #[inline]
-    pub fn stage(&self) -> Stage {
-        self.row.stage()
-    }
-
-    /// Separates this `AnnotRow` into its raw parts
-    #[inline]
-    pub fn into_raw_parts(self) -> (RowBuf, A) {
-        (self.row, self.annot)
-    }
-
-    /// Sets the [`Row`] contained within this `AnnotRow`, without checking that the [`Stage`]s
-    /// match.
-    ///
-    /// # Safety
-    ///
-    /// This is safe to call, so long as the [`Stage`] of `row` is equal to that of `self`
-    #[inline]
-    pub unsafe fn set_row_unchecked(&mut self, row: RowBuf) {
-        self.row = row;
-    }
-
-    /// Gets an immutable reference to the annotation of this `AnnotRow`
-    #[inline]
-    pub fn annot(&self) -> &A {
-        &self.annot
-    }
-
-    /// Gets a mutable reference to the annotation of this `AnnotRow`
-    #[inline]
-    pub fn annot_mut(&mut self) -> &mut A {
-        &mut self.annot
-    }
-
-    /// Applies a function to the annotation contained within this `AnnotRow`
-    #[inline]
-    pub fn map_annot<B>(self, f: impl Fn(A) -> B) -> AnnotRow<B> {
-        AnnotRow::new(self.row, f(self.annot))
-    }
-
-    /// Clones the [`Row`] of `self`, applying a function to the annotation contained within this
-    /// `AnnotRow`
-    #[inline]
-    pub fn clone_map_annot<B>(&self, f: impl Fn(&A) -> B) -> AnnotRow<B> {
-        AnnotRow::new(self.row.clone(), f(&self.annot))
+    pub fn annot(self) -> &'b A {
+        self.annot
     }
 }
 
 /// An `AnnotBlock` with no annotations.
 pub type Block = AnnotBlock<()>;
 
-pub type AnnotRowIter<'b, A> = std::slice::Iter<'b, AnnotRow<A>>;
-
-/// An `AnnotBlock` is in essence a multi-permutation: it describes the transposition of a single
-/// start [`Row`] into many [`Row`]s, the first of which is always the one supplied.  The last
-/// [`Row`] of an `AnnotBlock` is considered 'left-over', and represents the first [`Row`] that
-/// should be rung after this `AnnotBlock`.
+/// A block of [`Row`], each of which can be given an annotation of any type.  Blocks can start
+/// from any [`Row`], and can be empty.
 ///
-/// A few things to note about `Block`s:
-/// - All `Block`s must have non-zero length.  Zero-length blocks cannot be created with `safe`
-///   code, and will cause undefined behaviour or `panic!`s.
+/// All blocks must finish with a 'left-over' [`Row`].  This [`Row`] denotes the first [`Row`] of
+/// any block rung **after** this one.  This is not considered part of the `AnnotBlock`, and
+/// therefore cannot be annotated.  However, it is necessary - for example, if we create a `Block`
+/// for the first lead of Cambridge and Primrose Surprise Minor then they would be identical except
+/// for their 'left-over' row.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct AnnotBlock<A> {
     /// The [`Row`]s making up this `Block`.
     ///
-    /// A few important implementation details to note:
-    /// 1. The last [`Row`] in `Block::rows` is 'left-over' - i.e. it shouldn't be used for truth
-    ///    checking, and is used to generate the starting [`Row`] for the next `Block` that would
-    ///    be rung after this one.
+    /// **Invariant**: `row.len() >= 1`
+    row_buffer: SameStageVec,
+    /// The annotations on each [`Row`] in this `AnnotBlock`.
     ///
-    /// We also enforce the following invariants:
-    /// 1. `Block::rows` contains at least two [`Row`]s.  Zero-length `Block`s cannot be created
-    ///    using `safe` code.
-    /// 2. All the [`Row`]s in `Block::rows` must have the same [`Stage`].
-    /// 3. The first [`Row`] should always equal `rounds`
-    rows: Vec<AnnotRow<A>>,
+    /// **Invariant**: `rows.len() = annots.len() + 1`, because the 'left-over' row cannot be annotated.
+    annots: Vec<A>,
 }
 
-// We don't need `is_empty`, because the length is guaruteed to be at least 1
-#[allow(clippy::len_without_is_empty)]
 impl<A> AnnotBlock<A> {
-    /// Parse a multi-line [`str`]ing into an unannotated `Block`.  The last [`Row`] parsed will be
-    /// considered 'left over' - i.e. it isn't directly part of this `Block` but rather will be the
-    /// first [`Row`] of any `Block` which gets appended to this one.  Each [`Row`] has the default
-    /// annotation (thus requiring that `A` implements [`Default`]).
+    //////////////////
+    // CONSTRUCTORS //
+    //////////////////
+
+    /// Parse a multi-line [`str`]ing into an `AnnotBlock`, where each row is given the annotation
+    /// created by `A::default()`.  Each line in the string is interpreted as a [`Row`], with the
+    /// last row being 'left-over'.
     pub fn parse(s: &str) -> Result<Self, ParseError>
     where
         A: Default,
     {
-        // We store the _inverse_ of the first Row, because for each row R we are solving the
-        // equation `FX = R` where F is the first Row.  The solution to this is `X = F^-1 * R`, so
-        // it makes sense to invert F once and then use that in all subsequent calculations.
-        let mut inv_first_row: Option<RowBuf> = None;
-        let mut annot_rows: Vec<AnnotRow<A>> = Vec::new();
-        for (i, l) in s.lines().enumerate() {
+        let mut line_iter = s.lines().enumerate();
+
+        // Parse the first line before creating the `SameStageVec` (since we need to know upfront
+        // what the stage is going to be).
+        let (_zero, first_line) = line_iter.next().ok_or(ParseError::ZeroLengthBlock)?;
+        let first_row =
+            RowBuf::parse(first_line).map_err(|err| ParseError::InvalidRow { line: 0, err })?;
+        // Create a `SameStageVec` containing just `first_row`
+        let mut row_buffer = SameStageVec::from_row_buf(first_row);
+
+        // Now parse the rest of the lines into `SameStageVec`
+        for (i, line) in line_iter {
             // Parse the line into a Row, and fail if its either invalid or doesn't match the stage
             let parsed_row =
-                RowBuf::parse(l).map_err(|err| ParseError::InvalidRow { line: i, err })?;
-            if let Some(inv_first_row) = &inv_first_row {
-                if inv_first_row.stage() != parsed_row.stage() {
-                    return Err(ParseError::IncompatibleStages {
-                        line: i,
-                        first_stage: inv_first_row.stage(),
-                        different_stage: parsed_row.stage(),
-                    });
-                }
-                // If all the checks passed, push the row
-                annot_rows.push(AnnotRow::with_default(unsafe {
-                    inv_first_row.mul_unchecked(&parsed_row)
-                }));
-            } else {
-                // If this is the first Row, then push rounds and set the inverse first row
-                inv_first_row = Some(!&*parsed_row);
-                annot_rows.push(AnnotRow::with_default(RowBuf::rounds(parsed_row.stage())));
-            }
+                RowBuf::parse(line).map_err(|err| ParseError::InvalidRow { line: i, err })?;
+            row_buffer.push(&parsed_row).map_err(
+                |IncompatibleStages {
+                     lhs_stage,
+                     rhs_stage,
+                 }| ParseError::IncompatibleStages {
+                    line_index: i,
+                    first_stage: lhs_stage,
+                    different_stage: rhs_stage,
+                },
+            )?;
         }
-        // Return an error if the rows would form a zero-length block
-        if annot_rows.len() <= 1 {
-            return Err(ParseError::ZeroLengthBlock);
-        }
-        // Create a block from the newly parsed [`Row`]s.  This unsafety is OK, because we have
-        // verified all the invariants
-        Ok(unsafe { Self::from_annot_rows_unchecked(annot_rows) })
+
+        Ok(Self::from_vec_with_default_annots(row_buffer))
     }
 
-    /// Creates a new `AnnotBlock` from a [`Vec`] of annotated [`Row`]s, checking that the result
-    /// is valid.
-    pub fn from_annot_rows(annot_rows: Vec<AnnotRow<A>>) -> Result<Self, ParseError> {
-        assert!(annot_rows[0].row.is_rounds());
-        if annot_rows.len() <= 1 {
-            return Err(ParseError::ZeroLengthBlock);
-        }
-        let first_stage = annot_rows[0].row.stage();
-        for (i, annot_row) in annot_rows.iter().enumerate().skip(1) {
-            if annot_row.row.stage() != first_stage {
-                return Err(ParseError::IncompatibleStages {
-                    line: i,
-                    first_stage,
-                    different_stage: annot_row.row.stage(),
-                });
-            }
-        }
-        // This unsafety is OK because we've checked all the required invariants
-        Ok(unsafe { Self::from_annot_rows_unchecked(annot_rows) })
-    }
-
-    /// Creates a new `AnnotBlock` from a [`Vec`] of annotated [`Row`]s, without performing any
-    /// safety checks.
+    /// Creates a new `AnnotBlock` from a [`SameStageVec`], where every annotation is
+    /// `A::default()`.
     ///
-    /// # Safety
+    /// # Panics
     ///
-    /// This is safe when the following properties hold:
-    /// - `rows` has length at least 2.  This is so that there is at least one [`Row`] in the
-    ///   `AnnotBlock`, plus one leftover [`Row`].
-    /// - All the `rows` have the same [`Stage`].
-    pub unsafe fn from_annot_rows_unchecked(rows: Vec<AnnotRow<A>>) -> Self {
-        AnnotBlock { rows }
-    }
-
-    /// Creates an empty `AnnotBlock` on a given [`Stage`] (i.e. an `AnnotBlock` containing only
-    /// rounds as the leftover row).  **This function is wildly unsafe**; it should only be used if
-    /// you are going to extend the block before passing it out of the `unsafe` boundary.
-    ///
-    /// # Safety
-    ///
-    /// This function is never safe on its own.  In order to make the result safe, you have to
-    /// push more [`AnnotRow`]s onto the `AnnotBlock` (using [`AnnotBlock::extend_with`],
-    /// [`AnnotBlock::extend_from_iter_transposed`], etc.).
-    #[inline]
-    pub unsafe fn empty(stage: Stage) -> Self
+    /// This panics if the [`SameStageVec`] provided is empty.
+    pub fn from_vec_with_default_annots(rows: SameStageVec) -> Self
     where
         A: Default,
     {
-        AnnotBlock {
-            rows: vec![AnnotRow::new(RowBuf::rounds(stage), A::default())],
+        assert!(!rows.is_empty());
+        Self {
+            annots: repeat_with(A::default).take(rows.len() - 1).collect_vec(),
+            row_buffer: rows,
         }
     }
+
+    /////////////////
+    // STAGE & LEN //
+    /////////////////
 
     /// Gets the [`Stage`] of this `Block`.
     #[inline]
     pub fn stage(&self) -> Stage {
-        self.rows[0].row.stage()
+        self.row_buffer.stage()
     }
 
     /// Gets the effective [`Stage`] of this `AnnotBlock` - i.e. the smallest [`Stage`] that this
@@ -273,98 +172,49 @@ impl<A> AnnotBlock<A> {
             .unwrap()
     }
 
+    /// Gets the length of this `Block` (excluding the left-over [`Row`]).  This is guarunteed to
+    /// be at least 1.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.annots.len()
+    }
+
+    /////////////
+    // GETTERS //
+    /////////////
+
     /// Gets the [`Row`] at a given index, along with its annotation.
     #[inline]
     pub fn get_row(&self, index: usize) -> Option<&Row> {
-        self.get_annot_row(index).map(AnnotRow::row)
+        self.row_buffer.get(index)
     }
 
     /// Gets an immutable reference to the annotation of the [`Row`] at a given index, if it
     /// exists.
     #[inline]
     pub fn get_annot(&self, index: usize) -> Option<&A> {
-        self.get_annot_row(index).map(AnnotRow::annot)
+        self.annots.get(index)
     }
 
     /// Gets an mutable reference to the annotation of the [`Row`] at a given index, if it
     /// exists.
     #[inline]
     pub fn get_annot_mut(&mut self, index: usize) -> Option<&mut A> {
-        self.rows.get_mut(index).map(AnnotRow::annot_mut)
+        self.annots.get_mut(index)
     }
 
     /// Gets the [`Row`] at a given index, along with its annotation.
     #[inline]
-    pub fn get_annot_row(&self, index: usize) -> Option<&AnnotRow<A>> {
-        self.rows.get(index)
+    pub fn get_annot_row(&self, index: usize) -> Option<AnnotRow<A>> {
+        let row = self.get_row(index)?;
+        let annot = self.get_annot(index)?;
+        Some(AnnotRow { row, annot })
     }
 
     /// Gets the first [`Row`] of this `AnnotBlock`, along with its annotation.
     #[inline]
-    pub fn first_annot_row(&self) -> &AnnotRow<A> {
-        // This can't panic, because of the invariant disallowing zero-sized `AnnotBlock`s
-        &self.rows[0]
-    }
-
-    /// Gets the length of this `Block` (excluding the left-over [`Row`]).  This is guarunteed to
-    /// be at least 1.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.rows.len() - 1
-    }
-
-    /// Returns an [`Iterator`] over all the [`Row`]s in this `AnnotBlock`, along with their
-    /// annotations.
-    #[inline]
-    pub fn iter(&self) -> AnnotRowIter<'_, A> {
-        self.rows.iter()
-    }
-
-    /// Returns an immutable reference to the slice of annotated [`Row`]s making up this [`Block`]
-    #[inline]
-    pub fn annot_rows(&self) -> &[AnnotRow<A>] {
-        self.rows.as_slice()
-    }
-
-    /// Returns an [`Iterator`] over all the [`Row`]s in this `Block`, without their annotations.
-    #[inline]
-    pub fn rows(&self) -> impl Iterator<Item = &Row> + '_ {
-        self.iter().map(AnnotRow::row)
-    }
-
-    /// Returns an [`Iterator`] over all the annotations in this `Block`.
-    #[inline]
-    pub fn annots(&self) -> impl Iterator<Item = &A> + '_ {
-        self.iter().map(AnnotRow::annot)
-    }
-
-    /// Returns an [`Iterator`] yielding mutable references to the annotations in this `Block`.
-    #[inline]
-    pub fn annots_mut(&mut self) -> impl Iterator<Item = &mut A> + '_ {
-        self.rows.iter_mut().map(AnnotRow::annot_mut)
-    }
-
-    /// Pre-multiplies every [`Row`] in this `Block` by another [`Row`].  The resulting `Block` is
-    /// equivalent to `self` (inasmuch as the relations between the [`Row`]s are identical), but it
-    /// will start from a different [`Row`].
-    pub fn pre_mul(&mut self, perm_row: &Row) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(perm_row.stage(), self.stage())?;
-        let mut row_buf = RowBuf::empty();
-        self.rows.iter_mut().for_each(|AnnotRow { row, .. }| {
-            // Do in-place pre-multiplication using `row_buf` as a temporary buffer
-            row_buf.clone_from(row);
-            *row = unsafe { perm_row.mul_unchecked(&row_buf) };
-        });
-        Ok(())
-    }
-
-    /// Returns the 'left-over' [`Row`] of this `Block`, along with its annotation.  This [`Row`]
-    /// represents the overall transposition of the `Block`, and should not be used when generating
-    /// rows for truth checking.
-    #[inline]
-    pub fn leftover_annot_row(&self) -> &AnnotRow<A> {
-        // We can safely unwrap here, because we enforce an invariant that `self.rows.len() > 0`
-        self.rows.last().unwrap()
+    pub fn first_annot_row(&self) -> Option<AnnotRow<A>> {
+        self.get_annot_row(0)
     }
 
     /// Returns the 'left-over' [`Row`] of this `Block`.  This [`Row`] represents the overall
@@ -372,189 +222,137 @@ impl<A> AnnotBlock<A> {
     /// checking.
     #[inline]
     pub fn leftover_row(&self) -> &Row {
-        &self.leftover_annot_row().row
+        &self.row_buffer.last().unwrap()
     }
 
-    /// Returns a mutable reference to the annotation of the 'left-over' [`Row`] of this `Block`.
+    //////////////////////////////
+    // ITERATORS / PATH GETTERS //
+    //////////////////////////////
+
+    /// Returns an [`Iterator`] which yields the [`Row`]s which are directly part of this
+    /// `AnnotBlock`.  This does not include the 'left-over' row; if you want to include the
+    /// left-over [`Row`], use [`AnnotBlock::all_rows`] instead.
     #[inline]
-    pub fn leftover_annot_mut(&mut self) -> &mut A {
-        // We can safely unwrap here, because we enforce an invariant that `self.rows.len() > 0`
-        &mut self.rows.last_mut().unwrap().annot
+    pub fn rows(&self) -> same_stage_vec::Iter {
+        self.row_buffer.iter()
     }
 
-    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
-    /// annotation is passed through the given function.
-    pub fn map_annots<B>(self, f: impl Fn(A) -> B) -> AnnotBlock<B> {
-        unsafe {
-            AnnotBlock::from_annot_rows_unchecked(
-                self.rows.into_iter().map(|a| a.map_annot(&f)).collect(),
-            )
-        }
-    }
-
-    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
-    /// annotation is passed through the given function.
-    pub fn into_rows(self) -> Vec<RowBuf> {
-        self.rows
-            .into_iter()
-            .map(|annot_row| annot_row.row)
-            .collect()
-    }
-
-    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
-    /// annotation is passed through the given function.
-    pub fn prefix(&self, limit: usize) -> Self
-    where
-        A: Clone,
-    {
-        assert!(limit > 0);
-        unsafe {
-            AnnotBlock::from_annot_rows_unchecked(
-                self.rows.iter().cloned().take(limit + 1).collect(),
-            )
-        }
-    }
-
-    /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`, **excluding**
-    /// the leftover row.
-    pub fn path_of(&self, bell: Bell) -> Option<Vec<usize>> {
-        if bell.number() > self.stage().as_usize() {
-            return None;
-        }
-        Some(
-            self.annot_rows()[..self.len()]
-                .iter()
-                .map(|r| r.row.place_of(bell).unwrap())
-                .collect_vec(),
-        )
+    /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`.  Also returns
+    /// the place of `bell` in the leftover row.
+    pub fn path_of(&self, bell: Bell) -> Option<(Vec<usize>, usize)> {
+        let mut full_path = self.full_path_of(bell)?;
+        let place_in_leftover_row = full_path.pop().unwrap();
+        Some((full_path, place_in_leftover_row))
     }
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`, **including**
     /// the leftover row.
     pub fn full_path_of(&self, bell: Bell) -> Option<Vec<usize>> {
-        if bell.number() > self.stage().as_usize() {
-            return None;
-        }
-        Some(
-            self.annot_rows()
-                .iter()
-                .map(|r| r.row.place_of(bell).unwrap())
-                .collect_vec(),
-        )
+        self.row_buffer.path_of(bell) // Delegate to `SameStageVec`
     }
 
-    /// Splits this `AnnotBlock` into two separate `AnnotBlock`s at a specified index.  This makes
-    /// `self` shorter, whilst returning the remainder as a new `AnnotBlock` (along with its first
-    /// [`Row`]).  This returns `None` without mutation if either of the blocks would have zero
-    /// length.  During the course of this, the row at the split point will be used twice so the
-    /// annotation is moved to the second block (and the leftover row of `self` is annotated with
-    /// a default value).
-    #[must_use]
-    pub fn split(&mut self, index: usize) -> Option<(RowBuf, Self)>
-    where
-        A: Default,
-    {
-        // Early return
-        if index == 0 || index >= self.len() - 1 {
-            return None;
-        }
-        // Firstly, record the first Row of the 2nd block and cache its inverse to avoid
-        // recalculation
-        let other_block_first_row = self.rows[index].row.clone();
-        let inv_first_row = !&*other_block_first_row;
-        // Now, drain the rows out of `self`, transpose them and collect them in a new `Vec` to be
-        // turned into the new `AnnotBlock`
-        let new_rows: Vec<AnnotRow<A>> = self
-            .rows
-            .drain(index..)
-            .map(|AnnotRow { row, annot }| AnnotRow::new(&*inv_first_row * &row, annot))
-            .collect();
-        // The drain will have left `self` without a leftover Row, so we add it back in by cloning
-        // `other_block_first_row`
-        self.rows
-            .push(AnnotRow::with_default(other_block_first_row.clone()));
-        // Finally, construct the new Block.  The unsafety here is OK because:
-        // - The new block has length >= 2, which is checked by the early return
-        // - All the `Row`s have the same stage:
-        //       all Rows in `self` have the same stage (by invariant)
-        //    => all permuted copies of rows in `self` have the same stage (because permuting a Row
-        //       can't change its stage)
-        //    => all rows in `new_rows` must have the same stage
-        // - new_rows[0] must start in rounds, because the first row is multiplied it by its own
-        //   inverse, which always generates rounds
-        Some((other_block_first_row, unsafe {
-            Self::from_annot_rows_unchecked(new_rows)
-        }))
+    /////////////////////////
+    // IN-PLACE OPERATIONS //
+    /////////////////////////
+
+    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
+    /// the annotations.
+    pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
+        self.row_buffer.permute(lhs_row) // Delegate to `SameStageVec`
     }
 
-    /// Extend this `AnnotBlock` with [`AnnotRow`]s generated by a given [`Iterator`], transposing
-    /// them so that the first new [`Row`] matches `self.leftover_row()`.
-    pub fn extend_from_iter_transposed(
-        &mut self,
-        annot_rows: impl IntoIterator<Item = AnnotRow<A>>,
-    ) -> Result<(), IncompatibleStages> {
-        let mut transposition: Option<RowBuf> = None;
-        for annot_r in annot_rows {
-            // Return error if the stages don't match
-            IncompatibleStages::test_err(self.stage(), annot_r.row.stage())?;
-            match &transposition {
-                // If we're not on the first row, then push the transposed version of this row onto
-                // self.rows
-                Some(t) => self.rows.push(AnnotRow::new(
-                    unsafe { t.mul_unchecked(annot_r.row()) },
-                    annot_r.annot,
-                )),
-                // If we **are** on the first row, we calculate the transposition and then
-                // overwrite the current leftover row in-place (bypassing the transposition
-                // because we know that it will have no effect)
-                None => {
-                    transposition =
-                        Some(Row::solve_xa_equals_b(annot_r.row(), self.leftover_row()).unwrap());
-                    self.rows.last_mut().unwrap().annot = annot_r.annot;
-                }
-            };
-        }
-        Ok(())
-    }
-
-    /// Extend this `AnnotBlock` with the contents of another `AnnotBlock`.  This modifies `self`
-    /// to have the effect of ringing `self` then `other`.  Note that this overwrites the
-    /// leftover [`Row`] of `self`, replacing its annotation with that of `other`'s first [`Row`].
-    pub fn extend_with(&mut self, other: Self) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage(), other.stage())?;
-        // Remove the leftover row
-        let leftover_row = self.rows.pop().unwrap().row;
-        self.rows
-            .extend(other.rows.into_iter().map(|AnnotRow { row, annot }| {
-                AnnotRow::new(unsafe { leftover_row.mul_unchecked(&row) }, annot)
-            }));
-        Ok(())
-    }
-
-    /// Extend this `AnnotBlock` with the contents of another `AnnotBlock`, cloning the
-    /// annotations.  This modifies `self` to have the effect of ringing `self` then `other`.  Note
-    /// that this overwrites the leftover [`Row`] of `self`, replacing its annotation with that of
-    /// `other`'s first [`Row`].
-    pub fn extend_with_cloned(&mut self, other: &Self) -> Result<(), IncompatibleStages>
+    /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
+    pub fn extend_from_self(&mut self, range: Range<usize>)
     where
         A: Clone,
     {
-        IncompatibleStages::test_err(self.stage(), other.stage())?;
-        // Remove the leftover row
-        let leftover_row = self.rows.pop().unwrap().row;
-        self.rows
-            .extend(other.rows.iter().map(|AnnotRow { row, annot }| {
-                AnnotRow::new(unsafe { leftover_row.mul_unchecked(row) }, annot.clone())
-            }));
-        Ok(())
+        // Remove the leftover row from the row buffer, so that the new rows can be inserted in its
+        // place
+        let leftover_row = self.row_buffer.pop().unwrap(); // OK because `row_buffer` can't be empty
+        let first_row_of_chunk = self.get_row(range.start).unwrap();
+        // This unwrap is fine, because both rows were taken from the same `SameStageVec`
+        let transposition = Row::solve_xa_equals_b(first_row_of_chunk, &leftover_row).unwrap();
+
+        self.row_buffer
+            .extend_transposed_from_within(range.clone(), &transposition) // Extend the rows
+            .unwrap(); // Unwrapping is fine because `transposition` comes from `self.row_buffer`
+        self.annots.extend_from_within(range); // Extend the annots
     }
-}
 
-impl<A> Index<usize> for AnnotBlock<A> {
-    type Output = AnnotRow<A>;
+    ///////////////////////////////////
+    // OPERATIONS WHICH CONSUME SELF //
+    ///////////////////////////////////
 
-    #[inline]
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.rows[index]
+    /// Consumes this `AnnotBlock`, and returns a [`SameStageVec`] containing the same [`Row`]s,
+    /// **including** the left-over row.
+    pub fn into_row_buffer(self) -> SameStageVec {
+        self.row_buffer
+    }
+
+    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
+    /// annotation is passed through the given function.
+    pub fn map_annots<B>(self, f: impl Fn(A) -> B) -> AnnotBlock<B> {
+        AnnotBlock {
+            row_buffer: self.row_buffer, // Don't modify the rows
+            annots: self.annots.into_iter().map(f).collect_vec(),
+        }
+    }
+
+    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
+    /// annotation is passed through the given function (along with its index within the
+    /// `AnnotBlock`).
+    pub fn map_annots_with_index<B>(self, f: impl Fn(usize, A) -> B) -> AnnotBlock<B> {
+        AnnotBlock {
+            row_buffer: self.row_buffer, // Don't modify the rows
+            annots: self
+                .annots
+                .into_iter()
+                .enumerate()
+                .map(|(i, annot)| f(i, annot))
+                .collect_vec(),
+        }
+    }
+
+    /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
+    /// annotation is passed through the given function (along with its index within the
+    /// `AnnotBlock`).
+    pub fn clone_map_annots_with_index<'s, B>(
+        &'s self,
+        f: impl Fn(usize, &'s A) -> B,
+    ) -> AnnotBlock<B> {
+        AnnotBlock {
+            row_buffer: self.row_buffer.to_owned(), // Don't modify the rows
+            annots: self
+                .annots
+                .iter()
+                .enumerate()
+                .map(|(i, annot)| f(i, annot))
+                .collect_vec(),
+        }
+    }
+
+    /// Splits this `AnnotBlock` into two separate `AnnotBlock`s at a specified index.  This is
+    /// defined such the first `AnnotBlock` has length `index`.  This returns `None` if the second
+    /// `AnnotBlock` would have negative length.
+    pub fn split(self, index: usize) -> Option<(Self, Self)> {
+        let (first_annots, second_annots) = split_vec(self.annots, index)?;
+        let (mut first_rows, second_rows) = self.row_buffer.split(index)?;
+        // Copy the first row of `second_rows` back into `first_rows` so it becomes the leftover
+        // row of the first block
+        let first_row_of_second = second_rows.first().unwrap(); // Unwrap is safe because
+                                                                // `self.row_buffer.len() > index + 1`
+        first_rows.push(first_row_of_second).unwrap(); // Unwrap is safe because both rows came
+                                                       // from `self.row_buffer`
+
+        // Construct the new pair of blocks
+        let first_block = Self {
+            row_buffer: first_rows,
+            annots: first_annots,
+        };
+        let second_block = Self {
+            row_buffer: second_rows,
+            annots: second_annots,
+        };
+        Some((first_block, second_block))
     }
 }
