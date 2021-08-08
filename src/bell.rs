@@ -152,7 +152,7 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
-    pub fn to_char(&self) -> Option<char> {
+    pub fn to_char(self) -> Option<char> {
         BELL_NAMES.as_bytes().get(self.index).map(|x| *x as char)
     }
 

@@ -106,8 +106,8 @@ impl From<MethodLibSerde> for MethodLib {
                 method_map.insert(
                     title.to_lowercase(),
                     CompactMethod {
-                        title,
                         name,
+                        title,
                         full_class,
                         place_notation,
                     },
@@ -156,7 +156,7 @@ struct CompactMethodSerde {
 
 /// Serialization helper required to remove tons of `is_*:false` from the saved JSON
 fn is_false(b: &bool) -> bool {
-    *b == false
+    !(*b)
 }
 
 /// Converts a [`Class`] into a number, which can then be recovered with `from_class_id`.  This

@@ -97,11 +97,16 @@ impl SameStageVec {
         let stage = row.stage();
         // This unsafety is OK because `row.to_bell_vec()` generates a Vec containing only one
         // `Row`, which is required to be valid by `RowBuf`'s invariants
-        unsafe { Self::from_bell_vec_unchecked(row.to_bell_vec(), stage) }
+        unsafe { Self::from_bell_vec_unchecked(row.into_bell_vec(), stage) }
     }
 
     /// Creates a `SameStageVec` from a [`Vec`] of [`Bell`]s (containing the [`Row`]s concatenated
-    /// together), without checking that they correspond to valid [`Row`]s
+    /// together), without checking that they correspond to valid [`Row`]s.
+    ///
+    /// # Safety
+    ///
+    /// This function is safe if `bells` is formed of valid [`Row`]s (each of the provided
+    /// [`Stage`]) concatenated together.
     #[inline]
     pub unsafe fn from_bell_vec_unchecked(bells: Vec<Bell>, stage: Stage) -> Self {
         Self { bells, stage }

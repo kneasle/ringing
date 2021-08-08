@@ -172,8 +172,13 @@ impl<A> AnnotBlock<A> {
             .unwrap()
     }
 
-    /// Gets the length of this `Block` (excluding the left-over [`Row`]).  This is guarunteed to
-    /// be at least 1.
+    /// Shorthand for `self.len() == 0`
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.annots.is_empty()
+    }
+
+    /// Gets the length of this `Block` (excluding the left-over [`Row`]).
     #[inline]
     pub fn len(&self) -> usize {
         self.annots.len()
