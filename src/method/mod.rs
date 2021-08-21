@@ -133,6 +133,12 @@ impl Method {
             .as_ref()
             .map(String::as_str)
     }
+
+    /// Returns an [`AnnotBlock`] of the first lead of this [`Method`], along with the lead
+    /// location labels.
+    pub fn first_lead(&self) -> &AnnotBlock<Option<String>> {
+        &self.first_lead
+    }
 }
 
 /// Generate the (standard) title of a [`Method`] from its parts, according to the Framework's
