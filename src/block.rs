@@ -235,6 +235,14 @@ impl<A> AnnotBlock<A> {
         Some(AnnotRow { row, annot })
     }
 
+    /// Gets the first [`Row`] of this `AnnotBlock`, which may be leftover.
+    #[inline]
+    pub fn first_row(&self) -> &Row {
+        // This `unwrap` won't panic, because we require an invariant that `self.row_buffer` is
+        // non-empty
+        self.row_buffer.first().unwrap()
+    }
+
     /// Gets the first [`Row`] of this `AnnotBlock`, along with its annotation.
     #[inline]
     pub fn first_annot_row(&self) -> Option<AnnotRow<A>> {
@@ -259,6 +267,25 @@ impl<A> AnnotBlock<A> {
     #[inline]
     pub fn rows(&self) -> same_stage_vec::Iter {
         self.row_buffer.iter()
+    }
+
+    /// Returns an [`Iterator`] which yields the annotations of this [`AnnotBlock`], in
+    /// sequential order.
+    #[inline]
+    pub fn annots(&self) -> std::slice::Iter<A> {
+        self.annots.iter()
+    }
+
+    /// Returns an [`Iterator`] which yields the [`Row`]s which are directly part of this
+    /// `AnnotBlock`.  This does not include the 'left-over' row; if you want to include the
+    /// left-over [`Row`], use [`AnnotBlock::all_rows`] instead.
+    #[inline]
+    pub fn annot_rows(&self) -> impl Iterator<Item = AnnotRow<A>> {
+        self.rows()
+            // The lossy `zip` here is fine, because we **want** to lose the `leftover row` from
+            // the iteration
+            .zip(self.annots())
+            .map(|(r, a)| AnnotRow::new(r, a))
     }
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`.  Also returns
