@@ -258,6 +258,25 @@ impl<A> AnnotBlock<A> {
         self.rows.permute(lhs_row) // Delegate to `SameStageVec`
     }
 
+    /// Extends `self` with the contents of another [`AnnotBlock`], **transposing** its [`Row`]s so
+    /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
+    pub fn extend(&mut self, other: Self) -> Result<(), IncompatibleStages> {
+        // `transposition` pre-transposes `other`'s first row to `self`'s leftover row
+        let transposition = Row::solve_xa_equals_b(other.first_row(), self.leftover_row())?;
+
+        // Add the transposed rows to `self`
+        self.rows.pop(); // If we don't remove the leftover row, then it will get added twice
+        self.rows
+            .extend_transposed(&transposition, &other.rows)
+            .unwrap(); // If the stages don't match between `self` and `other`, then the `?` in the
+                       // first statement would prevent this code from being executed
+
+        // Add the annotations to `self`
+        self.annots.extend(other.annots);
+
+        Ok(())
+    }
+
     /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
     pub fn extend_from_self(&mut self, range: Range<usize>)
     where
