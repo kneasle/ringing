@@ -21,6 +21,10 @@ pub struct AnnotRow<'b, A> {
 }
 
 impl<'b, A> AnnotRow<'b, A> {
+    pub fn new(row: &'b Row, annot: &'b A) -> Self {
+        Self { row, annot }
+    }
+
     pub fn row(self) -> &'b Row {
         self.row
     }
@@ -174,7 +178,7 @@ impl<A> AnnotBlock<A> {
     pub fn get_annot_row(&self, index: usize) -> Option<AnnotRow<A>> {
         let row = self.get_row(index)?;
         let annot = self.get_annot(index)?;
-        Some(AnnotRow { row, annot })
+        Some(AnnotRow::new(row, annot))
     }
 
     /// Gets the first [`Row`] of this `AnnotBlock`, which may be leftover.
