@@ -147,9 +147,9 @@ impl Regex {
         assert_eq!(self.elems.pop(), Some(RegexElem::Bell(Bell::TREBLE)));
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
+    /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn runs_front_or_back(stage: Stage, len: usize) -> Vec<Self> {
+    pub fn runs_front(stage: Stage, len: usize) -> Vec<Self> {
         let num_bells = stage.as_usize();
 
         let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
@@ -160,26 +160,57 @@ impl Regex {
 
             // This unsafety is OK because all of the input patterns must be normalised because
             // they contain only one wildcard
-            unsafe {
-                // Descending runs on the back (e.g. `*1234`)
-                runs.push(Self::from_elems_unchecked(
-                    once(RegexElem::Glob).chain(run_iterator.clone()),
-                ));
-                // Ascending runs on the back (e.g. `*4321`)
-                runs.push(Self::from_elems_unchecked(
-                    once(RegexElem::Glob).chain(run_iterator.clone().rev()),
-                ));
-                // Descending runs off the front (e.g. `1234*`)
-                runs.push(Self::from_elems_unchecked(
-                    run_iterator.clone().chain(once(RegexElem::Glob)),
-                ));
-                // Ascending runs on the back (e.g. `4321*`)
-                runs.push(Self::from_elems_unchecked(
-                    run_iterator.rev().chain(once(RegexElem::Glob)),
-                ));
-            }
+            let descending_regex = unsafe {
+                // Descending runs on the front (e.g. `1234*`)
+                Self::from_elems_unchecked(run_iterator.clone().chain(once(RegexElem::Glob)))
+            };
+            let ascending_regex = unsafe {
+                // Ascending runs on the front (e.g. `4321*`)
+                Self::from_elems_unchecked(run_iterator.rev().chain(once(RegexElem::Glob)))
+            };
+
+            runs.push(descending_regex);
+            runs.push(ascending_regex);
         }
 
+        runs
+    }
+
+    /// Creates a set of `Regex`es which match runs of a given length off the **back** of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    pub fn runs_back(stage: Stage, len: usize) -> Vec<Self> {
+        let num_bells = stage.as_usize();
+
+        let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
+        // Iterate over every bell which could start a run
+        for i in 0..=num_bells - len {
+            // An iterator that yields the bells forming this run in ascending order
+            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+
+            // This unsafety is OK because all of the input patterns must be normalised because
+            // they contain only one wildcard
+            let descending_regex = unsafe {
+                // Descending runs on the back (e.g. `*1234`)
+                Self::from_elems_unchecked(once(RegexElem::Glob).chain(run_iterator.clone()))
+            };
+            let ascending_regex = unsafe {
+                // Ascending runs on the back (e.g. `*4321`)
+                Self::from_elems_unchecked(once(RegexElem::Glob).chain(run_iterator.clone().rev()))
+            };
+
+            runs.push(descending_regex);
+            runs.push(ascending_regex);
+        }
+
+        runs
+    }
+
+    /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    pub fn runs_front_or_back(stage: Stage, len: usize) -> Vec<Self> {
+        let mut runs = Vec::new();
+        runs.extend(Self::runs_front(stage, len));
+        runs.extend(Self::runs_back(stage, len));
         runs
     }
 
