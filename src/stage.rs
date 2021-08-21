@@ -51,14 +51,29 @@ impl Stage {
     /// assert_eq!(Stage::MAXIMUS.as_usize(), 12);
     /// ```
     #[inline(always)]
+    #[deprecated(note = "use `Stage::num_bells` instead")]
     pub fn as_usize(self) -> usize {
+        self.0
+    }
+
+    /// The number of [`Bell`]s in this [`Stage`]
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::Stage;
+    ///
+    /// assert_eq!(Stage::DOUBLES.num_bells(), 5);
+    /// assert_eq!(Stage::MAXIMUS.num_bells(), 12);
+    /// ```
+    #[inline(always)]
+    pub fn num_bells(self) -> usize {
         self.0
     }
 
     /// Returns true if this `Stage` has an even number of bells
     #[inline(always)]
     pub fn is_even(self) -> bool {
-        self.as_usize() % 2 == 0
+        self.num_bells() % 2 == 0
     }
 
     /// Creates a [`Stage`] from the lower case version of the human-friendly name (e.g.

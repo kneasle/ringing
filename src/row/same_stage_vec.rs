@@ -85,7 +85,7 @@ impl SameStageVec {
     pub fn with_capacity(stage: Stage, capacity: usize) -> Self {
         assert!(stage > Stage::ZERO);
         Self {
-            bells: Vec::with_capacity(capacity * stage.as_usize()),
+            bells: Vec::with_capacity(capacity * stage.num_bells()),
             stage,
         }
     }
@@ -126,9 +126,9 @@ impl SameStageVec {
     #[inline]
     pub fn len(&self) -> usize {
         // In debug builds, check that `bells` contains a whole number of rows
-        debug_assert!(self.bells.len() % self.stage.as_usize() == 0);
+        debug_assert!(self.bells.len() % self.stage.num_bells() == 0);
         // Calculate the length
-        self.bells.len() / self.stage.as_usize()
+        self.bells.len() / self.stage.num_bells()
     }
 
     /// Returns `true` if this `SameStageVec` contains no [`Row`]s.
@@ -193,11 +193,10 @@ impl SameStageVec {
     /// Returns a [`Vec`] containing the place of a [`Bell`] in each [`Row`] in this
     /// `SameStageVec`.  Returns `None` if the [`Bell`] exceeds the [`Stage`] of `self`.
     pub fn path_of(&self, bell: Bell) -> Option<Vec<usize>> {
-        if bell.number() > self.stage().as_usize() {
-            return None;
-        }
-        // TODO: Write a vectorised routine for this
-        Some(self.iter().map(|r| r.place_of(bell).unwrap()).collect_vec())
+        (bell.number() == self.stage().num_bells()).then(
+            // TODO: Write a vectorised routine for this
+            || self.iter().map(|r| r.place_of(bell).unwrap()).collect_vec(),
+        )
     }
 
     ////////////////
@@ -218,8 +217,8 @@ impl SameStageVec {
     pub fn pop(&mut self) -> Option<RowBuf> {
         // Compute the index of the first `Bell` in the last `Row`, and return `None` if that index
         // would be negative
-        let start_index = self.bells.len().checked_sub(self.stage.as_usize())?;
-        debug_assert_eq!(start_index % self.stage.as_usize(), 0);
+        let start_index = self.bells.len().checked_sub(self.stage.num_bells())?;
+        debug_assert_eq!(start_index % self.stage.num_bells(), 0);
         // This unsafety is OK because we enforce an invariant that every stage-aligned segment of
         // `self.bells` is a valid `Row`.
         Some(unsafe { RowBuf::from_bell_iter_unchecked(self.bells.drain(start_index..)) })
@@ -305,7 +304,7 @@ impl SameStageVec {
     /// - `a.len() == index`, and
     /// - `self == a.extend_from_buf(&b)` (i.e. no rows are created or destroyed)
     pub fn split(self, index: usize) -> Option<(Self, Self)> {
-        let (left_bells, right_bells) = split_vec(self.bells, index * self.stage.as_usize())?;
+        let (left_bells, right_bells) = split_vec(self.bells, index * self.stage.num_bells())?;
         Some((
             // Both of these are safe because we split `self.bells` at an integer multiple of
             // `self.stage`, thus preserving the row boundaries and upholding the invariants
@@ -320,7 +319,7 @@ impl SameStageVec {
 
     /// Gets the [`Range`] of `self.bells` which would contain the [`Row`] at a given `index`.
     fn get_range_of_row(&self, index: usize) -> Range<usize> {
-        let s = self.stage.as_usize();
+        let s = self.stage.num_bells();
         index * s..(index + 1) * s
     }
 }
@@ -364,7 +363,7 @@ impl<'v> Iterator for Iter<'v> {
         // Remove the first `self.stage` elements from `self.bells_left`.  Since we've removed
         // `self.stage` items, this means that the stage-aligned segments haven't changed, so the
         // invariant on `self.bells_left` is still satisfied.
-        let (next_row, future_rows) = self.bells_left.split_at(self.stage.as_usize());
+        let (next_row, future_rows) = self.bells_left.split_at(self.stage.num_bells());
         self.bells_left = future_rows;
         // This unsafety is OK because the invariant on `self.bells_left` requires that `next_row`
         // (a stage-aligned segment of `self.bells_left`) forms a valid row according to the

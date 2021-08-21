@@ -133,7 +133,8 @@ impl PlaceNot {
         // instead)
         parsed_places.last().ok_or(ParseError::NoPlacesGiven)?;
         // Check if any of the bells are out of range
-        if let Some(out_of_range_place) = parsed_places.last().filter(|p| **p >= stage.as_usize()) {
+        if let Some(out_of_range_place) = parsed_places.last().filter(|p| **p >= stage.num_bells())
+        {
             return Err(ParseError::PlaceOutOfStage {
                 place: *out_of_range_place,
                 stage,
@@ -170,10 +171,10 @@ impl PlaceNot {
         // Add implicit place at the back if necessary
         if parsed_places
             .last()
-            .filter(|p| (stage.as_usize() - *p) % 2 == 0)
+            .filter(|p| (stage.num_bells() - *p) % 2 == 0)
             .is_some()
         {
-            places.push(stage.as_usize() - 1)
+            places.push(stage.num_bells() - 1)
         }
         // Create struct and return.  We don't need to sort `places`, because we only pushed to it
         // in ascending order.
@@ -195,7 +196,7 @@ impl PlaceNot {
     /// # Ok::<(), bellframe::place_not::ParseError>(())
     /// ```
     pub fn cross(stage: Stage) -> Option<Self> {
-        if stage.as_usize() % 2 == 0 {
+        if stage.num_bells() % 2 == 0 {
             Some(PlaceNot {
                 places: Vec::new(),
                 stage,
@@ -234,7 +235,7 @@ impl PlaceNot {
     #[inline(always)]
     pub fn has_internal_places(&self) -> bool {
         let has_lead = self.places.first() == Some(&0);
-        let has_lie = self.places.last() == Some(&(self.stage.as_usize() - 1));
+        let has_lie = self.places.last() == Some(&(self.stage.num_bells() - 1));
         let num_external_places = if has_lead { 1 } else { 0 } + if has_lie { 1 } else { 0 };
         self.places.len() > num_external_places
     }
@@ -303,7 +304,7 @@ impl PlaceNot {
     pub unsafe fn permute_unchecked(&self, row: &mut Row) {
         let mut places = self.places.iter().copied().peekable();
         let mut i = 0;
-        while i < self.stage.as_usize() {
+        while i < self.stage.num_bells() {
             if places.peek() == Some(&i) {
                 // If this PN contains a place at this index, then no modification is necessary but
                 // we do need to consume the place so we move on the iterator

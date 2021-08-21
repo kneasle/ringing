@@ -150,7 +150,7 @@ impl Regex {
     /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
     pub fn runs_front(stage: Stage, len: usize) -> Vec<Self> {
-        let num_bells = stage.as_usize();
+        let num_bells = stage.num_bells();
 
         let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
         // Iterate over every bell which could start a run
@@ -179,7 +179,7 @@ impl Regex {
     /// Creates a set of `Regex`es which match runs of a given length off the **back** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
     pub fn runs_back(stage: Stage, len: usize) -> Vec<Self> {
-        let num_bells = stage.as_usize();
+        let num_bells = stage.num_bells();
 
         let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
         // Iterate over every bell which could start a run

@@ -103,7 +103,7 @@ impl RowBuf {
     /// ```
     pub fn rounds(stage: Stage) -> Self {
         // This unsafety is OK, because rounds is always a valid `Row`
-        unsafe { Self::from_bell_iter_unchecked((0..stage.as_usize()).map(Bell::from_index)) }
+        unsafe { Self::from_bell_iter_unchecked((0..stage.num_bells()).map(Bell::from_index)) }
     }
 
     /// Creates backrounds on a given [`Stage`].
@@ -117,7 +117,9 @@ impl RowBuf {
     /// ```
     pub fn backrounds(stage: Stage) -> Self {
         // This unsafety is OK, because backrounds is always a valid `Row`
-        unsafe { Self::from_bell_iter_unchecked((0..stage.as_usize()).rev().map(Bell::from_index)) }
+        unsafe {
+            Self::from_bell_iter_unchecked((0..stage.num_bells()).rev().map(Bell::from_index))
+        }
     }
 
     /// Creates Queens on a given [`Stage`].
@@ -133,9 +135,9 @@ impl RowBuf {
         // This unsafety is OK, because Queens is always a valid `Row`
         unsafe {
             Self::from_bell_iter_unchecked(
-                (0..stage.as_usize())
+                (0..stage.num_bells())
                     .step_by(2)
-                    .chain((1..stage.as_usize()).step_by(2))
+                    .chain((1..stage.num_bells()).step_by(2))
                     .map(Bell::from_index),
             )
         }
@@ -294,7 +296,7 @@ impl RowBuf {
     pub fn check_validity(self) -> Result<Self, InvalidRowError> {
         // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
         // each bell as we go.
-        let mut checklist = vec![false; self.stage().as_usize()];
+        let mut checklist = vec![false; self.stage().num_bells()];
         // Loop over all the bells to check them off in the checklist.  We do not need to check for
         // empty spaces in the checklist once we've done because (by the Pigeon Hole Principle),
         // fitting `n` bells into `n` slots with some gaps will always require that a bell is
@@ -322,7 +324,7 @@ impl RowBuf {
     pub fn check_validity_with_stage(mut self, stage: Stage) -> Result<Self, InvalidRowError> {
         // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
         // each bell as we go.
-        let mut checklist = vec![false; stage.as_usize()];
+        let mut checklist = vec![false; stage.num_bells()];
         // It's OK to initialise this with the `TREBLE` (and not handle the case where there are no
         // bells),
         let mut biggest_bell_found = Bell::TREBLE;
@@ -392,7 +394,7 @@ impl RowBuf {
     fn extend_to_stage(&mut self, stage: Stage) {
         assert!(self.stage() <= stage);
         self.bell_vec
-            .extend((self.bell_vec.len()..stage.as_usize()).map(Bell::from_index));
+            .extend((self.bell_vec.len()..stage.num_bells()).map(Bell::from_index));
     }
 
     /// Overwrites this with the contents of a [`Row`], thus reusing the allocation.

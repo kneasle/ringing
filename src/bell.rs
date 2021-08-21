@@ -112,8 +112,9 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
+    // TODO: Once zero-stages are banned, this can return a `Bell` directly
     pub fn tenor(stage: Stage) -> Option<Bell> {
-        Self::from_number(stage.as_usize())
+        Self::from_number(stage.num_bells())
     }
 
     /// A [`Bell`] representing the 'treble' on any stage.  Equivalent to

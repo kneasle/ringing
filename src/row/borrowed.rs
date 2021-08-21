@@ -140,7 +140,7 @@ impl Row {
         // Invariants: self.bells[..first_non_rounds_bell] is sorted
         let mut num_swaps = 0;
         let mut first_non_rounds_bell = 0;
-        while first_non_rounds_bell < self.stage().as_usize() {
+        while first_non_rounds_bell < self.stage().num_bells() {
             let cur_bell = self.bell_slice[first_non_rounds_bell];
             if cur_bell == Bell::from_index(first_non_rounds_bell) {
                 // Check if the current bell is sorted, then just move on to the next one
@@ -377,7 +377,7 @@ impl Row {
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn inv(&self) -> RowBuf {
-        let mut inv_bells = vec![Bell::TREBLE; self.stage().as_usize()];
+        let mut inv_bells = vec![Bell::TREBLE; self.stage().num_bells()];
         for (i, b) in self.bell_slice.iter().enumerate() {
             inv_bells[b.index()] = Bell::from_index(i);
         }
@@ -739,7 +739,7 @@ impl Row {
         let mut multiplier = 1;
         for b in self.bell_iter() {
             accum += b.index() * multiplier;
-            multiplier *= self.stage().as_usize();
+            multiplier *= self.stage().num_bells();
         }
         accum
     }

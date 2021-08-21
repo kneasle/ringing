@@ -339,7 +339,7 @@ fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
 fn classify_hunt_cycle(cycle: &Cycle, stage: Stage) -> (bool, HuntBellClass) {
     // Count the number of rows spent in each place (we ignore the first element of the path
     // because the `path` includes the leftover row and therefore counts the first place twice).
-    let mut num_rows_in_each_place = vec![0usize; stage.as_usize()];
+    let mut num_rows_in_each_place = vec![0usize; stage.num_bells()];
     for p in &cycle.full_path {
         num_rows_in_each_place[*p] += 1;
     }
@@ -505,7 +505,7 @@ impl Cycle {
         assert!(first_lead.first_annot_row().unwrap().row().is_rounds());
 
         let mut cycles = Vec::<Cycle>::new();
-        let mut bells_left = vec![true; first_lead.stage().as_usize()];
+        let mut bells_left = vec![true; first_lead.stage().num_bells()];
 
         // Repeatedly follow cycles until every bell is in a cycle that we've already explored
         while let Some(starting_bell_idx) = bells_left.iter().position(|v| *v) {
