@@ -570,8 +570,7 @@ impl Row {
         let mut closure = vec![RowBuf::rounds(self.stage())];
         loop {
             let last_row = closure.last().unwrap();
-            // This unsafety is OK, because `self` is a valid Row and `row` and `self` will always
-            // have the same Stage
+            // This unsafety is OK, because `row` and `self` will always have the same Stage
             let next_row = unsafe { last_row.mul_unchecked(self) };
             if next_row.is_rounds() {
                 return closure;
@@ -583,7 +582,7 @@ impl Row {
     /// Takes a sequence of sets of `Row`s (`[X_1, X_2, ..., X_n]`) and computes every product
     /// `x_1 * x_2 * ... * x_n` where `x_i` comes from `X_i` for all `i`.
     pub fn multi_cartesian_product<'a>(
-        row_sets: impl IntoIterator<Item = impl IntoIterator<Item = &'a Self>>,
+        row_sets: impl IntoIterator<Item = impl IntoIterator<Item = impl AsRef<Self>>>,
     ) -> Result<Vec<RowBuf>, IncompatibleStages> {
         let mut set_iter = row_sets.into_iter();
         let mut stage: Option<Stage> = None;
@@ -601,6 +600,7 @@ impl Row {
             // the stage
             Some(set) => {
                 for r in set.into_iter() {
+                    let r = r.as_ref();
                     IncompatibleStages::test_err_opt(&mut stage, r.stage())?;
                     transpose_from.push(r.to_owned());
                 }
@@ -619,6 +619,7 @@ impl Row {
             // push into `transpose_to`
             transpose_to.clear();
             for r2 in set {
+                let r2 = r2.as_ref();
                 IncompatibleStages::test_err(s, r2.stage())?;
                 for r1 in &transpose_from {
                     transpose_to.push(unsafe { r1.mul_unchecked(r2) });
@@ -752,9 +753,9 @@ impl Row {
     /// See [`Row`]'s docs for more information about this invariant.
     #[inline]
     pub unsafe fn from_slice_unchecked(slice: &[Bell]) -> &Row {
-        // The unsafe pointer cast here is OK, because Row a `#[repr(transparent)]` wrapper around
-        // slices of `Bell`s and the pointer cast doesn't change the lifetime of the underlying
-        // data.
+        // The unsafe pointer cast here is OK, because Row is a `#[repr(transparent)]` wrapper
+        // around slices of `Bell`s and the pointer cast doesn't change the lifetime of the
+        // underlying data.
         &*(slice as *const [Bell] as *const Row)
     }
 

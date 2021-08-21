@@ -256,6 +256,20 @@ impl SameStageVec {
 
     /// Take a range of `self`, pre-multiply all the `Row`s and extend `self` with them.
     #[inline]
+    pub fn extend_transposed(
+        &mut self,
+        transposition: &Row,
+        other: &Self,
+    ) -> Result<(), IncompatibleStages> {
+        IncompatibleStages::test_err(self.stage, transposition.stage())?;
+        // TODO: Write a vectorised routine for this
+        self.bells
+            .extend(other.bells.iter().map(|b| transposition[b.index()]));
+        Ok(())
+    }
+
+    /// Take a range of `self`, pre-multiply all the `Row`s and extend `self` with them.
+    #[inline]
     pub fn extend_transposed_from_within(
         &mut self,
         range: Range<usize>,

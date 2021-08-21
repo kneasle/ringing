@@ -377,6 +377,15 @@ impl RowBuf {
         unsafe { Row::from_slice_unchecked(&self.bell_vec) }
     }
 
+    /// Converts a [`RowBuf`] into a [`Row`].  Equivalent to `&*self`, but doesn't rely on type
+    /// inference.
+    #[inline]
+    pub fn as_mut_row(&mut self) -> &mut Row {
+        // This unsafety is OK, because `RowBuf` requires its bells to form a valid row according
+        // to the Framework
+        unsafe { Row::from_mut_slice_unchecked(&mut self.bell_vec) }
+    }
+
     /* MUTATING OPERATIONS */
 
     /// Extend this `RowBuf` in-place with cover bells so that it has a given [`Stage`].
@@ -427,9 +436,24 @@ impl BorrowMut<Row> for RowBuf {
     }
 }
 
+impl AsRef<Row> for RowBuf {
+    #[inline]
+    fn as_ref(&self) -> &Row {
+        self.as_row()
+    }
+}
+
+impl AsMut<Row> for RowBuf {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Row {
+        self.as_mut_row()
+    }
+}
+
 impl ToOwned for Row {
     type Owned = RowBuf;
 
+    #[inline]
     fn to_owned(&self) -> Self::Owned {
         // We can skip the validity checks here because `Row` is valid by invariant
         unsafe { RowBuf::from_bell_iter_unchecked(self.bell_iter()) }
