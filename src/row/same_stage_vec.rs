@@ -1,8 +1,11 @@
-use std::ops::{Index, Range};
+use std::{
+    fmt::{Display, Formatter},
+    ops::{Index, Range},
+};
 
 use itertools::Itertools;
 
-use crate::{utils::split_vec, Bell, IncompatibleStages, Row, RowBuf, Stage};
+use crate::{utils::split_vec, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
 
 /// A heap-allocated buffer of [`Row`]s which are required to have the same [`Stage`].  Collecting
 /// [`Row`]s of the same [`Stage`] is nearly always what we want, and having a type to enforce this
@@ -98,6 +101,39 @@ impl SameStageVec {
         // This unsafety is OK because `row.to_bell_vec()` generates a Vec containing only one
         // `Row`, which is required to be valid by `RowBuf`'s invariants
         unsafe { Self::from_bell_vec_unchecked(row.into_bell_vec(), stage) }
+    }
+
+    /// Parse a `SameStageVec` from a [`str`]ing, where each line is parsed into a [`Row`].
+    pub fn parse(s: &str) -> Result<Self, ParseError> {
+        // Create an iterator of (line_num, line) pairs, where `line_number` is indexed from 1
+        let mut line_iter = s.lines().enumerate().map(|(idx, v)| (idx + 1, v));
+
+        // Parse the first line before creating the `SameStageVec` (since we need to know upfront
+        // what the stage is going to be).
+        let (_one, first_line) = line_iter.next().unwrap(); // strings always contain at least one line
+        let first_row =
+            RowBuf::parse(first_line).map_err(|err| ParseError::InvalidRow { line_num: 1, err })?;
+        // Create a `SameStageVec` containing just `first_row`
+        let mut new_vec = SameStageVec::from_row_buf(first_row).ok_or(ParseError::ZeroStage)?;
+
+        // Now parse the rest of the lines into the new `SameStageVec`
+        for (line_num, line) in line_iter {
+            // Parse the line into a Row, and fail if its either invalid or doesn't match the stage
+            let parsed_row =
+                RowBuf::parse(line).map_err(|err| ParseError::InvalidRow { line_num, err })?;
+            new_vec.push(&parsed_row).map_err(
+                |IncompatibleStages {
+                     lhs_stage,
+                     rhs_stage,
+                 }| ParseError::IncompatibleStages {
+                    line_num,
+                    first_stage: lhs_stage,
+                    different_stage: rhs_stage,
+                },
+            )?;
+        }
+
+        Ok(new_vec)
     }
 
     /// Creates a `SameStageVec` from a [`Vec`] of [`Bell`]s (containing the [`Row`]s concatenated
@@ -371,3 +407,45 @@ impl<'v> Iterator for Iter<'v> {
         Some(unsafe { Row::from_slice_unchecked(next_row) })
     }
 }
+
+/// The possible ways that [`SameStageVec::parse`] could fail
+#[derive(Debug, Clone)]
+pub enum ParseError {
+    ZeroStage,
+    InvalidRow {
+        line_num: usize,
+        err: InvalidRowError,
+    },
+    IncompatibleStages {
+        line_num: usize,
+        first_stage: Stage,
+        different_stage: Stage,
+    },
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::ZeroStage => write!(f, "Can't make a `SameStageVec` with stage 0"),
+            ParseError::InvalidRow {
+                line_num: line,
+                err,
+            } => {
+                write!(f, "Error parsing row on line {}: {}", line, err)
+            }
+            ParseError::IncompatibleStages {
+                line_num: line,
+                first_stage,
+                different_stage,
+            } => {
+                write!(
+                    f,
+                    "Row on line {} has different stage ({}) to the first stage ({})",
+                    line, different_stage, first_stage
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}

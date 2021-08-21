@@ -10,48 +10,9 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    row::same_stage_vec, utils::split_vec, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf,
-    SameStageVec, Stage,
+    row::same_stage_vec, utils::split_vec, Bell, IncompatibleStages, Row, RowBuf, SameStageVec,
+    Stage,
 };
-
-/// All the possible ways that parsing a [`Block`] could fail
-#[derive(Debug, Clone)]
-pub enum ParseError {
-    ZeroLengthBlock,
-    InvalidRow {
-        line: usize,
-        err: InvalidRowError,
-    },
-    IncompatibleStages {
-        line_index: usize,
-        first_stage: Stage,
-        different_stage: Stage,
-    },
-}
-
-impl Display for ParseError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseError::ZeroLengthBlock => write!(f, "Blocks can't have length 0"),
-            ParseError::InvalidRow { line, err } => {
-                write!(f, "Error parsing line {}: {}", line, err)
-            }
-            ParseError::IncompatibleStages {
-                line_index: line,
-                first_stage,
-                different_stage,
-            } => {
-                write!(
-                    f,
-                    "Row on line {} has different stage ({}) to the first stage ({})",
-                    line, different_stage, first_stage
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct AnnotRow<'b, A> {
@@ -114,34 +75,15 @@ impl<A> AnnotBlock<A> {
     where
         A: Default,
     {
-        let mut line_iter = s.lines().enumerate();
-
-        // Parse the first line before creating the `SameStageVec` (since we need to know upfront
-        // what the stage is going to be).
-        let (_zero, first_line) = line_iter.next().ok_or(ParseError::ZeroLengthBlock)?;
-        let first_row =
-            RowBuf::parse(first_line).map_err(|err| ParseError::InvalidRow { line: 0, err })?;
-        // Create a `SameStageVec` containing just `first_row`
-        let mut row_buffer = SameStageVec::from_row_buf(first_row);
-
-        // Now parse the rest of the lines into `SameStageVec`
-        for (i, line) in line_iter {
-            // Parse the line into a Row, and fail if its either invalid or doesn't match the stage
-            let parsed_row =
-                RowBuf::parse(line).map_err(|err| ParseError::InvalidRow { line: i, err })?;
-            row_buffer.push(&parsed_row).map_err(
-                |IncompatibleStages {
-                     lhs_stage,
-                     rhs_stage,
-                 }| ParseError::IncompatibleStages {
-                    line_index: i,
-                    first_stage: lhs_stage,
-                    different_stage: rhs_stage,
-                },
-            )?;
+        let rows = SameStageVec::parse(s).map_err(ParseError::Other)?;
+        if rows.is_empty() {
+            // I'm not sure if this branch is even possible, since a zero-line string is
+            // impossible and `SameStageVec` attempts to parse every line as a [`Row`].  But for
+            // safety, it's here anyway
+            Err(ParseError::ZeroLengthBlock)
+        } else {
+            Ok(Self::with_default_annots(rows))
         }
-
-        Ok(Self::from_vec_with_default_annots(row_buffer))
     }
 
     /// Creates a new `AnnotBlock` from a [`SameStageVec`], where every annotation is
@@ -150,7 +92,7 @@ impl<A> AnnotBlock<A> {
     /// # Panics
     ///
     /// This panics if the [`SameStageVec`] provided is empty.
-    pub fn from_vec_with_default_annots(rows: SameStageVec) -> Self
+    pub fn with_default_annots(rows: SameStageVec) -> Self
     where
         A: Default,
     {
@@ -407,3 +349,21 @@ impl<A> AnnotBlock<A> {
         Some((first_block, second_block))
     }
 }
+
+/// The possible ways that [`AnnotBlock::parse`] could fail
+#[derive(Debug, Clone)]
+pub enum ParseError {
+    ZeroLengthBlock,
+    Other(same_stage_vec::ParseError),
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::ZeroLengthBlock => write!(f, "Blocks must contain at least one row"),
+            ParseError::Other(inner) => write!(f, "{}", inner),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}

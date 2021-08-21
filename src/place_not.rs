@@ -646,7 +646,7 @@ impl PnBlock {
         A: Default,
     {
         let rows = self.to_rows(start_row)?;
-        Ok(AnnotBlock::from_vec_with_default_annots(rows))
+        Ok(AnnotBlock::with_default_annots(rows))
     }
 
     /// Generates the [`AnnotBlock`] of this `PnBlock`, starting at [rounds](RowBuf::rounds).  All
