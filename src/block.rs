@@ -56,7 +56,7 @@ pub struct AnnotBlock<A> {
     /// The [`Row`]s making up this `Block`.
     ///
     /// **Invariant**: `row.len() >= 1`
-    row_buffer: SameStageVec,
+    rows: SameStageVec,
     /// The annotations on each [`Row`] in this `AnnotBlock`.
     ///
     /// **Invariant**: `rows.len() = annots.len() + 1`, because the 'left-over' row cannot be annotated.
@@ -99,7 +99,7 @@ impl<A> AnnotBlock<A> {
         assert!(!rows.is_empty());
         Self {
             annots: repeat_with(A::default).take(rows.len() - 1).collect_vec(),
-            row_buffer: rows,
+            rows,
         }
     }
 
@@ -107,7 +107,7 @@ impl<A> AnnotBlock<A> {
     /// [`RowBuf::rounds`].
     pub fn empty(stage: Stage) -> Self {
         Self {
-            row_buffer: SameStageVec::from_row_buf(RowBuf::rounds(stage)),
+            rows: SameStageVec::from_row_buf(RowBuf::rounds(stage)),
             annots: vec![], // No annotations
         }
     }
@@ -119,7 +119,7 @@ impl<A> AnnotBlock<A> {
     /// Gets the [`Stage`] of this `Block`.
     #[inline]
     pub fn stage(&self) -> Stage {
-        self.row_buffer.stage()
+        self.rows.stage()
     }
 
     /// Gets the effective [`Stage`] of this `AnnotBlock` - i.e. the smallest [`Stage`] that this
@@ -152,7 +152,7 @@ impl<A> AnnotBlock<A> {
     /// Gets the [`Row`] at a given index, along with its annotation.
     #[inline]
     pub fn get_row(&self, index: usize) -> Option<&Row> {
-        self.row_buffer.get(index)
+        self.rows.get(index)
     }
 
     /// Gets an immutable reference to the annotation of the [`Row`] at a given index, if it
@@ -182,7 +182,7 @@ impl<A> AnnotBlock<A> {
     pub fn first_row(&self) -> &Row {
         // This `unwrap` won't panic, because we require an invariant that `self.row_buffer` is
         // non-empty
-        self.row_buffer.first().unwrap()
+        self.rows.first().unwrap()
     }
 
     /// Gets the first [`Row`] of this `AnnotBlock`, along with its annotation.
@@ -196,7 +196,7 @@ impl<A> AnnotBlock<A> {
     /// checking.
     #[inline]
     pub fn leftover_row(&self) -> &Row {
-        &self.row_buffer.last().unwrap()
+        &self.rows.last().unwrap()
     }
 
     //////////////////////////////
@@ -208,7 +208,7 @@ impl<A> AnnotBlock<A> {
     /// left-over [`Row`], use [`AnnotBlock::all_rows`] instead.
     #[inline]
     pub fn rows(&self) -> same_stage_vec::Iter {
-        self.row_buffer.iter()
+        self.rows.iter()
     }
 
     /// Returns an [`Iterator`] which yields the annotations of this [`AnnotBlock`], in
@@ -241,7 +241,7 @@ impl<A> AnnotBlock<A> {
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `AnnotBlock`, **including**
     /// the leftover row.
     pub fn full_path_of(&self, bell: Bell) -> Option<Vec<usize>> {
-        self.row_buffer.path_of(bell) // Delegate to `SameStageVec`
+        self.rows.path_of(bell) // Delegate to `SameStageVec`
     }
 
     /////////////////////////
@@ -251,7 +251,7 @@ impl<A> AnnotBlock<A> {
     /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
     /// the annotations.
     pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
-        self.row_buffer.permute(lhs_row) // Delegate to `SameStageVec`
+        self.rows.permute(lhs_row) // Delegate to `SameStageVec`
     }
 
     /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
@@ -261,12 +261,12 @@ impl<A> AnnotBlock<A> {
     {
         // Remove the leftover row from the row buffer, so that the new rows can be inserted in its
         // place
-        let leftover_row = self.row_buffer.pop().unwrap(); // OK because `row_buffer` can't be empty
+        let leftover_row = self.rows.pop().unwrap(); // OK because `row_buffer` can't be empty
         let first_row_of_chunk = self.get_row(range.start).unwrap();
         // This unwrap is fine, because both rows were taken from the same `SameStageVec`
         let transposition = Row::solve_xa_equals_b(first_row_of_chunk, &leftover_row).unwrap();
 
-        self.row_buffer
+        self.rows
             .extend_transposed_from_within(range.clone(), &transposition) // Extend the rows
             .unwrap(); // Unwrapping is fine because `transposition` comes from `self.row_buffer`
         self.annots.extend_from_within(range); // Extend the annots
@@ -279,14 +279,14 @@ impl<A> AnnotBlock<A> {
     /// Consumes this `AnnotBlock`, and returns a [`SameStageVec`] containing the same [`Row`]s,
     /// **including** the left-over row.
     pub fn into_row_buffer(self) -> SameStageVec {
-        self.row_buffer
+        self.rows
     }
 
     /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
     /// annotation is passed through the given function.
     pub fn map_annots<B>(self, f: impl Fn(A) -> B) -> AnnotBlock<B> {
         AnnotBlock {
-            row_buffer: self.row_buffer, // Don't modify the rows
+            rows: self.rows, // Don't modify the rows
             annots: self.annots.into_iter().map(f).collect_vec(),
         }
     }
@@ -296,7 +296,7 @@ impl<A> AnnotBlock<A> {
     /// `AnnotBlock`).
     pub fn map_annots_with_index<B>(self, f: impl Fn(usize, A) -> B) -> AnnotBlock<B> {
         AnnotBlock {
-            row_buffer: self.row_buffer, // Don't modify the rows
+            rows: self.rows, // Don't modify the rows
             annots: self
                 .annots
                 .into_iter()
@@ -314,7 +314,7 @@ impl<A> AnnotBlock<A> {
         f: impl Fn(usize, &'s A) -> B,
     ) -> AnnotBlock<B> {
         AnnotBlock {
-            row_buffer: self.row_buffer.to_owned(), // Don't modify the rows
+            rows: self.rows.to_owned(), // Don't modify the rows
             annots: self
                 .annots
                 .iter()
@@ -329,7 +329,7 @@ impl<A> AnnotBlock<A> {
     /// `AnnotBlock` would have negative length.
     pub fn split(self, index: usize) -> Option<(Self, Self)> {
         let (first_annots, second_annots) = split_vec(self.annots, index)?;
-        let (mut first_rows, second_rows) = self.row_buffer.split(index)?;
+        let (mut first_rows, second_rows) = self.rows.split(index)?;
         // Copy the first row of `second_rows` back into `first_rows` so it becomes the leftover
         // row of the first block
         let first_row_of_second = second_rows.first().unwrap(); // Unwrap is safe because
@@ -339,11 +339,11 @@ impl<A> AnnotBlock<A> {
 
         // Construct the new pair of blocks
         let first_block = Self {
-            row_buffer: first_rows,
+            rows: first_rows,
             annots: first_annots,
         };
         let second_block = Self {
-            row_buffer: second_rows,
+            rows: second_rows,
             annots: second_annots,
         };
         Some((first_block, second_block))
