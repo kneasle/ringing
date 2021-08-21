@@ -53,7 +53,7 @@ impl Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct AnnotRow<'b, A> {
     row: &'b Row,
     annot: &'b A,
@@ -68,6 +68,16 @@ impl<'b, A> AnnotRow<'b, A> {
         self.annot
     }
 }
+
+// AnnotRow is always `Clone`, regardless of whether or not `A` is.
+impl<'b, A> Clone for AnnotRow<'b, A> {
+    fn clone(&self) -> Self {
+        Self { ..*self }
+    }
+}
+
+// AnnotRow is always `Copy`, regardless of whether or not `A` is.
+impl<'b, A> Copy for AnnotRow<'b, A> {}
 
 /// An `AnnotBlock` with no annotations.
 pub type Block = AnnotBlock<()>;
