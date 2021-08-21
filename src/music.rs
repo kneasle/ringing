@@ -3,9 +3,10 @@ use std::{
     iter::once,
 };
 
+use factorial::Factorial;
 use itertools::Itertools;
 
-use crate::{Bell, Row, Stage};
+use crate::{utils, Bell, Row, Stage};
 
 /// A single element of a [`Regex`] expression.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -218,6 +219,66 @@ impl Regex {
     #[inline(always)]
     pub fn elems(&self) -> &[RegexElem] {
         &self.elems
+    }
+
+    /// Returns the number of [`Row`]s with a given [`Stage`] which would match `self`.  Returns
+    /// `None` if the any part of the computation causes integer overflow.
+    pub fn num_matching_rows(&self, stage: Stage) -> Option<usize> {
+        // Each regex has some (possibly empty) set of 'unfixed' bells: i.e. those which don't
+        // appear in the regex.  For example, the regex `*1x*56*78` on Major has `{2,3,4}` as its
+        // unfixed bells.  These unfixed bells can either be placed in `x`s (i.e. exactly one bell
+        // per `x`) or into `*`s (i.e. any non-negative number of bells per `*`).  All bells must
+        // appear exactly once in the resulting row, so we must _partition_ the 'unfixed' bells
+        // into the `x`s or the `*`s.
+        //
+        // To derive the formula for this, suppose that we have `n` unfixed bells, which must be
+        // divided into `i` 'x's and `j` '*'s.  To enumerate every possibility, we must first
+        // assign a bell to each of the 'x's, then (for each of these assignments) partition the
+        // remaining bells between the '*'s.
+        //
+        // The number of assignments of `n` bells into `i` 'x's is simply `n choose i`.  Now we're
+        // left with the remaining `n - i` bells to distribute into `j` '*'s.  This step is not as
+        // simple, but nonetheless there is a nice way to re-frame the problem: instead of
+        // distributing the bells into `j` '*'s, we choose to split the bells up by inserting
+        // `j - 1` identical barriers.
+        //
+        // For example, if we have bells 1,2,3,4,5,6 to split into 3 '*'s, we instead insert two
+        // barriers (denoted with `|`) into the sequence of bells being permuted.  So now, we are
+        // looking for the number of arrangements of `123456||` (for example `62|35|41`, `|4|16532`
+        // or `||654321`).  These correspond precisely to the arrangements into '*'s.
+        //
+        // Now to find the formula: there are `(n - i + j - 1)!` arrangements of the bells and
+        // barriers, but the barriers are all identical so these permutations are over-counted by
+        // `(j - 1)!` times (assuming that `(-1)! = 1`).  Putting this together, for each way of
+        // assigning bells to 'x's there are `(n - i + j - 1)! / (j - 1)!` ways to distribute the
+        // remaining bells into the '*'s.
+        //
+        // Multiplying both of these terms will give the total number of matching `Row`s
+
+        // Compute the values of `n` (num_unfixed), `i` (num_wildcards) and `j` (num_globs) by
+        // iterating over the regex and counting.
+        let mut num_unfixed = stage.num_bells(); // `n`, decremented for each fixed bell
+        let mut num_wildcards = 0usize; // `i`
+        let mut num_globs = 0usize; // `j`
+        for e in &self.elems {
+            match e {
+                RegexElem::Bell(_) => num_unfixed -= 1,
+                RegexElem::Any => num_wildcards += 1,
+                RegexElem::Glob => num_globs += 1,
+            }
+        }
+
+        let ways_to_fill_wildcards = utils::choice(num_unfixed, num_wildcards)?;
+
+        // TODO: Compute the fraction directly to limit potential for overflow
+        let num_bells_in_globs = num_unfixed - num_wildcards;
+        let ways_to_fill_globs_numerator = (num_bells_in_globs + num_wildcards)
+            .saturating_sub(1) // This makes sure that `(-1)! = 1 = 0!`
+            .checked_factorial()?;
+        let ways_to_fill_globs_denominator = num_globs.saturating_sub(1).checked_factorial()?;
+        let ways_to_fill_globs = ways_to_fill_globs_numerator / ways_to_fill_globs_denominator;
+
+        Some(ways_to_fill_wildcards * ways_to_fill_globs)
     }
 
     /// Returns `true` if a given [`Row`] satisfies this `Regex`, and `false` otherwise.  If the
