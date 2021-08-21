@@ -161,6 +161,15 @@ impl<A> AnnotBlock<A> {
         }
     }
 
+    /// Creates a new [`AnnotBlock`] with no annotated [`Row`], and a leftover [`Row`] of
+    /// [`RowBuf::rounds`].
+    pub fn empty(stage: Stage) -> Self {
+        Self {
+            row_buffer: SameStageVec::from_row_buf(RowBuf::rounds(stage)),
+            annots: vec![], // No annotations
+        }
+    }
+
     /////////////////
     // STAGE & LEN //
     /////////////////
