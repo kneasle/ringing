@@ -5,6 +5,10 @@ use std::{
 
 use crate::{stage::ZeroStageError, Bell, IncompatibleStages, Stage};
 
+// Imports used solely for doc-comments
+#[allow(unused_imports)]
+use crate::Row;
+
 /// All the possible ways that a [`Row`] could be invalid.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InvalidRowError {

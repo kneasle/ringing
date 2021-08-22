@@ -12,7 +12,7 @@ pub(crate) mod parse_cc_lib;
 /// Convenient type alias for the nested [`HashMap`] type used to store methods in the library
 type LibraryMap = HashMap<Stage, HashMap<String, CompactMethod>>;
 
-/// A library of [`Methods`], usually that provided by the Central Council.
+/// A library of [`Method`]s, usually that provided by the Central Council.
 #[derive(Debug, Clone)]
 pub struct MethodLib {
     method_map: LibraryMap,

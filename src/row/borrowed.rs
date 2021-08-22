@@ -10,6 +10,10 @@ use crate::{Bell, IncompatibleStages, Parity, RowBuf, Stage};
 
 use super::MulIntoError;
 
+// Imports used solely for doc comments
+#[allow(unused_imports)]
+use crate::Block;
+
 /* ===== BORROWED ROW ===== */
 
 pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
@@ -171,7 +175,7 @@ impl Row {
         self.bell_iter().enumerate().all(|(i, b)| b.index() == i)
     }
 
-    /// Perform an in-place check that this `Row` is equal to [backrounds](Self::backrounds).
+    /// Perform an in-place check that this `Row` is equal to [backrounds](RowBuf::backrounds).
     /// `x.is_rounds()` is an optimised version of `x == RowBuf::backrounds(x.stage())`.
     ///
     /// # Example
@@ -584,7 +588,7 @@ impl Row {
 
     /// Takes a sequence of sets of `Row`s (`[X_1, X_2, ..., X_n]`) and computes every product
     /// `x_1 * x_2 * ... * x_n` where `x_i` comes from `X_i` for all `i`.
-    pub fn multi_cartesian_product<'a>(
+    pub fn multi_cartesian_product(
         row_sets: impl IntoIterator<Item = impl IntoIterator<Item = impl AsRef<Self>>>,
     ) -> Result<Vec<RowBuf>, IncompatibleStages> {
         let mut set_iter = row_sets.into_iter();

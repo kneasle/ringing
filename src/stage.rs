@@ -13,7 +13,7 @@ use serde_crate::{
 
 // Imports used solely by doc comments
 #[allow(unused_imports)]
-use crate::Row;
+use crate::{Bell, Method, Row};
 
 /// A newtype over [`usize`] that represents a stage.  All `Stage`s must contain at least one
 /// [`Bell`]; zero-bell `Stage`s cannot be created without `unsafe` code.

@@ -8,6 +8,10 @@ use itertools::Itertools;
 
 use crate::{AnnotBlock, Bell, PlaceNot, Stage};
 
+// Imports used solely for doc comments
+#[allow(unused_imports)]
+use crate::Method;
+
 /// The full class of a [`Method`], including flags for little and differential
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct FullClass {

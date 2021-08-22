@@ -304,7 +304,7 @@ impl RowBuf {
 
     /// Checks the validity of a potential `RowBuf`, extending it to the given [`Stage`] if valid
     /// and returning an [`InvalidRowError`] otherwise (consuming the potential `RowBuf` so it
-    /// can't be used).  This will provide nicer errors than [`RowBuf::check_validity`] since this
+    /// can't be used).  This will provide nicer errors than [`RowBuf::from_vec`] since this
     /// has extra information about the desired [`Stage`] of the potential `RowBuf`.
     pub fn from_vec_with_stage(
         mut bells: Vec<Bell>,
