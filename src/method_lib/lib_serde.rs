@@ -79,7 +79,7 @@ impl From<MethodLibSerde> for MethodLib {
 
         for group in m.groups {
             // Unpack values from the group
-            let stage = Stage::from(group.stage);
+            let stage = Stage::new(group.stage);
             let full_class = FullClass::new(
                 group.is_jump,
                 group.is_little,

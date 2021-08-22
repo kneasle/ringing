@@ -454,12 +454,6 @@ mod tests {
             }
         }
 
-        // Zero-sized row
-        check("", "", true);
-        check("*", "", true);
-        check("123", "", false);
-        check("x", "", false);
-        check("x*", "", false);
         // Regex with only 'x's
         check("xxxx", "3412", true);
         check("xxxx", "4321", true);
@@ -496,12 +490,6 @@ mod tests {
             assert_eq!(regex.match_pattern(&row), expected_pattern);
         }
 
-        // Zero-sized row
-        check("", "", Some(vec![]));
-        check("*", "", Some(vec![]));
-        check("123", "", None);
-        check("x", "", None);
-        check("x*", "", None);
         // Regex with only 'x's
         check("xxxx", "3412", Some(vec![]));
         check("xxxx", "4321", Some(vec![]));

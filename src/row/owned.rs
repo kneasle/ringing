@@ -1,8 +1,11 @@
 use std::{
     borrow::{Borrow, BorrowMut},
+    convert::TryFrom,
     fmt::{Debug, Display, Formatter},
     ops::{Deref, DerefMut},
 };
+
+use itertools::Itertools;
 
 use crate::{Bell, InvalidRowError, Stage};
 
@@ -86,10 +89,7 @@ impl RowBuf {
     /// # Ok::<(), InvalidRowError>(())
     /// ```
     pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, InvalidRowError> {
-        // This unsafety is OK because the resulting row is never used for anything other than a
-        // validity check
-        unsafe { Self::from_bell_iter_unchecked(s.chars().filter_map(Bell::from_name)) }
-            .check_validity_with_stage(stage)
+        Self::from_vec_with_stage(s.chars().filter_map(Bell::from_name).collect_vec(), stage)
     }
 
     /// Creates rounds on a given [`Stage`].
@@ -143,13 +143,6 @@ impl RowBuf {
         }
     }
 
-    /// Creates a `RowBuf` containing no [`Bell`]s, without allocating heap memory.
-    pub fn empty() -> Self {
-        // This unsafety is OK, because 0-length rows are always valid (albeit useless in most
-        // cases)
-        unsafe { Self::from_bell_iter_unchecked(std::iter::empty()) }
-    }
-
     /* UTILITY CONSTRUCTORS */
 
     /// Creates a `RowBuf` from a [`Vec`] of [`Bell`]s, checking that the resulting `RowBuf` is
@@ -182,9 +175,28 @@ impl RowBuf {
     /// # Ok::<(), InvalidRowError>(())
     /// ```
     pub fn from_vec(bells: Vec<Bell>) -> Result<RowBuf, InvalidRowError> {
-        // This unsafety is OK because if the resulting row is invalid, it will be consumed by the
-        // validity check
-        unsafe { Self::from_vec_unchecked(bells) }.check_validity()
+        let stage = Stage::try_from(bells.len())?;
+        // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
+        // each bell as we go.
+        let mut checklist = vec![false; bells.len()];
+        // Loop over all the bells to check them off in the checklist.  We do not need to check for
+        // empty spaces in the checklist once we've done because (by the Pigeon Hole Principle),
+        // fitting `n` bells into `n` slots with some gaps will always require that a bell is
+        // either out of range or two bells share a slot.
+        for &b in &bells {
+            match checklist.get_mut(b.index()) {
+                // If the `Bell` is out of range of the checklist, it can't belong within the
+                // `Stage` of this `Row`
+                None => return Err(InvalidRowError::BellOutOfStage(b, stage)),
+                // If the `Bell` has already been seen before, then it must be a duplicate
+                Some(&mut true) => return Err(InvalidRowError::DuplicateBell(b)),
+                // If the `Bell` has not been seen before, check off the checklist entry and
+                // continue
+                Some(x) => *x = true,
+            }
+        }
+        // If none of the `Bell`s caused errors, the row must be valid
+        Ok(Self { bell_vec: bells })
     }
 
     /// Creates a `RowBuf` from a [`Vec`] of [`Bell`]s, **without** checking that the resulting
@@ -214,7 +226,8 @@ impl RowBuf {
     ///     "4213"
     /// );
     /// // Converting a `Row` from an invalid `Vec` of `Bell`s compiles and runs,
-    /// // but silently creates an invalid `Row`
+    /// // but silently creates an invalid `Row` and, by extension, silently causes
+    /// // undefined behaviour
     /// assert_eq!(
     ///     unsafe {
     ///         RowBuf::from_vec_unchecked(vec![
@@ -260,9 +273,7 @@ impl RowBuf {
     /// # Ok::<(), InvalidRowError>(())
     /// ```
     pub fn from_bell_iter(iter: impl Iterator<Item = Bell>) -> Result<Self, InvalidRowError> {
-        // This unsafety is OK because the resulting row is never used for anything other than a
-        // validity check
-        unsafe { Self::from_bell_iter_unchecked(iter) }.check_validity()
+        Self::from_vec(iter.collect_vec())
     }
 
     /// Creates a `RowBuf` from a [`Vec`] of [`Bell`]s, **without** checking that the resulting
@@ -291,37 +302,14 @@ impl RowBuf {
         Self::from_vec_unchecked(iter.collect())
     }
 
-    /// Checks the validity of a potential `RowBuf`, returning it if valid and returning an
-    /// [`InvalidRowError`] otherwise (consuming the potential `RowBuf` so it can't be used).
-    pub fn check_validity(self) -> Result<Self, InvalidRowError> {
-        // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
-        // each bell as we go.
-        let mut checklist = vec![false; self.stage().num_bells()];
-        // Loop over all the bells to check them off in the checklist.  We do not need to check for
-        // empty spaces in the checklist once we've done because (by the Pigeon Hole Principle),
-        // fitting `n` bells into `n` slots with some gaps will always require that a bell is
-        // either out of range or two bells share a slot.
-        for b in self.bell_iter() {
-            match checklist.get_mut(b.index()) {
-                // If the `Bell` is out of range of the checklist, it can't belong within the
-                // `Stage` of this `Row`
-                None => return Err(InvalidRowError::BellOutOfStage(b, self.stage())),
-                // If the `Bell` has already been seen before, then it must be a duplicate
-                Some(&mut true) => return Err(InvalidRowError::DuplicateBell(b)),
-                // If the `Bell` has not been seen before, check off the checklist entry and
-                // continue
-                Some(x) => *x = true,
-            }
-        }
-        // If none of the `Bell`s caused errors, the row must be valid
-        Ok(self)
-    }
-
     /// Checks the validity of a potential `RowBuf`, extending it to the given [`Stage`] if valid
     /// and returning an [`InvalidRowError`] otherwise (consuming the potential `RowBuf` so it
     /// can't be used).  This will provide nicer errors than [`RowBuf::check_validity`] since this
     /// has extra information about the desired [`Stage`] of the potential `RowBuf`.
-    pub fn check_validity_with_stage(mut self, stage: Stage) -> Result<Self, InvalidRowError> {
+    pub fn from_vec_with_stage(
+        mut bells: Vec<Bell>,
+        stage: Stage,
+    ) -> Result<Self, InvalidRowError> {
         // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
         // each bell as we go.
         let mut checklist = vec![false; stage.num_bells()];
@@ -329,7 +317,7 @@ impl RowBuf {
         // bells),
         let mut biggest_bell_found = Bell::TREBLE;
         // Loop over all the bells to check them off in the checklist
-        for b in self.bell_iter() {
+        for &b in &bells {
             match checklist.get_mut(b.index()) {
                 // If the `Bell` is out of range of the checklist, it can't belong within the `Stage`
                 // of this `Row`
@@ -359,9 +347,16 @@ impl RowBuf {
         {
             return Err(InvalidRowError::MissingBell(Bell::from_index(index)));
         }
-        // If no errors were generated so far, then extend the row and return
-        self.extend_to_stage(stage);
-        Ok(self)
+
+        // If no errors were generated so far, then `bells` must represent a [`Row`] (or be empty)
+        // so we should extend it with 'cover' bells up to the stage
+        assert!(bells.len() <= stage.num_bells());
+        let cover_bells = (bells.len()..stage.num_bells()).map(Bell::from_index);
+        bells.extend(cover_bells);
+
+        // This unsafety is OK because we have verified that `bells` corresponds to a `Row`, while
+        // the no-zero-stage invariant makes sure that `bells` is non-empty
+        Ok(unsafe { Self::from_vec_unchecked(bells) })
     }
 
     /// Consumes this `RowBuf` and returns the underlying [`Vec`] of [`Bell`]s
@@ -390,8 +385,8 @@ impl RowBuf {
 
     /* MUTATING OPERATIONS */
 
-    /// Extend this `RowBuf` in-place with cover bells so that it has a given [`Stage`].
-    fn extend_to_stage(&mut self, stage: Stage) {
+    /// Extend this `RowBuf` in-place with cover bells until that it has a given [`Stage`].
+    pub fn extend_to_stage(&mut self, stage: Stage) {
         assert!(self.stage() <= stage);
         self.bell_vec
             .extend((self.bell_vec.len()..stage.num_bells()).map(Bell::from_index));
@@ -418,9 +413,9 @@ impl Deref for RowBuf {
 impl DerefMut for RowBuf {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // The unsafety here is OK, because Row is `#[repr(transparent)]` and the pointer cast
-        // doesn't change the lifetime or mutability of the underlying data.
-        unsafe { &mut *(self.bell_vec.as_mut_slice() as *mut [Bell] as *mut Row) }
+        // This unsafety is OK because the slice of `Bell`s comes from a `RowBuf`, which must
+        // represent a valid row
+        unsafe { Row::from_mut_slice_unchecked(&mut self.bell_vec) }
     }
 }
 
@@ -503,104 +498,111 @@ mod tests {
 
     #[test]
     fn parse_with_stage_ok() {
-        for (inp_str, stage, exp_row) in &[
-            ("321", Stage::SINGLES, "321"),
-            ("321", Stage::MINOR, "321456"),
-            ("1342", Stage::MAJOR, "13425678"),
-            ("123564", Stage::ROYAL, "1235647890"),
-            ("21", Stage::DOUBLES, "21345"),
-            ("", Stage::MINIMUS, "1234"),
-        ] {
+        fn check(inp_str: &str, stage: Stage, exp_row: &str) {
             assert_eq!(
-                RowBuf::parse_with_stage(inp_str, *stage).unwrap(),
+                RowBuf::parse_with_stage(inp_str, stage).unwrap(),
                 RowBuf::parse(exp_row).unwrap()
             );
         }
+
+        check("321", Stage::SINGLES, "321");
+        check("321", Stage::MINOR, "321456");
+        check("1342", Stage::MAJOR, "13425678");
+        check("123564", Stage::ROYAL, "1235647890");
+        check("21", Stage::DOUBLES, "21345");
+        check("", Stage::MINIMUS, "1234");
+    }
+
+    #[test]
+    fn parse_with_stage_err_dup_bell() {
+        fn check(inp_str: &str, stage: Stage, dup_bell: char) {
+            assert_eq!(
+                RowBuf::parse_with_stage(inp_str, stage),
+                Err(InvalidRowError::DuplicateBell(
+                    Bell::from_name(dup_bell).unwrap()
+                ))
+            );
+        }
+
+        check("322", Stage::SINGLES, '2');
+        check("11", Stage::MAXIMUS, '1');
+        check("512435", Stage::MINOR, '5');
+        check("331212", Stage::MINOR, '3');
+    }
+
+    #[test]
+    fn parse_with_stage_out_of_stage() {
+        fn check(inp_str: &str, stage: Stage, bell_out_of_range: char) {
+            assert_eq!(
+                RowBuf::parse_with_stage(inp_str, stage),
+                Err(InvalidRowError::BellOutOfStage(
+                    Bell::from_name(bell_out_of_range).unwrap(),
+                    stage
+                ))
+            );
+        }
+
+        check("0", Stage::SINGLES, '0');
+        check("3218", Stage::MINOR, '8');
+        check("12345678", Stage::SINGLES, '4');
     }
 
     #[test]
     fn parse_with_stage_err() {
-        // Input rows with duplicated bells
-        for (inp_str, stage, dup_bell) in &[
-            ("322", Stage::SINGLES, '2'),
-            ("11", Stage::MAXIMUS, '1'),
-            ("512435", Stage::MINOR, '5'),
-            ("331212", Stage::MINOR, '3'),
-        ] {
+        fn check(inp_str: &str, stage: Stage, missing_bell: char) {
             assert_eq!(
-                RowBuf::parse_with_stage(inp_str, *stage),
-                Err(InvalidRowError::DuplicateBell(
-                    Bell::from_name(*dup_bell).unwrap()
-                ))
-            );
-        }
-        // Input rows which contain bells that don't fit into the specified stage
-        for (inp_str, stage, bell_out_of_range) in &[
-            ("0", Stage::SINGLES, '0'),
-            ("3218", Stage::MINOR, '8'),
-            ("12345678", Stage::SINGLES, '4'),
-        ] {
-            assert_eq!(
-                RowBuf::parse_with_stage(inp_str, *stage),
-                Err(InvalidRowError::BellOutOfStage(
-                    Bell::from_name(*bell_out_of_range).unwrap(),
-                    *stage
-                ))
-            );
-        }
-        // Input rows with missing bells
-        for (inp_str, stage, missing_bell) in &[
-            ("13", Stage::SINGLES, '2'),
-            ("14", Stage::MINOR, '2'),
-            ("14567892", Stage::CATERS, '3'),
-        ] {
-            assert_eq!(
-                RowBuf::parse_with_stage(inp_str, *stage),
+                RowBuf::parse_with_stage(inp_str, stage),
                 Err(InvalidRowError::MissingBell(
-                    Bell::from_name(*missing_bell).unwrap(),
+                    Bell::from_name(missing_bell).unwrap(),
                 ))
             );
         }
+
+        check("13", Stage::SINGLES, '2');
+        check("14", Stage::MINOR, '2');
+        check("14567892", Stage::CATERS, '3');
     }
 
     #[test]
     fn is_group() {
-        #[rustfmt::skip]
-        let groups = [
-            vec!["1234", "1342", "1423"],
-            vec!["1"],
-            vec!["1234", "1324"],
-            vec!["1234", "1234", "1234", "1324"],
-            vec!["1234", "4123", "3412", "2341"],
-            vec!["123456", "134256", "142356", "132456", "124356", "143256"],
-            vec![
-                "123456", "134562", "145623", "156234", "162345",
-                "165432", "126543", "132654", "143265", "154326",
-            ],
-            vec!["123456", "234561", "345612", "456123", "561234", "612345"],
-            vec![
-                "123456", "234561", "345612", "456123", "561234", "612345",
-                "654321", "165432", "216543", "321654", "432165", "543216",
-            ],
-        ];
-        let non_groups = [
-            vec!["21"],
-            vec!["123456", "134256", "142356", "132456", "124356"], // 143256 is missing
-            vec![], // The empty set doesn't contain an identity element
-            vec![
-                "123456", "134256", "142356", "132456", "124356", "143256", "213456",
-            ],
-        ];
-
-        for g in &groups {
-            let rows: Vec<RowBuf> = g.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
-            println!("Is {:?} a group?", g);
+        fn check(rows: &[&str]) {
+            let rows: Vec<RowBuf> = rows.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
+            println!("Is {:?} a group?", rows);
             assert!(Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
         }
-        for g in &non_groups {
-            let rows: Vec<RowBuf> = g.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
-            println!("Is {:?} not a group?", g);
+
+        check(&["1234", "1342", "1423"]);
+        check(&["1"]);
+        check(&["1234", "1324"]);
+        check(&["1234", "1234", "1234", "1324"]);
+        check(&["1234", "4123", "3412", "2341"]);
+        check(&["123456", "134256", "142356", "132456", "124356", "143256"]);
+        #[rustfmt::skip]
+        check(&[
+            "123456", "134562", "145623", "156234", "162345",
+            "165432", "126543", "132654", "143265", "154326",
+        ]);
+        check(&["123456", "234561", "345612", "456123", "561234", "612345"]);
+        #[rustfmt::skip]
+        check(&[
+            "123456", "234561", "345612", "456123", "561234", "612345",
+            "654321", "165432", "216543", "321654", "432165", "543216",
+        ]);
+    }
+
+    #[test]
+    fn is_non_group() {
+        fn check(groups: &[&str]) {
+            let rows: Vec<RowBuf> = groups.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
+            println!("Is {:?} not a group?", groups);
             assert!(!Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
         }
+
+        check(&["21"]);
+        check(&["123456", "134256", "142356", "132456", "124356"]); // 143256 is missing
+        check(&[]); // The empty set doesn't contain an identity element
+        check(&[
+            "123456", "134256", "142356", "132456", "124356", "143256", "213456",
+        ]);
     }
 }

@@ -52,9 +52,6 @@ pub struct SameStageVec {
     /// **Invariant**: `self.bells.len()` is an integer multiple of `self.stage`.
     bells: Vec<Bell>,
     /// The [`Stage`] of all the [`Row`]s in this buffer.
-    ///
-    /// **Invariant**: This cannot be [`Stage::ZERO`] (because the number of rows is computed with
-    /// `bells.len() / stage.as_usize()`, which would divide by zero).
     stage: Stage,
 }
 
@@ -63,15 +60,10 @@ impl SameStageVec {
     // CONSTRUCTORS //
     //////////////////
 
-    /// Creates a new `SameStageVec`, where all the [`Row`]s are expected to have a given
-    /// [`Stage`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if `Stage::ZERO` is passed.
+    /// Creates a new `SameStageVec` containing no [`Row`]s, expecting to be given [`Row`]s of a
+    /// given [`Stage`].
     #[inline]
     pub fn new(stage: Stage) -> Self {
-        assert!(stage > Stage::ZERO);
         Self {
             bells: Vec::new(),
             stage,
@@ -86,7 +78,6 @@ impl SameStageVec {
     /// Panics if `Stage::ZERO` is passed.
     #[inline]
     pub fn with_capacity(stage: Stage, capacity: usize) -> Self {
-        assert!(stage > Stage::ZERO);
         Self {
             bells: Vec::with_capacity(capacity * stage.num_bells()),
             stage,
@@ -113,8 +104,8 @@ impl SameStageVec {
         let (_one, first_line) = line_iter.next().unwrap(); // strings always contain at least one line
         let first_row =
             RowBuf::parse(first_line).map_err(|err| ParseError::InvalidRow { line_num: 1, err })?;
-        // Create a `SameStageVec` containing just `first_row`
-        let mut new_vec = SameStageVec::from_row_buf(first_row).ok_or(ParseError::ZeroStage)?;
+        // Create a `SameStageVec`, which starts out containing the first row
+        let mut new_vec = SameStageVec::from_row_buf(first_row);
 
         // Now parse the rest of the lines into the new `SameStageVec`
         for (line_num, line) in line_iter {
@@ -229,7 +220,7 @@ impl SameStageVec {
     /// Returns a [`Vec`] containing the place of a [`Bell`] in each [`Row`] in this
     /// `SameStageVec`.  Returns `None` if the [`Bell`] exceeds the [`Stage`] of `self`.
     pub fn path_of(&self, bell: Bell) -> Option<Vec<usize>> {
-        (bell.number() == self.stage().num_bells()).then(
+        (bell.index() < self.stage().num_bells()).then(
             // TODO: Write a vectorised routine for this
             || self.iter().map(|r| r.place_of(bell).unwrap()).collect_vec(),
         )

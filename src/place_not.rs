@@ -771,9 +771,9 @@ mod tests {
 
     #[test]
     fn parse_err_no_places_given() {
-        for stage in 0..12 {
+        for num_bells in 1..12 {
             assert_eq!(
-                PlaceNot::parse("", Stage::from(stage)),
+                PlaceNot::parse("", Stage::new(num_bells)),
                 Err(ParseError::NoPlacesGiven)
             );
         }

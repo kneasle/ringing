@@ -76,7 +76,7 @@ impl Row {
     /// ```
     #[inline]
     pub fn stage(&self) -> Stage {
-        self.bell_slice.len().into()
+        Stage::new(self.bell_slice.len())
     }
 
     /// Returns an iterator over the [`Bell`]s in this `Row`.
@@ -193,6 +193,8 @@ impl Row {
 
     /// Return the [`Stage`] of the shortest prefix of `self` that is still a valid `Row`.  This is
     /// the smallest [`Stage`] that this `Row` can be safely reduced to.
+    /// [`Rounds`](RowBuf::rounds) on any [`Stage`] has an `effective_stage` of [`Stage::ONE`],
+    /// since zero-bell [`Stage`]s can't exist.
     ///
     /// # Example
     ///
@@ -203,20 +205,21 @@ impl Row {
     /// assert_eq!(RowBuf::parse("14237568")?.effective_stage(), Stage::TRIPLES);
     /// // This row has no cover bells, so can't be reduced
     /// assert_eq!(RowBuf::parse("18423756")?.effective_stage(), Stage::MAJOR);
-    /// // Rounds always has an effective `Stage` of 0
-    /// assert_eq!(RowBuf::rounds(Stage::MAXIMUS).effective_stage(), Stage::ZERO);
+    /// // Rounds always has an effective `Stage` of one
+    /// assert_eq!(RowBuf::rounds(Stage::MAXIMUS).effective_stage(), Stage::ONE);
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub fn effective_stage(&self) -> Stage {
-        // Iterate backwards over the bells looking for the first bell which isn't in its place
+        // Iterate backwards over the bells looking for the first bell which isn't in its place.
+        // This bell defines the effective_stage of the row.
         for (i, b) in self.bell_slice.iter().enumerate().rev() {
             if b.index() != i {
                 // The `+ 1` is needed because `i` is 0-indexed
-                return Stage::from(i + 1);
+                return Stage::new(i + 1);
             }
         }
-        // If the loop reached the front of the row, then the effective stage is 0
-        Stage::ZERO
+        // If the loop reached the front of the row, then the effective stage is 1
+        Stage::ONE
     }
 
     /// Swap two [`Bell`]s round in this `Row`, panicking if either of the indices point out of
@@ -431,7 +434,7 @@ impl Row {
     /// use bellframe::{RowBuf, Stage};
     ///
     /// // Create a new row that will be overwritten to avoid reallocations
-    /// let mut row_buf = RowBuf::empty();
+    /// let mut row_buf = RowBuf::rounds(Stage::ONE);
     /// // The inverse of Queens is Tittums
     /// RowBuf::parse("135246")?.inv_into_buf(&mut row_buf);
     /// assert_eq!(row_buf, RowBuf::parse("142536")?);
@@ -706,8 +709,8 @@ impl Row {
         // and thus gain performance
         // The buffers `b_inv` and `a_mul_b_inv` are reused in each loop iteration to avoid
         // performing `n(n + 1)` allocations.
-        let mut b_inv = RowBuf::empty();
-        let mut a_mul_b_inv = RowBuf::empty();
+        let mut b_inv = RowBuf::rounds(Stage::ONE);
+        let mut a_mul_b_inv = RowBuf::rounds(Stage::ONE);
         for &b in &row_set {
             b.inv_into_buf(&mut b_inv);
             for &a in &row_set {

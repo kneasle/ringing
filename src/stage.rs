@@ -1,6 +1,9 @@
 //! A representation of a stage, with human-friendly `const`s and display names.
 
-use std::fmt::{Debug, Display, Formatter};
+use std::{
+    convert::TryFrom,
+    fmt::{Debug, Display, Formatter},
+};
 
 #[cfg(feature = "serde")]
 use serde_crate::{
@@ -12,35 +15,50 @@ use serde_crate::{
 #[allow(unused_imports)]
 use crate::Row;
 
-/// A newtype over [`usize`] that represents a stage.
+/// A newtype over [`usize`] that represents a stage.  All `Stage`s must contain at least one
+/// [`Bell`]; zero-bell `Stage`s cannot be created without `unsafe` code.
 ///
-/// To create a new `Stage`, you can either create it directly by using `Stage::from(usize)` or use
-/// a constant for the human name for each `Stage`:
+/// To create a new `Stage`, you can either create it directly with `Stage::try_from(usize)` (which
+/// returns a [`Result`]) or with `Stage::new(usize)` (which panics if given `0`).
+///
+/// If you want a specific small `Stage`, then you can use the constants for the human name for
+/// each `Stage`:
 /// ```
 /// use bellframe::Stage;
 ///
 /// // Converting from numbers is the same as using the constants
-/// assert_eq!(Stage::SINGLES, Stage::from(3));
-/// assert_eq!(Stage::MAJOR, Stage::from(8));
-/// assert_eq!(Stage::CINQUES, Stage::from(11));
-/// assert_eq!(Stage::SIXTEEN, Stage::from(16));
+/// assert_eq!(Stage::SINGLES, Stage::new(3));
+/// assert_eq!(Stage::MAJOR, Stage::new(8));
+/// assert_eq!(Stage::CINQUES, Stage::new(11));
+/// assert_eq!(Stage::SIXTEEN, Stage::new(16));
 /// // We can use `Stage::from` to generate `Stage`s that don't have names
-/// assert_eq!(Stage::from(2).as_usize(), 2);
-/// assert_eq!(Stage::from(100).as_usize(), 100);
+/// assert_eq!(Stage::new(100).num_bells(), 100);
+/// assert_eq!(Stage::new(254).num_bells(), 254);
 /// ```
 ///
-/// `Stage`s with names will also be [`Display`](std::fmt::Display)ed as their names:
+/// `Stage`s with human-friendly names are [`Display`]ed as their names:
 /// ```
 /// # use bellframe::Stage;
 /// #
-/// assert_eq!(&format!("{}", Stage::MAXIMUS), "Maximus");
-/// assert_eq!(&format!("{}", Stage::from(9)), "Caters");
+/// assert_eq!(Stage::MAXIMUS.to_string(), "Maximus");
+/// assert_eq!(Stage::new(9).to_string(), "Caters");
+/// assert_eq!(Stage::new(50).to_string(), "50 bells");
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Stage(usize);
 
 impl Stage {
+    /// Creates a new `Stage` representing a given number of [`Bell`]s.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `num_bells` is zero.
+    #[track_caller]
+    pub fn new(num_bells: usize) -> Stage {
+        Self::try_from(num_bells).expect("Can't create a `Stage` of zero bells")
+    }
+
     /// Returns this `Stage` as a [`usize`].
     ///
     /// # Example
@@ -56,7 +74,7 @@ impl Stage {
         self.0
     }
 
-    /// The number of [`Bell`]s in this [`Stage`]
+    /// The number of [`Bell`]s in this [`Stage`].  This is guaranteed not to be zero.
     ///
     /// # Example
     /// ```
@@ -70,7 +88,7 @@ impl Stage {
         self.0
     }
 
-    /// Returns true if this `Stage` has an even number of bells
+    /// Returns true if this `Stage` denotes an even number of [`Bell`]s
     #[inline(always)]
     pub fn is_even(self) -> bool {
         self.num_bells() % 2 == 0
@@ -80,8 +98,6 @@ impl Stage {
     /// `"royal"`, `"triples"` or `"twenty-two"`).
     pub fn from_lower_case_name(name: &str) -> Option<Stage> {
         Some(match name {
-            "zero" => Stage::ZERO,
-
             "one" => Stage::ONE,
             "two" => Stage::TWO,
             "singles" => Stage::SINGLES,
@@ -157,16 +173,13 @@ impl Stage {
 /// ```
 /// use bellframe::Stage;
 ///
-/// assert_eq!(Stage::MINIMUS, Stage::from(4));
-/// assert_eq!(Stage::MINOR, Stage::from(6));
-/// assert_eq!(Stage::TRIPLES, Stage::from(7));
-/// assert_eq!(Stage::FOURTEEN, Stage::from(14));
-/// assert_eq!(Stage::SEPTUPLES, Stage::from(15));
+/// assert_eq!(Stage::MINIMUS, Stage::new(4));
+/// assert_eq!(Stage::MINOR, Stage::new(6));
+/// assert_eq!(Stage::TRIPLES, Stage::new(7));
+/// assert_eq!(Stage::FOURTEEN, Stage::new(14));
+/// assert_eq!(Stage::SEPTUPLES, Stage::new(15));
 /// ```
 impl Stage {
-    /// A `Stage` with no bells
-    pub const ZERO: Stage = Stage(0);
-
     /// A `Stage` with `1` 'working' bell
     pub const ONE: Stage = Stage(1);
 
@@ -219,7 +232,7 @@ impl Stage {
 impl Debug for Stage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let const_name = match self.0 {
-            0 => "ZERO",
+            0 => unreachable!(),
             1 => "ONE",
             2 => "TWO",
             3 => "SINGLES",
@@ -251,11 +264,76 @@ impl Display for Stage {
     }
 }
 
-impl From<usize> for Stage {
-    fn from(n: usize) -> Self {
-        Stage(n)
+impl TryFrom<usize> for Stage {
+    type Error = ZeroStageError;
+
+    fn try_from(num_bells: usize) -> Result<Self, Self::Error> {
+        match num_bells {
+            0 => Err(ZeroStageError),
+            _ => Ok(Stage(num_bells)),
+        }
     }
 }
+
+/// An error created when attempting to create a [`Stage`] of zero [`Bell`]s.
+#[derive(Debug, Clone, Copy)]
+pub struct ZeroStageError;
+
+impl Display for ZeroStageError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Can't create a `Stage` of zero bells")
+    }
+}
+
+/// An error created when a [`Row`] was used to permute something with the wrong length
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct IncompatibleStages {
+    /// The [`Stage`] of the [`Row`] that was being permuted
+    pub(crate) lhs_stage: Stage,
+    /// The [`Stage`] of the [`Row`] that was doing the permuting
+    pub(crate) rhs_stage: Stage,
+}
+
+impl IncompatibleStages {
+    /// Compares two [`Stage`]s, returning `Ok(())` if they are equal and returning the appropriate
+    /// `IncompatibleStages` error if not.
+    pub fn test_err(lhs_stage: Stage, rhs_stage: Stage) -> Result<(), Self> {
+        if lhs_stage == rhs_stage {
+            Ok(())
+        } else {
+            Err(IncompatibleStages {
+                lhs_stage,
+                rhs_stage,
+            })
+        }
+    }
+
+    /// Compares an `Option<Stage>` to a [`Stage`], overwriting the `Option` if it's `None` but
+    /// otherwise checking the [`Stage`]s for validity.  This is useful if you have a sequence of
+    /// [`Row`]s and you want to verify that all the [`Stage`]s are equal without treating the
+    /// first [`Row`] as a special case.
+    pub fn test_err_opt(opt: &mut Option<Stage>, stage: Stage) -> Result<(), Self> {
+        match opt {
+            None => {
+                *opt = Some(stage);
+                Ok(())
+            }
+            Some(s) => Self::test_err(*s, stage),
+        }
+    }
+}
+
+impl Display for IncompatibleStages {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Incompatible stages: {} (lhs), {} (rhs)",
+            self.lhs_stage, self.rhs_stage
+        )
+    }
+}
+
+impl std::error::Error for IncompatibleStages {}
 
 /* Allow [`Stage`]s to be serialised and deserialised with `serde` */
 
@@ -372,53 +450,3 @@ impl<'de> Deserialize<'de> for Stage {
         deserializer.deserialize_u64(StageVisitor)
     }
 }
-
-/// An error created when a [`Row`] was used to permute something with the wrong length
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct IncompatibleStages {
-    /// The [`Stage`] of the [`Row`] that was being permuted
-    pub(crate) lhs_stage: Stage,
-    /// The [`Stage`] of the [`Row`] that was doing the permuting
-    pub(crate) rhs_stage: Stage,
-}
-
-impl IncompatibleStages {
-    /// Compares two [`Stage`]s, returning `Ok(())` if they are equal and returning the appropriate
-    /// `IncompatibleStages` error if not.
-    pub fn test_err(lhs_stage: Stage, rhs_stage: Stage) -> Result<(), Self> {
-        if lhs_stage == rhs_stage {
-            Ok(())
-        } else {
-            Err(IncompatibleStages {
-                lhs_stage,
-                rhs_stage,
-            })
-        }
-    }
-
-    /// Compares an `Option<Stage>` to a [`Stage`], overwriting the `Option` if it's `None` but
-    /// otherwise checking the [`Stage`]s for validity.  This is useful if you have a sequence of
-    /// [`Row`]s and you want to verify that all the [`Stage`]s are equal without treating the
-    /// first [`Row`] as a special case.
-    pub fn test_err_opt(opt: &mut Option<Stage>, stage: Stage) -> Result<(), Self> {
-        match opt {
-            None => {
-                *opt = Some(stage);
-                Ok(())
-            }
-            Some(s) => Self::test_err(*s, stage),
-        }
-    }
-}
-
-impl Display for IncompatibleStages {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Incompatible stages: {} (lhs), {} (rhs)",
-            self.lhs_stage, self.rhs_stage
-        )
-    }
-}
-
-impl std::error::Error for IncompatibleStages {}
