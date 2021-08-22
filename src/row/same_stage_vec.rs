@@ -397,6 +397,35 @@ impl<'v> Iterator for Iter<'v> {
         // Framework.
         Some(unsafe { Row::from_slice_unchecked(next_row) })
     }
+
+    // PERF: Implement better routines for methods such as `nth`, etc. for which repeatedly calling
+    // `next()` is unnecessarily slow.
+}
+
+impl<'v> DoubleEndedIterator for Iter<'v> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.bells_left.is_empty() {
+            return None;
+        }
+        // Remove the last `self.stage` elements from `self.bells_left`.  Since we've removed
+        // `self.stage` items, this means that the stage-aligned segments haven't changed, so the
+        // invariant on `self.bells_left` is still satisfied.
+        let (future_rows, next_row) = self
+            .bells_left
+            .split_at(self.bells_left.len() - self.stage.num_bells());
+        self.bells_left = future_rows;
+        // This unsafety is OK because the invariant on `self.bells_left` requires that `next_row`
+        // (a stage-aligned segment of `self.bells_left`) forms a valid row according to the
+        // Framework.
+        Some(unsafe { Row::from_slice_unchecked(next_row) })
+    }
+}
+
+impl<'v> ExactSizeIterator for Iter<'v> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.bells_left.len() / self.stage.num_bells()
+    }
 }
 
 /// The possible ways that [`SameStageVec::parse`] could fail

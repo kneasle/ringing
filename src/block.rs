@@ -141,7 +141,7 @@ impl<A> AnnotBlock<A> {
     /// `AnnotBlock` can be reduced to without producing invalid [`Row`]s.  See
     /// [`Row::effective_stage`] for more info and examples.
     pub fn effective_stage(&self) -> Stage {
-        self.rows()
+        self.all_rows()
             .map(Row::effective_stage)
             .max()
             // Unwrapping here is safe, because blocks must contain at least one Row
@@ -223,6 +223,14 @@ impl<A> AnnotBlock<A> {
     /// left-over [`Row`], use [`AnnotBlock::all_rows`] instead.
     #[inline]
     pub fn rows(&self) -> same_stage_vec::Iter {
+        let mut iter = self.all_rows();
+        iter.next_back(); // Remove the leftover row
+        iter
+    }
+
+    /// Returns an [`Iterator`] which yields all the [`Row`]s, including the leftover [`Row`].
+    #[inline]
+    pub fn all_rows(&self) -> same_stage_vec::Iter {
         self.rows.iter()
     }
 
@@ -239,9 +247,7 @@ impl<A> AnnotBlock<A> {
     #[inline]
     pub fn annot_rows(&self) -> impl Iterator<Item = AnnotRow<A>> {
         self.rows()
-            // The lossy `zip` here is fine, because we **want** to lose the `leftover row` from
-            // the iteration
-            .zip(self.annots())
+            .zip_eq(self.annots())
             .map(|(r, a)| AnnotRow::new(r, a))
     }
 
