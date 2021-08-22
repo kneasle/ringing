@@ -373,7 +373,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::from(v as usize))
+        Ok(Stage::new(v as usize))
     }
 
     fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
@@ -387,7 +387,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::from(v as usize))
+        Ok(Stage::new(v as usize))
     }
 
     fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
@@ -401,7 +401,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::from(v as usize))
+        Ok(Stage::new(v as usize))
     }
 
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -415,7 +415,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::from(v as usize))
+        Ok(Stage::new(v as usize))
     }
 
     /// Attempt to parse a [`Stage`] from a string.  This matches standard [`Stage`] names on up to
@@ -435,7 +435,7 @@ impl<'de> Visitor<'de> for StageVisitor {
 #[inline(always)]
 fn try_parse_stage<E: Error>(val: i64) -> Result<Stage, E> {
     if val >= 0 {
-        Ok(Stage::from(val as usize))
+        Ok(Stage::new(val as usize))
     } else {
         Err(E::custom(format!("negative Stage: {}", val)))
     }
