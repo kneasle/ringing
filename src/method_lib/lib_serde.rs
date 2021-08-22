@@ -40,13 +40,9 @@ impl From<&MethodLib> for MethodLibSerde {
         Self {
             groups: groups
                 .into_iter()
-                .map(|((stage, full_class), methods)| MethodGroup {
-                    stage: stage.as_usize(),
-                    is_jump: full_class.is_jump(),
-                    is_little: full_class.is_little(),
-                    is_differential: full_class.is_differential(),
-                    class_id: to_class_id(full_class.class()),
-                    methods: methods
+                .map(|((stage, full_class), compact_methods)| {
+                    // 'Uncompact' the `CompactMethod`s
+                    let methods = compact_methods
                         .into_iter()
                         .map(|comp_method| {
                             // Check if the title follows the standard construction.  If it does,
@@ -66,7 +62,16 @@ impl From<&MethodLib> for MethodLibSerde {
                                 place_notation: comp_method.place_notation.to_owned(),
                             }
                         })
-                        .collect_vec(),
+                        .collect_vec();
+
+                    MethodGroup {
+                        stage: stage.num_bells(),
+                        is_jump: full_class.is_jump(),
+                        is_little: full_class.is_little(),
+                        is_differential: full_class.is_differential(),
+                        class_id: to_class_id(full_class.class()),
+                        methods,
+                    }
                 })
                 .collect_vec(),
         }

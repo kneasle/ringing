@@ -306,8 +306,8 @@ impl PlaceNot {
         let mut i = 0;
         while i < self.stage.num_bells() {
             if places.peek() == Some(&i) {
-                // If this PN contains a place at this index, then no modification is necessary but
-                // we do need to consume the place so we move on the iterator
+                // If this PN contains a place at this index, then the bell in this place stays
+                // where it is, so no change is required.
                 places.next();
                 i += 1;
             } else {
