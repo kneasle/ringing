@@ -272,9 +272,8 @@ impl Regex {
 
         // TODO: Compute the fraction directly to limit potential for overflow
         let num_bells_in_globs = num_unfixed - num_wildcards;
-        let ways_to_fill_globs_numerator = (num_bells_in_globs + num_wildcards)
-            .saturating_sub(1) // This makes sure that `(-1)! = 1 = 0!`
-            .checked_factorial()?;
+        let ways_to_fill_globs_numerator =
+            (num_bells_in_globs + num_wildcards.saturating_sub(1)).checked_factorial()?;
         let ways_to_fill_globs_denominator = num_globs.saturating_sub(1).checked_factorial()?;
         let ways_to_fill_globs = ways_to_fill_globs_numerator / ways_to_fill_globs_denominator;
 
