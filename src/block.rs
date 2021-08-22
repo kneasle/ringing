@@ -318,8 +318,13 @@ impl<A> AnnotBlock<A> {
 
     /// Consumes this `AnnotBlock`, and returns a [`SameStageVec`] containing the same [`Row`]s,
     /// **including** the left-over row.
-    pub fn into_row_buffer(self) -> SameStageVec {
+    pub fn into_row_vec(self) -> SameStageVec {
         self.rows
+    }
+
+    /// Borrows the [`SameStageVec`] storing all the [`Row`]s in this `AnnotBlock`
+    pub fn row_vec(&self) -> &SameStageVec {
+        &self.rows
     }
 
     /// Convert this `AnnotBlock` into another `AnnotBlock` with identical [`Row`]s, but where each
