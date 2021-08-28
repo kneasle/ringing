@@ -1,6 +1,6 @@
 use std::{
     fmt::{Display, Formatter},
-    ops::{Index, Range},
+    ops::{Bound, Index, Range, RangeBounds},
 };
 
 use itertools::Itertools;
@@ -287,10 +287,25 @@ impl SameStageVec {
         transposition: &Row,
         other: &Self,
     ) -> Result<(), IncompatibleStages> {
+        self.extend_range_transposed(transposition, other, ..)
+    }
+
+    /// Extend `self` with the [`Row`]s from a region of another [`SameStageVec`], pre-multiplying
+    /// them all by a given [`Row`].
+    #[inline]
+    pub fn extend_range_transposed(
+        &mut self,
+        transposition: &Row,
+        other: &Self,
+        range: impl RangeBounds<usize>,
+    ) -> Result<(), IncompatibleStages> {
         IncompatibleStages::test_err(self.stage, transposition.stage())?;
         // TODO: Write a vectorised routine for this
-        self.bells
-            .extend(other.bells.iter().map(|b| transposition[b.index()]));
+        self.bells.extend(
+            other.bells[other.to_bell_range(range)]
+                .iter()
+                .map(|b| transposition[b.index()]),
+        );
         Ok(())
     }
 
@@ -343,6 +358,27 @@ impl SameStageVec {
     //////////////////////
     // HELPER FUNCTIONS //
     //////////////////////
+
+    /// Converts a generic [`RangeBounds`] **over [`Row`]s** into a [`Range`] **over [`Bell`]s**
+    /// which explicitly refers to the same region of `self`.
+    #[allow(clippy::let_and_return)]
+    fn to_bell_range(&self, r: impl RangeBounds<usize>) -> Range<usize> {
+        let range_min_inclusive = match r.start_bound() {
+            Bound::Included(v) => *v,
+            Bound::Excluded(v) => *v + 1,
+            Bound::Unbounded => 0,
+        };
+        let range_max_exclusive = match r.end_bound() {
+            Bound::Included(v) => *v + 1,
+            Bound::Excluded(v) => *v,
+            Bound::Unbounded => self.len(),
+        };
+
+        let row_range = range_min_inclusive..range_max_exclusive;
+        let bell_range =
+            row_range.start * self.stage.num_bells()..row_range.end * self.stage.num_bells();
+        bell_range
+    }
 
     /// Gets the [`Range`] of `self.bells` which would contain the [`Row`] at a given `index`.
     fn get_range_of_row(&self, index: usize) -> Range<usize> {
