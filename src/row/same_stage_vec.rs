@@ -132,8 +132,8 @@ impl SameStageVec {
     ///
     /// # Safety
     ///
-    /// This function is safe if `bells` is formed of valid [`Row`]s (each of the provided
-    /// [`Stage`]) concatenated together.
+    /// This function is safe if `bells` is formed of a sequence of valid [`Row`]s (each of the
+    /// provided [`Stage`]) concatenated together.
     #[inline]
     pub unsafe fn from_bell_vec_unchecked(bells: Vec<Bell>, stage: Stage) -> Self {
         Self { bells, stage }
@@ -271,7 +271,7 @@ impl SameStageVec {
 
     /// Extend `self` with the [`Row`]s from `other`, returning an error if the [`Stage`]s don't
     /// match.  `x.extend_from_buf(y)` has the same effect as `x.extend(y)` (because
-    /// `&SameStageVec` implements [`IntoIterator`]), but this version is faster since the
+    /// `&SameStageVec` implements [`IntoIterator`]) but `extend_from_buf` is faster since the
     /// [`Stage`] comparison is only performed once.
     #[inline]
     pub fn extend_from_buf(&mut self, other: &Self) -> Result<(), IncompatibleStages> {
@@ -280,7 +280,8 @@ impl SameStageVec {
         Ok(())
     }
 
-    /// Take a range of `self`, pre-multiply all the `Row`s and extend `self` with them.
+    /// Extend `self` with the [`Row`]s from another [`SameStageVec`], pre-multiplying them all by
+    /// a given [`Row`].
     #[inline]
     pub fn extend_transposed(
         &mut self,

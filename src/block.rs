@@ -289,7 +289,7 @@ impl<A> AnnotBlock<A> {
     /// Extends `self` with the contents of another [`AnnotBlock`], **transposing** its [`Row`]s so
     /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
     pub fn extend(&mut self, other: Self) -> Result<(), IncompatibleStages> {
-        // `transposition` pre-transposes `other`'s first row to `self`'s leftover row
+        // `transposition` pre-multiplies `other`'s first row to `self`'s leftover row
         let transposition = Row::solve_xa_equals_b(other.first_row(), self.leftover_row())?;
 
         // Add the transposed rows to `self`

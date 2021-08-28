@@ -480,14 +480,14 @@ impl Row {
     }
 
     /// Computes the value of `x` which satisfies `x * a = b` - i.e. the `Row` which
-    /// pre-transposes `a` to `b`.  This is equivalent to `a.transposition_to(b)`.
+    /// pre-multiplies `a` to `b`.  This is equivalent to `a.transposition_to(b)`.
     #[inline]
     pub fn solve_xa_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
         b.mul_result(&a.inv())
     }
 
     /// Computes the value of `r` which satisfies `r * self = other` - i.e. the `Row` which
-    /// pre-transposes `self` to `other`.
+    /// pre-multiplies `self` to `other`.
     #[inline]
     #[deprecated(
         note = "This function's name is confusing, so please use `Row::solve_xa_equals_b` instead"
@@ -497,7 +497,7 @@ impl Row {
     }
 
     /// Computes the value of `r` which satisfies `r * self = other` - i.e. the `Row` which
-    /// pre-transposes `self` to `other`, bypassing the same-[`Stage`] check.
+    /// pre-multiplies `self` to `other`, bypassing the same-[`Stage`] check.
     ///
     /// # Safety
     ///
