@@ -5,6 +5,7 @@ use std::{
     fmt::{Display, Formatter},
     iter::repeat_with,
     ops::Range,
+    slice,
 };
 
 use itertools::Itertools;
@@ -265,6 +266,16 @@ impl<A> AnnotBlock<A> {
         self.rows.path_of(bell) // Delegate to `SameStageVec`
     }
 
+    /// An [`Iterator`] which yields the [`AnnotRow`]s of `self` repeated forever.  This
+    /// [`Iterator`] never terminates.
+    ///
+    /// [`RepeatIter`] is an [`Iterator`] which yields [`RowBuf`]s, causing an allocation for each
+    /// call to `next`.  If those allocations are not desired, then use [`RepeatIter::next_into`]
+    /// instead to re-use an existing allocation.
+    pub fn repeat_iter(&self, start_row: RowBuf) -> Result<RepeatIter<A>, IncompatibleStages> {
+        RepeatIter::new(start_row, self)
+    }
+
     /////////////////////////
     // IN-PLACE OPERATIONS //
     /////////////////////////
@@ -322,7 +333,7 @@ impl<A> AnnotBlock<A> {
         self.rows
     }
 
-    /// Borrows the [`SameStageVec`] storing all the [`Row`]s in this `AnnotBlock`
+    /// Borrows the [`SameStageVec`] which contains all the [`Row`]s in this `AnnotBlock`
     pub fn row_vec(&self) -> &SameStageVec {
         &self.rows
     }
@@ -394,6 +405,72 @@ impl<A> AnnotBlock<A> {
         Some((first_block, second_block))
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// Iterator used internally by [`RepeatIter`], which yields the (&Row, &annotation) pairs from an
+/// [`AnnotBlock`].
+type InnerIter<'b, A> =
+    std::iter::Enumerate<itertools::ZipEq<same_stage_vec::Iter<'b>, slice::Iter<'b, A>>>;
+
+/// An [`Iterator`] which yields an [`AnnotBlock`] forever.  Created with
+/// [`AnnotBlock::repeat_iter`].
+#[derive(Debug, Clone)]
+pub struct RepeatIter<'b, A> {
+    /// Invariant: `self.current_block_head` must have the same [`Stage`] as `self.block`
+    current_block_head: RowBuf,
+    iter: InnerIter<'b, A>,
+    block: &'b AnnotBlock<A>,
+}
+
+impl<'b, A> RepeatIter<'b, A> {
+    fn new(start_row: RowBuf, block: &'b AnnotBlock<A>) -> Result<Self, IncompatibleStages> {
+        IncompatibleStages::test_err(start_row.stage(), block.stage())?;
+        Ok(Self {
+            current_block_head: start_row,
+            iter: Self::get_iter(block),
+            block,
+        })
+    }
+
+    /// Same as `self.next` but re-uses an existing allocation.
+    #[must_use]
+    pub fn next_into(&mut self, out: &mut RowBuf) -> Option<(usize, &'b A)> {
+        let (source_idx, (untransposed_row, annot)) = self.next_untransposed_row()?;
+        self.current_block_head
+            .mul_into(untransposed_row, out)
+            .unwrap();
+        Some((source_idx, annot))
+    }
+
+    fn get_iter(block: &'b AnnotBlock<A>) -> InnerIter<'b, A> {
+        block.rows().zip_eq(block.annots()).enumerate()
+    }
+
+    fn next_untransposed_row(&mut self) -> Option<(usize, (&'b Row, &'b A))> {
+        self.iter.next().or_else(|| {
+            // Apply the block we've just finished to the block head
+            self.current_block_head = self.current_block_head.as_row() * self.block.leftover_row();
+            // Start a new block
+            self.iter = Self::get_iter(self.block);
+            // Get the first row/annot of the next block.  If `self.iter.next()` is None, then the
+            // block must be empty, and `self` should finish immediately
+            self.iter.next()
+        })
+    }
+}
+
+impl<'b, A> Iterator for RepeatIter<'b, A> {
+    type Item = (RowBuf, usize, &'b A);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (source_idx, (untransposed_row, annot)) = self.next_untransposed_row()?;
+        let next_row = self.current_block_head.as_row() * untransposed_row;
+        Some((next_row, source_idx, annot))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The possible ways that [`AnnotBlock::parse`] could fail
 #[derive(Debug, Clone)]
