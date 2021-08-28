@@ -88,6 +88,11 @@ impl Stage {
         self.0
     }
 
+    /// Gets an [`Iterator`] over the [`Bell`]s contained within this `Stage`, in increasing order.
+    pub fn bells(self) -> impl Iterator<Item = Bell> {
+        (0..self.num_bells()).map(Bell::from_index)
+    }
+
     /// Returns true if this `Stage` denotes an even number of [`Bell`]s
     #[inline(always)]
     pub fn is_even(self) -> bool {
