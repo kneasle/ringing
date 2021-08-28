@@ -105,16 +105,16 @@ impl Bell {
     /// use bellframe::{Bell, Stage};
     ///
     /// // The **5** is the 'tenor' when ringing Doubles
-    /// assert_eq!(Bell::tenor(Stage::DOUBLES)?, Bell::from_number(5)?);
+    /// assert_eq!(Bell::tenor(Stage::DOUBLES), Bell::from_number(5)?);
     /// // The 12 is the tenor on maximus
-    /// assert_eq!(Bell::tenor(Stage::MAXIMUS)?, Bell::from_number(12)?);
+    /// assert_eq!(Bell::tenor(Stage::MAXIMUS), Bell::from_number(12)?);
     /// # Some(())
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
-    // TODO: Once zero-stages are banned, this can return a `Bell` directly
-    pub fn tenor(stage: Stage) -> Option<Bell> {
-        Self::from_number(stage.num_bells())
+    pub fn tenor(stage: Stage) -> Bell {
+        // Unwrapping here is safe because `Stage.num_bells()` can never be zero
+        Self::from_number(stage.num_bells()).unwrap()
     }
 
     /// A [`Bell`] representing the 'treble' on any stage.  Equivalent to
@@ -225,7 +225,7 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
-    pub fn name(&self) -> String {
+    pub fn name(self) -> String {
         match self.to_char() {
             None => format!("<{}>", self.number()),
             Some(c) => c.to_string(),
