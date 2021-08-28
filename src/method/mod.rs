@@ -115,7 +115,7 @@ impl Method {
         // Start with the first lead, and repeatedly add leads until we get back to rounds
         let mut plain_course = first_lead_with_indices;
         while !plain_course.leftover_row().is_rounds() {
-            plain_course.extend_from_self(0..self.lead_len());
+            plain_course.extend_from_within(0..self.lead_len());
         }
         plain_course
     }

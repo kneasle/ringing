@@ -313,13 +313,13 @@ impl SameStageVec {
     #[inline]
     pub fn extend_transposed_from_within(
         &mut self,
-        range: Range<usize>,
+        range: impl RangeBounds<usize>,
         transposition: &Row,
     ) -> Result<(), IncompatibleStages> {
         IncompatibleStages::test_err(self.stage, transposition.stage())?;
         // Copy the bells one-by-one, because otherwise we'd have to borrow `self.bells` twice and
         // the borrow checker doesn't like that.
-        for i in range {
+        for i in self.to_bell_range(range) {
             let transposed_bell = transposition[self.bells[i].index()];
             self.bells.push(transposed_bell);
         }

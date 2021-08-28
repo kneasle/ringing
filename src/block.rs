@@ -4,7 +4,7 @@
 use std::{
     fmt::{Display, Formatter},
     iter::repeat_with,
-    ops::Range,
+    ops::{Bound, RangeBounds},
     slice,
 };
 
@@ -306,14 +306,20 @@ impl<A> AnnotBlock<A> {
     }
 
     /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
-    pub fn extend_from_self(&mut self, range: Range<usize>)
+    pub fn extend_from_within(&mut self, range: impl RangeBounds<usize> + Clone)
     where
         A: Clone,
     {
+        let range_start = match range.start_bound() {
+            Bound::Included(v) => *v,
+            Bound::Excluded(v) => *v + 1,
+            Bound::Unbounded => 0,
+        };
+
         // Remove the leftover row from the row buffer, so that the new rows can be inserted in its
         // place
         let leftover_row = self.rows.pop().unwrap(); // OK because `row_buffer` can't be empty
-        let first_row_of_chunk = self.get_row(range.start).unwrap();
+        let first_row_of_chunk = self.get_row(range_start).unwrap();
         // This unwrap is fine, because both rows were taken from the same `SameStageVec`
         let transposition = Row::solve_xa_equals_b(first_row_of_chunk, &leftover_row).unwrap();
 
