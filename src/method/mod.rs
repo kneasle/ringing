@@ -1,4 +1,4 @@
-use crate::{place_not::PnBlockParseError, AnnotBlock, PnBlock, Row, Stage};
+use crate::{place_not::PnBlockParseError, AnnotBlock, PnBlock, Row, RowBuf, Stage};
 
 // Imports used solely for doc comments
 #[allow(unused_imports)]
@@ -101,6 +101,25 @@ impl Method {
     #[inline]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Returns the [`Row`] at some index in the plain lead of this `Method`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the sub-lead index is larger than the first lead
+    pub fn row_in_plain_lead(&self, idx: usize) -> &Row {
+        &self.first_lead.row_vec()[idx]
+    }
+
+    /// Returns the [`Row`] at some index in the infinite plain course of this `Method`.
+    pub fn row_in_plain_course(&self, idx: usize) -> RowBuf {
+        let num_leads = idx / self.lead_len();
+        let sub_lead_idx = idx % self.lead_len();
+
+        let lead_head = self.lead_head().pow_u(num_leads);
+        let row_within_lead = self.row_in_plain_lead(sub_lead_idx);
+        lead_head.as_row() * row_within_lead
     }
 
     /// Returns an [`AnnotBlock`] representing the plain course of this method
