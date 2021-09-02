@@ -8,6 +8,9 @@ pub struct Call {
     notation: char,
     location: String,
     covers: usize,
+    /// The block replaced by this `Call`.
+    ///
+    /// Invariant: This must start with rounds
     block: Block,
 }
 
@@ -91,7 +94,6 @@ impl Call {
 
     /// Returns a [`Row`] representing the overall transposition of this `Call` (i.e. the
     /// permutation which maps the [`Row`] where this `Call` starts to the [`Row`] where it ends).
-    /// This is useful for generating things such as calling positions.
     #[inline]
     pub fn transposition(&self) -> &Row {
         self.block.leftover_row()

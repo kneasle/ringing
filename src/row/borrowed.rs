@@ -14,8 +14,6 @@ use super::{MulIntoError, RowAccumulator};
 #[allow(unused_imports)]
 use crate::Block;
 
-/* ===== BORROWED ROW ===== */
-
 pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
 
 /// A borrowed `Row` of [`Bell`]s.

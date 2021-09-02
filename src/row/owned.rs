@@ -15,8 +15,6 @@ use crate::Block;
 
 use super::borrowed::Row;
 
-/* ===== OWNED ROW ===== */
-
 /// An owned row.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct RowBuf {
