@@ -532,6 +532,13 @@ impl Row {
 
     /* MISC FUNCTIONS */
 
+    /// Copies the bells of `self` into `other`
+    #[inline]
+    pub fn copy_into(&self, other: &mut RowBuf) {
+        other.bell_vec.clear();
+        other.bell_vec.extend_from_slice(&self.bell_slice);
+    }
+
     /// Generate all the `Row`s formed by repeatedly permuting a given `Row`.  The first item
     /// returned will always be the input `Row`, and the last will always be `rounds`.
     ///
