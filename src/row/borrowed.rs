@@ -8,7 +8,7 @@ use itertools::Itertools;
 
 use crate::{Bell, IncompatibleStages, Parity, RowBuf, Stage};
 
-use super::MulIntoError;
+use super::{MulIntoError, RowAccumulator};
 
 // Imports used solely for doc comments
 #[allow(unused_imports)]
@@ -470,6 +470,26 @@ impl Row {
         for (i, b) in self.bell_iter().enumerate() {
             out.bell_vec[b.index()] = Bell::from_index(i);
         }
+    }
+
+    /// Raises `self` to some (possibly negative) `exponent`
+    pub fn pow_i(&self, exponent: isize) -> RowBuf {
+        if exponent < 0 {
+            self.inv().pow_u((-exponent) as usize)
+        } else {
+            self.pow_u(exponent as usize)
+        }
+    }
+
+    /// Raises `self` to some positive `exponent`
+    pub fn pow_u(&self, exponent: usize) -> RowBuf {
+        // TODO/PERF: Implement this using repeated squaring
+        let mut accumulator = RowAccumulator::rounds(self.stage());
+        for _ in 0..exponent {
+            // Unwrap is safe because the accumulator has the same stage as `self`
+            accumulator.accumulate(self).unwrap();
+        }
+        accumulator.into_total()
     }
 
     /// Computes the value of `x` which satisfies `a * x = b` - i.e. the `Row` which
