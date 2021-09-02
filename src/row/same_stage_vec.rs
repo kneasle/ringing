@@ -328,7 +328,13 @@ impl SameStageVec {
     }
 
     /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`].
+    #[deprecated(note = "Name is ambiguous; please use `pre_multiply` instead")]
     pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
+        self.pre_multiply(lhs_row)
+    }
+
+    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`].
+    pub fn pre_multiply(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
         IncompatibleStages::test_err(lhs_row.stage(), self.stage())?;
         // TODO: Write vectorised routine for this
         for b in &mut self.bells {
@@ -341,6 +347,13 @@ impl SameStageVec {
             *b = unsafe { lhs_row.get_bell_unchecked(b.index()) };
         }
         Ok(())
+    }
+
+    /// Creates a copy of `self`, where every [`Row`] has been pre-multiplied by another [`Row`].
+    pub fn pre_multiplied(&self, lhs_row: &Row) -> Result<Self, IncompatibleStages> {
+        let mut new_vec = Self::new(self.stage);
+        new_vec.extend_transposed(lhs_row, self)?;
+        Ok(new_vec)
     }
 
     /// Splits `self` into two `SameStageVec`s (`a` and `b`) where:
