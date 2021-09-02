@@ -46,6 +46,8 @@ impl<'b, A> Clone for AnnotRow<'b, A> {
 impl<'b, A> Copy for AnnotRow<'b, A> {}
 
 /// An `AnnotBlock` with no annotations.
+// TODO: Possibly rename `AnnotBlock` to `Block`
+// #[deprecated(note = "`AnnotBlock<()>` is much more explicit")]
 pub type Block = AnnotBlock<()>;
 
 /// A block of [`Row`], each of which can be given an annotation of any type.  Blocks can start
@@ -282,11 +284,18 @@ impl<A> AnnotBlock<A> {
 
     /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
     /// the annotations.
+    #[deprecated(note = "Name is ambiguous; please use `Block::pre_multiply` instead")]
     pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
-        self.rows.permute(lhs_row) // Delegate to `SameStageVec`
+        self.pre_multiply(lhs_row)
     }
 
-    /// Extends `self` with the contents of another [`AnnotBlock`], **transposing** its [`Row`]s so
+    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
+    /// the annotations.
+    pub fn pre_multiply(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
+        self.rows.pre_multiply(lhs_row) // Delegate to `SameStageVec`
+    }
+
+    /// Extends `self` with the contents of another [`AnnotBlock`], **pre-multiplying** its [`Row`]s so
     /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
     pub fn extend(&mut self, other: Self) -> Result<(), IncompatibleStages> {
         // `transposition` pre-multiplies `other`'s first row to `self`'s leftover row
