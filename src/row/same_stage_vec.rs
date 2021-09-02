@@ -1,11 +1,11 @@
 use std::{
     fmt::{Display, Formatter},
-    ops::{Bound, Index, Range, RangeBounds},
+    ops::{Index, Range, RangeBounds},
 };
 
 use itertools::Itertools;
 
-use crate::{utils::split_vec, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+use crate::{utils, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
 
 /// A heap-allocated buffer of [`Row`]s which are required to have the same [`Stage`].  Collecting
 /// [`Row`]s of the same [`Stage`] is nearly always what we want, and having a type to enforce this
@@ -347,7 +347,8 @@ impl SameStageVec {
     /// - `a.len() == index`, and
     /// - `self == a.extend_from_buf(&b)` (i.e. no rows are created or destroyed)
     pub fn split(self, index: usize) -> Option<(Self, Self)> {
-        let (left_bells, right_bells) = split_vec(self.bells, index * self.stage.num_bells())?;
+        let (left_bells, right_bells) =
+            utils::split_vec(self.bells, index * self.stage.num_bells())?;
         Some((
             // Both of these are safe because we split `self.bells` at an integer multiple of
             // `self.stage`, thus preserving the row boundaries and upholding the invariants
@@ -363,19 +364,8 @@ impl SameStageVec {
     /// Converts a generic [`RangeBounds`] **over [`Row`]s** into a [`Range`] **over [`Bell`]s**
     /// which explicitly refers to the same region of `self`.
     #[allow(clippy::let_and_return)]
-    fn to_bell_range(&self, r: impl RangeBounds<usize>) -> Range<usize> {
-        let range_min_inclusive = match r.start_bound() {
-            Bound::Included(v) => *v,
-            Bound::Excluded(v) => *v + 1,
-            Bound::Unbounded => 0,
-        };
-        let range_max_exclusive = match r.end_bound() {
-            Bound::Included(v) => *v + 1,
-            Bound::Excluded(v) => *v,
-            Bound::Unbounded => self.len(),
-        };
-
-        let row_range = range_min_inclusive..range_max_exclusive;
+    fn to_bell_range(&self, range: impl RangeBounds<usize>) -> Range<usize> {
+        let row_range = utils::clamp_range(range, self.len());
         let bell_range =
             row_range.start * self.stage.num_bells()..row_range.end * self.stage.num_bells();
         bell_range

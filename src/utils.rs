@@ -1,4 +1,7 @@
-use std::cmp;
+use std::{
+    cmp,
+    ops::{Bound, Range, RangeBounds},
+};
 
 use crate::Bell;
 use itertools::Itertools;
@@ -14,6 +17,23 @@ pub fn run_len(iter: impl IntoIterator<Item = Bell>) -> usize {
         + 1
 }
 
+/// Converts any [`RangeBounds`] (i.e. `x..=y`, `..y`, `..`, etc.) into a concrete [`Range`], where
+/// unbounded min/max bounds are clamped to either `0` or `length`, respectively
+pub fn clamp_range(range: impl RangeBounds<usize>, length: usize) -> Range<usize> {
+    let range_min_inclusive = match range.start_bound() {
+        Bound::Included(v) => *v,
+        Bound::Excluded(v) => *v + 1,
+        Bound::Unbounded => 0,
+    };
+    let range_max_exclusive = match range.end_bound() {
+        Bound::Included(v) => *v + 1,
+        Bound::Excluded(v) => *v,
+        Bound::Unbounded => length,
+    };
+
+    range_min_inclusive..range_max_exclusive
+}
+
 /// Split a [`Vec`] into two segments at a given `index`
 pub fn split_vec<T>(vec: Vec<T>, index: usize) -> Option<(Vec<T>, Vec<T>)> {
     if index > vec.len() {
@@ -22,7 +42,7 @@ pub fn split_vec<T>(vec: Vec<T>, index: usize) -> Option<(Vec<T>, Vec<T>)> {
     // We re-use the allocation of `vec` as the first return value, so drain the remaining elements
     // into another `Vec` to create `other`
     let mut left_vec = vec;
-    let right_vec = left_vec.drain(index..).collect_vec();
+    let right_vec = left_vec.split_off(index);
     Some((left_vec, right_vec))
 }
 
