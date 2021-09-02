@@ -11,8 +11,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    row::same_stage_vec, utils::split_vec, Bell, IncompatibleStages, Row, RowBuf, SameStageVec,
-    Stage,
+    row::same_stage_vec, utils, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage,
 };
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -297,19 +296,42 @@ impl<A> AnnotBlock<A> {
 
     /// Extends `self` with the contents of another [`AnnotBlock`], **pre-multiplying** its [`Row`]s so
     /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
-    pub fn extend(&mut self, other: Self) -> Result<(), IncompatibleStages> {
+    pub fn extend(&mut self, other: &Self) -> Result<(), IncompatibleStages>
+    where
+        A: Clone,
+    {
+        self.extend_range(other, ..)
+    }
+
+    /// Extends `self` with a region of another [`AnnotBlock`], **pre-multiplying** its [`Row`]s so
+    /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `range` explicitly states a bound outside `other.len()`
+    pub fn extend_range(
+        &mut self,
+        other: &Self,
+        range: impl RangeBounds<usize>,
+    ) -> Result<(), IncompatibleStages>
+    where
+        A: Clone,
+    {
+        let range = utils::clamp_range(range, other.len());
+
         // `transposition` pre-multiplies `other`'s first row to `self`'s leftover row
-        let transposition = Row::solve_xa_equals_b(other.first_row(), self.leftover_row())?;
+        let transposition =
+            Row::solve_xa_equals_b(other.get_row(range.start).unwrap(), self.leftover_row())?;
 
         // Add the transposed rows to `self`
         self.rows.pop(); // If we don't remove the leftover row, then it will get added twice
         self.rows
-            .extend_transposed(&transposition, &other.rows)
+            .extend_range_transposed(&transposition, &other.rows, range.start..range.end + 1)
             .unwrap(); // If the stages don't match between `self` and `other`, then the `?` in the
                        // first statement would prevent this code from being executed
 
         // Add the annotations to `self`
-        self.annots.extend(other.annots);
+        self.annots.extend(other.annots.iter().cloned());
 
         Ok(())
     }
@@ -399,7 +421,7 @@ impl<A> AnnotBlock<A> {
     /// defined such the first `AnnotBlock` has length `index`.  This returns `None` if the second
     /// `AnnotBlock` would have negative length.
     pub fn split(self, index: usize) -> Option<(Self, Self)> {
-        let (first_annots, second_annots) = split_vec(self.annots, index)?;
+        let (first_annots, second_annots) = utils::split_vec(self.annots, index)?;
         let (mut first_rows, second_rows) = self.rows.split(index)?;
         // Copy the first row of `second_rows` back into `first_rows` so it becomes the leftover
         // row of the first block
