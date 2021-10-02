@@ -1,5 +1,5 @@
 [workspace]
-members = [ "cli", "monument" ]
+members = ["cli", "monument"]
 
 [profile.dev]
 opt-level = 2

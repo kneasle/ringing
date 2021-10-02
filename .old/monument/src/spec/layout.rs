@@ -305,10 +305,10 @@ impl RowIdx {
 pub struct NodeId {
     pub course_head: RowBuf,
     pub row_idx: RowIdx,
-    /// Start nodes have to be treated separately in the case where the rounds can appear as the
-    /// first [`Row`] of a segment.  In this case, the start segment is full-length whereas any
-    /// non-start segments become 0-length end segments (because the composition comes round
-    /// instantly).
+    // Start nodes have to be treated separately in the case where the rounds can appear as the
+    // first [`Row`] of a segment.  In this case, the start segment is full-length whereas any
+    // non-start segments become 0-length end segments (because the composition comes round
+    // instantly).
     pub is_start: bool,
 }
 
