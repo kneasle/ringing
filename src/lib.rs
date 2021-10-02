@@ -3,6 +3,7 @@
 mod bell;
 pub mod block;
 pub mod call;
+mod mask;
 pub mod method;
 pub mod method_lib;
 pub mod music;
@@ -16,6 +17,7 @@ mod utils;
 pub use bell::Bell;
 pub use block::{AnnotBlock, AnnotRow, Block};
 pub use call::Call;
+pub use mask::Mask;
 pub use method::Method;
 pub use method_lib::MethodLib;
 pub use parity::Parity;
