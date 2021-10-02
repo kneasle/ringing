@@ -3,6 +3,7 @@ use std::{
     convert::TryFrom,
     fmt::{Debug, Display, Formatter},
     ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
 use itertools::Itertools;
@@ -482,6 +483,17 @@ impl Display for RowBuf {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Delegate to `Row`'s implementation
         Display::fmt(self.deref(), f)
+    }
+}
+
+/* OTHER TRAITS */
+
+impl FromStr for RowBuf {
+    type Err = InvalidRowError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
