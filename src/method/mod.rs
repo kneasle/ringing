@@ -123,13 +123,16 @@ impl Method {
     }
 
     /// Returns an [`AnnotBlock`] representing the plain course of this method
-    pub fn plain_course(&self) -> AnnotBlock<(usize, Option<&str>)> {
+    pub fn plain_course(&self) -> AnnotBlock<RowAnnot> {
         // Create a copy of `self.first_lead` where each row is also annotated by its index within
         // this lead
         let first_lead_with_indices = self
             .first_lead
             // We use `as_deref` to convert `&Option<String>` to `Option<&str>`
-            .clone_map_annots_with_index(|i, label| (i, label.as_deref()));
+            .clone_map_annots_with_index(|i, label| RowAnnot {
+                sub_lead_idx: i,
+                label: label.as_deref(),
+            });
 
         // Start with the first lead, and repeatedly add leads until we get back to rounds
         let mut plain_course = first_lead_with_indices;
@@ -184,4 +187,21 @@ pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
     s.push_str(stage.name().expect("Stage was too big to generate a name"));
 
     s
+}
+
+/// The source of a [`Row`] within a [`Method`]
+#[derive(Debug, Clone)]
+pub struct RowAnnot<'meth> {
+    sub_lead_idx: usize,
+    label: Option<&'meth str>,
+}
+
+impl<'meth> RowAnnot<'meth> {
+    pub fn sub_lead_idx(&self) -> usize {
+        self.sub_lead_idx
+    }
+
+    pub fn label(&self) -> Option<&'meth str> {
+        self.label
+    }
 }
