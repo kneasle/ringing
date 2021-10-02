@@ -2,6 +2,8 @@ use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
     ops::{Index, Mul, Not},
+    rc::Rc,
+    sync::Arc,
 };
 
 use itertools::Itertools;
@@ -535,6 +537,28 @@ impl Row {
     pub fn copy_into(&self, other: &mut RowBuf) {
         other.bell_vec.clear();
         other.bell_vec.extend_from_slice(&self.bell_slice);
+    }
+
+    /// Creates an `Rc<Row>` containing the same [`Bell`]s as `self`
+    #[inline]
+    pub fn to_rc(&self) -> Rc<Row> {
+        let rc_of_bells: Rc<[Bell]> = self.bell_slice.to_vec().into();
+        let ptr_to_bells = Rc::into_raw(rc_of_bells);
+        // Ptr cast is OK because `Row` and `[Bell]` have identical memory layouts
+        let ptr_to_row = ptr_to_bells as *const Row;
+        // Unsafety is OK because `ptr_to_row` came (indirectly) from `Rc::into_raw`
+        unsafe { Rc::from_raw(ptr_to_row) }
+    }
+
+    /// Creates an `Rc<Row>` containing the same [`Bell`]s as `self`
+    #[inline]
+    pub fn to_arc(&self) -> Arc<Row> {
+        let arc_of_bells: Arc<[Bell]> = self.bell_slice.to_vec().into();
+        let ptr_to_bells = Arc::into_raw(arc_of_bells);
+        // Ptr cast is OK because `Row` and `[Bell]` have identical memory layouts
+        let ptr_to_row = ptr_to_bells as *const Row;
+        // Unsafety is OK because `ptr_to_row` came (indirectly) from `Arc::into_raw`
+        unsafe { Arc::from_raw(ptr_to_row) }
     }
 
     /// Generate all the `Row`s formed by repeatedly permuting a given `Row`.  The first item
