@@ -15,14 +15,15 @@ use crate::Block;
 pub enum ParseError {
     PlaceOutOfStage { place: usize, stage: Stage },
     AmbiguousPlacesBetween { p: usize, q: usize },
-    OddStageCross { stage: Stage },
+    DuplicatePlace(usize),
+    OddStageCross(Stage),
     NoPlacesGiven,
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::OddStageCross { stage } => {
+            ParseError::OddStageCross(stage) => {
                 write!(f, "Cross notation for odd stage {}", stage)
             }
             ParseError::PlaceOutOfStage { place, stage } => {
@@ -42,6 +43,9 @@ impl Display for ParseError {
             ),
             ParseError::NoPlacesGiven => {
                 write!(f, "No places given.  Use 'x' or '-' for a cross.")
+            }
+            ParseError::DuplicatePlace(p) => {
+                write!(f, "Place '{}' is duplicated", Bell::from_index(*p))
             }
         }
     }
@@ -104,7 +108,7 @@ impl PlaceNot {
     pub fn parse(s: &str, stage: Stage) -> Result<Self, ParseError> {
         // If the string is any one of the cross strings, then return CROSS
         if s.len() == 1 && s.chars().next().map(CharMeaning::from) == Some(CharMeaning::Cross) {
-            return Self::cross(stage).ok_or(ParseError::OddStageCross { stage });
+            return Self::cross(stage).ok_or(ParseError::OddStageCross(stage));
         }
         // Parse the string into bell indices, ignoring any invalid characters
         let mut parsed_places: Vec<usize> = s
@@ -153,7 +157,9 @@ impl PlaceNot {
             places.push(p);
             // Check if there is an implicit place made between these, or if the place notation is
             // ambiguous
-            let num_intermediate_places = q - p - 1;
+            let num_intermediate_places = (q - p)
+                .checked_sub(1) // If p == q, then `p - q == 0` and this subtraction will underflow ...
+                .ok_or(ParseError::DuplicatePlace(p))?; // ... so report the duplicate places
             if num_intermediate_places == 1 {
                 places.push(p + 1);
             } else if num_intermediate_places % 2 == 1 {
@@ -549,7 +555,7 @@ impl PnBlock {
             if m == CharMeaning::Cross {
                 buf.push(
                     PlaceNot::cross(stage)
-                        .ok_or(ParseError::OddStageCross { stage })
+                        .ok_or(ParseError::OddStageCross(stage))
                         .map_err(|e| PnBlockParseError::PnError(index..index + 1, e))?,
                 );
             }
@@ -749,7 +755,7 @@ mod tests {
             for cross_not in &["x", "X", "-"] {
                 assert_eq!(
                     PlaceNot::parse(*cross_not, stage),
-                    Err(ParseError::OddStageCross { stage })
+                    Err(ParseError::OddStageCross(stage))
                 );
             }
         }
