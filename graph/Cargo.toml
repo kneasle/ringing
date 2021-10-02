@@ -1,0 +1,9 @@
+[package]
+name = "monument"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bellframe.path = "../../bellframe/"
+itertools = "0.10"
+ordered-float = "2.8"
