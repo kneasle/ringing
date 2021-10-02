@@ -37,4 +37,5 @@ optional = true
 features = ["derive"]
 
 [dev-dependencies]
-proptest = "1.0"
+quickcheck = "1.0"
+quickcheck_macros = "1.0"

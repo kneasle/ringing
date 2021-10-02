@@ -500,6 +500,7 @@ impl FromStr for RowBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck_macros::quickcheck;
 
     #[test]
     fn row_ref_size() {
@@ -614,5 +615,17 @@ mod tests {
         check(&[
             "123456", "134256", "142356", "132456", "124356", "143256", "213456",
         ]);
+    }
+
+    #[quickcheck]
+    fn parse_doesnt_panic(v: String) -> bool {
+        let _ = v.parse::<RowBuf>();
+        true // the only way for this test to fail is if `RowBuf::parse` panics
+    }
+
+    #[quickcheck]
+    fn parse_with_stage_doesnt_panic(s: String, stage: Stage) -> bool {
+        let _ = RowBuf::parse_with_stage(&s, stage);
+        true // the only way for this test to fail is if `RowBuf::parse_with_stage` panics
     }
 }

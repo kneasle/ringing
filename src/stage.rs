@@ -455,3 +455,23 @@ impl<'de> Deserialize<'de> for Stage {
         deserializer.deserialize_u64(StageVisitor)
     }
 }
+
+//////////////////
+// TESTING CODE //
+//////////////////
+
+#[cfg(test)]
+use quickcheck::{Arbitrary, Gen};
+
+#[cfg(test)]
+impl Arbitrary for Stage {
+    fn arbitrary(gen: &mut Gen) -> Self {
+        let num_bells = u8::arbitrary(gen);
+        // Convert all zero-size `Stage`s to `Stage::ONE`.  This means that `Stage::arbitrary` is
+        // not uniform (since `Stage::ONE` will be generated twice as much as any other value) but
+        // I think this is fine - the point here is not to be fair, but rather to generate useful
+        // test cases.
+        let num_bells = num_bells.max(1);
+        Self::new(num_bells as usize)
+    }
+}
