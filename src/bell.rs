@@ -11,7 +11,8 @@ use serde_crate::{
 use crate::Stage;
 
 /// A lookup string of the bell names
-// - E, T stand for 11 and 12 and therefore feel out of place
+// Letters missing from the alphabet sequence
+// - E, T stand for 11 and 12
 // - I could be confused with 1
 // - O could be confused with 0 and Q
 // - X is not a valid bell name to avoid confusion with 'x' as place notation
