@@ -533,6 +533,16 @@ impl Row {
 
     /* MISC FUNCTIONS */
 
+    /// Returns an [`Iterator`] over the [`Bell`]s in this `Row` which are fixed in their home
+    /// positions (i.e. they're fixed by the transposition represented by this row).
+    pub fn fixed_bells(&self) -> impl Iterator<Item = Bell> + '_ {
+        self.bell_slice
+            .iter()
+            .enumerate()
+            .filter(|&(idx, bell)| idx == bell.index())
+            .map(|(_idx, bell)| *bell)
+    }
+
     /// Copies the bells of `self` into `other`
     #[inline]
     pub fn copy_into(&self, other: &mut RowBuf) {
