@@ -147,6 +147,11 @@ impl Method {
         *self.first_lead.get_annot_mut(index).unwrap() = label;
     }
 
+    /// Same as `self.set_label(0, Some(LABEL_LEAD_END.to_owned()))`
+    pub fn set_lead_end_label(&mut self) {
+        self.set_label(0, Some(LABEL_LEAD_END.to_owned()))
+    }
+
     /// Returns the label at a given index, panicking if the index is out of range
     pub fn get_label(&self, index: usize) -> Option<&str> {
         self.first_lead

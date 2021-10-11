@@ -77,7 +77,7 @@ impl<A> AnnotBlock<A> {
 
     /// Parse a multi-line [`str`]ing into an `AnnotBlock`, where each row is given the annotation
     /// created by `A::default()`.  Each line in the string is interpreted as a [`Row`], with the
-    /// last row being 'left-over'.
+    /// last row being 'left-over'.  The [`Stage`] is inferred from the first line.
     pub fn parse(s: &str) -> Result<Self, ParseError>
     where
         A: Default,
@@ -487,7 +487,7 @@ type InnerIter<'b, A> =
 
 /// An [`Iterator`] which yields an [`AnnotBlock`] forever.  Created with
 /// [`AnnotBlock::repeat_iter`].
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RepeatIter<'b, A> {
     /// Invariant: `self.current_block_head` must have the same [`Stage`] as `self.block`
     current_block_head: RowBuf,
