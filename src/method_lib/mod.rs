@@ -23,11 +23,11 @@ impl MethodLib {
     /// and `None` otherwise.  The failure state for this function is not very useful - if you want
     /// to provide useful suggestions for your user, then consider using
     /// [`MethodLib::get_by_title_with_suggestions`].
-    pub fn get_by_title<'s>(&'s self, title: &str) -> QueryResult<'s, ()> {
+    pub fn get_by_title<'s>(&'s self, title: &str) -> Result<Method, QueryError<'s, ()>> {
         match self.get_by_title_option(&title.to_lowercase()) {
-            Some(Ok(method)) => QueryResult::Success(method),
-            Some(Err((pn, error))) => QueryResult::PnParseErr { pn, error },
-            None => QueryResult::NotFound(()),
+            Some(Ok(method)) => Ok(method),
+            Some(Err((pn, error))) => Err(QueryError::PnParseErr { pn, error }),
+            None => Err(QueryError::NotFound(())),
         }
     }
 
@@ -65,10 +65,11 @@ impl MethodLib {
         &'s self,
         title: &str,
         num_suggestions: usize,
-    ) -> QueryResult<Vec<(&'s str, usize)>> {
+    ) -> Result<Method, QueryError<Vec<(&'s str, usize)>>> {
         let lower_case_title = title.to_lowercase();
-        self.get_by_title(&lower_case_title)
-            .map_not_found(|()| self.generate_suggestions(&lower_case_title, num_suggestions))
+        self.get_by_title(&lower_case_title).map_err(|e| {
+            e.map_not_found(|()| self.generate_suggestions(&lower_case_title, num_suggestions))
+        })
     }
 
     /// Generate a list of method title suggestions based on the Levenstein edit from a given title
@@ -243,9 +244,7 @@ impl CompactMethod {
 }
 
 #[derive(Debug, Clone)]
-#[must_use]
-pub enum QueryResult<'lib, T> {
-    Success(Method),
+pub enum QueryError<'lib, T> {
     PnParseErr {
         pn: &'lib str,
         error: PnBlockParseError,
@@ -253,33 +252,21 @@ pub enum QueryResult<'lib, T> {
     NotFound(T),
 }
 
-impl<'lib, T> QueryResult<'lib, T> {
-    /// Converts a `QueryResult` directly into a [`Method`], panicking if `self` is anything other
-    /// than [`QueryResult::Success`]
-    pub fn unwrap(self) -> Method {
-        match self {
-            Self::Success(method) => method,
-            Self::PnParseErr { pn, error } => panic!("Error parsing {:?}: {}", pn, error),
-            Self::NotFound(_) => panic!("Unwrap called on a `QueryResult::NotFound`"),
-        }
-    }
-
+impl<'lib, T> QueryError<'lib, T> {
     /// Unwraps the `PnParseErr` part of a [`QueryResult`], expecting the Method's place notation
     /// to have parsed correctly and panicking if it didn't
     pub fn unwrap_parse_err(self) -> Result<Method, T> {
         match self {
-            Self::Success(method) => Ok(method),
             Self::PnParseErr { pn, error } => panic!("Error parsing {:?}: {}", pn, error),
             Self::NotFound(v) => Err(v),
         }
     }
 
     /// Passes the value contained in the `NotFound` part of `self` through an arbitrary function.
-    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> QueryResult<'lib, U> {
+    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> QueryError<'lib, U> {
         match self {
-            QueryResult::Success(method) => QueryResult::Success(method),
-            QueryResult::PnParseErr { pn, error } => QueryResult::PnParseErr { pn, error },
-            QueryResult::NotFound(v) => QueryResult::NotFound(f(v)),
+            QueryError::PnParseErr { pn, error } => QueryError::PnParseErr { pn, error },
+            QueryError::NotFound(v) => QueryError::NotFound(f(v)),
         }
     }
 }
