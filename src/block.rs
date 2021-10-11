@@ -4,7 +4,7 @@
 use std::{
     fmt::{Debug, Display, Formatter},
     iter::repeat_with,
-    ops::{Bound, RangeBounds},
+    ops::RangeBounds,
     slice,
 };
 
@@ -338,27 +338,28 @@ impl<A> AnnotBlock<A> {
     }
 
     /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
-    pub fn extend_from_within(&mut self, range: impl RangeBounds<usize> + Clone)
+    pub fn extend_from_within(&mut self, range: impl RangeBounds<usize> + Debug + Clone)
     where
-        A: Clone,
+        A: Clone + Debug,
     {
-        let range_start = match range.start_bound() {
-            Bound::Included(v) => *v,
-            Bound::Excluded(v) => *v + 1,
-            Bound::Unbounded => 0,
-        };
+        // Clamp open ranges to `0..self.len()`, so our code only has to handle concrete `Range`s
+        let range = utils::clamp_range(range, self.len());
 
-        // Remove the leftover row from the row buffer, so that the new rows can be inserted in its
-        // place
-        let leftover_row = self.rows.pop().unwrap(); // OK because `row_buffer` can't be empty
-        let first_row_of_chunk = self.get_row(range_start).unwrap();
-        // This unwrap is fine, because both rows were taken from the same `SameStageVec`
-        let transposition = Row::solve_xa_equals_b(first_row_of_chunk, &leftover_row).unwrap();
+        // Compute the pre-transposition required to make the chunk start at `self.leftover_row`
+        let first_row_of_chunk = self.get_row(range.start).unwrap();
+        // This unwrap is fine because stages must match because both rows were taken from the same
+        // `SameStageVec`
+        let transposition =
+            Row::solve_xa_equals_b(first_row_of_chunk, self.leftover_row()).unwrap();
 
+        // Extend the rows
         self.rows
-            .extend_transposed_from_within(range.clone(), &transposition) // Extend the rows
-            .unwrap(); // Unwrapping is fine because `transposition` comes from `self.row_buffer`
-        self.annots.extend_from_within(range); // Extend the annots
+            // The range is offset by 1 to exclude the current `leftover_row` of `self`, but
+            // include the new leftover row
+            .extend_transposed_from_within(range.start + 1..range.end + 1, &transposition)
+            .unwrap(); // Stages must match because `transposition` comes from `self.row_buffer`
+                       // Extend the annots
+        self.annots.extend_from_within(range);
     }
 
     ///////////////////////////////////
