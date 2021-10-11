@@ -246,6 +246,42 @@ impl Display for Bell {
     }
 }
 
+impl std::ops::Add<usize> for Bell {
+    type Output = Bell;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        Self {
+            index: self.index + rhs,
+        }
+    }
+}
+
+impl std::ops::AddAssign<usize> for Bell {
+    fn add_assign(&mut self, rhs: usize) {
+        self.index += rhs;
+    }
+}
+
+impl std::ops::Sub<usize> for Bell {
+    type Output = Bell;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self {
+            index: self.index - rhs,
+        }
+    }
+}
+
+impl std::ops::SubAssign<usize> for Bell {
+    fn sub_assign(&mut self, rhs: usize) {
+        self.index -= rhs;
+    }
+}
+
+///////////
+// SERDE //
+///////////
+
 #[cfg(feature = "serde")]
 struct BellVisitor;
 
