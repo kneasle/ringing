@@ -44,13 +44,43 @@ impl Mask {
         }
     }
 
+    /// Creates a `Mask` that matches any [`Row`] of a given [`Stage`] (i.e. a mask where no
+    /// [`Bell`] is fixed, written as `xxxx...`).
+    pub fn empty(stage: Stage) -> Self {
+        Self {
+            bells: std::iter::repeat(None)
+                .take(stage.num_bells())
+                .collect_vec(),
+        }
+    }
+
     /// Creates a `Mask` that fixes the given [`Bell`]s into their corresponding 'home' place.
     pub fn fix_bells(stage: Stage, fixed_bells: impl IntoIterator<Item = Bell>) -> Self {
-        let mut bells: Vec<Option<Bell>> = vec![None; stage.num_bells()];
+        let mut new_mask = Self::empty(stage);
         for b in fixed_bells {
-            bells[b.index()] = Some(b);
+            // Unsafety is OK because bells are only ever fixed to their own locations
+            unsafe { new_mask.fix_unchecked(b) };
         }
-        Self { bells }
+        new_mask
+    }
+
+    /// Modifies `self` so that a [`Bell`] is fixed in its home position.  Returns `Err(())` if
+    /// that [`Bell`] already appears in this `Mask`.
+    #[inline]
+    pub fn fix(&mut self, b: Bell) -> Result<(), ()> {
+        self.set_bell(b, b.index())
+    }
+
+    /// Modifies `self` so that a [`Bell`] is fixed in its home position, without checking if that
+    /// [`Bell`] is already fixed in a different location.
+    ///
+    /// # Safety
+    ///
+    /// This function is safe if `b` is not already fixed in `self`, or is already fixed to its
+    /// home position.
+    #[inline]
+    pub unsafe fn fix_unchecked(&mut self, b: Bell) {
+        self.set_bell_unchecked(b, b.index())
     }
 
     /// Returns an [`Iterator`] over the indices of locations where this `Mask` contains an `x`
@@ -100,8 +130,30 @@ impl Mask {
     }
 
     /// Updates this `Mask` so that a given [`Bell`] is required at a given place.
-    pub fn set_bell_at(&mut self, bell: Bell, place: usize) {
-        // TODO: Check that this operation preserves the validity of the mask
+    pub fn set_bell(&mut self, bell: Bell, place: usize) -> Result<(), ()> {
+        let existing_bell_place = self
+            .bells
+            .iter()
+            .position(|maybe_bell| maybe_bell == &Some(bell));
+        match existing_bell_place {
+            Some(p) if p == place => Ok(()), // Bell is already fixed, so nothing to do
+            Some(_) => Err(()), // Bell is fixed to a different place, adding it would fix it twice
+            None => {
+                // Unsafety is OK because this match arm only executes if the bell isn't fixed in
+                // `self`
+                unsafe { self.set_bell_unchecked(bell, place) };
+                Ok(())
+            }
+        }
+    }
+
+    /// Updates this `Mask` so that a given [`Bell`] is required at a given place.
+    ///
+    /// # Safety
+    ///
+    /// This function is safe if `b` is not already fixed in `self`, or is already fixed at the
+    /// given `place`.
+    pub unsafe fn set_bell_unchecked(&mut self, bell: Bell, place: usize) {
         self.bells[place] = Some(bell);
     }
 
