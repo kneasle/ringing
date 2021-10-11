@@ -1,11 +1,13 @@
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     ops::{Index, Range, RangeBounds},
 };
 
 use itertools::Itertools;
 
 use crate::{utils, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+
+use super::DbgRow;
 
 /// A heap-allocated buffer of [`Row`]s which are required to have the same [`Stage`].  Collecting
 /// [`Row`]s of the same [`Stage`] is nearly always what we want, and having a type to enforce this
@@ -37,7 +39,7 @@ use crate::{utils, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage
 /// // The 3rd row is backrounds
 /// assert!(new_buffer[2].is_backrounds());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct SameStageVec {
     /// A contiguous chunk of [`Bell`]s, containing all the [`Row`]s concatenated together.  For
     /// example, the start of a plain course of Cambridge Surprise Minor would be stored as
@@ -398,6 +400,16 @@ impl Index<usize> for SameStageVec {
         // This unsafety is fine, because we require that every stage-aligned chunk of bells forms
         // a valid row according to the Framework
         unsafe { Row::from_slice_unchecked(&self.bells[self.get_range_of_row(index)]) }
+    }
+}
+
+impl Debug for SameStageVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut formatter = f.debug_tuple("SameStageVec");
+        for row in self {
+            formatter.field(&DbgRow(row)); // Only display the bells
+        }
+        formatter.finish()
     }
 }
 

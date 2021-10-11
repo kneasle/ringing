@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
+    fmt::{Debug, Display, Formatter},
     ops::{Index, Mul, Not},
     rc::Rc,
     sync::Arc,
@@ -952,5 +953,35 @@ impl Mul for &Row {
         // This unsafety is OK because the product of two valid Rows of the same Stage is always
         // valid (because groups are closed under their binary operation).
         unsafe { self.mul_unchecked(rhs) }
+    }
+}
+
+////////////////
+// FORMATTING //
+////////////////
+
+impl Debug for Row {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Row({})", self)
+    }
+}
+
+impl Display for Row {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for b in self.bell_iter() {
+            write!(f, "{}", b)?;
+        }
+        Ok(())
+    }
+}
+
+/// A new-type over a [`Row`] which just displays the [`Bell`]s as its [`Debug`] implementation
+/// (i.e. the [`Debug`] impl of [`DbgRow`] is identical to the [`Display`] impl of [`Row`]).
+#[derive(Clone)]
+pub struct DbgRow<'r>(pub &'r Row);
+
+impl Debug for DbgRow<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

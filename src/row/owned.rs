@@ -458,21 +458,6 @@ impl ToOwned for Row {
 
 /* FORMATTING */
 
-impl Debug for Row {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Row({})", self)
-    }
-}
-
-impl Display for Row {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for b in self.bell_iter() {
-            write!(f, "{}", b)?;
-        }
-        Ok(())
-    }
-}
-
 impl Debug for RowBuf {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "RowBuf({})", self)

@@ -2,7 +2,7 @@
 //! starting [`Row`] and yields a sequence of permuted [`Row`]s.
 
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     iter::repeat_with,
     ops::{Bound, RangeBounds},
     slice,
@@ -11,7 +11,8 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    row::same_stage_vec, utils, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage,
+    row::{same_stage_vec, DbgRow},
+    utils, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage,
 };
 
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -57,7 +58,7 @@ pub type Block = AnnotBlock<()>;
 /// therefore cannot be annotated.  However, it is necessary - for example, if we create a `Block`
 /// for the first lead of Cambridge and Primrose Surprise Minor then they would be identical except
 /// for their 'left-over' row.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct AnnotBlock<A> {
     /// The [`Row`]s making up this `Block`.
     ///
@@ -440,6 +441,39 @@ impl<A> AnnotBlock<A> {
             annots: second_annots,
         };
         Some((first_block, second_block))
+    }
+}
+
+////////////////
+// FORMATTING //
+////////////////
+
+impl<T> Debug for AnnotBlock<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        /// Struct which debug prints as `K: V`
+        struct Pair<K, V>(K, V);
+
+        impl<K, V> Debug for Pair<K, V>
+        where
+            K: Debug,
+            V: Debug,
+        {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{:?}: {:?}", self.0, self.1)
+            }
+        }
+
+        let mut builder = f.debug_tuple(stringify!(AnnotBlock));
+        for annot_row in self.annot_rows() {
+            // Format all annotated rows as `row: annot`
+            builder.field(&Pair(DbgRow(annot_row.row()), annot_row.annot()));
+        }
+        // Format the leftover row as `row` (since it has no annotation)
+        builder.field(&DbgRow(self.leftover_row()));
+        builder.finish()
     }
 }
 
