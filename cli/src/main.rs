@@ -1,35 +1,27 @@
-use bellframe::{Bell, Mask, Method, MethodLib};
-use monument_graph::{
-    layout::{self, Call, Layout},
-    music::MusicType,
-    Graph,
-};
+use args::CliArgs;
+use log::LevelFilter;
+use spec::Spec;
+use structopt::StructOpt;
+
+mod args;
+mod spec;
+mod test_data;
 
 fn main() {
-    let cc_lib = MethodLib::cc_lib().expect("Couldn't load CC lib");
-    let mut bristol = cc_lib
-        .get_by_title("Bristol Surprise Major")
-        .expect("CC lib doesn't contain Bristol");
-    bristol.set_lead_end_label();
-    let stage = bristol.stage();
+    // Parse CLI args
+    let args = CliArgs::from_args();
+    let log_level = args.log_level();
 
-    let calls = Call::near_calls(stage).unwrap();
-    let runs = MusicType::all_4_bell_runs(stage, 1.0).unwrap();
+    // Generate & debug print the TOML file specifying the search
+    let mut spec = Spec::read_from_file(&args.input_file).unwrap();
+    // Remove the test data to stop it clogging up the terminal
+    spec.test_data = None;
+    if log_level >= LevelFilter::Debug {
+        println!("{:#?}", spec);
+    }
 
-    let layout = tenors_together_layout(bristol, &calls).expect("Couldn't build layout");
+    // Convert the `Spec` into a `Graph` and other data required for running a search
+    let (layout, music_types, len_range) = spec.lower().unwrap();
 
-    dbg!(&layout);
-
-    let graph = Graph::from_layout(&layout, &[runs], 1280);
-
-    println!("Hello World!");
-}
-
-fn tenors_together_layout(
-    method: Method,
-    calls: &[Call],
-) -> Result<Layout, layout::single_method::Error> {
-    let tenor = Bell::tenor(method.stage());
-    let tt_course_head = Mask::fix_bells(method.stage(), [tenor, tenor - 1].iter().cloned());
-    Layout::single_method(&method, calls, vec![(tt_course_head, tenor)], None, None)
+    dbg!(layout);
 }
