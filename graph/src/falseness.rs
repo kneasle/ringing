@@ -14,17 +14,18 @@ use crate::layout::{Layout, NodeId, RowIdx, RowRange};
 /// of the structure of the node graph: namely that the nodes will all come from a limited set of
 /// row ranges, and within each pair of ranges the falseness can simply be determined by testing
 /// the (pre-)transposition between the two course heads.  This is very similar to False Course
-/// Heads: two courses of a given method are false if and only if the transposition between two
-/// full courses is contained in the False Course Head groups for that method.  This gives the
-/// outer type of the `grouped_falseness` field: `HashMap<(RowRange, RowRange), _>` stores
+/// Heads: two courses of a given method are false if and only if the (pre-)transposition between
+/// their course heads is contained in the False Course Head groups for that method.  This gives
+/// the outer type of the `grouped_falseness` field: `HashMap<(RowRange, RowRange), _>` stores
 /// individual FCH tables for each pair of [`RowRange`]s (i.e. node groups).
 ///
 /// However, we can reduce the size of the resulting table by only computing the falseness for
 /// known course head masks.  For example, if the composition will only be tenors-together with a
-/// fixed treble, then the course heads must all fix 1, 7 and 8 so any falseness transpositions
-/// which don't fix these bells can be discarded.  This is why the falseness tables are of the form
-/// `Vec<Mask, Mask, HashSet<RowBuf>>` instead of simply `HashSet<RowBuf>` (the [`Mask`]s are
-/// matching the course heads for each of the nodes being queried.
+/// fixed treble, then we can discard any FCHs which aren't of the form `1xxxxx789...`.  This isn't
+/// quite so simple for our case, since the user can specify arbitrary sets of CH masks.  However,
+/// for each pair of CH masks, this trick is possible.  Thus, for each pair of row ranges we split
+/// the FCHs by the corresponding CH masks, giving a type signature of
+/// `Vec<Mask, Mask, HashSet<RowBuf>>` instead of simply `HashSet<RowBuf>`.
 #[derive(Debug, Clone)]
 pub(crate) struct FalsenessTable {
     grouped_falseness: HashMap<(RowRange, RowRange), Vec<(Mask, Mask, HashSet<RowBuf>)>>,
@@ -114,8 +115,8 @@ impl FalsenessTable {
             }
         }
 
-        // Group this falseness table by the ranges, then the masks, then finally group the rows
-        // into a HashSet.  This has the effect of further subdividing the false course heads
+        // Group this falseness table by the ranges, then the masks, then finally the HashSet of
+        // FCHs.  This has the effect of further subdividing the false course heads
         let mut grouped_falseness: HashMap<
             (RowRange, RowRange),
             HashMap<(&Mask, &Mask), HashSet<RowBuf>>,
@@ -129,6 +130,7 @@ impl FalsenessTable {
                 .insert(false_course_head);
         }
 
+        // Convert the inner `HashMap` to a `Vec` and take ownership of the `Mask`s before returning
         let grouped_falseness: HashMap<(RowRange, RowRange), Vec<(Mask, Mask, HashSet<RowBuf>)>> =
             grouped_falseness
                 .into_iter()

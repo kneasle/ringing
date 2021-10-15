@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+monument_utils.path = "../utils/"
 bellframe.path = "../../bellframe/"
 itertools = "0.10"
 ordered-float = "2.8"
+index_vec = "0.1"

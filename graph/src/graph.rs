@@ -1,15 +1,16 @@
 //! A mutable graph of nodes.  Compositions are represented as paths through this node graph.
 
 use std::{
-    cmp::{Ordering, Reverse},
+    cmp::Reverse,
     collections::{BinaryHeap, HashMap},
 };
 
 use itertools::Itertools;
+use monument_utils::Frontier;
 
 use crate::{
     falseness::FalsenessTable,
-    layout::{Layout, NodeId, Segment},
+    layout::{Layout, LinkIdx, NodeId, Segment},
     music::{Breakdown, MusicType},
 };
 
@@ -25,8 +26,61 @@ pub struct Graph {
     // that isn't actually in the graph - in this case they will be ignored or discarded during the
     // optimisation process).
     nodes: HashMap<NodeId, Node>,
+    /// **Invariant**: If `start_nodes` points to a node, it **must** be a start node (i.e. not
+    /// have any predecessors, and have `start_label` set)
     start_nodes: Vec<NodeId>,
+    /// **Invariant**: If `start_nodes` points to a node, it **must** be a end node (i.e. not have
+    /// any successors, and have `end_nodes` set)
     end_nodes: Vec<NodeId>,
+}
+
+impl Graph {
+    // Getters
+
+    pub fn get_node<'graph>(&'graph self, id: &NodeId) -> Option<&'graph Node> {
+        self.nodes.get(id)
+    }
+
+    pub fn get_node_mut<'graph>(&'graph mut self, id: &NodeId) -> Option<&'graph mut Node> {
+        self.nodes.get_mut(id)
+    }
+
+    pub fn start_nodes(&self) -> &[NodeId] {
+        &self.start_nodes
+    }
+
+    pub fn end_nodes(&self) -> &[NodeId] {
+        &self.end_nodes
+    }
+
+    // Iterators
+
+    /// An [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
+    pub fn ids(&self) -> impl Iterator<Item = &NodeId> {
+        self.nodes.keys()
+    }
+
+    /// An [`Iterator`] over every [`Node`] in this `Graph` (including its [`NodeId`])
+    pub fn nodes(&self) -> impl Iterator<Item = (&NodeId, &Node)> {
+        self.nodes.iter()
+    }
+
+    /// A mutable [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = (&NodeId, &mut Node)> {
+        self.nodes.iter_mut()
+    }
+
+    // Modifiers
+
+    /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
+    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.start_nodes.retain(pred);
+    }
+
+    /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
+    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.end_nodes.retain(pred);
+    }
 }
 
 /// A `Node` in a node [`Graph`].  This is an indivisible chunk of ringing which cannot be split up
@@ -57,32 +111,41 @@ pub struct Node {
     /// been computed yet).
     lb_distance_to_rounds: Option<Distance>,
 
-    /// The `usize` here denotes which link in the [`Layout`] has generated this succession.  This
-    /// is required so that a human-friendly representation of the composition can be generated.
-    successors: Vec<(usize, NodeId)>,
-    /// Which nodes can directly lead into this one.  The `predecessors` graph is the inverse of
-    /// the `successors` graph.
-    predecessors: Vec<NodeId>,
+    successors: Vec<(LinkIdx, NodeId)>,
+    predecessors: Vec<(LinkIdx, NodeId)>,
 }
 
-/// An orderable type for storing nodes on Dijkstra's Algorithm's frontier.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-struct FrontierNode {
-    node_id: NodeId,
-    distance: usize,
-}
+impl Node {
+    // Getters
 
-impl PartialOrd for FrontierNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+    pub fn successors(&self) -> &[(LinkIdx, NodeId)] {
+        self.successors.as_slice()
+    }
+
+    pub fn successors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {
+        &mut self.successors
+    }
+
+    pub fn predecessors(&self) -> &[(LinkIdx, NodeId)] {
+        self.predecessors.as_slice()
+    }
+
+    pub fn predecessors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {
+        &mut self.predecessors
+    }
+
+    pub fn false_nodes(&self) -> &[NodeId] {
+        self.false_nodes.as_slice()
+    }
+
+    pub fn false_nodes_mut(&mut self) -> &mut Vec<NodeId> {
+        &mut self.false_nodes
     }
 }
 
-impl Ord for FrontierNode {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.distance.cmp(&other.distance)
-    }
-}
+////////////////////////////
+// CONVERSION FROM LAYOUT //
+////////////////////////////
 
 impl Graph {
     /// Generate a graph of all nodes which are reachable within a given length constraint.
@@ -95,7 +158,7 @@ impl Graph {
 
         // Unexplored nodes, ordered by distance from rounds (i.e. the minimum number of rows required
         // to reach them from rounds)
-        let mut frontier: BinaryHeap<Reverse<FrontierNode>> = BinaryHeap::new();
+        let mut frontier: BinaryHeap<Reverse<Frontier<NodeId>>> = BinaryHeap::new();
 
         /* Run Dijkstra's algorithm using comp length as edge weights */
 
@@ -109,15 +172,19 @@ impl Graph {
             start_node_ids
                 .iter()
                 .cloned()
-                .map(|node_id| FrontierNode {
-                    node_id,
+                .map(|node_id| Frontier {
+                    item: node_id,
                     distance: 0,
                 })
                 .map(Reverse),
         );
 
         // Consume nodes from the frontier until the frontier is empty
-        while let Some(Reverse(FrontierNode { node_id, distance })) = frontier.pop() {
+        while let Some(Reverse(Frontier {
+            item: node_id,
+            distance,
+        })) = frontier.pop()
+        {
             // Don't expand nodes multiple times (Dijkstra's algorithm makes sure that the first time
             // it is expanded will be have the shortest distance)
             if expanded_nodes.get(&node_id).is_some() {
@@ -140,8 +207,8 @@ impl Graph {
             // Expand the node by adding its successors to the frontier
             for (_link_idx, id_after_link) in &segment.links {
                 // Add the new node to the frontier
-                frontier.push(Reverse(FrontierNode {
-                    node_id: id_after_link.to_owned(),
+                frontier.push(Reverse(Frontier {
+                    item: id_after_link.to_owned(),
                     distance: new_dist,
                 }));
             }
@@ -201,9 +268,9 @@ impl Graph {
 
         // Add predecessor references
         for (id, _dist) in expanded_nodes {
-            for (_, succ_id) in nodes.get(&id).unwrap().successors.clone() {
+            for (link_idx, succ_id) in nodes.get(&id).unwrap().successors.clone() {
                 if let Some(node) = nodes.get_mut(&succ_id) {
-                    node.predecessors.push(id.clone());
+                    node.predecessors.push((link_idx, id.clone()));
                 }
             }
         }

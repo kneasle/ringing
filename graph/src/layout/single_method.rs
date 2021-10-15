@@ -42,7 +42,7 @@ pub(super) fn single_method_layout(
     check_for_ambiguous_courses(&ch_masks, &lead_heads)?;
 
     // The possible ways that courses can be stitched together
-    let links = generate_links(&plain_course, &ch_masks, calls)?;
+    let links = generate_links(&plain_course, &ch_masks, calls)?.into();
 
     // Places where the composition can start
     let starts = rounds_locations(&ch_masks, &plain_course, allowed_start_indices, "<");
