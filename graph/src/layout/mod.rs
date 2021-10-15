@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{Bell, Block, Mask, Method, PlaceNot, Row, RowBuf};
+use bellframe::{Bell, Block, Mask, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::{music::MusicType, Graph};
@@ -55,7 +55,6 @@ impl Layout {
         allowed_start_indices: Option<&[usize]>,
         allowed_end_indices: Option<&[usize]>,
     ) -> Result<Self, single_method::Error> {
-        // Delegate to the `single_method` module
         single_method::single_method_layout(
             method,
             calls,
@@ -424,7 +423,8 @@ impl CourseHeadMask {
             mask.unspecified_places()
                 .map(|pl| {
                     let mut new_mask = mask.to_owned();
-                    new_mask.set_bell_at(calling_bell, pl);
+                    // Unwrap is safe because the calling bell can't already be in the mask
+                    new_mask.set_bell(calling_bell, pl).unwrap();
                     Self {
                         mask: new_mask,
                         calling_bell,
@@ -473,6 +473,37 @@ impl Call {
                 .unwrap_or_else(|| default_calling_positions(&place_not)),
             place_not,
         }
+    }
+
+    ////////////////////////
+    // DEFAULT CALL TYPES //
+    ////////////////////////
+
+    /// Generates `14` bob and `1234` single, both at the lead end (i.e. label `"LE"`).  Returns
+    /// `None` for any [`Stage`] smaller than [`Stage::MINIMUS`].
+    pub fn near_calls(stage: Stage) -> Option<Vec<Self>> {
+        let bob = Self::lead_end_bob(PlaceNot::parse("14", stage).ok()?);
+        let single = Self::lead_end_bob(PlaceNot::parse("1234", stage).ok()?);
+        Some(vec![bob, single])
+    }
+
+    /// Generates `1(n-2)` bob and `1(n-2)(n-1)n` single, both at the lead end (i.e. label `"LE"`).
+    /// Returns `None` for any [`Stage`] smaller than [`Stage::MINIMUS`].
+    pub fn far_calls(stage: Stage) -> Option<Vec<Self>> {
+        if stage < Stage::MINIMUS {
+            return None;
+        }
+
+        let n = stage.num_bells();
+        // Unsafety and unwrapping is OK because, in both cases, the places are sorted and within
+        // the stage (because we early return when `n < 4`).
+        let bob_notation = unsafe { PlaceNot::from_sorted_slice(&[1, n - 2], stage).unwrap() };
+        let single_notation =
+            unsafe { PlaceNot::from_sorted_slice(&[1, n - 2, n - 1, n], stage).unwrap() };
+
+        let bob = Self::lead_end_bob(bob_notation);
+        let single = Self::lead_end_bob(single_notation);
+        Some(vec![bob, single])
     }
 
     /// Create a bob which replaces the lead end with a given [`PlaceNot`]
