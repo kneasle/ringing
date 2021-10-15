@@ -966,6 +966,15 @@ impl Mul for &Row {
     }
 }
 
+impl<'row> IntoIterator for &'row Row {
+    type Item = Bell;
+    type IntoIter = BellIter<'row>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.bell_iter()
+    }
+}
+
 ////////////////
 // FORMATTING //
 ////////////////

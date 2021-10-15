@@ -1,7 +1,7 @@
 mod accumulator;
-mod borrowed;
+mod borrowed; // Contains `Row`
 mod errors;
-mod owned;
+mod owned; // Contains `RowBuf`
 pub mod same_stage_vec;
 
 pub use accumulator::RowAccumulator;

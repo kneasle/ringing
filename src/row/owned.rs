@@ -14,7 +14,7 @@ use crate::{Bell, InvalidRowError, Stage};
 #[allow(unused_imports)]
 use crate::Block;
 
-use super::borrowed::Row;
+use super::{borrowed::Row, BellIter};
 
 /// An owned row.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -472,6 +472,15 @@ impl Display for RowBuf {
 }
 
 /* OTHER TRAITS */
+
+impl<'row> IntoIterator for &'row RowBuf {
+    type Item = Bell;
+    type IntoIter = BellIter<'row>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.bell_iter()
+    }
+}
 
 impl FromStr for RowBuf {
     type Err = InvalidRowError;
