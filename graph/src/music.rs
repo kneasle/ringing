@@ -21,6 +21,17 @@ impl MusicType {
         }
     }
 
+    /// Returns a `MusicType` for all 4-bell runs on a given [`Stage`] off the front or back.
+    /// Returns `None` if the [`Stage`] is smaller than [`Stage::MINIMUS`] (in which case no 4-bell
+    /// runs are possible).
+    pub fn all_4_bell_runs(stage: Stage, weight: f32) -> Option<Self> {
+        (stage >= Stage::MINIMUS).then(|| {
+            let regexes = Regex::runs_front_or_back(stage, 4);
+            let weight = OrderedFloat(weight);
+            Self { regexes, weight }
+        })
+    }
+
     /// Compute the score of a sequence of [`Row`]s
     pub fn score<'r>(&self, rows: impl IntoIterator<Item = &'r Row>) -> Score {
         let mut num_matches = 0usize;
@@ -122,4 +133,3 @@ impl AddAssign<&Breakdown> for Breakdown {
         }
     }
 }
-
