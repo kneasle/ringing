@@ -1,2 +1,2 @@
 [workspace]
-members = ["graph"]
+members = ["graph", "cli"]

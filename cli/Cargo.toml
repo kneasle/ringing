@@ -1,9 +1,8 @@
 [package]
-name = "monument_graph"
+name = "monument_cli"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
 bellframe.path = "../../bellframe/"
-itertools = "0.10"
-ordered-float = "2.8"
+monument_graph.path = "../graph/"
