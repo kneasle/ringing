@@ -1,4 +1,7 @@
-use std::{collections::HashMap, ops::Mul};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Mul,
+};
 
 use bellframe::{method, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage};
 use itertools::Itertools;
@@ -22,12 +25,12 @@ pub(super) fn single_method_layout(
     let plain_course = method.plain_course();
     let lead_heads = method.lead_head().closure_from_rounds();
 
-    // TODO: Detect fixed bells (e.g. treble) and add them to all the course heads.  This will
-    // prevent Monument from generating an unnecessary amount of falseness data which will have
-    // to be optimised out of the node graph.
-
     /* PRE-PROCESS COURSE HEAD MASKS */
 
+    // Add fixed bells (e.g. the treble) to the CH masks.  Skipping this would preserve the
+    // correctness of the graph but makes the falseness detection consume a completely unnecessary
+    // amount of time and memory.
+    let ch_masks = add_fixed_bells(ch_masks, method, calls);
     // Convert the (Mask, Bell) pairs into `CourseHeadMask`s
     let ch_masks = ch_masks
         .into_iter()
@@ -86,6 +89,74 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// 0.  If we extend this to handle multiple methods, then this would have to be calculated.
 const BLOCK_IDX: usize = 0;
 
+/// Detect fixed bells (a place bell which is preserved by all methods' calls and plain leads) and
+/// fix it in all the course heads
+fn add_fixed_bells(
+    ch_masks: Vec<(Mask, Bell)>,
+    method: &Method,
+    calls: &[super::Call],
+) -> Vec<(Mask, Bell)> {
+    let fixed_bells = fixed_bells(method, calls);
+
+    let mut fixed_ch_masks = Vec::with_capacity(ch_masks.len());
+    'mask_loop: for (mut mask, calling_bell) in ch_masks {
+        // Attempt to add the fixed bells to this mask
+        for &b in &fixed_bells {
+            if let Err(()) = mask.fix(b) {
+                // If a bell is known to be fixed in its home position but a mask requires it to be
+                // outside of its home position, then that mask will never be satisfied and can be
+                // removed
+                continue 'mask_loop;
+            }
+        }
+        // If all fixed bells could be set, then keep this mask
+        fixed_ch_masks.push((mask, calling_bell))
+    }
+    fixed_ch_masks
+}
+
+/// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
+/// bells in non-variable-hunt compositions).
+fn fixed_bells(method: &Method, calls: &[super::Call]) -> Vec<Bell> {
+    // Start the set with the bells which are fixed by the plain lead
+    let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
+    // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in Grandsire is
+    // unaffected by a plain lead, but affected by calls)
+    for call in calls {
+        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+    }
+    fixed_bells.into_iter().collect_vec()
+}
+
+// For every position that this call could be placed, remove any bells which **aren't** preserved
+// by placing the call at this location.
+fn filter_bells_fixed_by_call(method: &Method, call: &super::Call, set: &mut HashSet<Bell>) {
+    // Note that all calls are required to only substitute one piece of place notation.
+    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
+        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
+        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
+
+        // The row before a call in this location in the _first lead_
+        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
+        // The row after a plain call in this location in the _first lead_
+        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
+        // The row after a call in this location in the _first lead_
+        let mut row_after_call = row_before_call.to_owned();
+        call.place_not.permute(&mut row_after_call).unwrap();
+
+        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
+        // `row_after_no_call`.  These should be removed from the set, because they are no longer
+        // fixed.
+        for (bell_after_no_call, bell_after_call) in
+            row_after_no_call.bell_iter().zip(&row_after_call)
+        {
+            if bell_after_call != bell_after_no_call {
+                set.remove(&bell_after_call);
+            }
+        }
+    }
+}
+
 /////////////////////////////////
 // COURSE HEAD MASK PROCESSING //
 /////////////////////////////////
@@ -95,14 +166,20 @@ const BLOCK_IDX: usize = 0;
 /// same calling bell).  It is an error if two masks are compatible but specify different calling
 /// bells.
 fn dedup_ch_masks(course_head_masks: &[CourseHeadMask]) -> Result<Vec<CourseHeadMask>> {
-    let deduped_ch_masks = Vec::with_capacity(course_head_masks.len());
-    for (i, _mask) in course_head_masks.iter().enumerate() {
-        // Look for another CH mask who's matching rows are a superset of `mask`
-        for (other_i, _other_mask) in course_head_masks.iter().enumerate() {
+    let mut deduped_ch_masks = Vec::with_capacity(course_head_masks.len());
+    'outer: for (i, ch_mask) in course_head_masks.iter().enumerate() {
+        // Look for another CH mask who's matched CHs are a superset of `mask`
+        for (other_i, other_ch_mask) in course_head_masks.iter().enumerate() {
             if i == other_i {
                 continue; // Don't compare masks against themselves
             }
+            if ch_mask.mask.is_subset_of(&other_ch_mask.mask)
+                && ch_mask.calling_bell == other_ch_mask.calling_bell
+            {
+                continue 'outer; // Skip this `ch_mask` if it is implied by another mask
+            }
         }
+        deduped_ch_masks.push(ch_mask.clone());
     }
     Ok(deduped_ch_masks)
 }
