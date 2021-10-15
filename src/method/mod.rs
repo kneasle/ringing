@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::{place_not::PnBlockParseError, AnnotBlock, PnBlock, Row, RowBuf, Stage};
 
 // Imports used solely for doc comments
@@ -11,13 +13,11 @@ pub mod class;
 /// A standard label name used for denoting the 'lead end' of a method
 pub const LABEL_LEAD_END: &str = "LE";
 
-/// The definition of a 'method' within Change Ringing.  This struct follows quite a loose
-/// definition, which allows the `Method` struct to represent things that may not count as methods
-/// (as determined by the Framework).  Essentially, a `Method` consists of a [`Block`] which is
-/// intended to be rung as a repeating unit (usually a 'lead'), along with names for specific
-/// locations within this [`Block`].  Calls can then be attached to these locations (by name), and
-/// thus the single lead can be modified to determine the effect of calls in a general way.  This
-/// follows how complib.org's composition input works.
+/// The definition of a 'method' within Change Ringing.  Essentially, a `Method` consists of a
+/// [`Block`] which is intended to be rung as a repeating unit (usually a 'lead'), along with names
+/// for specific locations within this [`Block`].  Calls can then be attached to these locations
+/// (by name), and thus the single lead can be modified to determine the effect of calls in a
+/// general way.  This follows how complib.org's composition input works.
 #[derive(Debug, Clone)]
 pub struct Method {
     title: String,
@@ -27,6 +27,10 @@ pub struct Method {
 }
 
 impl Method {
+    //////////////////
+    // CONSTRUCTORS //
+    //////////////////
+
     /// Creates a new `Method` from its raw parts
     pub fn new(
         title: String,
@@ -73,9 +77,21 @@ impl Method {
         Self::with_name(name, first_lead)
     }
 
+    /////////////
+    // GETTERS //
+    /////////////
+
     /// Returns an `AnnotBlock` of the first lead of this `Method`
+    #[deprecated(note = "Use `Method::first_lead` instead`")]
     #[inline]
     pub fn lead(&self) -> &AnnotBlock<Option<String>> {
+        &self.first_lead
+    }
+
+    /// Returns an [`AnnotBlock`] of the first lead of this [`Method`], along with the lead
+    /// location labels.
+    #[inline]
+    pub fn first_lead(&self) -> &AnnotBlock<Option<String>> {
         &self.first_lead
     }
 
@@ -102,6 +118,10 @@ impl Method {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    //////////////////////////////
+    // BLOCK-RELATED OPERATIONS //
+    //////////////////////////////
 
     /// Returns the [`Row`] at some index in the plain lead of this `Method`.
     ///
@@ -142,6 +162,10 @@ impl Method {
         plain_course
     }
 
+    //////////////////////
+    // LABEL OPERATIONS //
+    //////////////////////
+
     /// Sets or clears the label at a given index, panicking if the index is out of range
     pub fn set_label(&mut self, index: usize, label: Option<String>) {
         *self.first_lead.get_annot_mut(index).unwrap() = label;
@@ -153,6 +177,7 @@ impl Method {
     }
 
     /// Returns the label at a given index, panicking if the index is out of range
+    // TODO: Make this not panic
     pub fn get_label(&self, index: usize) -> Option<&str> {
         self.first_lead
             .get_annot(index)
@@ -161,10 +186,11 @@ impl Method {
             .map(String::as_str)
     }
 
-    /// Returns an [`AnnotBlock`] of the first lead of this [`Method`], along with the lead
-    /// location labels.
-    pub fn first_lead(&self) -> &AnnotBlock<Option<String>> {
-        &self.first_lead
+    /// An [`Iterator`] over the sub-lead indices of a particular lead label.
+    pub fn label_indices<'s>(&'s self, label: &'s str) -> impl Iterator<Item = usize> + 's {
+        self.first_lead
+            .annots()
+            .positions(move |l| l.as_ref().map(String::as_str) == Some(label))
     }
 }
 
