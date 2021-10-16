@@ -15,7 +15,7 @@ weight = -0.8
 
 # Boost scores of LB5s in order to make Monument generate more of them
 [[music]]
-patterns = ["65432*", "*23456", "23456*", "65432*"]
+patterns = ["*65432", "*23456", "23456*", "65432*"]
 weight = 2
 
 # This data is only used by the test/benchmark runner and will be ignored by Monument
