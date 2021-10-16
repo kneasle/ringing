@@ -131,14 +131,18 @@ impl Layout {
         // Determine whether or not this segment can end the composition before any links can be
         // taken
         for end in &self.ends {
-            if end.ch_and_row_idx() == id.ch_and_row_idx() {
+            // An end could occur if we're in the same course and block as the end point
+            if end.course_head.as_row() == id.course_head.as_ref()
+                && end.row_idx.block == id.row_idx.block
+            {
                 let len = length_between(id.row_idx.row, end.row_idx.row);
+
                 // Make a special case to disallow 0-length blocks which are both starts and ends.
                 // This happens a lot because almost all compositions start and end at the same row
-                // (i.e. rounds), and therefore the starts and ends will happen at the same
-                // locations.  Therefore, each start node would generate a 0-length segment,
-                // corresponding to a 0-length composition which immediately comes round.  This is
-                // clearly not useful, so we explicitly prevent it here.
+                // (rounds), and therefore the starts and ends will happen at the same locations.
+                // Thus, each start node would generate a 0-length segment corresponding to a
+                // 0-length composition which immediately comes round.  This is clearly not useful,
+                // so we explicitly prevent it here.
                 if len == 0 && id.is_start {
                     continue;
                 }
