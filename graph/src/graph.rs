@@ -6,7 +6,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use monument_utils::Frontier;
+use monument_utils::FrontierItem;
 
 use crate::{
     falseness::FalsenessTable,
@@ -286,7 +286,7 @@ impl Graph {
 
         // Unexplored nodes, ordered by distance from rounds (i.e. the minimum number of rows required
         // to reach them from rounds)
-        let mut frontier: BinaryHeap<Reverse<Frontier<NodeId>>> = BinaryHeap::new();
+        let mut frontier: BinaryHeap<Reverse<FrontierItem<NodeId>>> = BinaryHeap::new();
 
         /* Run Dijkstra's algorithm using comp length as edge weights */
 
@@ -300,7 +300,7 @@ impl Graph {
             start_node_ids
                 .iter()
                 .cloned()
-                .map(|node_id| Frontier {
+                .map(|node_id| FrontierItem {
                     item: node_id,
                     distance: 0,
                 })
@@ -308,7 +308,7 @@ impl Graph {
         );
 
         // Consume nodes from the frontier until the frontier is empty
-        while let Some(Reverse(Frontier {
+        while let Some(Reverse(FrontierItem {
             item: node_id,
             distance,
         })) = frontier.pop()
@@ -335,7 +335,7 @@ impl Graph {
             // Expand the node by adding its successors to the frontier
             for (_link_idx, id_after_link) in &segment.links {
                 // Add the new node to the frontier
-                frontier.push(Reverse(Frontier {
+                frontier.push(Reverse(FrontierItem {
                     item: id_after_link.to_owned(),
                     distance: new_dist,
                 }));
