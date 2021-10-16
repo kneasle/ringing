@@ -1,7 +1,7 @@
 //! A mutable graph of nodes.  Compositions are represented as paths through this node graph.
 
 use std::{
-    cmp::Reverse,
+    cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap},
 };
 
@@ -12,9 +12,11 @@ use crate::{
     falseness::FalsenessTable,
     layout::{Layout, LinkIdx, NodeId, Segment},
     music::{Breakdown, MusicType},
+    optimise::Pass,
+    Data,
 };
 
-/// The number of rows required to get from the start of a node to/from rounds.
+/// The number of rows required to get from a point in the graph to a start/end.
 type Distance = usize;
 
 /// A 'prototype' node graph that is (relatively) inefficient to traverse but easy to modify.  This
@@ -65,11 +67,142 @@ pub struct Node {
     predecessors: Vec<(LinkIdx, NodeId)>,
 }
 
-///////////////////////////
-// GETTERS AND ITERATORS //
-///////////////////////////
+// ------------------------------------------------------------------------------------------
+
+/// Optimisation
 
 impl Graph {
+    /// Repeatedly apply a sequence of [`Pass`]es until the graph stops getting smaller, or 20
+    /// iterations are made.  Use [`Graph::optimise_with_iter_limit`] to set a custom iteration limit.
+    pub fn optimise(&mut self, passes: &mut [Pass], data: &Data) {
+        self.optimise_with_iter_limit(passes, data, 20);
+    }
+
+    /// Repeatedly apply a sequence of [`Pass`]es until the graph either becomes static, or `limit`
+    /// many iterations are performed.
+    pub fn optimise_with_iter_limit(&mut self, passes: &mut [Pass], data: &Data, limit: usize) {
+        let mut last_size = Size::from(&*self);
+
+        for _ in 0..limit {
+            self.run_passes(passes, data);
+
+            let new_size = Size::from(&*self);
+            // Stop optimising if the optimisations don't make the graph strictly smaller.  If
+            // they make some parts smaller but others larger, then keep optimising.
+            match new_size.partial_cmp(&last_size) {
+                Some(Ordering::Equal | Ordering::Greater) => return,
+                Some(Ordering::Less) | None => {}
+            }
+            last_size = new_size;
+        }
+    }
+
+    /// Run a sequence of [`Pass`]es on `self`
+    pub fn run_passes(&mut self, passes: &mut [Pass], data: &Data) {
+        for p in &mut *passes {
+            p.run(self, data);
+        }
+    }
+
+    /// For each start node in `self`, creates a copy of `self` with _only_ that start node.  This
+    /// partitions the set of generated compositions across these `Graph`s, but allows for better
+    /// optimisations because more is known about each `Graph`.
+    pub fn split_by_start_node(&self) -> Vec<Graph> {
+        self.start_nodes
+            .iter()
+            .cloned()
+            .map(|start_id| {
+                let mut new_self = self.clone();
+                new_self.start_nodes = vec![start_id];
+                new_self
+            })
+            .collect_vec()
+    }
+}
+
+// ------------------------------------------------------------------------------------------
+
+impl Graph {
+    //! Helpers for optimisation passes
+
+    /// Removes all nodes for whom `pred` returns `false`
+    pub fn retain_nodes(&mut self, pred: impl FnMut(&NodeId, &mut Node) -> bool) {
+        self.nodes.retain(pred);
+    }
+
+    /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
+    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.start_nodes.retain(pred);
+    }
+
+    /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
+    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.end_nodes.retain(pred);
+    }
+}
+
+impl Node {
+    //! Helpers for optimisation passes
+
+    /// A lower bound on the length of a composition which passes through this node.
+    pub fn min_comp_length(&self) -> usize {
+        self.lb_distance_from_rounds + self.length + self.lb_distance_to_rounds
+    }
+}
+
+/// A measure of the `Size` of a [`Graph`].  Used to detect when further optimisations aren't
+/// useful.
+#[derive(Debug, PartialEq)]
+struct Size {
+    num_nodes: usize,
+    num_links: usize,
+    num_starts: usize,
+    num_ends: usize,
+}
+
+impl From<&Graph> for Size {
+    fn from(g: &Graph) -> Self {
+        Self {
+            num_nodes: g.nodes.len(),
+            // This assumes that every successor link also corresponds to a predecessor link
+            num_links: g.nodes().map(|(_id, node)| node.successors.len()).sum(),
+            num_starts: g.start_nodes.len(),
+            num_ends: g.end_nodes.len(),
+        }
+    }
+}
+
+impl PartialOrd for Size {
+    // TODO: Make this into a macro?
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let cmp_nodes = self.num_nodes.cmp(&other.num_nodes);
+        let cmp_links = self.num_links.cmp(&other.num_links);
+        let cmp_starts = self.num_starts.cmp(&other.num_starts);
+        let cmp_ends = self.num_ends.cmp(&other.num_ends);
+
+        let all_comparisons = [cmp_nodes, cmp_links, cmp_starts, cmp_ends];
+
+        let are_any_less = all_comparisons
+            .iter()
+            .any(|cmp| matches!(cmp, Ordering::Less));
+        let are_any_greater = all_comparisons
+            .iter()
+            .any(|cmp| matches!(cmp, Ordering::Greater));
+
+        match (are_any_less, are_any_greater) {
+            (true, false) => Some(Ordering::Less), // If nothing got larger, then the size is smaller
+            (false, true) => Some(Ordering::Greater), // If nothing got smaller, then the size is larger
+            (false, false) => Some(Ordering::Equal),  // No < or > means all components are equal
+            (true, true) => None, // If some are smaller & some are greater then these are incomparable
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------
+
+impl Graph {
+    //! Getters & Iterators
+
     // Getters
 
     pub fn get_node<'graph>(&'graph self, id: &NodeId) -> Option<&'graph Node> {
@@ -111,7 +244,7 @@ impl Graph {
 }
 
 impl Node {
-    // Getters
+    //! Getters & Iterators
 
     pub fn successors(&self) -> &[(LinkIdx, NodeId)] {
         self.successors.as_slice()
@@ -135,49 +268,6 @@ impl Node {
 
     pub fn false_nodes_mut(&mut self) -> &mut Vec<NodeId> {
         &mut self.false_nodes
-    }
-}
-
-//////////////////////////
-// OPTIMISATION HELPERS //
-//////////////////////////
-
-impl Graph {
-    /// Removes all nodes for whom `pred` returns `false`
-    pub fn retain_nodes(&mut self, pred: impl FnMut(&NodeId, &mut Node) -> bool) {
-        self.nodes.retain(pred);
-    }
-
-    /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
-    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
-        self.start_nodes.retain(pred);
-    }
-
-    /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
-    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
-        self.end_nodes.retain(pred);
-    }
-
-    /// For each start node in `self`, creates a copy of `self` with _only_ that start node.  This
-    /// partitions the comps generated across these graphs, but allows for better optimisations
-    /// because more is known about each `Graph`.
-    pub fn split_by_start_node(&self) -> Vec<Graph> {
-        self.start_nodes
-            .iter()
-            .cloned()
-            .map(|start_id| {
-                let mut new_self = self.clone();
-                new_self.start_nodes = vec![start_id];
-                new_self
-            })
-            .collect_vec()
-    }
-}
-
-impl Node {
-    /// A lower bound on the length of a composition which passes through this node.
-    pub fn min_comp_length(&self) -> usize {
-        self.lb_distance_from_rounds + self.length + self.lb_distance_to_rounds
     }
 }
 

@@ -1,5 +1,6 @@
 use args::CliArgs;
 use log::LevelFilter;
+use monument_graph::optimise::passes;
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -27,9 +28,16 @@ fn main() {
     // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
     // independently and then searching in parallel is almost always better because the
     // optimisation passes have more concrete information about each graph.
-    let graphs = graph.split_by_start_node();
+    let mut graphs = graph.split_by_start_node();
 
+    // Optimise the graphs
+    let mut passes = passes::default();
+    for g in &mut graphs {
+        g.optimise(&mut passes, &data);
+    }
+
+    // Debug print the graphs
     for g in graphs {
-        dbg!(g.start_nodes());
+        dbg!(g.node_map().len());
     }
 }
