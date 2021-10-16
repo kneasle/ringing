@@ -10,7 +10,7 @@ use crate::{optimise::NodeView, Data, NodeId};
 use super::DirectionalView;
 
 /// Compute node distances to/from rounds
-pub fn compute_distances(view: &mut DirectionalView, data: &Data) {
+pub fn compute_distances(mut view: DirectionalView, data: &Data) {
     // TODO: Refactor out Dijkstra's algorithm into its own method?
 
     // Set of nodes which are reachable within the range limit, mapped to their shortest distance
@@ -21,6 +21,7 @@ pub fn compute_distances(view: &mut DirectionalView, data: &Data) {
     // queue.  Initialise this with just the start nodes.
     let mut frontier: BinaryHeap<Reverse<FrontierItem<(&NodeId, NodeView)>>> = view
         .start_nodes()
+        .iter()
         .filter_map(|id| view.get_node(id).map(|node| (id, node))) // Collect IDs and nodes
         .map(FrontierItem::new)
         .map(Reverse)

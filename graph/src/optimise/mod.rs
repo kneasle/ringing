@@ -10,7 +10,7 @@ use self::Direction::{Backward, Forward};
 pub type SinglePass = Box<dyn FnMut(&mut Graph, &Data)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  For example,
 /// computing distances to/from rounds (removing unreachable nodes).
-pub type DirectionalPass = Box<dyn FnMut(&mut DirectionalView<'_>, &Data)>;
+pub type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Data)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
@@ -54,7 +54,7 @@ fn run_in_direction(
     graph: &mut Graph,
     data: &Data,
 ) {
-    pass(&mut DirectionalView::new(graph, direction), data)
+    pass(DirectionalView::new(graph, direction), data)
 }
 
 /// A `Direction` in which a [`DirectionalPass`] can be run
@@ -91,17 +91,17 @@ impl<'graph> DirectionalView<'graph> {
         Self { graph, direction }
     }
 
-    pub fn start_nodes(&self) -> impl Iterator<Item = &NodeId> {
+    pub fn start_nodes(&self) -> &[NodeId] {
         match self.direction {
-            Forward => self.graph.start_nodes().iter(),
-            Backward => self.graph.end_nodes().iter(),
+            Forward => self.graph.start_nodes(),
+            Backward => self.graph.end_nodes(),
         }
     }
 
-    pub fn end_nodes(&self) -> impl Iterator<Item = &NodeId> {
+    pub fn end_nodes(&self) -> &[NodeId] {
         match self.direction {
-            Forward => self.graph.end_nodes().iter(),
-            Backward => self.graph.start_nodes().iter(),
+            Forward => self.graph.end_nodes(),
+            Backward => self.graph.start_nodes(),
         }
     }
 
@@ -207,20 +207,34 @@ mod distance; // Compute node distances
 mod strip_refs; // Strip references to non-existent nodes
 
 pub mod passes {
-    use crate::{Data, Graph};
+    use std::collections::HashSet;
+
+    use crate::{optimise::DirectionalView, Data, Graph, NodeId};
 
     use super::Pass;
 
     /// A default sequence of built-in optimisation passes
     pub fn default() -> Vec<Pass> {
-        vec![strip_refs(), compute_distances(), strip_long_nodes()]
+        vec![
+            strip_refs(),
+            // Distance-related optimisation
+            compute_distances(),
+            strip_long_nodes(),
+            // Required node optimisation
+            single_start_or_end_required(),
+            remove_nodes_false_against_required(),
+        ]
     }
+
+    /* Simple passes */
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
     /// removing any which can't reach rounds in either direction.
     pub fn strip_refs() -> Pass {
         Pass::Single(Box::new(super::strip_refs::strip_refs))
     }
+
+    /* Distance related passes */
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
     /// removing any which can't reach rounds in either direction.
@@ -234,5 +248,41 @@ pub mod passes {
             graph.retain_nodes(|_id, node| node.min_comp_length() < data.len_range.end);
         }
         Pass::Single(Box::new(pass))
+    }
+
+    /* Passes related to required nodes */
+
+    /// A [`Pass`] which checks for a single start/end node and marks that node as required
+    /// (because all compositions must start or end at that node).
+    pub fn single_start_or_end_required() -> Pass {
+        Pass::BothDirections(Box::new(|view: DirectionalView, _| {
+            let single_start_id = match view.start_nodes() {
+                [id] => id.clone(),
+                _ => return,
+            };
+            if let Some(node) = view.graph.get_node_mut(&single_start_id) {
+                node.required = true;
+            }
+        }))
+    }
+
+    /// A [`Pass`] which removes any nodes which are false against a node marked as required
+    pub fn remove_nodes_false_against_required() -> Pass {
+        Pass::Single(Box::new(|graph: &mut Graph, _| {
+            let mut node_ids_to_remove: HashSet<NodeId> = HashSet::new();
+            // For each required node ...
+            for (id, node) in graph.nodes() {
+                if node.required {
+                    // ... mark all its false nodes (**except itself**) to be removed
+                    let other_false_node_ids = node
+                        .false_nodes()
+                        .iter()
+                        .filter(|false_id| *false_id != id)
+                        .cloned();
+                    node_ids_to_remove.extend(other_false_node_ids);
+                }
+            }
+            graph.retain_nodes(|id, _node| !node_ids_to_remove.contains(id));
+        }))
     }
 }
