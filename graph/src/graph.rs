@@ -157,6 +157,21 @@ impl Graph {
     pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
         self.end_nodes.retain(pred);
     }
+
+    /// For each start node in `self`, creates a copy of `self` with _only_ that start node.  This
+    /// partitions the comps generated across these graphs, but allows for better optimisations
+    /// because more is known about each `Graph`.
+    pub fn split_by_start_node(&self) -> Vec<Graph> {
+        self.start_nodes
+            .iter()
+            .cloned()
+            .map(|start_id| {
+                let mut new_self = self.clone();
+                new_self.start_nodes = vec![start_id];
+                new_self
+            })
+            .collect_vec()
+    }
 }
 
 impl Node {

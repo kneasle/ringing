@@ -24,6 +24,12 @@ fn main() {
     // Convert the `Spec` into a `Graph` and other data required for running a search
     let data = spec.lower().unwrap();
     let graph = data.unoptimised_graph();
+    // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
+    // independently and then searching in parallel is almost always better because the
+    // optimisation passes have more concrete information about each graph.
+    let graphs = graph.split_by_start_node();
 
-    dbg!(graph.node_map().len());
+    for g in graphs {
+        dbg!(g.start_nodes());
+    }
 }
