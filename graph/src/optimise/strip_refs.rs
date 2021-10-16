@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use crate::Graph;
+use crate::{Data, Graph};
 
 /// Removes node references which point to non-existent nodes.  This cannot fail.
-pub(super) fn strip_refs(graph: &mut Graph) {
+pub(super) fn strip_refs(graph: &mut Graph, _data: &Data) {
     // Cloned set of which `NodeID`s are in the graph.  We need to clone these, because otherwise
     // we'd have to borrow the node map whilst mutably iterating over it.
     let node_ids = graph.ids().cloned().collect::<HashSet<_>>();

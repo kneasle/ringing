@@ -34,55 +34,6 @@ pub struct Graph {
     end_nodes: Vec<NodeId>,
 }
 
-impl Graph {
-    // Getters
-
-    pub fn get_node<'graph>(&'graph self, id: &NodeId) -> Option<&'graph Node> {
-        self.nodes.get(id)
-    }
-
-    pub fn get_node_mut<'graph>(&'graph mut self, id: &NodeId) -> Option<&'graph mut Node> {
-        self.nodes.get_mut(id)
-    }
-
-    pub fn start_nodes(&self) -> &[NodeId] {
-        &self.start_nodes
-    }
-
-    pub fn end_nodes(&self) -> &[NodeId] {
-        &self.end_nodes
-    }
-
-    // Iterators
-
-    /// An [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
-    pub fn ids(&self) -> impl Iterator<Item = &NodeId> {
-        self.nodes.keys()
-    }
-
-    /// An [`Iterator`] over every [`Node`] in this `Graph` (including its [`NodeId`])
-    pub fn nodes(&self) -> impl Iterator<Item = (&NodeId, &Node)> {
-        self.nodes.iter()
-    }
-
-    /// A mutable [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
-    pub fn nodes_mut(&mut self) -> impl Iterator<Item = (&NodeId, &mut Node)> {
-        self.nodes.iter_mut()
-    }
-
-    // Modifiers
-
-    /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
-    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
-        self.start_nodes.retain(pred);
-    }
-
-    /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
-    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
-        self.end_nodes.retain(pred);
-    }
-}
-
 /// A `Node` in a node [`Graph`].  This is an indivisible chunk of ringing which cannot be split up
 /// by calls or splices.
 #[derive(Debug, Clone)]
@@ -106,13 +57,57 @@ pub struct Node {
     /// A lower bound on the number of rows required to go from any rounds to the first row of
     /// `self`
     lb_distance_from_rounds: Distance,
-    /// A lower bound on the number of rows required to go from the first row of `self` to rounds
-    /// (or `None` if rounds is unreachable - a distance of infinity - or the distances haven't
-    /// been computed yet).
-    lb_distance_to_rounds: Option<Distance>,
+    /// A lower bound on the number of rows required to go from the first row **after** `self` to
+    /// rounds.
+    lb_distance_to_rounds: Distance,
 
     successors: Vec<(LinkIdx, NodeId)>,
     predecessors: Vec<(LinkIdx, NodeId)>,
+}
+
+///////////////////////////
+// GETTERS AND ITERATORS //
+///////////////////////////
+
+impl Graph {
+    // Getters
+
+    pub fn get_node<'graph>(&'graph self, id: &NodeId) -> Option<&'graph Node> {
+        self.nodes.get(id)
+    }
+
+    pub fn get_node_mut<'graph>(&'graph mut self, id: &NodeId) -> Option<&'graph mut Node> {
+        self.nodes.get_mut(id)
+    }
+
+    pub fn start_nodes(&self) -> &[NodeId] {
+        &self.start_nodes
+    }
+
+    pub fn end_nodes(&self) -> &[NodeId] {
+        &self.end_nodes
+    }
+
+    pub fn node_map(&self) -> &HashMap<NodeId, Node> {
+        &self.nodes
+    }
+
+    // Iterators
+
+    /// An [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
+    pub fn ids(&self) -> impl Iterator<Item = &NodeId> {
+        self.nodes.keys()
+    }
+
+    /// An [`Iterator`] over every [`Node`] in this `Graph` (including its [`NodeId`])
+    pub fn nodes(&self) -> impl Iterator<Item = (&NodeId, &Node)> {
+        self.nodes.iter()
+    }
+
+    /// A mutable [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = (&NodeId, &mut Node)> {
+        self.nodes.iter_mut()
+    }
 }
 
 impl Node {
@@ -140,6 +135,34 @@ impl Node {
 
     pub fn false_nodes_mut(&mut self) -> &mut Vec<NodeId> {
         &mut self.false_nodes
+    }
+}
+
+//////////////////////////
+// OPTIMISATION HELPERS //
+//////////////////////////
+
+impl Graph {
+    /// Removes all nodes for whom `pred` returns `false`
+    pub fn retain_nodes(&mut self, pred: impl FnMut(&NodeId, &mut Node) -> bool) {
+        self.nodes.retain(pred);
+    }
+
+    /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
+    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.start_nodes.retain(pred);
+    }
+
+    /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
+    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+        self.end_nodes.retain(pred);
+    }
+}
+
+impl Node {
+    /// A lower bound on the length of a composition which passes through this node.
+    pub fn min_comp_length(&self) -> usize {
+        self.lb_distance_from_rounds + self.length + self.lb_distance_to_rounds
     }
 }
 
@@ -237,8 +260,9 @@ impl Graph {
                     end_label: segment.end_label.to_owned(),
 
                     lb_distance_from_rounds: *distance,
-                    // Distances to rounds are computed during optimisation
-                    lb_distance_to_rounds: None,
+                    // Distances to rounds are computed later.  However, the distance is an lower
+                    // bound, so we can set it to 0 without breaking any invariants.
+                    lb_distance_to_rounds: 0,
 
                     successors: segment.links.to_owned(),
                     // These are populated in separate passes over the graph

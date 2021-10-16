@@ -3,14 +3,14 @@
 
 use std::{fmt::Debug, ops::Not};
 
-use crate::{layout::LinkIdx, Graph, Node, NodeId};
+use crate::{layout::LinkIdx, Data, Graph, Node, NodeId};
 
 use self::Direction::{Backward, Forward};
 
-pub type SinglePass = Box<dyn FnMut(&mut Graph)>;
+pub type SinglePass = Box<dyn FnMut(&mut Graph, &Data)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  For example,
 /// computing distances to/from rounds (removing unreachable nodes).
-pub type DirectionalPass = Box<dyn FnMut(&mut DirectionalView<'_>)>;
+pub type DirectionalPass = Box<dyn FnMut(&mut DirectionalView<'_>, &Data)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
@@ -28,17 +28,17 @@ pub enum Pass {
 
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
-    pub fn run(&mut self, graph: &mut Graph) {
+    pub fn run(&mut self, graph: &mut Graph, data: &Data) {
         match self {
-            Pass::Single(pass) => pass(graph),
-            Pass::OneDirection(pass, direction) => run_in_direction(pass, graph, *direction),
+            Pass::Single(pass) => pass(graph, data),
+            Pass::OneDirection(pass, direction) => run_in_direction(*direction, pass, graph, data),
             Pass::BothDirections(pass) => {
-                run_in_direction(pass, graph, Forward);
-                run_in_direction(pass, graph, Backward);
+                run_in_direction(Forward, pass, graph, data);
+                run_in_direction(Backward, pass, graph, data);
             }
             Pass::BothDirectionsRev(pass) => {
-                run_in_direction(pass, graph, Backward);
-                run_in_direction(pass, graph, Forward);
+                run_in_direction(Backward, pass, graph, data);
+                run_in_direction(Forward, pass, graph, data);
             }
         }
     }
@@ -48,8 +48,13 @@ impl Pass {
 // DIRECTIONAL PASSES //
 ////////////////////////
 
-fn run_in_direction(pass: &mut DirectionalPass, graph: &mut Graph, direction: Direction) {
-    pass(&mut DirectionalView::new(graph, direction))
+fn run_in_direction(
+    direction: Direction,
+    pass: &mut DirectionalPass,
+    graph: &mut Graph,
+    data: &Data,
+) {
+    pass(&mut DirectionalView::new(graph, direction), data)
 }
 
 /// A `Direction` in which a [`DirectionalPass`] can be run
@@ -73,7 +78,8 @@ impl Not for Direction {
 }
 
 /// The view of a [`Graph`] where 'start'/'end' and 'successors'/'predecessors' are defined in a
-/// given [`Direction`].
+/// given [`Direction`].  I.e. if the [`Direction`] is [`Backward`], then the graph's ordering is
+/// reversed.
 #[derive(Debug)]
 pub struct DirectionalView<'graph> {
     graph: &'graph mut Graph,
@@ -168,9 +174,15 @@ impl<'graph> NodeViewMut<'graph> {
 mod distance; // Compute node distances
 mod strip_refs; // Strip references to non-existent nodes
 
-// Re-exported as `crate::passes`
 pub mod passes {
+    use crate::{Data, Graph};
+
     use super::Pass;
+
+    /// A default sequence of built-in optimisation passes
+    pub fn default() -> Vec<Pass> {
+        vec![strip_refs(), compute_distances(), strip_long_nodes()]
+    }
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
     /// removing any which can't reach rounds in either direction.
@@ -182,5 +194,13 @@ pub mod passes {
     /// removing any which can't reach rounds in either direction.
     pub fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(super::distance::compute_distances))
+    }
+
+    /// A [`Pass`] which removes any nodes which can't be included in a short enough round block.
+    pub fn strip_long_nodes() -> Pass {
+        fn pass(graph: &mut Graph, data: &Data) {
+            graph.retain_nodes(|_id, node| node.min_comp_length() >= data.len_range.end);
+        }
+        Pass::Single(Box::new(pass))
     }
 }

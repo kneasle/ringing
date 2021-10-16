@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::ParseIntError, ops::Range, path::Path};
+use std::{collections::HashMap, num::ParseIntError, path::Path};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -11,6 +11,7 @@ use itertools::Itertools;
 use monument_graph::{
     layout::{single_method, Layout},
     music::MusicType,
+    Data,
 };
 use serde::Deserialize;
 
@@ -77,7 +78,7 @@ impl Spec {
     }
 
     /// 'Lower' this specification into the information required to build a composition.
-    pub fn lower(&self) -> Result<(Layout, Vec<MusicType>, Range<usize>), Error> {
+    pub fn lower(&self) -> Result<Data, Error> {
         // Parse and verify into its fully specified form
         let method = self.method.gen_method()?;
         let stage = method.stage();
@@ -116,7 +117,11 @@ impl Spec {
         .map_err(Error::LayoutGenError)?;
 
         // Build this layout into a `Graph`
-        Ok((layout, music_types, self.length.range.clone()))
+        Ok(Data {
+            layout,
+            music_types,
+            len_range: self.length.range.clone(),
+        })
     }
 }
 

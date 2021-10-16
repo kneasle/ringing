@@ -14,14 +14,16 @@ fn main() {
 
     // Generate & debug print the TOML file specifying the search
     let mut spec = Spec::read_from_file(&args.input_file).unwrap();
-    // Remove the test data to stop it clogging up the terminal
+    // Remove data for the testing harness; it's not useful for the CLI version and just clogs up
+    // any debugging.
     spec.test_data = None;
     if log_level >= LevelFilter::Debug {
         println!("{:#?}", spec);
     }
 
     // Convert the `Spec` into a `Graph` and other data required for running a search
-    let (layout, music_types, len_range) = spec.lower().unwrap();
+    let data = spec.lower().unwrap();
+    let graph = data.unoptimised_graph();
 
-    dbg!(layout);
+    dbg!(graph.node_map().len());
 }
