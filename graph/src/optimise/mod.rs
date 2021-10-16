@@ -106,37 +106,51 @@ impl<'graph> DirectionalView<'graph> {
     }
 
     pub fn get_node(&'graph self, id: &NodeId) -> Option<NodeView<'graph>> {
-        self.graph.get_node(id).map(|node| NodeView {
-            node,
-            direction: self.direction,
-        })
+        self.graph
+            .get_node(id)
+            .map(|node| NodeView::new(node, self.direction))
     }
 
     pub fn get_node_mut(&'graph mut self, id: &NodeId) -> Option<NodeViewMut<'graph>> {
         let direction = self.direction;
         self.graph
             .get_node_mut(id)
-            .map(|node| NodeViewMut { node, direction })
+            .map(|node| NodeViewMut::new(node, direction))
+    }
+
+    pub fn retain_nodes(&mut self, mut pred: impl FnMut(&NodeId, NodeViewMut) -> bool) {
+        let direction = self.direction;
+        self.graph
+            .retain_nodes(|id, node| pred(id, NodeViewMut::new(node, direction)));
     }
 }
 
 /// Immutable view of a [`Node`], facing in a given [`Direction`] (i.e. a [`Backward`] view will
 /// swap the successors/predecessors).
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct NodeView<'graph> {
     pub node: &'graph Node,
     pub direction: Direction,
+    _extra: (), // Prevents `NodeView`s being constructed outside this module
 }
 
 impl<'graph> NodeView<'graph> {
-    pub fn successors(&self) -> &[(LinkIdx, NodeId)] {
+    pub fn new(node: &'graph Node, direction: Direction) -> Self {
+        Self {
+            node,
+            direction,
+            _extra: (),
+        }
+    }
+
+    pub fn successors(self) -> &'graph [(LinkIdx, NodeId)] {
         match self.direction {
             Forward => self.node.successors(),
             Backward => self.node.predecessors(),
         }
     }
 
-    pub fn predecessors(&self) -> &[(LinkIdx, NodeId)] {
+    pub fn predecessors(self) -> &'graph [(LinkIdx, NodeId)] {
         match self.direction {
             Forward => self.node.predecessors(),
             Backward => self.node.successors(),
@@ -146,12 +160,22 @@ impl<'graph> NodeView<'graph> {
 
 /// Mutable view of a [`Node`], facing in a given [`Direction`] (i.e. a [`Backward`] view will
 /// swap the successors/predecessors).
+#[derive(Debug)]
 pub struct NodeViewMut<'graph> {
     pub node: &'graph mut Node,
-    direction: Direction,
+    pub direction: Direction,
+    _extra: (), // Prevents `NodeViewMut`s being constructed outside this module
 }
 
 impl<'graph> NodeViewMut<'graph> {
+    fn new(node: &'graph mut Node, direction: Direction) -> Self {
+        Self {
+            node,
+            direction,
+            _extra: (),
+        }
+    }
+
     pub fn successors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {
         match self.direction {
             Forward => self.node.successors_mut(),
@@ -163,6 +187,14 @@ impl<'graph> NodeViewMut<'graph> {
         match self.direction {
             Forward => self.node.predecessors_mut(),
             Backward => self.node.successors_mut(),
+        }
+    }
+
+    /// Mutable reference to the distance from rounds **to** the start of this node
+    pub fn distance_mut(&mut self) -> &mut usize {
+        match self.direction {
+            Forward => &mut self.node.lb_distance_from_rounds,
+            Backward => &mut self.node.lb_distance_to_rounds,
         }
     }
 }
@@ -199,7 +231,7 @@ pub mod passes {
     /// A [`Pass`] which removes any nodes which can't be included in a short enough round block.
     pub fn strip_long_nodes() -> Pass {
         fn pass(graph: &mut Graph, data: &Data) {
-            graph.retain_nodes(|_id, node| node.min_comp_length() >= data.len_range.end);
+            graph.retain_nodes(|_id, node| node.min_comp_length() < data.len_range.end);
         }
         Pass::Single(Box::new(pass))
     }

@@ -7,6 +7,12 @@ pub struct FrontierItem<T> {
     pub distance: usize,
 }
 
+impl<T> FrontierItem<T> {
+    pub fn new(item: T) -> Self {
+        Self { item, distance: 0 }
+    }
+}
+
 impl<T> PartialEq for FrontierItem<T> {
     fn eq(&self, other: &Self) -> bool {
         self.distance == other.distance
