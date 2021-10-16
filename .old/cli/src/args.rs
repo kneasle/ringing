@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use log::LevelFilter;
+use monument::spec::Config;
 use structopt::StructOpt;
 
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
@@ -24,17 +25,28 @@ pub struct CliArgs {
     pub quietness: usize,
 }
 
-impl CliArgs {
-    /// Parse the `-q`/`-v` args into verbosity
-    pub fn log_level(&self) -> LevelFilter {
-        match self.verbosity as isize - self.quietness as isize {
-            x if x < -2 => LevelFilter::Off, // -qqq (or more `q`s)
-            -2 => LevelFilter::Error,        // -qq
-            -1 => LevelFilter::Warn,         // -q
-            0 => LevelFilter::Info,          // <none of -q or -v>
-            1 => LevelFilter::Debug,         // -v
-            2 => LevelFilter::Trace,         // -vv
-            _ => LevelFilter::Trace,         // -vvv (or more `v`s)
+impl From<&CliArgs> for Config {
+    fn from(args: &CliArgs) -> Config {
+        // Parse the `-q`/`-v` args into verbosity
+        let log_level = match args.verbosity as isize - args.quietness as isize {
+            -2 => LevelFilter::Error, // -qq
+            -1 => LevelFilter::Warn,  // -q
+            0 => LevelFilter::Info,   // <no args>
+            1 => LevelFilter::Debug,  // -v
+            2 => LevelFilter::Trace,  // -vv
+            x => {
+                if x < 0 {
+                    LevelFilter::Off // -qqq (or more `q`s)
+                } else {
+                    LevelFilter::Trace // -vvv (or more `v`s)
+                }
+            }
+        };
+
+        Config {
+            num_threads: args.num_threads,
+            log_level,
+            ..Config::default()
         }
     }
 }

@@ -1,19 +1,19 @@
-use std::{collections::HashMap, num::ParseIntError, path::Path};
+use std::{collections::HashMap, num::ParseIntError, path::Path, sync::Arc};
 
 use bellframe::{
     method::LABEL_LEAD_END,
-    method_lib::QueryError,
     music::Regex,
     place_not::{self, PnBlockParseError},
-    Bell, Mask, Method, MethodLib, Stage,
+    Bell, Method, MethodLib, Stage,
 };
+use hmap::hmap;
 use itertools::Itertools;
-use monument_graph::{
-    layout::{single_method, Layout},
-    music::MusicType,
-    Data,
+use monument::{
+    mask::Mask,
+    spec::{single_method::SingleMethodError, Config, Layout, Spec},
+    MusicType,
 };
-use serde::Deserialize;
+use serde_derive::Deserialize;
 
 use crate::test_data::TestData;
 
@@ -23,14 +23,15 @@ use self::{
 };
 
 mod calls;
+mod length;
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
-/// file.  Like ASTs, this specifies a superset of valid programs - so building a composition
-/// search can also fail (as can lowering an AST).
+/// file.  This requires additional processing and verification before it can be converted into an
+/// [`Engine`].
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Spec {
+pub struct AbstractSpec {
     /// The range of lengths of composition which are allowed
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
@@ -70,20 +71,26 @@ pub struct Spec {
     pub test_data: Option<TestData>,
 }
 
-impl Spec {
+impl AbstractSpec {
     /// Read a `Spec` from a TOML file
     pub fn read_from_file(path: &Path) -> Result<Self, toml::de::Error> {
         let spec_toml = std::fs::read_to_string(&path).unwrap();
         toml::from_str(&spec_toml)
     }
 
-    /// 'Lower' this specification into the information required to build a composition.
-    pub fn lower(&self) -> Result<Data, Error> {
+    /// Convert this abstract specification into a concrete [`Spec`] that uniquely defines a set of
+    /// compositions.
+    pub fn to_spec(&self, config: &Config) -> Result<Arc<Spec>, SpecConvertError> {
         // Parse and verify into its fully specified form
         let method = self.method.gen_method()?;
         let stage = method.stage();
-        let tenor = Bell::tenor(stage);
 
+        // This unwrap will only trigger if the method has `Stage` of zero, which I don't think is
+        // possible.  Even if it is possible, there aren't any possible compositions on 0 bells so
+        // I think a panic is justified.
+        let tenor = Bell::tenor(stage).unwrap();
+
+        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
         let music_types = self
             .music
             .iter()
@@ -106,22 +113,25 @@ impl Spec {
         };
 
         // Generate a `Layout` from the data about the method and calls
-        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
         let layout = Layout::single_method(
             &method,
             &calls,
-            course_head_masks,
+            &course_head_masks,
+            config,
             self.start_indices.as_deref(),
             self.end_indices.as_deref(),
         )
-        .map_err(Error::LayoutGenError)?;
+        .map_err(SpecConvertError::LayoutGenError)?;
 
-        // Build this layout into a `Graph`
-        Ok(Data {
+        Ok(Spec::new(
             layout,
+            self.length.range.clone(),
+            self.num_comps,
             music_types,
-            len_range: self.length.range.clone(),
-        })
+            // Always normalise music
+            self.normalise_music,
+            config,
+        ))
     }
 }
 
@@ -131,25 +141,21 @@ fn gen_tenors_together_mask(stage: Stage) -> Mask {
     // By default, fix the treble and >=7.  Also, make sure to always fix the tenor even on Minor
     // or lower.  Note that we're numbering the bells where the treble is `0`
     let mut fixed_bells = vec![Bell::TREBLE];
-    fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
+    fixed_bells.extend((6..stage.as_usize()).map(Bell::from_index));
     Mask::fix_bells(stage, fixed_bells)
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
 #[derive(Debug, Clone)]
-pub enum Error<'s> {
+pub enum SpecConvertError<'s> {
     NoCalls,
     CcLibNotFound,
     MethodNotFound { suggestions: Vec<String> },
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
-    LayoutGenError(single_method::Error),
+    LayoutGenError(SingleMethodError),
 }
-
-///////////////
-// METHOD(S) //
-///////////////
 
 /// The contents of the `[method]` header in the input TOML file
 #[derive(Debug, Clone, Deserialize)]
@@ -159,7 +165,7 @@ pub enum MethodSpec {
         title: String,
         /// The inputs to this map are numerical strings representing sub-lead indices, and the
         /// outputs are the lead location names
-        #[serde(default = "default_lead_labels")]
+        #[serde(default = "default_lead_locations")]
         lead_locations: HashMap<String, String>,
     },
     Custom {
@@ -169,19 +175,19 @@ pub enum MethodSpec {
         stage: Stage,
         /// The inputs to this map are numerical strings representing sub-lead indices, and the
         /// outputs are the lead location names
-        #[serde(default = "default_lead_labels")]
+        #[serde(default = "default_lead_locations")]
         lead_locations: HashMap<String, String>,
     },
 }
 
 impl MethodSpec {
-    fn gen_method(&self) -> Result<Method, Error<'_>> {
+    fn gen_method(&self) -> Result<Method, SpecConvertError<'_>> {
         let mut m = self.get_method_without_lead_locations()?;
 
         for (index_str, name) in self.get_lead_locations() {
             let index = index_str
                 .parse::<isize>()
-                .map_err(|e| Error::LeadLocationIndex(&index_str, e))?;
+                .map_err(|e| SpecConvertError::LeadLocationIndex(&index_str, e))?;
             let lead_len = m.lead_len() as isize;
             let wrapped_index = ((index % lead_len) + lead_len) % lead_len;
             // This cast is OK because we used % twice to guarantee a positive index
@@ -198,27 +204,23 @@ impl MethodSpec {
     }
 
     /// Attempt to generate a new [`Method`] with no lead location annotations
-    fn get_method_without_lead_locations(&self) -> Result<Method, Error<'_>> {
+    fn get_method_without_lead_locations(&self) -> Result<Method, SpecConvertError<'_>> {
         match self {
             MethodSpec::Lib { title, .. } => {
-                let lib = MethodLib::cc_lib().ok_or(Error::CcLibNotFound)?;
+                let lib = MethodLib::cc_lib().ok_or(SpecConvertError::CcLibNotFound)?;
                 lib.get_by_title_with_suggestions(title, 5)
-                    .map_err(|err| match err {
-                        QueryError::PnParseErr { .. } => {
-                            panic!("Method lib contains invalid place notation")
-                        }
-                        QueryError::NotFound(suggestions) => {
-                            // Only suggest the suggestions which (perhaps jointly) have the best edit
-                            // distance
-                            let first_suggestion_edit_dist = suggestions[0].1;
-                            let best_suggestions = suggestions
-                                .into_iter()
-                                .take_while(|&(_s, i)| i == first_suggestion_edit_dist)
-                                .map(|(s, _i)| s.to_owned())
-                                .collect_vec();
-                            Error::MethodNotFound {
-                                suggestions: best_suggestions,
-                            }
+                    .unwrap_parse_err()
+                    .map_err(|suggestions| {
+                        // Only suggest the suggestions which (perhaps jointly) have the best edit
+                        // distance
+                        let first_suggestion_edit_dist = suggestions[0].1;
+                        let best_suggestions = suggestions
+                            .into_iter()
+                            .take_while(|&(_s, i)| i == first_suggestion_edit_dist)
+                            .map(|(s, _i)| s.to_owned())
+                            .collect_vec();
+                        SpecConvertError::MethodNotFound {
+                            suggestions: best_suggestions,
                         }
                     })
             }
@@ -228,7 +230,7 @@ impl MethodSpec {
                 place_notation,
                 ..
             } => Method::from_place_not_string(name.clone(), *stage, place_notation)
-                .map_err(Error::MethodPnParse),
+                .map_err(SpecConvertError::MethodPnParse),
         }
     }
 }
@@ -264,13 +266,8 @@ pub enum MusicSpec {
 }
 
 impl MusicSpec {
-    /// Generates a [`MusicType`] representing `self`.
-    pub fn to_music_type(&self, stage: Stage) -> MusicType {
-        MusicType::new(self.regexes(stage), self.weight())
-    }
-
     /// Gets the weight given to one instance of this `MusicSpec`
-    fn weight(&self) -> f32 {
+    pub fn weight(&self) -> f32 {
         match self {
             Self::Runs { weight, .. } => *weight,
             Self::RunsList { weight, .. } => *weight,
@@ -280,7 +277,7 @@ impl MusicSpec {
     }
 
     /// Gets the [`Regex`]es which match this `MusicSpec`
-    fn regexes(&self, stage: Stage) -> Vec<Regex> {
+    pub fn regexes(&self, stage: Stage) -> Vec<Regex> {
         match self {
             Self::Runs { length, .. } => Regex::runs_front_or_back(stage, *length),
             Self::RunsList { lengths, .. } => lengths
@@ -292,6 +289,11 @@ impl MusicSpec {
                 patterns.iter().map(|s| Regex::parse(&s)).collect_vec()
             }
         }
+    }
+
+    /// Generates a [`MusicType`] representing `self`.
+    pub fn to_music_type(&self, stage: Stage) -> MusicType {
+        MusicType::new(self.regexes(stage), self.weight())
     }
 }
 
@@ -311,162 +313,6 @@ fn get_true() -> bool {
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
 #[inline]
-fn default_lead_labels() -> HashMap<String, String> {
-    let mut labels = HashMap::new();
-    labels.insert("0".to_owned(), LABEL_LEAD_END.to_owned());
-    labels
-}
-
-////////////
-// LENGTH //
-////////////
-
-mod length {
-    use std::{
-        fmt,
-        ops::{Range, RangeInclusive},
-    };
-
-    use serde::{
-        de::{Error, MapAccess, Visitor},
-        Deserialize, Deserializer,
-    };
-
-    /* Constants for commonly used length ranges */
-
-    pub const QP: RangeInclusive<usize> = 1250..=1350;
-    pub const HALF_PEAL: RangeInclusive<usize> = 2500..=2600;
-    pub const PEAL: RangeInclusive<usize> = 5000..=5200;
-
-    /// A new-typed range with human-friendly deserialisation
-    #[derive(Debug, Clone)]
-    #[repr(transparent)]
-    pub(super) struct Length {
-        pub(super) range: Range<usize>,
-    }
-
-    // Convert Length to a ranges
-    impl From<Length> for Range<usize> {
-        #[inline(always)]
-        fn from(l: Length) -> Range<usize> {
-            l.range
-        }
-    }
-
-    impl From<usize> for Length {
-        #[inline(always)]
-        fn from(v: usize) -> Length {
-            Length { range: v..v + 1 }
-        }
-    }
-
-    impl From<Range<usize>> for Length {
-        #[inline(always)]
-        fn from(r: Range<usize>) -> Length {
-            Length { range: r }
-        }
-    }
-
-    impl From<RangeInclusive<usize>> for Length {
-        #[inline(always)]
-        fn from(r: RangeInclusive<usize>) -> Length {
-            Length {
-                range: *r.start()..r.end() + 1,
-            }
-        }
-    }
-
-    struct LengthVisitor;
-
-    impl<'de> Visitor<'de> for LengthVisitor {
-        type Value = Length;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a positive integer or a name like 'peal' or a 'min/max' range")
-        }
-
-        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            de_signed_num(v)
-        }
-
-        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Length::from(v as usize))
-        }
-
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: MapAccess<'de>,
-        {
-            #[derive(Deserialize)]
-            #[serde(field_identifier, rename_all = "lowercase", deny_unknown_fields)]
-            enum Fields {
-                Min,
-                Max,
-            }
-
-            // If we are deserialising a map, we expect the form `{ min: _, max: _ }`
-            let mut min: Option<usize> = None;
-            let mut max: Option<usize> = None;
-            // I don't care about allocating strings here - we'll only serialise one length per run
-            while let Some(key) = map.next_key()? {
-                match key {
-                    Fields::Min => {
-                        if min.is_some() {
-                            return Err(Error::duplicate_field("min"));
-                        }
-                        min = Some(map.next_value()?);
-                    }
-                    Fields::Max => {
-                        if max.is_some() {
-                            return Err(Error::duplicate_field("max"));
-                        }
-                        max = Some(map.next_value()?);
-                    }
-                }
-            }
-            // Open question: should min default to 0?
-            let min = min.ok_or_else(|| Error::missing_field("min"))?;
-            let max = max.ok_or_else(|| Error::missing_field("max"))?;
-            Ok(Length::from(min..=max))
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            let lower_str = v.to_lowercase();
-            Ok(Length::from(match lower_str.as_str() {
-                "qp" => QP,
-                "quarter peal" => QP,
-                "peal" => PEAL,
-                "half peal" => HALF_PEAL,
-                _ => return Err(E::custom(format!("unknown length name '{}'", v))),
-            }))
-        }
-    }
-
-    /// Helper function to generate an error message on negative lengths
-    #[inline(always)]
-    fn de_signed_num<E: Error>(v: i64) -> Result<Length, E> {
-        if v >= 0 {
-            Ok(Length::from(v as usize))
-        } else {
-            Err(E::custom(format!("negative length: {}", v)))
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Length {
-        fn deserialize<D>(deserializer: D) -> Result<Length, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            deserializer.deserialize_any(LengthVisitor)
-        }
-    }
+fn default_lead_locations() -> HashMap<String, String> {
+    hmap! { "0".to_owned() => LABEL_LEAD_END.to_owned() }
 }

@@ -1,3 +1,6 @@
+use monument::spec::Layout;
+use monument::Comp;
+use monument::Score;
 use serde::Deserialize;
 
 /// The data required to turn this input file into a test case for the test/benchmark harness
@@ -18,7 +21,6 @@ pub struct CompResultI64 {
     ranking_score: i64,
 }
 
-/*
 /// An easily testable form of a [`Comp`] which can be easily compared
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompResult {
@@ -49,4 +51,3 @@ impl From<CompResultI64> for CompResult {
         }
     }
 }
-*/
