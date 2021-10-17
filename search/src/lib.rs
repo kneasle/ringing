@@ -2,23 +2,20 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 
 use bit_vec::BitVec;
 use frontier::Frontier;
-use monument_graph::{layout::LinkIdx, music::Score};
+use monument_graph::{self as m_gr, layout::LinkIdx, music::Score, Data};
 
 pub mod frontier;
 mod graph;
 
 use graph::{Graph, NodeIdx};
 
-pub fn search<Ftr: Frontier<CompPrefix> + Debug>(
-    graph: &monument_graph::Graph,
-    data: &monument_graph::Data,
-) {
+pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Data) {
     // Lower the graph into a graph that's immutable but faster to traverse
     let lowered_graph = Graph::from(graph);
     search_lowered::<Ftr>(&lowered_graph, data)
 }
 
-fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &monument_graph::Data) {
+fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data) {
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();
     for (i, (node_idx, _label)) in graph.starts.iter().enumerate() {
@@ -44,7 +41,7 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &monum
 
             score,
             length,
-            avg_score: _,
+            avg_score,
         } = prefix;
         let node = &graph.nodes[node_idx];
 
@@ -52,10 +49,11 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &monum
             // Found a comp
             if data.len_range.contains(&length) {
                 println!(
-                    "q: {}, len: {}, score: {}, str: {}",
+                    "q: {:>8}, len: {}, score: {:>6.2}, avg: {}, str: {}",
                     frontier.len(),
                     length,
                     score,
+                    avg_score,
                     path.comp_string(graph, data, end_label)
                 );
                 comps_found += 1;
@@ -167,14 +165,14 @@ pub enum CompPath {
 }
 
 impl CompPath {
-    fn comp_string(&self, graph: &Graph, data: &monument_graph::Data, end_label: &str) -> String {
+    fn comp_string(&self, graph: &Graph, data: &Data, end_label: &str) -> String {
         let mut s = String::new();
         self.fmt_recursive(graph, data, &mut s);
         s.push_str(end_label);
         s
     }
 
-    fn fmt_recursive(&self, graph: &Graph, data: &monument_graph::Data, s: &mut String) {
+    fn fmt_recursive(&self, graph: &Graph, data: &Data, s: &mut String) {
         match self {
             Self::Start(idx) => {
                 let (_node_idx, label) = &graph.starts[*idx];
