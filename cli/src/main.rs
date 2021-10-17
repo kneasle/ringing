@@ -37,6 +37,9 @@ fn main() {
         g.optimise(&mut passes, &data);
     }
 
-    // Run graph search
-    search::<BestFirst<CompPrefix>>(&graph, &data);
+    // Run graph search on each graph
+    for g in &graphs {
+        println!("\n\n\n\nHI\n\n\n");
+        search::<BestFirst<CompPrefix>>(g, &data);
+    }
 }

@@ -273,13 +273,25 @@ impl Node {
         self.music.total
     }
 
+    // STARTS/ENDS //
+
+    pub fn start_label(&self) -> Option<&str> {
+        self.start_label.as_deref()
+    }
+
     pub fn is_start(&self) -> bool {
         self.start_label.is_some()
+    }
+
+    pub fn end_label(&self) -> Option<&str> {
+        self.end_label.as_deref()
     }
 
     pub fn is_end(&self) -> bool {
         self.end_label.is_some()
     }
+
+    // CROSS-NODE REFERENCES //
 
     pub fn successors(&self) -> &[(LinkIdx, NodeId)] {
         self.successors.as_slice()

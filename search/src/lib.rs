@@ -1,25 +1,35 @@
 use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 
+use bit_vec::BitVec;
 use frontier::Frontier;
-use monument_graph::{music::Score, Data, Graph, Node};
+use monument_graph::{layout::LinkIdx, music::Score};
 
 pub mod frontier;
+mod graph;
 
-pub fn search<'graph, Ftr: Frontier<CompPrefix<'graph>> + Debug>(
-    graph: &'graph Graph,
-    data: &Data,
+use graph::{Graph, NodeIdx};
+
+pub fn search<Ftr: Frontier<CompPrefix> + Debug>(
+    graph: &monument_graph::Graph,
+    data: &monument_graph::Data,
 ) {
+    // Lower the graph into a graph that's immutable but faster to traverse
+    let lowered_graph = Graph::from(graph);
+    search_lowered::<Ftr>(&lowered_graph, data)
+}
+
+fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &monument_graph::Data) {
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();
-    for (start_idx, start_id) in graph.start_nodes().iter().enumerate() {
-        if let Some(node) = graph.get_node(start_id) {
-            frontier.push(CompPrefix::new(
-                CompPath::Start(start_idx),
-                node.score(),
-                node.length(),
-                node,
-            ));
-        }
+    for (i, (node_idx, _label)) in graph.starts.iter().enumerate() {
+        let node = &graph.nodes[*node_idx];
+        frontier.push(CompPrefix::new(
+            CompPath::Start(i),
+            *node_idx,
+            node.falseness.clone(),
+            node.score,
+            node.length,
+        ));
     }
 
     let mut comps_found = 0usize;
@@ -29,17 +39,25 @@ pub fn search<'graph, Ftr: Frontier<CompPrefix<'graph>> + Debug>(
     while let Some(prefix) = frontier.pop() {
         let CompPrefix {
             path,
+            node_idx,
+            unreachable_nodes,
+
             score,
             length,
-            node,
             avg_score: _,
         } = prefix;
+        let node = &graph.nodes[node_idx];
 
-        if node.is_end() {
+        if let Some(end_label) = &node.end_label {
             // Found a comp
-            println!("COMP of len {}", length);
             if data.len_range.contains(&length) {
-                println!("{}: {}", frontier.len(), path.comp_string(graph, data));
+                println!(
+                    "q: {}, len: {}, score: {}, str: {}",
+                    frontier.len(),
+                    length,
+                    score,
+                    path.comp_string(graph, data, end_label)
+                );
                 comps_found += 1;
             }
             if comps_found == data.num_comps {
@@ -50,33 +68,43 @@ pub fn search<'graph, Ftr: Frontier<CompPrefix<'graph>> + Debug>(
 
         // Expand this node
         let path = Rc::new(path);
-        for (i, (_link_idx, succ_id)) in node.successors().iter().enumerate() {
-            if let Some(succ_node) = graph.get_node(succ_id) {
-                let length = length + succ_node.length();
-                let score = score + succ_node.score();
+        for &(link_idx, succ_idx) in &node.succs {
+            let succ_node = &graph.nodes[succ_idx];
 
-                if length >= data.len_range.end {
-                    continue; // Node would make comp too long
-                }
+            let length = length + succ_node.length;
+            let score = score + succ_node.score;
 
-                // TODO: Check for falseness
-
-                frontier.push(CompPrefix::new(
-                    CompPath::Cons(path.clone(), i),
-                    score,
-                    length,
-                    succ_node,
-                ));
+            if length >= data.len_range.end {
+                continue; // Node would make comp too long
             }
+
+            if unreachable_nodes.get(succ_idx.index()).unwrap() {
+                continue; // Node is unreachable (i.e. false)
+            }
+
+            // Compute which nodes are unreachable after this node has been added
+            let mut new_unreachable_nodes = unreachable_nodes.clone();
+            new_unreachable_nodes.or(&succ_node.falseness);
+
+            frontier.push(CompPrefix::new(
+                CompPath::Cons(path.clone(), link_idx),
+                succ_idx,
+                new_unreachable_nodes,
+                score,
+                length,
+            ));
         }
     }
 }
 
 /// The prefix of a composition.  These are ordered by score.
 #[derive(Debug, Clone)]
-pub struct CompPrefix<'graph> {
+pub struct CompPrefix {
     /// The path traced to this node
     path: CompPath,
+
+    node_idx: NodeIdx,
+    unreachable_nodes: BitVec,
 
     /// Score refers to the **end** of the current node
     score: Score,
@@ -85,39 +113,42 @@ pub struct CompPrefix<'graph> {
 
     /// Score per row in the composition
     avg_score: Score,
-
-    /// The current node
-    node: &'graph Node,
-    // TODO: Falseness storage
 }
 
-impl<'graph> CompPrefix<'graph> {
-    pub fn new(path: CompPath, score: Score, length: usize, node: &'graph Node) -> Self {
+impl CompPrefix {
+    pub fn new(
+        path: CompPath,
+        node_idx: NodeIdx,
+        unreachable_nodes: BitVec,
+        score: Score,
+        length: usize,
+    ) -> Self {
         Self {
             path,
+            node_idx,
+            unreachable_nodes,
             score,
             length,
             avg_score: score / length as f32,
-            node,
         }
     }
 }
 
-impl PartialEq for CompPrefix<'_> {
+impl PartialEq for CompPrefix {
     fn eq(&self, other: &Self) -> bool {
         self.avg_score == other.avg_score
     }
 }
 
-impl Eq for CompPrefix<'_> {}
+impl Eq for CompPrefix {}
 
-impl PartialOrd for CompPrefix<'_> {
+impl PartialOrd for CompPrefix {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for CompPrefix<'_> {
+impl Ord for CompPrefix {
     fn cmp(&self, other: &Self) -> Ordering {
         self.avg_score.cmp(&other.avg_score)
     }
@@ -132,33 +163,26 @@ pub enum CompPath {
     Start(usize),
     /// The composition follows the sequence in the [`Rc`], followed by taking the `n`th successor
     /// to that node.
-    Cons(Rc<Self>, usize),
+    Cons(Rc<Self>, LinkIdx),
 }
 
 impl CompPath {
-    fn comp_string(&self, graph: &Graph, data: &Data) -> String {
+    fn comp_string(&self, graph: &Graph, data: &monument_graph::Data, end_label: &str) -> String {
         let mut s = String::new();
         self.fmt_recursive(graph, data, &mut s);
+        s.push_str(end_label);
         s
     }
 
-    fn fmt_recursive<'graph>(
-        &self,
-        graph: &'graph Graph,
-        data: &Data,
-        s: &mut String,
-    ) -> &'graph Node {
+    fn fmt_recursive(&self, graph: &Graph, data: &monument_graph::Data, s: &mut String) {
         match self {
             Self::Start(idx) => {
-                let (label, start_node) = graph.get_start(*idx).unwrap();
+                let (_node_idx, label) = &graph.starts[*idx];
                 s.push_str(label);
-                start_node
             }
-            Self::Cons(lhs, succ_idx) => {
-                let lhs_node = lhs.fmt_recursive(graph, data, s);
-                let (link_idx, succ_id) = &lhs_node.successors()[*succ_idx];
-                s.push_str(&data.layout.links[*link_idx].debug_name);
-                graph.get_node(succ_id).unwrap()
+            Self::Cons(lhs, link_idx) => {
+                lhs.fmt_recursive(graph, data, s);
+                s.push_str(&data.layout.links[*link_idx].display_name);
             }
         }
     }
