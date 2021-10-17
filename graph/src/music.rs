@@ -15,10 +15,8 @@ pub struct MusicType {
 
 impl MusicType {
     pub fn new(regexes: Vec<Regex>, weight: f32) -> Self {
-        Self {
-            regexes,
-            weight: weight.into(),
-        }
+        let weight = OrderedFloat(weight);
+        Self { regexes, weight }
     }
 
     /// Returns a `MusicType` for all 4-bell runs on a given [`Stage`] off the front or back.

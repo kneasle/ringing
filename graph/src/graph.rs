@@ -11,7 +11,7 @@ use monument_utils::FrontierItem;
 use crate::{
     falseness::FalsenessTable,
     layout::{Layout, LinkIdx, NodeId, Segment},
-    music::{Breakdown, MusicType},
+    music::{Breakdown, MusicType, Score},
     optimise::Pass,
     Data,
 };
@@ -89,8 +89,6 @@ impl Graph {
         let mut last_size = Size::from(&*self);
 
         for _ in 0..limit {
-            dbg!(last_size);
-
             self.run_passes(passes, data);
 
             let new_size = Size::from(&*self);
@@ -102,8 +100,6 @@ impl Graph {
             }
             last_size = new_size;
         }
-
-        dbg!(last_size);
     }
 
     /// Run a sequence of [`Pass`]es on `self`
@@ -234,6 +230,15 @@ impl Graph {
         &self.nodes
     }
 
+    pub fn get_start(&self, idx: usize) -> Option<(&str, &Node)> {
+        let start_node_id = self.start_nodes.get(idx)?;
+        let start_node = self.nodes.get(start_node_id)?;
+        start_node
+            .start_label
+            .as_deref()
+            .map(|label| (label, start_node))
+    }
+
     // Iterators
 
     /// An [`Iterator`] over the [`NodeId`] of every [`Node`] in this `Graph`
@@ -262,6 +267,18 @@ impl Node {
 
     pub fn length(&self) -> usize {
         self.length
+    }
+
+    pub fn score(&self) -> Score {
+        self.music.total
+    }
+
+    pub fn is_start(&self) -> bool {
+        self.start_label.is_some()
+    }
+
+    pub fn is_end(&self) -> bool {
+        self.end_label.is_some()
     }
 
     pub fn successors(&self) -> &[(LinkIdx, NodeId)] {
@@ -376,7 +393,7 @@ impl Graph {
                     length: segment.length,
                     music,
 
-                    start_label: segment.end_label.to_owned(),
+                    start_label: segment.start_label.to_owned(),
                     end_label: segment.end_label.to_owned(),
 
                     required: false,

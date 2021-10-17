@@ -121,6 +121,7 @@ impl Spec {
             layout,
             music_types,
             len_range: self.length.range.clone(),
+            num_comps: self.num_comps,
         })
     }
 }

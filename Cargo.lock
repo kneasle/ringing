@@ -490,6 +490,7 @@ dependencies = [
  "itertools",
  "log",
  "monument_graph",
+ "monument_search",
  "serde",
  "structopt",
  "toml",
@@ -504,6 +505,15 @@ dependencies = [
  "itertools",
  "monument_utils",
  "ordered-float",
+]
+
+[[package]]
+name = "monument_search"
+version = "0.1.0"
+dependencies = [
+ "bellframe",
+ "itertools",
+ "monument_graph",
 ]
 
 [[package]]

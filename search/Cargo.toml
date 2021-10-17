@@ -1,0 +1,9 @@
+[package]
+name = "monument_search"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+monument_graph.path = "../graph/"
+bellframe.path = "../../bellframe/"
+itertools = "0.10"
