@@ -1,13 +1,17 @@
-length = "QP"
-num_comps = 20
+length = "qp"
+num_comps = 40
 base_calls = "near"
 method.title = "Yorkshire Surprise Major"
 
+course_heads = ["xxxxxx78", "xxxx8765", "xxxx7856"]
+
+
 [[music]]
-run_length = 4
+run_lengths = [4, 5, 6, 7]
 
 [[music]]
 patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
+weight = 6
 
 # This data is only used by the test/benchmark runner and will be ignored by Monument
 [test_data]
