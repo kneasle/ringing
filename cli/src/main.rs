@@ -1,6 +1,7 @@
 use args::CliArgs;
 use log::LevelFilter;
 use monument_graph::optimise::passes;
+use monument_search::{frontier::BestFirst, search, CompPrefix};
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -36,8 +37,9 @@ fn main() {
         g.optimise(&mut passes, &data);
     }
 
-    // Debug print the graphs
-    for g in graphs {
-        dbg!(g.node_map().len());
+    // Run graph search on each graph
+    for g in &graphs {
+        println!("\n\n\n\nHI\n\n\n");
+        search::<BestFirst<CompPrefix>>(g, &data);
     }
 }
