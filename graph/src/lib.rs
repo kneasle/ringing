@@ -21,6 +21,8 @@ pub struct Data {
     pub music_types: Vec<music::MusicType>,
     pub len_range: Range<usize>,
     pub num_comps: usize,
+
+    pub queue_limit: usize,
 }
 
 impl Data {

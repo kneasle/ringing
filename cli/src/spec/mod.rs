@@ -122,6 +122,8 @@ impl Spec {
             music_types,
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
+
+            queue_limit: 5_000_000,
         })
     }
 }

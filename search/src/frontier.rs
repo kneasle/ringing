@@ -39,8 +39,8 @@ impl<Node: Ord> Frontier<Node> for BestFirst<Node> {
     fn truncate(&mut self, len: usize) {
         let heap = std::mem::replace(&mut self.heap, BinaryHeap::default());
         let mut nodes = heap.into_vec();
-        nodes.sort_by(|a, b| b.cmp(a)); // Sort the
-        if len > nodes.len() {
+        nodes.sort_by(|a, b| b.cmp(a)); // Sort highest score first
+        if len < nodes.len() {
             nodes.drain(len..);
         }
         self.heap = BinaryHeap::from(nodes);

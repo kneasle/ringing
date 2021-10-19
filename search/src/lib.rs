@@ -9,13 +9,13 @@ mod graph;
 
 use graph::{Graph, NodeIdx};
 
-pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Data) {
+pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Data) -> Vec<Comp> {
     // Lower the graph into a graph that's immutable but faster to traverse
-    let lowered_graph = Graph::from(graph);
+    let lowered_graph = crate::graph::Graph::from(graph);
     search_lowered::<Ftr>(&lowered_graph, data)
 }
 
-fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data) {
+fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data) -> Vec<Comp> {
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();
     for (i, (node_idx, _label)) in graph.starts.iter().enumerate() {
@@ -29,10 +29,11 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
         ));
     }
 
-    let mut comps_found = 0usize;
+    let mut comps = Vec::<Comp>::new();
 
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).
+    let mut iter_count = 0;
     while let Some(prefix) = frontier.pop() {
         let CompPrefix {
             path,
@@ -45,23 +46,34 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
         } = prefix;
         let node = &graph.nodes[node_idx];
 
+        // Check if the comp has come round
         if let Some(end_label) = &node.end_label {
-            // Found a comp
             if data.len_range.contains(&length) {
+                let (start_idx, links) = path.flatten(graph, data);
+                let comp = Comp {
+                    start_idx,
+                    links,
+                    end_label: end_label.to_owned(),
+
+                    length,
+                    score,
+                    avg_score,
+                };
                 println!(
                     "q: {:>8}, len: {}, score: {:>6.2}, avg: {}, str: {}",
                     frontier.len(),
                     length,
                     score,
                     avg_score,
-                    path.comp_string(graph, data, end_label)
+                    comp.display_string(graph, data, end_label)
                 );
-                comps_found += 1;
+                comps.push(comp);
+
+                if comps.len() == data.num_comps {
+                    break; // Stop the search once we've got enough comps
+                }
             }
-            if comps_found == data.num_comps {
-                return;
-            }
-            continue; // Don't expand comps that come round
+            continue; // Don't expand comps after they've come round
         }
 
         // Expand this node
@@ -77,7 +89,7 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
             }
 
             if unreachable_nodes.get(succ_idx.index()).unwrap() {
-                continue; // Node is unreachable (i.e. false)
+                continue; // Node is unreachable (i.e. false against something already in the comp)
             }
 
             // Compute which nodes are unreachable after this node has been added
@@ -92,8 +104,54 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
                 length,
             ));
         }
+
+        // If the queue gets too long, then reduce its size
+        if frontier.len() >= data.queue_limit {
+            println!("Truncating queue ({})...", frontier.len());
+            frontier.truncate(data.queue_limit / 2);
+            println!("done. ({})", frontier.len());
+        }
+
+        // Print stats every so often
+        if iter_count % 1_000_000 == 0 {
+            println!("{} iters, {} items in queue.", iter_count, frontier.len());
+        }
+        iter_count += 1;
+    }
+
+    comps
+}
+
+#[derive(Debug, Clone)]
+pub struct Comp {
+    pub start_idx: usize,
+    pub links: Vec<LinkIdx>,
+    pub end_label: String,
+
+    pub length: usize,
+    pub score: Score,
+    pub avg_score: Score,
+}
+
+impl Comp {
+    pub fn display_string(&self, graph: &Graph, data: &Data, end_label: &str) -> String {
+        let mut s = String::new();
+        // Start
+        let (_node_idx, label) = &graph.starts[self.start_idx];
+        s.push_str(label);
+        // Links
+        for &link_idx in &self.links {
+            s.push_str(&data.layout.links[link_idx].display_name);
+        }
+        // End
+        s.push_str(end_label);
+        s
     }
 }
+
+/////////////////
+// COMP PREFIX //
+/////////////////
 
 /// The prefix of a composition.  These are ordered by score.
 #[derive(Debug, Clone)]
@@ -114,7 +172,7 @@ pub struct CompPrefix {
 }
 
 impl CompPrefix {
-    pub fn new(
+    fn new(
         path: CompPath,
         node_idx: NodeIdx,
         unreachable_nodes: BitVec,
@@ -155,7 +213,7 @@ impl Ord for CompPrefix {
 /// A route through the composition graph, stored as a reverse linked list.  This allows for
 /// multiple compositions with the same prefix to share the data for that prefix.
 #[derive(Debug, Clone)]
-pub enum CompPath {
+enum CompPath {
     /// The start of a composition, along with the index within `Graph::start_nodes` of this
     /// specific start
     Start(usize),
@@ -165,22 +223,22 @@ pub enum CompPath {
 }
 
 impl CompPath {
-    fn comp_string(&self, graph: &Graph, data: &Data, end_label: &str) -> String {
-        let mut s = String::new();
-        self.fmt_recursive(graph, data, &mut s);
-        s.push_str(end_label);
-        s
+    // TODO: Remove the dependence on `Graph`.  Ideally, we'd store comps in such a way that they
+    // only need the `Layout`.
+    fn flatten(&self, graph: &Graph, data: &Data) -> (usize, Vec<LinkIdx>) {
+        let mut links = Vec::new();
+        let start_idx = self.flatten_recursive(graph, data, &mut links);
+        (start_idx, links)
     }
 
-    fn fmt_recursive(&self, graph: &Graph, data: &Data, s: &mut String) {
+    // Recursively flatten `self`, returning the start idx
+    fn flatten_recursive(&self, graph: &Graph, data: &Data, out: &mut Vec<LinkIdx>) -> usize {
         match self {
-            Self::Start(idx) => {
-                let (_node_idx, label) = &graph.starts[*idx];
-                s.push_str(label);
-            }
-            Self::Cons(lhs, link_idx) => {
-                lhs.fmt_recursive(graph, data, s);
-                s.push_str(&data.layout.links[*link_idx].display_name);
+            Self::Start(idx) => *idx,
+            Self::Cons(lhs, link) => {
+                let start = lhs.flatten_recursive(graph, data, out);
+                out.push(*link);
+                start
             }
         }
     }
