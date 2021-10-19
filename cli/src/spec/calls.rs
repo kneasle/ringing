@@ -71,6 +71,8 @@ pub struct SpecificCall {
     #[serde(default = "lead_end")]
     lead_location: String,
     calling_positions: Option<Vec<String>>,
+    #[serde(default = "default_call_score")]
+    weight: f32,
 }
 
 impl SpecificCall {
@@ -78,17 +80,13 @@ impl SpecificCall {
         Ok(Call::new(
             self.symbol.clone(),
             self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
+            self.calling_positions.clone(),
             self.lead_location.clone(),
             PlaceNot::parse(&self.place_notation, stage)
                 .map_err(|e| Error::CallPnParse(&self.place_notation, e))?,
-            self.calling_positions.clone(),
+            self.weight,
         ))
     }
-}
-
-#[inline(always)]
-fn lead_end() -> String {
-    LABEL_LEAD_END.to_owned()
 }
 
 pub fn gen_calls<'s>(
@@ -108,4 +106,13 @@ pub fn gen_calls<'s>(
     }
 
     Ok(call_specs)
+}
+
+#[inline(always)]
+fn lead_end() -> String {
+    LABEL_LEAD_END.to_owned()
+}
+
+fn default_call_score() -> f32 {
+    -0.3
 }

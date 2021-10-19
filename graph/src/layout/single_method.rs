@@ -20,6 +20,8 @@ pub(super) fn single_method_layout(
     // composition.  If these are `None`, then any location is allowed
     allowed_start_indices: Option<&[usize]>,
     allowed_end_indices: Option<&[usize]>,
+
+    plain_lead_weight: f32,
 ) -> Result<Layout> {
     // Generate useful values
     let plain_course = method.plain_course();
@@ -42,7 +44,7 @@ pub(super) fn single_method_layout(
     check_for_ambiguous_courses(&ch_masks, &lead_heads)?;
 
     // The possible ways that courses can be stitched together
-    let links = generate_links(&plain_course, &ch_masks, calls)?.into();
+    let links = generate_links(&plain_course, &ch_masks, calls, plain_lead_weight)?.into();
 
     // Places where the composition can start
     let starts = rounds_locations(&ch_masks, &plain_course, allowed_start_indices, "<");
@@ -237,6 +239,7 @@ fn generate_links(
     plain_course: &AnnotBlock<method::RowAnnot>,
     course_head_masks: &[CourseHeadMask],
     calls: &[super::Call],
+    plain_lead_weight: f32,
 ) -> Result<Vec<Link>> {
     /*
     The general approach here is to attempt to place calls in every position, compute which row
@@ -259,6 +262,7 @@ fn generate_links(
         calls,
         &call_ends,
         &call_starts_by_label,
+        plain_lead_weight,
     )
     .map(dedup_links)
 }
@@ -339,6 +343,8 @@ fn generate_all_links(
     calls: &[super::Call],
     call_ends: &[CallEnd],
     call_starts_by_label: &HashMap<&str, Vec<usize>>,
+
+    plain_lead_weight: f32,
 ) -> Result<Vec<Link>> {
     let stage = plain_course.stage();
 
@@ -405,6 +411,7 @@ fn generate_all_links(
                             course_head_transposition,
                             debug_name: format!("{}{}", call.debug_symbol, calling_position),
                             display_name: format!("{}{}", call.display_symbol, calling_position),
+                            weight: call.weight,
                         });
                         // The `Link` referring to a plain call at this lead.  This will generate a
                         // large number of duplicate leads (since many calls could happen in the
@@ -419,6 +426,7 @@ fn generate_all_links(
                             debug_name: format!("p{}", calling_position),
                             // Plain leads shouldn't be displayed
                             display_name: String::new(),
+                            weight: plain_lead_weight,
                         });
                     }
                 }

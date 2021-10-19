@@ -64,6 +64,7 @@ impl Layout {
             ch_masks,
             allowed_start_indices,
             allowed_end_indices,
+            0.0, // Give plain leads no weight
         )
     }
 
@@ -254,6 +255,9 @@ pub struct Link {
     pub debug_name: String,
     /// The name of this `Link` used when generating human-friendly call strings
     pub display_name: String,
+
+    /// The score given to each instance of this link
+    pub weight: f32,
 }
 
 impl Link {
@@ -459,26 +463,31 @@ impl CourseHeadMask {
 pub struct Call {
     display_symbol: String,
     debug_symbol: String,
+    calling_positions: Vec<String>,
+
     lead_location: String,
     place_not: PlaceNot,
-    calling_positions: Vec<String>,
+
+    weight: f32,
 }
 
 impl Call {
     pub fn new(
         display_symbol: String,
         debug_symbol: String,
+        calling_positions: Option<Vec<String>>,
         lead_location: String,
         place_not: PlaceNot,
-        calling_positions: Option<Vec<String>>,
+        weight: f32,
     ) -> Self {
         Self {
             display_symbol,
             debug_symbol,
-            lead_location,
             calling_positions: calling_positions
                 .unwrap_or_else(|| default_calling_positions(&place_not)),
+            lead_location,
             place_not,
+            weight,
         }
     }
 
@@ -518,9 +527,10 @@ impl Call {
         Self::new(
             String::new(),
             "-".to_owned(),
+            None,
             bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            None,
+            -1.8, // Slightly punish bobs
         )
     }
 
@@ -529,9 +539,10 @@ impl Call {
         Self::new(
             "s".to_owned(),
             "s".to_owned(),
+            None,
             bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            None,
+            -2.3, // Punish singles slightly more than bobs
         )
     }
 }

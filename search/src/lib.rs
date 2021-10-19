@@ -11,7 +11,7 @@ use graph::{Graph, NodeIdx};
 
 pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Data) -> Vec<Comp> {
     // Lower the graph into a graph that's immutable but faster to traverse
-    let lowered_graph = crate::graph::Graph::from(graph);
+    let lowered_graph = crate::graph::Graph::new(graph, data);
     search_lowered::<Ftr>(&lowered_graph, data)
 }
 
@@ -78,11 +78,11 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
 
         // Expand this node
         let path = Rc::new(path);
-        for &(link_idx, succ_idx) in &node.succs {
+        for &(link_score, link_idx, succ_idx) in &node.succs {
             let succ_node = &graph.nodes[succ_idx];
 
             let length = length + succ_node.length;
-            let score = score + succ_node.score;
+            let score = score + succ_node.score + link_score;
 
             if length >= data.len_range.end {
                 continue; // Node would make comp too long
@@ -105,18 +105,16 @@ fn search_lowered<Ftr: Frontier<CompPrefix> + Debug>(graph: &Graph, data: &Data)
             ));
         }
 
-        // If the queue gets too long, then reduce its size
+        // If the queue gets too long, then halve its size
         if frontier.len() >= data.queue_limit {
-            println!("Truncating queue ({})...", frontier.len());
             frontier.truncate(data.queue_limit / 2);
-            println!("done. ({})", frontier.len());
         }
 
         // Print stats every so often
+        iter_count += 1;
         if iter_count % 1_000_000 == 0 {
             println!("{} iters, {} items in queue.", iter_count, frontier.len());
         }
-        iter_count += 1;
     }
 
     comps

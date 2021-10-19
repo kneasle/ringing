@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bit_vec::BitVec;
 use itertools::Itertools;
-use monument_graph::{layout::LinkIdx, music::Score, NodeId};
+use monument_graph::{layout::LinkIdx, music::Score, Data, NodeId};
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
@@ -18,7 +18,7 @@ pub struct Node {
     pub score: Score,
     pub length: usize,
 
-    pub succs: Vec<(LinkIdx, NodeIdx)>, // Indices must be aligned with those from the source graph
+    pub succs: Vec<(Score, LinkIdx, NodeIdx)>, // Indices must be aligned with those from the source graph
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
     // unreachable
     pub falseness: BitVec,
@@ -30,8 +30,8 @@ pub struct Node {
 // CONVERSION FROM monument_graph::Graph //
 ///////////////////////////////////////////
 
-impl From<&monument_graph::Graph> for Graph {
-    fn from(source_graph: &monument_graph::Graph) -> Self {
+impl Graph {
+    pub fn new(source_graph: &monument_graph::Graph, data: &Data) -> Self {
         let num_nodes = source_graph.node_map().len();
 
         // Assign each node ID to a unique `NodeIdx`, and vice versa.  This way, we can now label
@@ -66,7 +66,13 @@ impl From<&monument_graph::Graph> for Graph {
                     succs: source_node
                         .successors()
                         .iter()
-                        .map(|(link_idx, succ_id)| (*link_idx, id_to_index[succ_id]))
+                        .map(|(link_idx, succ_id)| {
+                            (
+                                Score::from(data.layout.links[*link_idx].weight),
+                                *link_idx,
+                                id_to_index[succ_id],
+                            )
+                        })
                         .collect_vec(),
                     falseness,
                 }
