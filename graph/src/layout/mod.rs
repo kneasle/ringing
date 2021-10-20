@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{Bell, Block, Mask, Method, PlaceNot, Row, RowBuf, Stage};
+use bellframe::{AnnotBlock, Bell, Mask, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::{music::MusicType, Graph};
@@ -26,7 +26,7 @@ pub struct Layout {
     /// A list of blocks of [`Row`]s, from which the [`Segment`]s are taken (more precisely, each
     /// [`Segment`] corresponds to a subsequence of some block in `blocks`).  In most cases, this
     /// will be the plain course of the given method(s).
-    pub blocks: BlockVec<Block>,
+    pub blocks: BlockVec<AnnotBlock<Option<String>>>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
     /// but can also be the _absence_ of a call - note here that Monument will not implicitly add
     /// 'plain' links; they have to be explicitly added (and potentially named).
@@ -46,7 +46,7 @@ pub struct Layout {
 impl Layout {
     /// Create a new `Layout` for a single [`Method`].
     pub fn from_methods(
-        method: &[Method],
+        method: &[(Method, String)],
         calls: &[self::Call],
         splice_style: SpliceStyle,
         // The course head masks, along with the 'calling bell' for that course.  Allowing

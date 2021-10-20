@@ -108,7 +108,7 @@ impl Spec {
         // Generate a `Layout` from the data about the method and calls
         let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
         let layout = Layout::from_methods(
-            &[method],
+            &[(method, "".to_owned())],
             &calls,
             SpliceStyle::Calls, // TODO: Make this configurable
             course_head_masks,

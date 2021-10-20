@@ -11,7 +11,7 @@ use super::{BlockIdx, BlockVec, CourseHeadMask, Layout, Link, RowIdx, StartOrEnd
 /// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
 /// [`Call`](super::Call)s and course heads to use).
 pub(super) fn from_methods(
-    methods: &[Method],
+    methods: &[(Method, String)],
     calls: &[super::Call],
     splice_style: SpliceStyle,
     // The course head masks, along with which bell is 'calling bell' during that course.
@@ -42,7 +42,7 @@ pub(super) fn from_methods(
         // Create a block for each method
         blocks: method_datas
             .into_iter()
-            .map(|d| d.plain_course.map_annots(|_| ()))
+            .map(MethodData::to_block)
             .collect::<BlockVec<_>>(),
     })
 }
@@ -91,16 +91,16 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Generate a [`MethodData`] struct for each source [`Method`].  This also adds fixed bells (e.g.
 /// the treble) to the course heads.
 fn gen_method_data<'a>(
-    methods: &'a [Method],
+    methods: &'a [(Method, String)],
     calls: &'a [super::Call],
     ch_masks: Vec<(Mask, Bell)>,
 ) -> Result<(Vec<MethodData<'a>>, Stage)> {
     let stage = methods
         .iter()
-        .map(Method::stage)
+        .map(|(method, _shorthand)| method.stage())
         .max()
         .ok_or(Error::NoMethods)?;
-    assert!(methods.iter().all(|m| m.stage() == stage)); // TODO: Implement mixed stage splicing
+    assert!(methods.iter().all(|(m, _)| m.stage() == stage)); // TODO: Implement mixed stage splicing
 
     let calls_per_method = methods
         .iter()
@@ -122,7 +122,7 @@ fn gen_method_data<'a>(
 
     let method_datas = methods
         .iter()
-        .map(|m| MethodData::new(m, calls, &ch_masks))
+        .map(|(m, shorthand)| MethodData::new(m, shorthand.to_owned(), calls, &ch_masks))
         .collect_vec();
     Ok((method_datas, stage))
 }
@@ -132,7 +132,7 @@ fn gen_method_data<'a>(
 /// (allowing the falseness detection to use it to reduce the size of the falseness table).
 fn add_fixed_bells(
     ch_masks: Vec<(Mask, Bell)>,
-    methods: &[Method],
+    methods: &[(Method, String)],
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
 ) -> Vec<(Mask, Bell)> {
@@ -159,13 +159,13 @@ fn add_fixed_bells(
 /// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
 /// bells in non-variable-hunt compositions).
 fn fixed_bells(
-    methods: &[Method],
+    methods: &[(Method, String)],
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
 ) -> Vec<Bell> {
     // Start off with all bells fixed
     let mut all_fixed_bells = stage.bells().collect_vec();
-    for (method, calls) in methods.iter().zip_eq(calls_per_method) {
+    for ((method, _shorthand), calls) in methods.iter().zip_eq(calls_per_method) {
         // Start the set with the bells which are fixed by the plain lead of every method
         let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
         for call in calls {
@@ -730,6 +730,8 @@ fn rounds_locations(
 struct MethodData<'a> {
     /// The [`Method`] which this data is about
     method: &'a Method,
+    /// The string used to represent one lead of this method
+    shorthand: String,
     /// The calls which can be applied to this [`Method`].
     calls: Vec<&'a super::Call>,
     /// The [`CourseHeadMask`]s which can be applied to this method
@@ -742,14 +744,26 @@ struct MethodData<'a> {
 }
 
 impl<'a> MethodData<'a> {
-    fn new(method: &'a Method, calls: &'a [super::Call], ch_masks: &[CourseHeadMask]) -> Self {
+    fn new(
+        method: &'a Method,
+        shorthand: String,
+        calls: &'a [super::Call],
+        ch_masks: &[CourseHeadMask],
+    ) -> Self {
         Self {
             method,
+            shorthand,
             calls: calls.iter().collect_vec(), // TODO: Allow calls to be assigned to specific methods
             ch_masks: ch_masks.to_owned(), // TODO: Allow CH masks to be assigned to specific methods
 
             plain_course: method.plain_course(),
             lead_heads: method.lead_head().closure_from_rounds(),
         }
+    }
+
+    fn to_block(self) -> AnnotBlock<Option<String>> {
+        let shorthand = &self.shorthand;
+        self.plain_course
+            .map_annots(|annot| (annot.sub_lead_idx() == 0).then(|| shorthand.clone()))
     }
 }
