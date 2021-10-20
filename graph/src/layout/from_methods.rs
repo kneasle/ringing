@@ -418,6 +418,8 @@ fn generate_all_links(
     stage: Stage,
     splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
+    let is_spliced = method_datas.len() > 1;
+
     let mut links = Vec::<Link>::new();
     let link_gen_data = LinkGenData {
         method_datas,
@@ -467,8 +469,14 @@ fn generate_all_links(
                                 stage,
                             }
                         })?;
-                    let debug_name = format!("{}{}", call.debug_symbol, calling_position);
-                    let display_name = format!("{}{}", call.display_symbol, calling_position);
+                    let mut debug_name = format!("{}{}", call.debug_symbol, calling_position);
+                    let mut display_name = format!("{}{}", call.display_symbol, calling_position);
+                    if is_spliced {
+                        // If we're ringing spliced, then put calls in `[]`s to differentiate them
+                        // from method names
+                        debug_name = format!("[{}]", debug_name);
+                        display_name = format!("[{}]", display_name);
+                    }
 
                     // Add links for this call, splicing to any available method
                     add_links_for_call(
@@ -511,8 +519,8 @@ fn generate_all_links(
                     from_idx,
                     &from_ch_mask.mask,
                     row_after_plain,
-                    "p", // Debug with no calling position
-                    "",  // Hide in display
+                    if is_spliced { "[p]" } else { "p" }, // Debug with no call position
+                    "",                                   // Don't display plain leads
                     plain_lead_weight,
                     &link_gen_data,
                     &mut links,
@@ -524,7 +532,8 @@ fn generate_all_links(
     Ok(links)
 }
 
-/// Creates a new [`Link`] from its source location and mask.
+/// For a given link type (i.e. source mask, transposition, etc.) create links which come out of
+/// this into any possible method
 fn add_links_for_call(
     from_idx: RowIdx,
     from_ch_mask: &Mask,
