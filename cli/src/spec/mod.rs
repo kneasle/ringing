@@ -9,7 +9,7 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument_graph::{
-    layout::{single_method, Layout},
+    layout::{from_methods, Layout, SpliceStyle},
     music::MusicType,
     Data,
 };
@@ -107,9 +107,10 @@ impl Spec {
 
         // Generate a `Layout` from the data about the method and calls
         let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
-        let layout = Layout::single_method(
-            &method,
+        let layout = Layout::from_methods(
+            &[method],
             &calls,
+            SpliceStyle::Calls, // TODO: Make this configurable
             course_head_masks,
             self.start_indices.as_deref(),
             self.end_indices.as_deref(),
@@ -147,7 +148,7 @@ pub enum Error<'s> {
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
-    LayoutGenError(single_method::Error),
+    LayoutGenError(from_methods::Error),
 }
 
 ///////////////

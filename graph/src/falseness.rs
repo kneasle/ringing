@@ -193,11 +193,8 @@ fn ch_masks_from_links(
     let mut masks_by_end = HashSet::<(RowIdx, &Mask)>::with_capacity(layout.links.len());
     let mut masks_by_start = HashSet::<(RowIdx, Mask)>::with_capacity(layout.links.len());
     for link in &layout.links {
-        masks_by_end.insert((link.from, &link.course_head_mask));
-        masks_by_start.insert((
-            link.to,
-            &link.course_head_mask * link.course_head_transposition.as_row(),
-        ));
+        masks_by_end.insert((link.from, &link.ch_mask));
+        masks_by_start.insert((link.to, &link.ch_mask * link.ch_transposition.as_row()));
     }
 
     // Group these sets by RowIdx

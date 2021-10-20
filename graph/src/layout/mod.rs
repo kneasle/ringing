@@ -9,10 +9,9 @@ use itertools::Itertools;
 
 use crate::{music::MusicType, Graph};
 
-pub mod single_method;
+pub mod from_methods;
 
-index_vec::define_index_type! { pub struct LinkIdx = usize; }
-pub type LinkVec<T> = index_vec::IndexVec<LinkIdx, T>;
+pub use self::from_methods::SpliceStyle;
 
 /// A representation of the course layout of a composition, and how Monument understands
 /// composition structure.  In this representation, a
@@ -27,7 +26,7 @@ pub struct Layout {
     /// A list of blocks of [`Row`]s, from which the [`Segment`]s are taken (more precisely, each
     /// [`Segment`] corresponds to a subsequence of some block in `blocks`).  In most cases, this
     /// will be the plain course of the given method(s).
-    pub blocks: Vec<Block>,
+    pub blocks: BlockVec<Block>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
     /// but can also be the _absence_ of a call - note here that Monument will not implicitly add
     /// 'plain' links; they have to be explicitly added (and potentially named).
@@ -46,9 +45,10 @@ pub struct Layout {
 
 impl Layout {
     /// Create a new `Layout` for a single [`Method`].
-    pub fn single_method(
-        method: &Method,
+    pub fn from_methods(
+        method: &[Method],
         calls: &[self::Call],
+        splice_style: SpliceStyle,
         // The course head masks, along with the 'calling bell' for that course.  Allowing
         // different calling bells allows us to do things like keep using W,M,H during courses of
         // e.g. `1xxxxx0987`.
@@ -57,14 +57,15 @@ impl Layout {
         // composition.  If these are `None`, then any location is allowed
         allowed_start_indices: Option<&[usize]>,
         allowed_end_indices: Option<&[usize]>,
-    ) -> Result<Self, single_method::Error> {
-        single_method::single_method_layout(
+    ) -> Result<Self, from_methods::Error> {
+        from_methods::from_methods(
             method,
             calls,
+            splice_style,
             ch_masks,
             allowed_start_indices,
             allowed_end_indices,
-            0.0, // Give plain leads no weight
+            0.0, // Neither punish nor reward plain leads
         )
     }
 
@@ -90,7 +91,7 @@ impl Layout {
             }
             // If this link's course head mask doesn't match the current course, then it can't be
             // called
-            if !link.course_head_mask.matches(&id.course_head) {
+            if !link.ch_mask.matches(&id.course_head) {
                 continue;
             }
 
@@ -247,9 +248,9 @@ pub struct Link {
     pub to: RowIdx,
 
     /// A [`Mask`] which determines which course heads this `Link` can be applied to
-    pub course_head_mask: Mask,
+    pub ch_mask: Mask,
     /// The transposition of the course head taken when this is applied
-    pub course_head_transposition: RowBuf,
+    pub ch_transposition: RowBuf,
 
     /// The name of this `Link`, used in debugging
     pub debug_name: String,
@@ -265,20 +266,24 @@ impl Link {
     /// course.
     fn id_after(&self, course_head: &Row) -> NodeId {
         // Sanity check that this link could actually be applied in this location.
-        assert!(self.course_head_mask.matches(course_head));
+        assert!(self.ch_mask.matches(course_head));
         NodeId::new(
-            course_head * self.course_head_transposition.as_row(),
+            course_head * self.ch_transposition.as_row(),
             self.to,
             // Nodes reached by taking a link can't be start nodes
             false,
         )
     }
 
+    pub fn is_call(&self) -> bool {
+        !self.ch_transposition.is_rounds()
+    }
+
     /// Returns `true` if `self` and `other` are equal (but ignoring the name and CH masks)
     pub(crate) fn eq_without_name_or_ch_mask(&self, other: &Self) -> bool {
         self.from == other.from
             && self.to == other.to
-            && self.course_head_transposition == other.course_head_transposition
+            && self.ch_transposition == other.ch_transposition
     }
 }
 
@@ -301,12 +306,12 @@ impl StartOrEnd {
 /// row_idx)` pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RowIdx {
-    pub block: usize,
+    pub block: BlockIdx,
     pub row: usize,
 }
 
 impl RowIdx {
-    pub fn new(block_idx: usize, row_idx: usize) -> Self {
+    pub fn new(block_idx: BlockIdx, row_idx: usize) -> Self {
         Self {
             block: block_idx,
             row: row_idx,
@@ -352,7 +357,7 @@ impl Display for NodeId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{},{}:{}{}",
+            "{},{:?}:{}{}",
             self.course_head,
             self.row_idx.block,
             self.row_idx.row,
@@ -548,7 +553,7 @@ impl Call {
 }
 
 fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
-    let named_positions = "LIBFVXSEN";
+    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // Generate calling positions that aren't M, W or H
     let mut positions =
@@ -556,8 +561,9 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
         named_positions
         .chars()
         .map(|c| c.to_string())
-        // Extending forever with numbers
-        .chain((named_positions.len()..).map(|i| (i + 1).to_string()))
+        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
+        // calling positions)
+        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
         // But we consume one value per place in the Stage
         .take(place_not.stage().num_bells())
         .collect_vec();
@@ -608,6 +614,16 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 
     positions
 }
+
+/////////////////
+// INDEX TYPES //
+/////////////////
+
+index_vec::define_index_type! { pub struct LinkIdx = usize; }
+index_vec::define_index_type! { pub struct BlockIdx = usize; }
+
+pub type LinkVec<T> = index_vec::IndexVec<LinkIdx, T>;
+pub type BlockVec<T> = index_vec::IndexVec<BlockIdx, T>;
 
 #[cfg(test)]
 mod tests {
