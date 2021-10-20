@@ -17,6 +17,7 @@ pub struct Node {
     pub id: NodeId,
     pub score: Score,
     pub length: usize,
+    pub label: String,
 
     pub succs: Vec<(Score, LinkIdx, NodeIdx)>, // Indices must be aligned with those from the source graph
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
@@ -58,22 +59,25 @@ impl Graph {
                     falseness.set(false_node_idx.index(), true);
                 }
 
+                let succs = source_node
+                    .successors()
+                    .iter()
+                    .map(|(link_idx, succ_id)| {
+                        (
+                            Score::from(data.layout.links[*link_idx].weight),
+                            *link_idx,
+                            id_to_index[succ_id],
+                        )
+                    })
+                    .collect_vec();
+
                 Node {
                     id,
                     score: source_node.score(),
                     length: source_node.length(),
+                    label: source_node.label().to_owned(),
                     end_label: source_node.end_label().map(str::to_owned),
-                    succs: source_node
-                        .successors()
-                        .iter()
-                        .map(|(link_idx, succ_id)| {
-                            (
-                                Score::from(data.layout.links[*link_idx].weight),
-                                *link_idx,
-                                id_to_index[succ_id],
-                            )
-                        })
-                        .collect_vec(),
+                    succs,
                     falseness,
                 }
             })
@@ -90,6 +94,10 @@ impl Graph {
         }
 
         Graph { starts, nodes }
+    }
+
+    pub fn node_label(&self, idx: NodeIdx) -> String {
+        self.nodes[idx].label.clone()
     }
 }
 

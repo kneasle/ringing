@@ -47,9 +47,10 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Dat
         // Check if the comp has come round
         if let Some(end_label) = &node.end_label {
             if data.len_range.contains(&length) {
-                let (start_idx, links) = path.flatten(&graph, data);
+                let (start_idx, start_node_label, links) = path.flatten(&graph, data);
                 let comp = Comp {
                     start_idx,
+                    start_node_label,
                     links,
                     end_label: end_label.to_owned(),
 
@@ -95,7 +96,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Dat
             new_unreachable_nodes.or(&succ_node.falseness);
 
             frontier.push(CompPrefix::new(
-                CompPath::Cons(path.clone(), link_idx),
+                CompPath::Cons(path.clone(), link_idx, succ_idx),
                 succ_idx,
                 new_unreachable_nodes,
                 score,
@@ -121,7 +122,8 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Dat
 #[derive(Debug, Clone)]
 pub struct Comp {
     pub start_idx: usize,
-    pub links: Vec<LinkIdx>,
+    pub start_node_label: String,
+    pub links: Vec<(LinkIdx, String)>,
     pub end_label: String,
 
     pub length: usize,
@@ -136,9 +138,11 @@ impl Comp {
         // Start
         let (_node_idx, label) = &graph.starts[self.start_idx];
         s.push_str(label);
+        s.push_str(&self.start_node_label);
         // Links
-        for &link_idx in &self.links {
-            s.push_str(&data.layout.links[link_idx].display_name);
+        for (link_idx, link_label) in &self.links {
+            s.push_str(&data.layout.links[*link_idx].display_name);
+            s.push_str(link_label);
         }
         // End
         s.push_str(end_label);
@@ -216,25 +220,34 @@ enum CompPath {
     Start(usize),
     /// The composition follows the sequence in the [`Rc`], followed by taking the `n`th successor
     /// to that node.
-    Cons(Rc<Self>, LinkIdx),
+    Cons(Rc<Self>, LinkIdx, NodeIdx),
 }
 
 impl CompPath {
     // TODO: Remove the dependence on `Graph`.  Ideally, we'd store comps in such a way that they
     // only need the `Layout`.
-    fn flatten(&self, graph: &Graph, data: &Data) -> (usize, Vec<LinkIdx>) {
+    fn flatten(&self, graph: &Graph, data: &Data) -> (usize, String, Vec<(LinkIdx, String)>) {
         let mut links = Vec::new();
-        let start_idx = self.flatten_recursive(graph, data, &mut links);
-        (start_idx, links)
+        let (start_idx, start_node_label) = self.flatten_recursive(graph, data, &mut links);
+        (start_idx, start_node_label, links)
     }
 
     // Recursively flatten `self`, returning the start idx
-    fn flatten_recursive(&self, graph: &Graph, data: &Data, out: &mut Vec<LinkIdx>) -> usize {
+    fn flatten_recursive(
+        &self,
+        graph: &Graph,
+        data: &Data,
+        out: &mut Vec<(LinkIdx, String)>,
+    ) -> (usize, String) {
         match self {
-            Self::Start(idx) => *idx,
-            Self::Cons(lhs, link) => {
+            &Self::Start(start_idx) => {
+                let (start_node_idx, _start_label) = &graph.starts[start_idx];
+                let label = graph.node_label(*start_node_idx);
+                (start_idx, label)
+            }
+            Self::Cons(lhs, link, node_idx) => {
                 let start = lhs.flatten_recursive(graph, data, out);
-                out.push(*link);
+                out.push((*link, graph.node_label(*node_idx)));
                 start
             }
         }

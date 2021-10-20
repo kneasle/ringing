@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    convert::identity,
     fmt::{Debug, Display, Formatter},
     sync::Arc,
 };
@@ -77,7 +78,8 @@ impl Layout {
     /// Returns the [`Segment`], starting at a given [`NodeId`].  If this [`Segment`] would never
     /// terminate (because no [`Link`]s can be applied to it), then `None` is returned.
     pub(crate) fn get_segment(&self, id: &NodeId) -> Option<Segment> {
-        let block_len = self.blocks[id.row_idx.block].len();
+        let block = &self.blocks[id.row_idx.block];
+        let block_len = block.len();
         let length_between = |from: usize, to: usize| (to + block_len - from) % block_len;
 
         // Figure out which links are going to finish this segment
@@ -165,7 +167,7 @@ impl Layout {
         }
 
         // Decide which of `self.starts` this node corresponds to (if it is a start)
-        let start_idx = if id.is_start {
+        let start_label = if id.is_start {
             let start_or_end = self
                 .starts
                 .iter()
@@ -198,13 +200,29 @@ impl Layout {
             }
         }
 
+        let shortest_length = shortest_length?;
+
+        // Generate the string for this node from the lead labels annotating the block
+        let mut label = String::new();
+        for l in block
+            .annots()
+            .cycle()
+            .skip(id.row_idx.row)
+            .take(shortest_length)
+            .map(Option::as_ref)
+            .filter_map(identity)
+        {
+            label.push_str(l);
+        }
+
         // If some way of ending this segment was found (i.e. a Link or an end-point), then build a
         // new Some(Segment), otherwise bubble the `None` value
-        shortest_length.map(|length| Segment {
+        Some(Segment {
             links: deduped_links,
-            length,
+            length: shortest_length,
+            label,
             node_id: id.clone(),
-            start_label: start_idx,
+            start_label,
             end_label,
         })
     }
@@ -386,6 +404,10 @@ pub(crate) struct Segment {
     pub(crate) node_id: NodeId,
     pub(crate) length: usize,
     pub(crate) links: Vec<(LinkIdx, NodeId)>,
+
+    /// The [`String`] which should be printed when this node is expanded.  This is usually a
+    /// sequence of method shorthands (e.g. "YYY") when ringing spliced.
+    pub(crate) label: String,
 
     /// If this `Segment` is a start point, then this is `Some(s)` where `s` should be inserted at
     /// the start of the composition string (e.g. `""` for normal starts and `"<"` for snap

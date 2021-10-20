@@ -47,6 +47,8 @@ pub struct Node {
     /// If this `Node` is an 'end' (i.e. adding it will complete a composition), then this is
     /// `Some(label)` where `label` should be appended to the human-friendly composition string.
     end_label: Option<String>,
+    /// The string that should be added when this node is generated
+    label: String,
 
     successors: Vec<(LinkIdx, NodeId)>,
     predecessors: Vec<(LinkIdx, NodeId)>,
@@ -273,6 +275,10 @@ impl Node {
         self.music.total
     }
 
+    pub fn label(&self) -> &str {
+        self.label.as_str()
+    }
+
     // STARTS/ENDS //
 
     pub fn start_label(&self) -> Option<&str> {
@@ -405,8 +411,9 @@ impl Graph {
                     length: segment.length,
                     music,
 
-                    start_label: segment.start_label.to_owned(),
-                    end_label: segment.end_label.to_owned(),
+                    start_label: segment.start_label.clone(),
+                    end_label: segment.end_label.clone(),
+                    label: segment.label.clone(),
 
                     required: false,
                     lb_distance_from_rounds: *distance,
