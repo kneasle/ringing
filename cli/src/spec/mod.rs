@@ -58,7 +58,11 @@ pub struct Spec {
     course_heads: Option<Vec<String>>,
 
     /// The [`Method`] who's compositions we are after
-    method: MethodSpec,
+    method: Option<MethodSpec>,
+    #[serde(default)]
+    /// A list of [`Method`] who are being spliced together
+    methods: Vec<MethodSpec>,
+
     /// Which calls to use in the compositions
     #[serde(default)]
     calls: Vec<SpecificCall>,
@@ -79,15 +83,28 @@ impl Spec {
 
     /// 'Lower' this specification into the information required to build a composition.
     pub fn lower(&self) -> Result<Data, Error> {
-        // Parse and verify into its fully specified form
-        let method = self.method.gen_method()?;
-        let stage = method.stage();
+        // Generate methods
+        let mut methods: Vec<Method> = self
+            .methods
+            .iter()
+            .map(MethodSpec::gen_method)
+            .collect::<Result<_, _>>()?;
+        if let Some(m) = &self.method {
+            methods.push(m.gen_method()?);
+        }
+
+        // Compute useful values
+        let stage = methods
+            .iter()
+            .map(Method::stage)
+            .max()
+            .ok_or(Error::NoMethods)?;
         let tenor = Bell::tenor(stage);
 
         let music_types = self
             .music
             .iter()
-            .map(|b| b.to_music_type(method.stage()))
+            .map(|b| b.to_music_type(stage))
             .collect_vec();
         let course_head_masks = match (self.course_heads.as_ref(), self.split_tenors) {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
@@ -97,20 +114,24 @@ impl Spec {
                 .map(|s| (Mask::parse(s), tenor))
                 .collect_vec(),
             // If no masks were given but `split_tenors` was `true`, then only fix tenor and treble
-            (None, true) => vec![(
-                Mask::fix_bells(method.stage(), vec![Bell::TREBLE, tenor]),
-                tenor,
-            )],
+            (None, true) => vec![(Mask::fix_bells(stage, vec![Bell::TREBLE, tenor]), tenor)],
             // Default to tenors together, with the tenor as 'calling bell'
             (None, false) => vec![(gen_tenors_together_mask(stage), tenor)],
         };
+        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
+        let methods = methods
+            .into_iter()
+            .map(|m| {
+                let shorthand = m.name().chars().next().unwrap().to_string();
+                (m, shorthand)
+            })
+            .collect_vec();
 
         // Generate a `Layout` from the data about the method and calls
-        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
         let layout = Layout::from_methods(
-            &[(method, "".to_owned())],
+            &methods,
             &calls,
-            SpliceStyle::Calls, // TODO: Make this configurable
+            SpliceStyle::LeadLabels, // TODO: Make this configurable
             course_head_masks,
             self.start_indices.as_deref(),
             self.end_indices.as_deref(),
@@ -143,6 +164,7 @@ fn gen_tenors_together_mask(stage: Stage) -> Mask {
 #[derive(Debug, Clone)]
 pub enum Error<'s> {
     NoCalls,
+    NoMethods,
     CcLibNotFound,
     MethodNotFound { suggestions: Vec<String> },
     CallPnParse(&'s str, place_not::ParseError),
