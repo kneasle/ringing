@@ -87,7 +87,7 @@ impl Spec {
     /// 'Lower' this specification into the information required to build a composition.
     pub fn lower(&self) -> Result<Data, Error> {
         // Generate methods
-        let mut methods: Vec<Method> = self
+        let mut methods: Vec<(Method, String)> = self
             .methods
             .iter()
             .map(MethodSpec::gen_method)
@@ -99,7 +99,7 @@ impl Spec {
         // Compute useful values
         let stage = methods
             .iter()
-            .map(Method::stage)
+            .map(|(m, _)| m.stage())
             .max()
             .ok_or(Error::NoMethods)?;
         let tenor = Bell::tenor(stage);
@@ -122,13 +122,6 @@ impl Spec {
             (None, false) => vec![(gen_tenors_together_mask(stage), tenor)],
         };
         let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
-        let methods = methods
-            .into_iter()
-            .map(|m| {
-                let shorthand = m.name().chars().next().unwrap().to_string();
-                (m, shorthand)
-            })
-            .collect_vec();
 
         // Generate a `Layout` from the data about the method and calls
         let layout = Layout::from_methods(
@@ -194,12 +187,14 @@ pub enum MethodSpec {
         /// outputs are the lead location names
         #[serde(default = "default_lead_labels")]
         lead_locations: HashMap<String, String>,
+        shorthand: Option<String>,
     },
     Custom {
         #[serde(default)]
         name: String,
         place_notation: String,
         stage: Stage,
+        shorthand: Option<String>,
         /// The inputs to this map are numerical strings representing sub-lead indices, and the
         /// outputs are the lead location names
         #[serde(default = "default_lead_labels")]
@@ -208,7 +203,7 @@ pub enum MethodSpec {
 }
 
 impl MethodSpec {
-    fn gen_method(&self) -> Result<Method, Error<'_>> {
+    fn gen_method(&self) -> Result<(Method, String), Error<'_>> {
         let mut m = self.get_method_without_lead_locations()?;
 
         for (index_str, name) in self.get_lead_locations() {
@@ -220,7 +215,20 @@ impl MethodSpec {
             // This cast is OK because we used % twice to guarantee a positive index
             m.set_label(wrapped_index as usize, Some(name.clone()));
         }
-        Ok(m)
+
+        // Use the custom shorthand, or the first letter of the method
+        let shorthand = self
+            .shorthand()
+            .unwrap_or_else(|| m.name().chars().next().unwrap().to_string());
+
+        Ok((m, shorthand))
+    }
+
+    fn shorthand(&self) -> Option<String> {
+        match self {
+            Self::Lib { shorthand, .. } => shorthand.clone(),
+            Self::Custom { shorthand, .. } => shorthand.clone(),
+        }
     }
 
     fn get_lead_locations(&self) -> &HashMap<String, String> {
