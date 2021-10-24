@@ -1,0 +1,17 @@
+length = "QP"
+num_comps = 20
+base_calls = "near"
+methods = [
+    { title = "Yorkshire Surprise Major" },
+    { title = "Bristol Surprise Major" },
+    { title = "Superlative Surprise Major" },
+    { title = "Cambridge Surprise Major" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+]
+# course_heads = ["1xxxxx78", "15678xxx"]
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
