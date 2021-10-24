@@ -14,14 +14,15 @@ pub struct Graph {
 
 #[derive(Debug, Clone)]
 pub struct Node {
-    pub id: NodeId,
     pub score: Score,
     pub length: usize,
+    /// Minimum number of rows required to go from the end of `self` to rounds
+    pub dist_to_rounds: usize,
     pub label: String,
 
     pub succs: Vec<(Score, LinkIdx, NodeIdx)>, // Indices must be aligned with those from the source graph
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
-    // unreachable
+    // unreachable.  This includes `Self`
     pub falseness: BitVec,
 
     pub end_label: Option<String>,
@@ -50,7 +51,7 @@ impl Graph {
             .map(|index| {
                 // Get the source node and its NodeId
                 let index = NodeIdx::new(index);
-                let (id, source_node) = index_to_id[index].clone();
+                let (_id, source_node) = index_to_id[index].clone();
 
                 // Generate a BitVec with a 1 for every node which is false against this node
                 let mut falseness = BitVec::from_elem(num_nodes, false);
@@ -72,9 +73,9 @@ impl Graph {
                     .collect_vec();
 
                 Node {
-                    id,
                     score: source_node.score(),
                     length: source_node.length(),
+                    dist_to_rounds: source_node.lb_distance_to_rounds,
                     label: source_node.label().to_owned(),
                     end_label: source_node.end_label().map(str::to_owned),
                     succs,

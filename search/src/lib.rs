@@ -83,7 +83,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug>(graph: &m_gr::Graph, data: &Dat
             let length = length + succ_node.length;
             let score = score + succ_node.score + link_score;
 
-            if length >= data.len_range.end {
+            if length + succ_node.dist_to_rounds >= data.len_range.end {
                 continue; // Node would make comp too long
             }
 
