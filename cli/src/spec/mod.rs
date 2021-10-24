@@ -127,7 +127,7 @@ impl Spec {
         let layout = Layout::from_methods(
             &methods,
             &calls,
-            SpliceStyle::LeadLabels, // TODO: Make this configurable
+            SpliceStyle::Calls, // TODO: Make this configurable
             course_head_masks,
             if self.snap_start {
                 None

@@ -469,30 +469,48 @@ fn generate_all_links(
                                 stage,
                             }
                         })?;
-                    let mut debug_name = format!("{}{}", call.debug_symbol, calling_position);
-                    let mut display_name = format!("{}{}", call.display_symbol, calling_position);
-                    if is_spliced {
-                        // If we're ringing spliced, then put calls in `[]`s to differentiate them
-                        // from method names
-                        debug_name = format!("[{}]", debug_name);
-                        display_name = format!("[{}]", display_name);
-                    }
+
+                    // Closure used to format a call string
+                    let fmt_call = |symbol: &str, calling_pos: &str| -> String {
+                        if is_spliced {
+                            // If we're ringing spliced, then put calls in `[]`s to differentiate
+                            // them from method names
+                            format!("[{}{}]", symbol, calling_pos)
+                        } else {
+                            format!("{}{}", symbol, calling_pos)
+                        }
+                    };
 
                     // Add links for this call, splicing to any available method
                     add_links_for_call(
                         from_idx,
                         &from_ch_mask.mask,
                         &row_after_call,
-                        &debug_name,
-                        &display_name,
+                        &fmt_call(&call.debug_symbol, calling_position),
+                        &fmt_call(&call.display_symbol, calling_position),
                         call.weight,
+                        None, // Calls are always allowed to change method
                         &link_gen_data,
                         &mut links,
                     );
 
+                    // Add corresponding plain links, according to the splicing style
                     if splice_style != SpliceStyle::LeadLabels {
-                        // TODO: Add corresponding plain links for splicing
-                        todo!()
+                        let idx_after_plain = (from_idx.row + 1) % d.plain_course.len();
+                        let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
+                        add_links_for_call(
+                            from_idx,
+                            &from_ch_mask.mask,
+                            row_after_plain,
+                            &fmt_call("p", calling_position),
+                            "", // Don't display plain leads in output
+                            plain_lead_weight,
+                            // Splicing on plain leads at call locations is allowed for
+                            // `CallLocations`, but not for just `Calls`
+                            (splice_style == SpliceStyle::CallLocations).then(|| method_idx),
+                            &link_gen_data,
+                            &mut links,
+                        );
                     }
                 }
             }
@@ -522,6 +540,7 @@ fn generate_all_links(
                     if is_spliced { "[p]" } else { "p" }, // Debug with no call position
                     "",                                   // Don't display plain leads
                     plain_lead_weight,
+                    None, // We want to allow splices at every lead
                     &link_gen_data,
                     &mut links,
                 );
@@ -532,8 +551,8 @@ fn generate_all_links(
     Ok(links)
 }
 
-/// For a given link type (i.e. source mask, transposition, etc.) create links which come out of
-/// this into any possible method
+/// For a given call in a given position, create links which come out of this into any possible
+/// method
 fn add_links_for_call(
     from_idx: RowIdx,
     from_ch_mask: &Mask,
@@ -542,6 +561,8 @@ fn add_links_for_call(
     debug_name: &str,
     display_name: &str,
     weight: f32,
+    // `Some(i)` means that only links to method `i` is allowed, otherwise all links are allowed
+    required_method_idx: Option<usize>,
 
     // Same across all calls:
     data: &LinkGenData,
@@ -553,6 +574,12 @@ fn add_links_for_call(
     for call_end in data.call_ends {
         if !call_end.row_mask.is_compatible_with(&mask_after_call) {
             continue;
+        }
+
+        if let Some(i) = required_method_idx {
+            if i != call_end.method_idx {
+                continue;
+            }
         }
 
         let method_to = &data.method_datas[call_end.method_idx];
