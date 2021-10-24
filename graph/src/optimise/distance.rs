@@ -21,7 +21,6 @@ pub fn compute_distances(mut view: DirectionalView, data: &Data) {
     // queue.  Initialise this with just the start nodes.
     let mut frontier: BinaryHeap<Reverse<FrontierItem<(&NodeId, NodeView)>>> = view
         .start_nodes()
-        .iter()
         .filter_map(|id| view.get_node(id).map(|node| (id, node))) // Collect IDs and nodes
         .map(FrontierItem::new)
         .map(Reverse)

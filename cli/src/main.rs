@@ -1,7 +1,7 @@
 use args::CliArgs;
 use log::LevelFilter;
-use monument_graph::optimise::passes;
-use monument_search::{frontier::BestFirst, search, CompPrefix};
+use monument_graph::{layout::Layout, optimise::passes};
+use monument_search::{frontier::BestFirst, search, Comp};
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -38,8 +38,22 @@ fn main() {
     }
 
     // Run graph search on each graph
+    let mut comps = Vec::<Comp>::new();
     for g in &graphs {
         println!("\n\n\n\nHI\n\n\n");
-        search::<BestFirst<CompPrefix>>(g, &data);
+        search::<BestFirst<_>, _>(g, &data, |c| {
+            print_comp(&c, &data.layout);
+            comps.push(c);
+        });
     }
+}
+
+fn print_comp(c: &Comp, layout: &Layout) {
+    println!(
+        "len: {}, score: {:>6.2}, avg: {}, str: {}",
+        c.length,
+        c.score,
+        c.avg_score,
+        c.display_string(layout)
+    );
 }

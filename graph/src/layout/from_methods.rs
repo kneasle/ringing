@@ -37,8 +37,8 @@ pub(super) fn from_methods(
 
     Ok(Layout {
         links: generate_links(&method_datas, plain_lead_weight, stage, splice_style)?.into(),
-        starts: rounds_locations(&method_datas, stage, allowed_start_indices, "<"),
-        ends: rounds_locations(&method_datas, stage, allowed_end_indices, ">"),
+        starts: rounds_locations(&method_datas, stage, allowed_start_indices, "<").into(),
+        ends: rounds_locations(&method_datas, stage, allowed_end_indices, ">").into(),
         // Create a block for each method
         blocks: method_datas
             .into_iter()
@@ -52,7 +52,7 @@ pub(super) fn from_methods(
 pub enum SpliceStyle {
     /// Splices could happen at any lead label
     LeadLabels,
-    /// Splice only happen whenever a call _could_ have happened (restricted by course heads)
+    /// Splice only happen whenever a call _could_ have happened
     CallLocations,
     /// Splices only happen when calls are actually made
     Calls,
@@ -292,7 +292,8 @@ fn generate_links(
     stage: Stage,
     mut splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
-    // If there's only one method, then no splicing is required so we place plain leads
+    // If there's only one method, then plain leads are only required where there could be calls.
+    // `SpliceStyle::Calls` would be equivalent.
     if method_datas.len() == 1 {
         splice_style = SpliceStyle::CallLocations;
     }

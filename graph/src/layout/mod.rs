@@ -14,14 +14,19 @@ pub mod from_methods;
 
 pub use self::from_methods::SpliceStyle;
 
-/// A representation of the course layout of a composition, and how Monument understands
-/// composition structure.  In this representation, a
-/// layout is a set of [`Segment`]s, which are sequences of [`Row`]s combined with links to the
-/// [`Segment`]s which can come after them.  Every useful composition structure (that I know of)
-/// can be represented like this, but it is not efficient to use [`Layout`]s directly in the
-/// composing loop.  Therefore, [`Engine`] compiles a `Layout` (along with extra info like desired
-/// composition length, music requirements, etc.) into a node graph that can be efficiently
-/// traversed.
+/// A somewhat human-friendly representation of the course layout of a composition, meant to be
+/// easy to generate.  A `Layout` consists of a set of blocks of rows, which are usually the plain
+/// courses of the methods being rung.  Some of these rows can be annotated with a label, which
+/// will cause that label to be inserted into the composition string whenever that row is used
+/// (useful for adding method labels in spliced).  Branches in the composition (e.g. choices
+/// between making/not making calls) are represented as [`Link`]s.
+///
+/// Every useful composition structure (that I can think of) can be represented like this, but it
+/// is not efficient to use `Layout`s directly in the composing loop.  Therefore, [`Engine`]
+/// compiles a `Layout` (along with extra info like desired composition length, music requirements,
+/// etc.) into a [`Graph`] of [`Node`](crate::Node)s.  This graph is then optimised, then usually
+/// compiled _again_ into an immutable copy which stores its nodes as a [`Vec`], rather than a
+/// [`HashMap`](std::collections::HashMap).
 #[derive(Debug, Clone)]
 pub struct Layout {
     /// A list of blocks of [`Row`]s, from which the [`Segment`]s are taken (more precisely, each
@@ -36,12 +41,12 @@ pub struct Layout {
     /// [`Link`] which contains a matching course head [`Mask`].
     pub links: LinkVec<Link>,
     /// The [`RowIdx`]s and course heads where the composition can be started
-    pub starts: Vec<StartOrEnd>,
+    pub starts: StartVec<StartOrEnd>,
     /// The [`RowIdx`]s and course heads where the composition can be finished.  If the composition
     /// starts and finishes at the same [`Row`], then `starts` and `ends` are likely to be equal
     /// (because every possible starting point is also an end point).  The only exceptions to this
     /// are cases where e.g. snap finishes are allowed but snap starts are not.
-    pub ends: Vec<StartOrEnd>,
+    pub ends: EndVec<StartOrEnd>,
 }
 
 impl Layout {
@@ -131,10 +136,10 @@ impl Layout {
             }
         }
 
-        let mut end_label = None;
+        let mut end_idx = None;
         // Determine whether or not this segment can end the composition before any links can be
         // taken
-        for end in &self.ends {
+        for (idx, end) in self.ends.iter_enumerated() {
             // An end could occur if we're in the same course and block as the end point
             if end.course_head.as_row() == id.course_head.as_ref()
                 && end.row_idx.block == id.row_idx.block
@@ -151,6 +156,7 @@ impl Layout {
                     continue;
                 }
 
+                // `true` if this end is reached before any of the links out of this segment
                 let is_improvement = match shortest_length {
                     // If this node ends at the same location that a link could be taken, then the
                     // links take precedence (hence the strict inequality)
@@ -159,27 +165,24 @@ impl Layout {
                     None => true,
                 };
                 if is_improvement {
-                    end_label = Some(end.label.to_owned());
+                    end_idx = Some(idx);
                     shortest_length = Some(len);
                     outgoing_links.clear();
                 }
             }
         }
 
-        // Decide which of `self.starts` this node corresponds to (if it is a start)
-        let start_label = if id.is_start {
-            let start_or_end = self
+        // If `id.is_start`, then check that the `NodeId` actually corresponds to a start
+        if id.is_start {
+            let start = self
                 .starts
-                .iter()
-                .find(|start| start.ch_and_row_idx() == id.ch_and_row_idx());
-            // Sanity check that nodes marked `is_start` actually do correspond to a start node
-            match start_or_end {
-                Some(start) => Some(start.label.to_owned()),
-                None => panic!("NodeId has `is_start`, but it doesn't come from `Layout::starts`"),
-            }
-        } else {
-            None
-        };
+                .iter_enumerated()
+                .find(|(_idx, start)| start.ch_and_row_idx() == id.ch_and_row_idx());
+            assert!(
+                start.is_some(),
+                "`NodeId` sets `is_start` but has no corresponding start"
+            );
+        }
 
         // De-duplicate the links (removing pairs of links which link to the same node).  We do
         // already perform some de-duplication when building the Layout, but this deduplication is
@@ -222,8 +225,7 @@ impl Layout {
             length: shortest_length,
             label,
             node_id: id.clone(),
-            start_label,
-            end_label,
+            end_idx,
         })
     }
 
@@ -409,21 +411,12 @@ pub(crate) struct Segment {
     /// sequence of method shorthands (e.g. "YYY") when ringing spliced.
     pub(crate) label: String,
 
-    /// If this `Segment` is a start point, then this is `Some(s)` where `s` should be inserted at
-    /// the start of the composition string (e.g. `""` for normal starts and `"<"` for snap
-    /// starts).  This `Segment` is a 'start' segment if and only if this is `Some(_)`.
-    pub(crate) start_label: Option<String>,
-    /// If this `Segment` is a end point, then this is `Some(s)` where `s` should be inserted at
-    /// the end of the composition string (e.g. `""` for normal starts and `">"` for snap
-    /// starts).  This `Segment` is an 'end' segment if and only if this is `Some(_)`.
-    pub(crate) end_label: Option<String>,
+    /// If this `Segment` is a end point, then this is `Some(idx)` where `idx` indexes into
+    /// [`Layout::ends`].
+    pub(crate) end_idx: Option<EndIdx>,
 }
 
 impl Segment {
-    pub(crate) fn is_end(&self) -> bool {
-        self.end_label.is_some()
-    }
-
     /// Returns the [`Row`]s covered this [`Segment`] **of the plain course**
     pub(crate) fn untransposed_rows<'l>(
         &self,
@@ -643,9 +636,13 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 
 index_vec::define_index_type! { pub struct LinkIdx = usize; }
 index_vec::define_index_type! { pub struct BlockIdx = usize; }
+index_vec::define_index_type! { pub struct StartIdx = usize; }
+index_vec::define_index_type! { pub struct EndIdx = usize; }
 
 pub type LinkVec<T> = index_vec::IndexVec<LinkIdx, T>;
 pub type BlockVec<T> = index_vec::IndexVec<BlockIdx, T>;
+pub type StartVec<T> = index_vec::IndexVec<StartIdx, T>;
+pub type EndVec<T> = index_vec::IndexVec<EndIdx, T>;
 
 #[cfg(test)]
 mod tests {

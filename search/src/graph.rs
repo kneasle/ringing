@@ -2,13 +2,17 @@ use std::collections::HashMap;
 
 use bit_vec::BitVec;
 use itertools::Itertools;
-use monument_graph::{layout::LinkIdx, music::Score, Data, NodeId};
+use monument_graph::{
+    layout::{EndIdx, LinkIdx, StartIdx},
+    music::Score,
+    Data, NodeId,
+};
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub starts: Vec<(NodeIdx, String)>,
+    pub starts: Vec<(NodeIdx, StartIdx)>,
     pub nodes: NodeVec<Node>,
 }
 
@@ -25,7 +29,7 @@ pub struct Node {
     // unreachable.  This includes `Self`
     pub falseness: BitVec,
 
-    pub end_label: Option<String>,
+    pub end_idx: Option<EndIdx>,
 }
 
 ///////////////////////////////////////////
@@ -77,7 +81,7 @@ impl Graph {
                     length: source_node.length(),
                     dist_to_rounds: source_node.lb_distance_to_rounds,
                     label: source_node.label().to_owned(),
-                    end_label: source_node.end_label().map(str::to_owned),
+                    end_idx: source_node.end_idx(),
                     succs,
                     falseness,
                 }
@@ -86,11 +90,10 @@ impl Graph {
 
         // Compute the list of start nodes and their labels
         let mut starts = Vec::new();
-        for start_id in source_graph.start_nodes() {
-            if let Some(node) = source_graph.get_node(start_id) {
-                let idx = id_to_index[start_id];
-                let label = node.start_label().unwrap().to_owned();
-                starts.push((idx, label));
+        for (start_id, start_idx) in source_graph.start_nodes() {
+            if source_graph.get_node(start_id).is_some() {
+                let node_idx = id_to_index[start_id];
+                starts.push((node_idx, *start_idx));
             }
         }
 

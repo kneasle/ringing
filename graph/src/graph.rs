@@ -10,7 +10,7 @@ use monument_utils::FrontierItem;
 
 use crate::{
     falseness::FalsenessTable,
-    layout::{Layout, LinkIdx, NodeId, Segment},
+    layout::{EndIdx, Layout, LinkIdx, NodeId, Segment, StartIdx},
     music::{Breakdown, MusicType, Score},
     optimise::Pass,
     Data,
@@ -30,10 +30,10 @@ pub struct Graph {
     nodes: HashMap<NodeId, Node>,
     /// **Invariant**: If `start_nodes` points to a node, it **must** be a start node (i.e. not
     /// have any predecessors, and have `start_label` set)
-    start_nodes: Vec<NodeId>,
+    start_nodes: Vec<(NodeId, StartIdx)>,
     /// **Invariant**: If `start_nodes` points to a node, it **must** be a end node (i.e. not have
     /// any successors, and have `end_nodes` set)
-    end_nodes: Vec<NodeId>,
+    end_nodes: Vec<(NodeId, EndIdx)>,
 }
 
 /// A `Node` in a node [`Graph`].  This is an indivisible chunk of ringing which cannot be split up
@@ -43,10 +43,10 @@ pub struct Node {
     /// If this `Node` is a 'start' (i.e. it can be the first node in a composition), then this is
     /// `Some(label)` where `label` should be appended to the front of the human-friendly
     /// composition string.
-    start_label: Option<String>,
+    is_start: bool,
     /// If this `Node` is an 'end' (i.e. adding it will complete a composition), then this is
     /// `Some(label)` where `label` should be appended to the human-friendly composition string.
-    end_label: Option<String>,
+    end_idx: Option<EndIdx>,
     /// The string that should be added when this node is generated
     label: String,
 
@@ -138,12 +138,12 @@ impl Graph {
     }
 
     /// Remove elements from [`Self::start_nodes`] for which a predicate returns `false`.
-    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+    pub fn retain_start_nodes(&mut self, pred: impl FnMut(&(NodeId, StartIdx)) -> bool) {
         self.start_nodes.retain(pred);
     }
 
     /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
-    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&NodeId) -> bool) {
+    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&(NodeId, EndIdx)) -> bool) {
         self.end_nodes.retain(pred);
     }
 }
@@ -220,11 +220,11 @@ impl Graph {
         self.nodes.get_mut(id)
     }
 
-    pub fn start_nodes(&self) -> &[NodeId] {
+    pub fn start_nodes(&self) -> &[(NodeId, StartIdx)] {
         &self.start_nodes
     }
 
-    pub fn end_nodes(&self) -> &[NodeId] {
+    pub fn end_nodes(&self) -> &[(NodeId, EndIdx)] {
         &self.end_nodes
     }
 
@@ -232,13 +232,11 @@ impl Graph {
         &self.nodes
     }
 
-    pub fn get_start(&self, idx: usize) -> Option<(&str, &Node)> {
-        let start_node_id = self.start_nodes.get(idx)?;
+    pub fn get_start(&self, idx: usize) -> Option<(&Node, StartIdx)> {
+        let (start_node_id, start_idx) = self.start_nodes.get(idx)?;
         let start_node = self.nodes.get(start_node_id)?;
-        start_node
-            .start_label
-            .as_deref()
-            .map(|label| (label, start_node))
+        assert!(start_node.is_start);
+        Some((start_node, *start_idx))
     }
 
     // Iterators
@@ -281,20 +279,16 @@ impl Node {
 
     // STARTS/ENDS //
 
-    pub fn start_label(&self) -> Option<&str> {
-        self.start_label.as_deref()
-    }
-
     pub fn is_start(&self) -> bool {
-        self.start_label.is_some()
+        self.is_start
     }
 
-    pub fn end_label(&self) -> Option<&str> {
-        self.end_label.as_deref()
+    pub fn end_idx(&self) -> Option<EndIdx> {
+        self.end_idx
     }
 
     pub fn is_end(&self) -> bool {
-        self.end_label.is_some()
+        self.end_idx.is_some()
     }
 
     // CROSS-NODE REFERENCES //
@@ -344,16 +338,20 @@ impl Graph {
         /* Run Dijkstra's algorithm using comp length as edge weights */
 
         // Populate the frontier with all the possible start nodes, each with distance 0
-        let start_node_ids = layout
+        let start_nodes = layout
             .starts
             .iter()
-            .map(|start| NodeId::new(start.course_head.to_owned(), start.row_idx, true))
+            .enumerate()
+            .map(|(idx, start)| {
+                let id = NodeId::new(start.course_head.to_owned(), start.row_idx, true);
+                (id, StartIdx::new(idx))
+            })
             .collect_vec();
         frontier.extend(
-            start_node_ids
+            start_nodes
                 .iter()
                 .cloned()
-                .map(|node_id| FrontierItem::new(node_id))
+                .map(|(id, _)| FrontierItem::new(id))
                 .map(Reverse),
         );
 
@@ -379,8 +377,8 @@ impl Graph {
             if new_dist > max_length {
                 continue;
             }
-            if segment.is_end() {
-                end_nodes.push(node_id.clone());
+            if let Some(end_idx) = segment.end_idx {
+                end_nodes.push((node_id.clone(), end_idx));
             }
             // Expand the node by adding its successors to the frontier
             for (_link_idx, id_after_link) in &segment.links {
@@ -411,8 +409,8 @@ impl Graph {
                     length: segment.length,
                     music,
 
-                    start_label: segment.start_label.clone(),
-                    end_label: segment.end_label.clone(),
+                    is_start: node_id.is_start,
+                    end_idx: segment.end_idx,
                     label: segment.label.clone(),
 
                     required: false,
@@ -460,7 +458,7 @@ impl Graph {
 
         Self {
             nodes,
-            start_nodes: start_node_ids,
+            start_nodes,
             end_nodes,
         }
     }

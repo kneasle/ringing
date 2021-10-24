@@ -91,17 +91,19 @@ impl<'graph> DirectionalView<'graph> {
         Self { graph, direction }
     }
 
-    pub fn start_nodes(&self) -> &[NodeId] {
+    /// Gets the IDs of the 'start' nodes of the [`Graph`] going in this [`Direction`]
+    pub fn start_nodes(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
         match self.direction {
-            Forward => self.graph.start_nodes(),
-            Backward => self.graph.end_nodes(),
+            Forward => Box::new(self.graph.start_nodes().iter().map(|(id, _)| id)),
+            Backward => Box::new(self.graph.end_nodes().iter().map(|(id, _)| id)),
         }
     }
 
-    pub fn end_nodes(&self) -> &[NodeId] {
+    /// Gets the IDs of the 'start' nodes of the [`Graph`] going in this [`Direction`]
+    pub fn end_nodes(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
         match self.direction {
-            Forward => self.graph.end_nodes(),
-            Backward => self.graph.start_nodes(),
+            Forward => Box::new(self.graph.end_nodes().iter().map(|(id, _)| id)),
+            Backward => Box::new(self.graph.start_nodes().iter().map(|(id, _)| id)),
         }
     }
 
@@ -209,6 +211,8 @@ mod strip_refs; // Strip references to non-existent nodes
 pub mod passes {
     use std::collections::HashSet;
 
+    use itertools::Itertools;
+
     use crate::{optimise::DirectionalView, Data, Graph, NodeId};
 
     use super::Pass;
@@ -256,9 +260,9 @@ pub mod passes {
     /// (because all compositions must start or end at that node).
     pub fn single_start_or_end_required() -> Pass {
         Pass::BothDirections(Box::new(|view: DirectionalView, _| {
-            let single_start_id = match view.start_nodes() {
-                [id] => id.clone(),
-                _ => return,
+            let single_start_id = match view.start_nodes().exactly_one() {
+                Ok(id) => id.clone(),
+                Err(_) => return,
             };
             if let Some(node) = view.graph.get_node_mut(&single_start_id) {
                 node.required = true;
