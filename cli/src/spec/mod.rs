@@ -37,8 +37,11 @@ pub struct Spec {
     #[serde(default = "get_30")]
     num_comps: usize,
 
+    #[serde(default)]
+    snap_start: bool,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
     /// then all locations are allowed
+    #[serde(default = "default_start_indices")]
     start_indices: Option<Vec<usize>>,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
     /// then all locations are allowed
@@ -133,7 +136,11 @@ impl Spec {
             &calls,
             SpliceStyle::LeadLabels, // TODO: Make this configurable
             course_head_masks,
-            self.start_indices.as_deref(),
+            if self.snap_start {
+                None
+            } else {
+                self.start_indices.as_deref()
+            },
             self.end_indices.as_deref(),
         )
         .map_err(Error::LayoutGenError)?;
@@ -341,6 +348,10 @@ fn default_lead_labels() -> HashMap<String, String> {
     let mut labels = HashMap::new();
     labels.insert("0".to_owned(), LABEL_LEAD_END.to_owned());
     labels
+}
+
+fn default_start_indices() -> Option<Vec<usize>> {
+    Some(vec![0]) // Just normal starts
 }
 
 ////////////
