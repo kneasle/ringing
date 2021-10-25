@@ -67,9 +67,8 @@ pub struct PlaceNot {
     /// - The places are stored **in ascending order**.  So "4817" would be stored as
     ///   `vec![0, 3, 6, 7]`.
     ///
-    /// Enforcing these invariants improves the the speed of permutation and equality tests at the
-    /// cost of (slightly) slower parsing, but I think this trade-off is justified since all
-    /// `PlaceNot`s are parsed only once but permuting/equality tests happen many many times.
+    /// Enforcing these invariants improves the speed of permutation and equality tests at the cost
+    /// of (slightly) slower parsing.
     places: Vec<usize>,
     /// The [`Stage`] that this `PlaceNot` is intended to be used for.
     stage: Stage,
@@ -78,10 +77,10 @@ pub struct PlaceNot {
 impl PlaceNot {
     /// Parse a string, interpreting it as a single `PlaceNot` of a given [`Stage`].  Like
     /// [`RowBuf::parse_with_stage`], this ignores chars that don't correspond to valid [`Bell`]
-    /// names, including `&`, `.`, `,` and `+` which have reserved meanings in blocks of place
-    /// notation.  This will expand implicit places (even between two written places) but will fail
-    /// if there is any kind of ambiguity, returning a [`ParseError`] describing the problem.  This
-    /// also runs in `O(n)` time except for sorting the places which takes `O(n log n)` time.
+    /// names, including `&`, `.`, `,` and `+` (even though they have reserved meanings in blocks
+    /// of place notation).  This will expand implicit places (even between two written places) but
+    /// will fail if there is any kind of ambiguity, returning a [`ParseError`] describing the
+    /// problem.
     ///
     /// # Example
     /// ```

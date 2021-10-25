@@ -157,9 +157,11 @@ pub enum Class {
     Surprise,
 
     /* Other hunter classes */
-    /// A method where the hunt bell makes places more than twice per lead
+    /// A method where the hunt bell path is symmetric, spends an equal number of rows in each
+    /// visited place and makes places more than twice per lead
     TreblePlace,
-    /// A method where the hunt bell makes a symmetric but not well-formed path
+    /// A method where the hunt bell makes a symmetric but not well-formed path (i.e. isn't plain,
+    /// treble dodging or treble place)
     Alliance,
     /// A method where the hunt bell makes an asymmetric path
     Hybrid,
@@ -270,7 +272,7 @@ fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
     if hunt_cycles.is_empty() {
         return FullClass {
             is_jump: false,
-            is_little: false, // principles can't be little
+            is_little: false, // little principles are impossible
             is_differential,
             class: Class::Principle,
         };
@@ -284,16 +286,16 @@ fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
         let (is_little, class) = classify_hunt_cycle(cycle, stage);
 
         match class.cmp(&best_hunt_bell_class) {
-            // If this class is strictly better than the last one, then overwrite
-            // best_hunt_bell_class directly
+            // If this class is strictly better than the current best, then it becomes the new best
+            // hunt bell class
             Ordering::Less => {
                 best_is_little = is_little;
                 best_hunt_bell_class = class;
                 hunt_cycles_in_best_class.clear();
                 hunt_cycles_in_best_class.push(cycle);
             }
-            // If this hunt bell is equal to the current best class, then we only name the
-            // method 'Little' if **all** its best-classed hunt bells are Little
+            // If this hunt bell is equal to the current best class, then we only name the method
+            // 'Little' if **all** its best-classed hunt bells are Little
             Ordering::Equal => {
                 best_is_little &= is_little;
                 hunt_cycles_in_best_class.push(cycle);
@@ -348,16 +350,15 @@ fn classify_hunt_cycle(cycle: &Cycle, stage: Stage) -> (bool, HuntBellClass) {
         num_rows_in_each_place[*p] += 1;
     }
 
-    // A method is Little if some places are not visited by this hunt bell
+    // A hunt bell path is Little if some places are not visited
     let is_little = num_rows_in_each_place.contains(&0);
-    // A method is stationary if exactly one place is visited
+    // A hunt bell path is stationary if exactly one place is visited
     let is_stationary = num_rows_in_each_place.iter().filter(|v| **v > 0).count() == 1;
     let are_places_visited_exactly_twice =
         num_rows_in_each_place.iter().all(|&n| matches!(n, 0 | 2));
 
     // If a hunt bell path is stationary, then it classifies as Treble Place
     // (from Framework):
-    // ... or
     // a) The Hunt Bell is a Stationary Bell
     // b) The Method does not use Jump Changes.
     if is_stationary {
@@ -399,8 +400,8 @@ fn classify_hunt_cycle(cycle: &Cycle, stage: Stage) -> (bool, HuntBellClass) {
         // c) places are made more than twice
         (true, true, Ordering::Greater) => HuntBellClass::TreblePlace,
         // If places are made precisely twice, then this method is either Plain or Treble Dodging.
-        // However, if it were plain, then we would have returned earlier in the function so, by
-        // the process of elimination, this path must be treble dodging.
+        // However, if it were plain, then we would have returned earlier in the function so this
+        // path must be treble dodging.
         (true, true, Ordering::Equal) => HuntBellClass::TrebleDodging,
         // Any palindromic path which covers all places equally but <2 places are made is hybrid
         // (it must just be dodging)
@@ -420,8 +421,7 @@ fn sub_classify_treble_dodging<A>(first_lead: &AnnotBlock<A>, hunt_cycles: &[&Cy
     // Use the hunt bell paths to figure out in which places the hunt bells hunt between dodges
     for &cycle in hunt_cycles {
         let min_place = *cycle.full_path.iter().min().unwrap();
-        // Find the 'cross sections' - i.e. the positions where this hunt bell hunts between
-        // calling positions
+        // Find the 'cross sections' - i.e. the positions where this hunt bell hunts between dodges
         cross_indices.extend(
             cycle
                 .full_path
@@ -431,7 +431,7 @@ fn sub_classify_treble_dodging<A>(first_lead: &AnnotBlock<A>, hunt_cycles: &[&Cy
         );
     }
 
-    // Check for internal places at each of the cross locations
+    // Check for internal places at each of the 'cross sections'
     let mut all_internal_places = true;
     let mut all_no_internal_places = true;
     for i in cross_indices {
@@ -449,7 +449,7 @@ fn sub_classify_treble_dodging<A>(first_lead: &AnnotBlock<A>, hunt_cycles: &[&Cy
         (false, true) => Class::TrebleBob,
         (false, false) => Class::Delight,
         (true, false) => Class::Surprise,
-        // In this case, there must be no cross points (i.e. the hunt bell is confined to two
+        // In this case, there must be no cross sections (i.e. the hunt bell is confined to two
         // places) and in this case the method defaults to Treble Bob
         (true, true) => Class::TrebleBob,
     }
@@ -457,28 +457,27 @@ fn sub_classify_treble_dodging<A>(first_lead: &AnnotBlock<A>, hunt_cycles: &[&Cy
 
 /// Given a Plain method, sub-classify it into either Bob or Place
 fn sub_classify_plain(working_bell_cycles: Vec<&Cycle>) -> Class {
-    // Follow each cycle of working bells, and generate the full path of that cycle for detecting
-    // points
     for cycle in working_bell_cycles {
         // Check for a change in direction without an intervening place.  I.e. we're looking for:
         //     x                x
         //       x     or     x
         //     x                x
         // If this happens, we know that the method is a Bob, not a Place
-        for (&a, &b, &c) in cycle.full_path.iter().circular_tuple_windows() {
-            if a == c && (b as isize == a as isize - 1 || b == a + 1) {
+        for (a, b, c) in cycle.full_path.iter().copied().circular_tuple_windows() {
+            if a == c && (b + 1 == a || b == a + 1) {
                 return Class::Bob;
             }
         }
     }
-    // If no 'dodges' were found, then the method is `Place`
+    // If no sharp changes in direction were found, then the method is `Place`
     Class::Place
 }
 
 /// Determines if a sequence of places is the same forwards as it is backwards.  This currently
 /// uses a fairly naive algorithm of generating the reverse path and then repeatedly rotating it,
-/// giving a roughly quadratic algorithm.  This should be fine, but if someone knows of or wants to
-/// implement a faster algorithm then that'd be great :).
+/// giving a roughly quadratic algorithm.  This is more than fast enough (it classifies the whole
+/// method library with no noticeable delay), but if someone knows of or wants to implement a
+/// faster algorithm then you're welcome to.
 fn is_palindromic(path: &[usize]) -> bool {
     // Try rotating `reversed_path` by each amount, and test if the result is equal to
     // `is_palindromic`
@@ -565,7 +564,6 @@ impl Cycle {
 
         for cycle in cycles {
             if cycle.is_hunt() {
-                // If this bell is at its home position at the lead head, then it must be a hunt bell
                 hunt_cycles.push(cycle);
             } else {
                 working_cycles.push(cycle);
