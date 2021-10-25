@@ -11,6 +11,10 @@ pub trait Frontier<Node>: Default {
     /// Remove nodes from `self` until the length is under `len`.  The nodes removed should have
     /// the longest time to go before being `pop`ped.
     fn truncate(&mut self, len: usize);
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 /// A [`Frontier`] which always pops the largest scoring node, while performing all operations in
@@ -37,7 +41,7 @@ impl<Node: Ord> Frontier<Node> for BestFirst<Node> {
     }
 
     fn truncate(&mut self, len: usize) {
-        let heap = std::mem::replace(&mut self.heap, BinaryHeap::default());
+        let heap = std::mem::take(&mut self.heap);
         let mut nodes = heap.into_vec();
         nodes.sort_by(|a, b| b.cmp(a)); // Sort highest score first
         if len < nodes.len() {

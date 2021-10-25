@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering,
-    convert::identity,
     fmt::{Debug, Display, Formatter},
     sync::Arc,
 };
@@ -213,7 +212,7 @@ impl Layout {
             .skip(id.row_idx.row)
             .take(shortest_length)
             .map(Option::as_ref)
-            .filter_map(identity)
+            .flatten()
         {
             label.push_str(l);
         }
@@ -567,6 +566,7 @@ impl Call {
     }
 }
 
+#[allow(clippy::branches_sharing_code)]
 fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 

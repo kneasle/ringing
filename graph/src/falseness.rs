@@ -1,11 +1,18 @@
 //! Utilities for computing falseness between graph nodes
 
+// This algorithm is fiddly, and I think that the somewhat verbose type hints are the best way to
+// show how the code works (both to the reader and the compiler)
+#![allow(clippy::type_complexity)]
+
 use std::collections::{HashMap, HashSet};
 
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::layout::{Layout, NodeId, RowIdx, RowRange};
+
+/// The falseness table between two types of [`RowRange`]s
+type RangeTable = Vec<(Mask, Mask, HashSet<RowBuf>)>;
 
 /// A pre-computed table used to quickly determine falseness between two [`Node`](crate::Node)s in
 /// a [`Graph`](crate::Graph).
@@ -16,19 +23,19 @@ use crate::layout::{Layout, NodeId, RowIdx, RowRange};
 /// the (pre-)transposition between the two course heads.  This is very similar to False Course
 /// Heads: two courses of a given method are false if and only if the (pre-)transposition between
 /// their course heads is contained in the False Course Head groups for that method.  This gives
-/// the outer type of the `grouped_falseness` field: `HashMap<(RowRange, RowRange), _>` stores
-/// individual FCH tables for each pair of [`RowRange`]s (i.e. node groups).
+/// the outer type of the `grouped_falseness` field: `HashMap<(RowRange, RowRange), RangeTable>`
+/// stores individual FCH tables for each pair of [`RowRange`]s (i.e. node groups).
 ///
-/// However, we can reduce the size of the resulting table by only computing the falseness for
+/// We can further reduce the size of the resulting table by only computing the falseness for
 /// known course head masks.  For example, if the composition will only be tenors-together with a
 /// fixed treble, then we can discard any FCHs which aren't of the form `1xxxxx789...`.  This isn't
 /// quite so simple for our case, since the user can specify arbitrary sets of CH masks.  However,
 /// for each pair of CH masks, this trick is possible.  Thus, for each pair of row ranges we split
-/// the FCHs by the corresponding CH masks, giving a type signature of
-/// `Vec<Mask, Mask, HashSet<RowBuf>>` instead of simply `HashSet<RowBuf>`.
+/// the FCHs by the corresponding CH masks, giving [`RangeTable`] a type signature of
+/// `Vec<(Mask, Mask, HashSet<RowBuf>)>` instead of simply `HashSet<RowBuf>`.
 #[derive(Debug, Clone)]
 pub(crate) struct FalsenessTable {
-    grouped_falseness: HashMap<(RowRange, RowRange), Vec<(Mask, Mask, HashSet<RowBuf>)>>,
+    grouped_falseness: HashMap<(RowRange, RowRange), RangeTable>,
 }
 
 impl FalsenessTable {

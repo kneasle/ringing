@@ -130,19 +130,15 @@ impl<'graph> DirectionalView<'graph> {
 /// Immutable view of a [`Node`], facing in a given [`Direction`] (i.e. a [`Backward`] view will
 /// swap the successors/predecessors).
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct NodeView<'graph> {
     pub node: &'graph Node,
     pub direction: Direction,
-    _extra: (), // Prevents `NodeView`s being constructed outside this module
 }
 
 impl<'graph> NodeView<'graph> {
     pub fn new(node: &'graph Node, direction: Direction) -> Self {
-        Self {
-            node,
-            direction,
-            _extra: (),
-        }
+        Self { node, direction }
     }
 
     pub fn successors(self) -> &'graph [(LinkIdx, NodeId)] {
@@ -163,19 +159,15 @@ impl<'graph> NodeView<'graph> {
 /// Mutable view of a [`Node`], facing in a given [`Direction`] (i.e. a [`Backward`] view will
 /// swap the successors/predecessors).
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct NodeViewMut<'graph> {
     pub node: &'graph mut Node,
     pub direction: Direction,
-    _extra: (), // Prevents `NodeViewMut`s being constructed outside this module
 }
 
 impl<'graph> NodeViewMut<'graph> {
     fn new(node: &'graph mut Node, direction: Direction) -> Self {
-        Self {
-            node,
-            direction,
-            _extra: (),
-        }
+        Self { node, direction }
     }
 
     pub fn successors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {

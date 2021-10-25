@@ -136,7 +136,7 @@ impl Spec {
             },
             self.end_indices.as_deref(),
         )
-        .map_err(Error::LayoutGenError)?;
+        .map_err(Error::LayoutGen)?;
 
         // Build this layout into a `Graph`
         Ok(Data {
@@ -170,7 +170,7 @@ pub enum Error<'s> {
     CallPnParse(&'s str, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(&'s str, ParseIntError),
-    LayoutGenError(from_methods::Error),
+    LayoutGen(from_methods::Error),
 }
 
 ///////////////
@@ -209,7 +209,7 @@ impl MethodSpec {
         for (index_str, name) in self.get_lead_locations() {
             let index = index_str
                 .parse::<isize>()
-                .map_err(|e| Error::LeadLocationIndex(&index_str, e))?;
+                .map_err(|e| Error::LeadLocationIndex(index_str, e))?;
             let lead_len = m.lead_len() as isize;
             let wrapped_index = ((index % lead_len) + lead_len) % lead_len;
             // This cast is OK because we used % twice to guarantee a positive index
@@ -328,9 +328,9 @@ impl MusicSpec {
                 .iter()
                 .flat_map(|length| Regex::runs_front_or_back(stage, *length))
                 .collect_vec(),
-            Self::Pattern { pattern, .. } => vec![Regex::parse(&pattern)],
+            Self::Pattern { pattern, .. } => vec![Regex::parse(pattern)],
             Self::Patterns { patterns, .. } => {
-                patterns.iter().map(|s| Regex::parse(&s)).collect_vec()
+                patterns.iter().map(|s| Regex::parse(s)).collect_vec()
             }
         }
     }
