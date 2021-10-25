@@ -44,6 +44,7 @@ pub(super) fn from_methods(
             .into_iter()
             .map(MethodData::into_block)
             .collect::<BlockVec<_>>(),
+        stage,
     })
 }
 

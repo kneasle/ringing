@@ -5,6 +5,7 @@ use std::{
     collections::{BinaryHeap, HashMap},
 };
 
+use bellframe::RowBuf;
 use itertools::Itertools;
 use monument_utils::FrontierItem;
 
@@ -343,7 +344,7 @@ impl Graph {
             .iter()
             .enumerate()
             .map(|(idx, start)| {
-                let id = NodeId::new(start.course_head.to_owned(), start.row_idx, true);
+                let id = NodeId::standard(start.course_head.to_arc(), start.row_idx, true);
                 (id, StartIdx::new(idx))
             })
             .collect_vec();
@@ -355,7 +356,6 @@ impl Graph {
                 .map(Reverse),
         );
 
-        // Consume nodes from the frontier until the frontier is empty
         while let Some(Reverse(FrontierItem {
             item: node_id,
             distance,
@@ -396,12 +396,15 @@ impl Graph {
         // within the length of the composition.  However, we're still not done because we have to
         // build a graph over these IDs (which requires computing falseness, music, connections,
         // etc.).
+        let rounds = RowBuf::rounds(layout.stage);
         let mut nodes: HashMap<NodeId, Node> = expanded_nodes
             .iter()
             .map(|(node_id, (segment, distance))| {
+                assert_eq!(node_id, &segment.node_id);
+
                 let music = Breakdown::from_rows(
                     segment.untransposed_rows(layout),
-                    &node_id.course_head,
+                    node_id.course_head().unwrap_or(&rounds),
                     music_types,
                 );
 
@@ -409,7 +412,7 @@ impl Graph {
                     length: segment.length,
                     music,
 
-                    is_start: node_id.is_start,
+                    is_start: node_id.is_start(),
                     end_idx: segment.end_idx,
                     label: segment.label.clone(),
 
@@ -421,8 +424,7 @@ impl Graph {
 
                     successors: segment.links.to_owned(),
 
-                    // These are populated in separate passes over the graph, after Dijkstra's
-                    // algorithm terminates
+                    // These are populated in separate passes once all the `Node`s have been created
                     false_nodes: Vec::new(),
                     predecessors: Vec::new(),
                 };

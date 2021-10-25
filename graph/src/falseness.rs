@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
-use crate::layout::{Layout, NodeId, RowIdx, RowRange};
+use crate::layout::{Layout, NodeId, RowIdx, RowRange, StandardNodeId};
 
 /// The falseness table between two types of [`RowRange`]s
 type RangeTable = Vec<(Mask, Mask, HashSet<RowBuf>)>;
@@ -48,10 +48,12 @@ impl FalsenessTable {
         // Group the (range, course head) pairs by their range
         let mut chs_by_range = HashMap::<RowRange, Vec<&Row>>::new();
         for (id, length) in nodes {
-            chs_by_range
-                .entry(RowRange::new(id.row_idx, *length))
-                .or_insert_with(Vec::new)
-                .push(&id.course_head);
+            if let NodeId::Standard(id) = id {
+                chs_by_range
+                    .entry(RowRange::new(id.row_idx, *length))
+                    .or_insert_with(Vec::new)
+                    .push(&id.course_head);
+            }
         }
 
         // Determine which masks/range pairs are actually needed (pre-filtering the number of masks
@@ -160,6 +162,21 @@ impl FalsenessTable {
     /// Returns `true` if `node1` and `node2` are false against each other (slightly
     /// counterintuitive, but read the function name).
     pub fn are_false(&self, node1: &NodeId, len1: usize, node2: &NodeId, len2: usize) -> bool {
+        match (node1, node2) {
+            (NodeId::Standard(s1), NodeId::Standard(s2)) => self.are_false_std(s1, len1, s2, len2),
+            _ => false, // If either of the nodes are 0-length then no falseness can occur
+        }
+    }
+
+    /// Returns `true` if two standard nodes are false against each other (slightly
+    /// counterintuitive, but read the function name).
+    fn are_false_std(
+        &self,
+        node1: &StandardNodeId,
+        len1: usize,
+        node2: &StandardNodeId,
+        len2: usize,
+    ) -> bool {
         let range1 = RowRange::new(node1.row_idx, len1);
         let range2 = RowRange::new(node2.row_idx, len2);
 
