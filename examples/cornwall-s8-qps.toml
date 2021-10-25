@@ -1,7 +1,7 @@
 length = "qp"
 num_comps = 20
 base_calls = "near"
-method.title = "Cornwall Surprise Major"
+method = "Cornwall Surprise Major"
 
 [[music]]
 run_length = 4

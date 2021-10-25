@@ -83,7 +83,7 @@ impl SpecificCall {
             self.calling_positions.clone(),
             self.lead_location.clone(),
             PlaceNot::parse(&self.place_notation, stage)
-                .map_err(|e| Error::CallPnParse(&self.place_notation, e))?,
+                .map_err(|e| Error::CallPnParse(self.place_notation.clone(), e))?,
             self.weight,
         ))
     }
@@ -93,7 +93,7 @@ pub fn gen_calls<'s>(
     stage: Stage,
     base_calls: Option<&'s BaseCalls>,
     calls: &'s [SpecificCall],
-) -> Result<Vec<Call>, Error<'s>> {
+) -> Result<Vec<Call>, Error> {
     // Check if the user hasn't specified any calls
     if base_calls.is_none() && calls.is_empty() {
         return Err(Error::NoCalls);

@@ -1,7 +1,7 @@
 length = { min = 1250, max = 1440 }
 num_comps = 30
 base_calls = "near"
-method.title = "Bristol Surprise Maximus"
+method = "Bristol Surprise Maximus"
 
 [[music]]
 run_lengths = [4, 5, 6, 7, 8]

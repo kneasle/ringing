@@ -1,6 +1,6 @@
 length = "QP"
 base_calls = "near"
-method.title = "Yorkshire Surprise Major"
+method = "Yorkshire Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

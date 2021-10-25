@@ -73,7 +73,9 @@ pub struct Spec {
     music: Vec<MusicSpec>,
 
     /// Data for the testing/benchmark harness.  It is public so that it can be accessed by the
-    /// testing harness
+    /// testing harness.
+    ///
+    /// TODO: Move testing data to its own files, and figure out how to test non-optimal engines
     pub test_data: Option<TestData>,
 }
 
@@ -127,7 +129,7 @@ impl Spec {
         let layout = Layout::from_methods(
             &methods,
             &calls,
-            SpliceStyle::CallLocations, // TODO: Make this configurable
+            SpliceStyle::LeadLabels, // TODO: Make this configurable
             course_head_masks,
             if self.snap_start {
                 None
@@ -162,14 +164,14 @@ fn gen_tenors_together_mask(stage: Stage) -> Mask {
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
 #[derive(Debug, Clone)]
-pub enum Error<'s> {
+pub enum Error {
     NoCalls,
     NoMethods,
     CcLibNotFound,
     MethodNotFound { suggestions: Vec<String> },
-    CallPnParse(&'s str, place_not::ParseError),
+    CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
-    LeadLocationIndex(&'s str, ParseIntError),
+    LeadLocationIndex(String, ParseIntError),
     LayoutGen(from_methods::Error),
 }
 
@@ -181,6 +183,7 @@ pub enum Error<'s> {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum MethodSpec {
+    JustTitle(String),
     Lib {
         title: String,
         /// The inputs to this map are numerical strings representing sub-lead indices, and the
@@ -203,7 +206,7 @@ pub enum MethodSpec {
 }
 
 impl MethodSpec {
-    fn gen_method(&self) -> Result<(Method, String), Error<'_>> {
+    fn gen_method(&self) -> Result<(Method, String), Error> {
         let mut m = self.get_method_without_lead_locations()?;
 
         for (index_str, name) in self.get_lead_locations() {
@@ -226,22 +229,24 @@ impl MethodSpec {
 
     fn shorthand(&self) -> Option<String> {
         match self {
+            Self::JustTitle(_) => None,
             Self::Lib { shorthand, .. } => shorthand.clone(),
             Self::Custom { shorthand, .. } => shorthand.clone(),
         }
     }
 
-    fn get_lead_locations(&self) -> &HashMap<String, String> {
+    fn get_lead_locations(&self) -> HashMap<String, String> {
         match self {
-            MethodSpec::Lib { lead_locations, .. } => lead_locations,
-            MethodSpec::Custom { lead_locations, .. } => lead_locations,
+            MethodSpec::JustTitle(_) => default_lead_labels(),
+            MethodSpec::Lib { lead_locations, .. } => lead_locations.clone(),
+            MethodSpec::Custom { lead_locations, .. } => lead_locations.clone(),
         }
     }
 
     /// Attempt to generate a new [`Method`] with no lead location annotations
-    fn get_method_without_lead_locations(&self) -> Result<Method, Error<'_>> {
+    fn get_method_without_lead_locations(&self) -> Result<Method, Error> {
         match self {
-            MethodSpec::Lib { title, .. } => {
+            MethodSpec::Lib { title, .. } | MethodSpec::JustTitle(title) => {
                 let lib = MethodLib::cc_lib().ok_or(Error::CcLibNotFound)?;
                 lib.get_by_title_with_suggestions(title, 5)
                     .map_err(|err| match err {

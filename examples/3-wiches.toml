@@ -1,11 +1,7 @@
 length = { min = 0, max = 300 }
 num_comps = 30
 base_calls = "near"
-methods = [
-    { title = "Norwich Surprise Minor" },
-    { title = "Ipswich Surprise Minor" },
-    { title = "Dunwich Bob Minor" },
-]
+methods = ["Norwich Surprise Minor", "Ipswich Surprise Minor", "Dunwich Bob Minor"]
 course_heads = ["1xxxx6"]
 
 [[music]]

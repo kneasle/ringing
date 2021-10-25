@@ -1,10 +1,7 @@
 length = "half peal"
 num_comps = 50
 base_calls = "near"
-methods = [
-    { title = "Bristol Surprise Royal" },
-    { title = "Triton Delight Royal" },
-]
+methods = ["Bristol Surprise Royal", "Triton Delight Royal"]
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

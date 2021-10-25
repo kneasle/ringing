@@ -18,10 +18,13 @@ stage = 10
 # stage = "royal"
 #(opt) lead_locations = { 0 = "LE", 20 = "HL" }
 
-# [or]
+#     or
 # [method]
 # title = "Bristol Surprise Royal"
 # lead_locations = { .. }
+
+#     or
+# method = "Bristol Surprise Royal"
 
 [[calls]]
 place_notation = "16"

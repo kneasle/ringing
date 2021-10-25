@@ -2,10 +2,10 @@ length = "QP"
 num_comps = 20
 base_calls = "near"
 methods = [
-    { title = "Yorkshire Surprise Major" },
-    { title = "Bristol Surprise Major" },
-    { title = "Superlative Surprise Major" },
-    { title = "Cambridge Surprise Major" },
+    "Yorkshire Surprise Major",
+    "Bristol Surprise Major",
+    "Superlative Surprise Major",
+    "Cambridge Surprise Major",
     { title = "Lessness Surprise Major", shorthand = "E" },
 ]
 # course_heads = ["1xxxxx78", "15678xxx"]

@@ -2,7 +2,7 @@ length = "QP"
 # length = { min = 0, max = 400 }
 num_comps = 16
 base_calls = "near"
-method.title = "Yorkshire Surprise Royal"
+method = "Yorkshire Surprise Royal"
 
 [[calls]]
 symbol = "x"

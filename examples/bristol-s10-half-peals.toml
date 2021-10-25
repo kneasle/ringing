@@ -1,7 +1,7 @@
 length = "half peal"
 num_comps = 50
 base_calls = "far"
-method.title = "Bristol Surprise Royal"
+method = "Bristol Surprise Royal"
 start_indices = [0]
 
 [[music]]

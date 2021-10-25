@@ -1,7 +1,7 @@
 length = "peal"
 num_comps = 15
 base_calls = "near"
-method.title = "Cambridge Surprise Major"
+method = "Cambridge Surprise Major"
 
 [[music]]
 run_lengths = [4, 5, 6, 7]

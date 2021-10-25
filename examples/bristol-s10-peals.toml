@@ -1,7 +1,7 @@
 length = "peal"
 num_comps = 50
 base_calls = "far"
-method.title = "Bristol Surprise Royal"
+method = "Bristol Surprise Royal"
 start_indices = [0] # Ignore snap starts
 
 # course_heads = ["xxxxxx7890", "xxxxxx9807", "xxxxxx9078", "xxxxxx7089"]
