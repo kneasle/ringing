@@ -49,6 +49,16 @@ pub struct Spec {
 
     /// Which calls should be used by default
     base_calls: Option<BaseCalls>,
+    /// Which calls to use in the compositions
+    #[serde(default)]
+    calls: Vec<SpecificCall>,
+    /// The weight given to each bob from `base_calls`
+    bob_weight: Option<f32>,
+    /// The weight given to each single from `base_calls`
+    single_weight: Option<f32>,
+
+    /// Which music to use
+    music: Vec<MusicSpec>,
     /// Should Monument normalise music scores by length when generating comps.
     #[serde(default = "get_true")]
     normalise_music: bool,
@@ -65,12 +75,6 @@ pub struct Spec {
     #[serde(default)]
     /// A list of [`Method`] who are being spliced together
     methods: Vec<MethodSpec>,
-
-    /// Which calls to use in the compositions
-    #[serde(default)]
-    calls: Vec<SpecificCall>,
-    /// Which music to use
-    music: Vec<MusicSpec>,
 
     /// Data for the testing/benchmark harness.  It is public so that it can be accessed by the
     /// testing harness.
@@ -123,13 +127,19 @@ impl Spec {
             // Default to tenors together, with the tenor as 'calling bell'
             (None, false) => vec![(gen_tenors_together_mask(stage), tenor)],
         };
-        let calls = calls::gen_calls(stage, self.base_calls.as_ref(), &self.calls)?;
+        let calls = calls::gen_calls(
+            stage,
+            self.base_calls.as_ref(),
+            self.bob_weight,
+            self.single_weight,
+            &self.calls,
+        )?;
 
         // Generate a `Layout` from the data about the method and calls
         let layout = Layout::from_methods(
             &methods,
             &calls,
-            SpliceStyle::LeadLabels, // TODO: Make this configurable
+            SpliceStyle::Calls, // TODO: Make this configurable
             course_head_masks,
             if self.snap_start {
                 None

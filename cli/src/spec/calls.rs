@@ -12,20 +12,25 @@ pub enum BaseCalls {
 }
 
 impl BaseCalls {
-    pub(crate) fn to_call_specs(self, stage: Stage) -> Vec<Call> {
+    pub(crate) fn to_call_specs(
+        self,
+        stage: Stage,
+        bob_weight: Option<f32>,
+        single_weight: Option<f32>,
+    ) -> Vec<Call> {
         let num_bells = stage.num_bells();
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
         // generate comps on fewer than 8 bells, but we should still check because the alternative
         // is UB
         assert!(num_bells >= 4);
 
-        match self {
-            BaseCalls::Near => vec![
+        let (mut bob, mut single) = match self {
+            BaseCalls::Near => (
                 Call::lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
                 Call::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
-            ],
+            ),
             BaseCalls::Far => {
-                vec![
+                (
                     // The unsafety here is OK, because the slice is always sorted (unless stage <
                     // MINIMUS, in which case the assert trips)
                     Call::lead_end_bob(unsafe {
@@ -40,9 +45,18 @@ impl BaseCalls {
                         )
                         .unwrap()
                     }),
-                ]
+                )
             }
+        };
+
+        if let Some(w) = bob_weight {
+            bob.set_weight(w);
         }
+        if let Some(w) = single_weight {
+            single.set_weight(w);
+        }
+
+        vec![bob, single]
     }
 }
 
@@ -92,6 +106,8 @@ impl SpecificCall {
 pub fn gen_calls<'s>(
     stage: Stage,
     base_calls: Option<&'s BaseCalls>,
+    bob_weight: Option<f32>,
+    single_weight: Option<f32>,
     calls: &'s [SpecificCall],
 ) -> Result<Vec<Call>, Error> {
     // Check if the user hasn't specified any calls
@@ -100,7 +116,9 @@ pub fn gen_calls<'s>(
     }
 
     // Expand base calls into `Call`s
-    let mut call_specs = base_calls.map_or_else(Vec::new, |bc| bc.to_call_specs(stage));
+    let mut call_specs = base_calls.map_or_else(Vec::new, |bc| {
+        bc.to_call_specs(stage, bob_weight, single_weight)
+    });
     for specific_call in calls {
         call_specs.push(specific_call.to_call_spec(stage)?);
     }

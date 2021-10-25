@@ -613,6 +613,10 @@ impl Call {
         }
     }
 
+    pub fn set_weight(&mut self, weight: f32) {
+        self.weight = weight;
+    }
+
     ////////////////////////
     // DEFAULT CALL TYPES //
     ////////////////////////
