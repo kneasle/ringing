@@ -1,4 +1,7 @@
+use std::sync::{Arc, Mutex};
+
 use args::CliArgs;
+use itertools::Itertools;
 use log::LevelFilter;
 use monument_graph::{layout::Layout, optimise::passes};
 use monument_search::{frontier::BestFirst, search, Comp};
@@ -37,20 +40,33 @@ fn main() {
         g.optimise(&mut passes, &data);
     }
 
-    // Run graph search on each graph
-    let mut comps = Vec::<Comp>::new();
-    for g in &graphs {
-        println!("\n\n\n\nHI\n\n\n");
-        search::<BestFirst<_>, _>(g, &data, |c| {
-            print_comp(&c, &data.layout);
-            comps.push(c);
-        });
+    // Run graph search on each graph in parallel
+    let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
+    let data = Arc::new(data);
+    let handles = graphs
+        .into_iter()
+        .map(|graph| {
+            let data = data.clone();
+            let comps = comps.clone();
+            std::thread::spawn(move || {
+                search::<BestFirst<_>, _>(&graph, &data, |c| {
+                    print_comp(&c, &data.layout);
+                    comps.lock().unwrap().push(c);
+                });
+            })
+        })
+        .collect_vec();
+    // Wait for the worker threads to finish
+    for h in handles {
+        h.join().unwrap();
     }
+
+    // TODO: Display all the comps in sorted order
 }
 
 fn print_comp(c: &Comp, layout: &Layout) {
     println!(
-        "len: {}, score: {:>6.2}, avg: {}, str: {}",
+        "len: {}, score: {:>6.2}, avg: {:.6}, str: {}",
         c.length,
         c.score,
         c.avg_score,
