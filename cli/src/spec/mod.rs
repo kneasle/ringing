@@ -384,6 +384,7 @@ mod length {
 
     /* Constants for commonly used length ranges */
 
+    pub const PRACTICE: RangeInclusive<usize> = 0..=300;
     pub const QP: RangeInclusive<usize> = 1250..=1350;
     pub const HALF_PEAL: RangeInclusive<usize> = 2500..=2600;
     pub const PEAL: RangeInclusive<usize> = 5000..=5200;
@@ -492,6 +493,7 @@ mod length {
         {
             let lower_str = v.to_lowercase();
             Ok(Length::from(match lower_str.as_str() {
+                "practice" => PRACTICE,
                 "qp" => QP,
                 "quarter peal" => QP,
                 "peal" => PEAL,

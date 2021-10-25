@@ -4,6 +4,11 @@
 length = "peal"
 # length = 5040
 # length = { min = 5040, max = 5040 }
+# Special values:
+#   "practice"  -> { min = 0, max = 300 }
+#   "QP"|"qp"   -> { min = 1250, max = 1350 }
+#   "half peal" -> { min = 2500, max = 2600 }
+#   "peal"      -> { min = 5000, max = 5200 }
 num_comps = 10
 
 base_calls = "near"
