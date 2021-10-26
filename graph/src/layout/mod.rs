@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt::{Debug, Display, Formatter},
-    hash::{Hash, Hasher},
+    hash::Hash,
     sync::Arc,
 };
 
@@ -81,45 +81,29 @@ impl Layout {
         Graph::from_layout(self, music_types, max_length)
     }
 
-    /// Gets the [`NodeId`] of the node that would appear after this [`Link`] is applied to a given
-    /// course.
-    fn id_after(&self, link: &Link, course_head: &Row) -> NodeId {
-        assert!(link.ch_mask.matches(course_head));
-        let new_ch = course_head * link.ch_transposition.as_row();
+    pub fn num_methods(&self) -> usize {
+        // TODO: Track methods properly
+        self.blocks.len()
+    }
 
-        match self.idx_of_end(&new_ch, link.to) {
-            Some(end_idx) => NodeId::ZeroLengthEnd(end_idx),
-            None => NodeId::Standard(StandardNodeId {
-                course_head: new_ch.to_arc(),
-                row_idx: link.to,
-                is_start: false, // Nodes reached by taking a link can't be start nodes
-            }),
+    pub fn end_label(&self, end: End) -> &str {
+        match end {
+            End::ZeroLength => "",
+            End::Idx(idx) => &self.ends[idx].label,
         }
     }
 
-    /// Returns the [`EndIdx`] of the end at a given position, if it exists.  Used for detecting
-    /// 0-length end nodes.
-    fn idx_of_end(&self, ch: &Row, row_idx: RowIdx) -> Option<EndIdx> {
-        self.ends
-            .iter_enumerated()
-            .find(|(_idx, end)| end.row_idx == row_idx && &end.course_head == ch)
-            .map(|(idx, _end)| idx)
-    }
+    //////////////////////
+    // GRAPH GENERATION //
+    //////////////////////
 
     /// Returns the [`Segment`], starting at a given [`StandardNodeId`].  If this [`Segment`] would
     /// never terminate (because no [`Link`]s can be applied to it), then `None` is returned.
     pub(crate) fn get_segment(&self, id: &NodeId) -> Option<Segment> {
         match id {
             NodeId::Standard(std_id) => self.get_segment_std(std_id),
-            NodeId::ZeroLengthEnd(end_idx) => {
-                Some(Segment::zero_len_end(*end_idx, self.num_methods()))
-            }
+            NodeId::ZeroLengthEnd => Some(Segment::zero_len_end(self.num_methods())),
         }
-    }
-
-    pub fn num_methods(&self) -> usize {
-        // TODO: Track methods properly
-        self.blocks.len()
     }
 
     /// Returns the [`Segment`], starting at a given [`StandardNodeId`].  If this [`Segment`] would
@@ -270,7 +254,7 @@ impl Layout {
             ),
             label,
             node_id: NodeId::Standard(id.clone()),
-            end_idx,
+            end: end_idx.map(End::Idx), // Zero-length nodes are handled when links are **created**
         })
     }
 
@@ -299,6 +283,36 @@ impl Layout {
             .cycle()
             .skip(row_idx.row)
             .take(length)
+    }
+
+    /////////////
+    // HELPERS //
+    /////////////
+
+    /// Gets the [`NodeId`] of the node that would appear after this [`Link`] is applied to a given
+    /// course.
+    fn id_after(&self, link: &Link, course_head: &Row) -> NodeId {
+        assert!(link.ch_mask.matches(course_head));
+        let new_ch = course_head * link.ch_transposition.as_row();
+
+        if self.idx_of_end(&new_ch, link.to).is_some() {
+            NodeId::ZeroLengthEnd
+        } else {
+            NodeId::Standard(StandardNodeId {
+                course_head: new_ch.to_arc(),
+                row_idx: link.to,
+                is_start: false, // Nodes reached by taking a link can't be start nodes
+            })
+        }
+    }
+
+    /// Returns the [`EndIdx`] of the end at a given position, if it exists.  Used for detecting
+    /// 0-length end nodes.
+    fn idx_of_end(&self, ch: &Row, row_idx: RowIdx) -> Option<EndIdx> {
+        self.ends
+            .iter_enumerated()
+            .find(|(_idx, end)| end.row_idx == row_idx && &end.course_head == ch)
+            .map(|(idx, _end)| idx)
     }
 }
 
@@ -354,6 +368,15 @@ impl StartOrEnd {
     }
 }
 
+/// Description of how a composition ends
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum End {
+    /// The composition ends immediately after a call or splice
+    ZeroLength,
+    /// The composition ends at a specific [`StartOrEnd`]
+    Idx(EndIdx),
+}
+
 /// The unique index of a [`Row`] within a [`Layout`].  This is essentially a `(block_idx,
 /// row_idx)` pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -374,12 +397,12 @@ impl RowIdx {
 /// The unique identifier for a single node (i.e. an instantiated course segment) in the
 /// composition.  This node is assumed to end at the closest [`Link`] where the course head matches
 /// one of the supplied [course head masks](Link::course_head_masks).
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum NodeId {
-    /// The ID of any `Node` which comes round instantly.  All such nodes can (and should) be
-    /// considered equivalent.  Note that [`Eq`]/[`PartialEq`]/[`Hash`] will ignore the [`EndIdx`],
-    /// so that all [`ZeroLengthEnd`]s are considered equal.
-    ZeroLengthEnd(EndIdx),
+    /// The ID of any `Node` which comes round instantly.  All such nodes are considered
+    /// equivalent, regardless of what method is spliced to.  These are all given the empty string
+    /// as a label.
+    ZeroLengthEnd,
     Standard(StandardNodeId),
 }
 
@@ -394,46 +417,22 @@ impl NodeId {
 
     pub fn row_idx(&self) -> Option<RowIdx> {
         match self {
-            Self::ZeroLengthEnd(_) => None,
+            Self::ZeroLengthEnd => None,
             Self::Standard(StandardNodeId { row_idx, .. }) => Some(*row_idx),
         }
     }
 
     pub fn course_head(&self) -> Option<&Row> {
         match self {
-            Self::ZeroLengthEnd(_) => None,
+            Self::ZeroLengthEnd => None,
             Self::Standard(StandardNodeId { course_head, .. }) => Some(course_head),
         }
     }
 
     pub fn is_start(&self) -> bool {
         match self {
-            Self::ZeroLengthEnd(_) => false,
+            Self::ZeroLengthEnd => false,
             Self::Standard(std_id) => std_id.is_start,
-        }
-    }
-}
-
-impl PartialEq for NodeId {
-    fn eq(&self, other: &NodeId) -> bool {
-        use NodeId::*;
-
-        match (self, other) {
-            (ZeroLengthEnd(_), ZeroLengthEnd(_)) => true,
-            (Standard(std1), Standard(std2)) => std1 == std2,
-            _ => false,
-        }
-    }
-}
-
-impl Eq for NodeId {}
-
-impl Hash for NodeId {
-    // Note that `NodeId::hash` doesn't disambiguate different values of `NodeId::ZeroLengthEnd(_)`
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        core::mem::discriminant(self).hash(state);
-        if let Self::Standard(std_id) = self {
-            std_id.hash(state);
         }
     }
 }
@@ -467,7 +466,7 @@ impl StandardNodeId {
 impl Debug for NodeId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ZeroLengthEnd(end_idx) => write!(f, "NodeId::ZeroLengthEnd({:?})", end_idx),
+            Self::ZeroLengthEnd => write!(f, "NodeId::ZeroLengthEnd"),
             Self::Standard(std_id) => write!(f, "NodeId({})", std_id),
         }
     }
@@ -515,18 +514,18 @@ pub(crate) struct Segment {
 
     /// If this `Segment` is a end point, then this is `Some(idx)` where `idx` indexes into
     /// [`Layout::ends`].
-    pub(crate) end_idx: Option<EndIdx>,
+    pub(crate) end: Option<End>,
 }
 
 impl Segment {
-    pub(crate) fn zero_len_end(end_idx: EndIdx, num_methods: usize) -> Self {
+    pub(crate) fn zero_len_end(num_methods: usize) -> Self {
         Self {
-            node_id: NodeId::ZeroLengthEnd(end_idx),
+            node_id: NodeId::ZeroLengthEnd,
             length: 0,
             method_counts: RowCounts::zero(num_methods),
             links: Vec::new(),
             label: String::new(),
-            end_idx: Some(end_idx),
+            end: Some(End::ZeroLength),
         }
     }
 

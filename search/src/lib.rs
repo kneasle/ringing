@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 use bit_vec::BitVec;
 use frontier::Frontier;
 use m_gr::{
-    layout::{EndIdx, Layout, StartIdx},
+    layout::{End, Layout, StartIdx},
     RowCounts,
 };
 use monument_graph::{self as m_gr, layout::LinkIdx, music::Score, Data};
@@ -57,7 +57,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
         let node = &graph.nodes[node_idx];
 
         // Check if the comp has come round
-        if let Some(end_idx) = node.end_idx {
+        if let Some(end) = node.end {
             if data.len_range.contains(&length)
                 && method_counts.is_feasible(0, data.method_count_range.clone())
             {
@@ -66,7 +66,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                     start_idx,
                     start_node_label,
                     links,
-                    end_idx,
+                    end,
 
                     length,
                     method_counts,
@@ -136,7 +136,7 @@ pub struct Comp {
     pub start_idx: StartIdx,
     pub start_node_label: String,
     pub links: Vec<(LinkIdx, String)>,
-    pub end_idx: EndIdx,
+    pub end: End,
 
     pub length: usize,
     pub method_counts: RowCounts,
@@ -158,7 +158,7 @@ impl Comp {
             s.push_str(link_label);
         }
         // End
-        s.push_str(&layout.ends[self.end_idx].label);
+        s.push_str(layout.end_label(self.end));
         s
     }
 }

@@ -11,7 +11,7 @@ use monument_utils::FrontierItem;
 
 use crate::{
     falseness::FalsenessTable,
-    layout::{EndIdx, Layout, LinkIdx, NodeId, Segment, StartIdx},
+    layout::{End, Layout, LinkIdx, NodeId, Segment, StartIdx},
     music::{Breakdown, MusicType, Score},
     optimise::Pass,
     row_counts::RowCounts,
@@ -35,7 +35,7 @@ pub struct Graph {
     start_nodes: Vec<(NodeId, StartIdx)>,
     /// **Invariant**: If `start_nodes` points to a node, it **must** be a end node (i.e. not have
     /// any successors, and have `end_nodes` set)
-    end_nodes: Vec<(NodeId, EndIdx)>,
+    end_nodes: Vec<(NodeId, End)>,
 }
 
 /// A `Node` in a node [`Graph`].  This is an indivisible chunk of ringing which cannot be split up
@@ -48,7 +48,7 @@ pub struct Node {
     is_start: bool,
     /// If this `Node` is an 'end' (i.e. adding it will complete a composition), then this is
     /// `Some(label)` where `label` should be appended to the human-friendly composition string.
-    end_idx: Option<EndIdx>,
+    end: Option<End>,
     /// The string that should be added when this node is generated
     label: String,
 
@@ -147,7 +147,7 @@ impl Graph {
     }
 
     /// Remove elements from [`Self::end_nodes`] for which a predicate returns `false`.
-    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&(NodeId, EndIdx)) -> bool) {
+    pub fn retain_end_nodes(&mut self, pred: impl FnMut(&(NodeId, End)) -> bool) {
         self.end_nodes.retain(pred);
     }
 }
@@ -228,7 +228,7 @@ impl Graph {
         &self.start_nodes
     }
 
-    pub fn end_nodes(&self) -> &[(NodeId, EndIdx)] {
+    pub fn end_nodes(&self) -> &[(NodeId, End)] {
         &self.end_nodes
     }
 
@@ -291,12 +291,12 @@ impl Node {
         self.is_start
     }
 
-    pub fn end_idx(&self) -> Option<EndIdx> {
-        self.end_idx
+    pub fn end(&self) -> Option<End> {
+        self.end
     }
 
     pub fn is_end(&self) -> bool {
-        self.end_idx.is_some()
+        self.end.is_some()
     }
 
     // CROSS-NODE REFERENCES //
@@ -384,8 +384,8 @@ impl Graph {
             if new_dist > max_length {
                 continue;
             }
-            if let Some(end_idx) = segment.end_idx {
-                end_nodes.push((node_id.clone(), end_idx));
+            if let Some(end) = segment.end {
+                end_nodes.push((node_id.clone(), end));
             }
             // Expand the node by adding its successors to the frontier
             for (_link_idx, id_after_link) in &segment.links {
@@ -421,7 +421,7 @@ impl Graph {
                     music,
 
                     is_start: node_id.is_start(),
-                    end_idx: segment.end_idx,
+                    end: segment.end,
                     label: segment.label.clone(),
 
                     required: false,

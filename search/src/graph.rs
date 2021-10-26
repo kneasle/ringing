@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bit_vec::BitVec;
 use itertools::Itertools;
 use monument_graph::{
-    layout::{EndIdx, LinkIdx, StartIdx},
+    layout::{End, LinkIdx, StartIdx},
     music::Score,
     Data, NodeId, RowCounts,
 };
@@ -30,7 +30,7 @@ pub struct Node {
     // unreachable.  This includes `Self`
     pub falseness: BitVec,
 
-    pub end_idx: Option<EndIdx>,
+    pub end: Option<End>,
 }
 
 ///////////////////////////////////////////
@@ -83,7 +83,7 @@ impl Graph {
                     method_counts: source_node.method_counts().clone(),
                     dist_to_rounds: source_node.lb_distance_to_rounds,
                     label: source_node.label().to_owned(),
-                    end_idx: source_node.end_idx(),
+                    end: source_node.end(),
                     succs,
                     falseness,
                 }

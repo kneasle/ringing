@@ -759,7 +759,7 @@ fn rounds_locations(
     positions
 }
 
-/// Useful cached data about a [`Method`]
+/// Cached data about each [`Method`] in the resulting [`Layout`]
 #[derive(Debug, Clone)]
 struct MethodData<'a> {
     /// The [`Method`] which this data is about
