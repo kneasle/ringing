@@ -12,6 +12,9 @@ mod args;
 mod spec;
 mod test_data;
 
+/// Max number of comp prefixes stored in the queues of all threads
+const QUEUE_LIMIT: usize = 10_000_000;
+
 fn main() {
     // Parse CLI args
     let args = CliArgs::from_args();
@@ -43,16 +46,19 @@ fn main() {
     // Run graph search on each graph in parallel
     let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let data = Arc::new(data);
+    let num_threads = graphs.len();
+    let queue_limit = QUEUE_LIMIT / num_threads;
     let handles = graphs
         .into_iter()
         .map(|graph| {
             let data = data.clone();
             let comps = comps.clone();
             std::thread::spawn(move || {
-                search::<BestFirst<_>, _>(&graph, &data, |c| {
+                let on_find_comp = |c: Comp| {
                     print_comp(&c, &data.layout);
                     comps.lock().unwrap().push(c);
-                });
+                };
+                search::<BestFirst<_>, _>(&graph, &data, queue_limit, on_find_comp);
             })
         })
         .collect_vec();

@@ -162,8 +162,6 @@ impl Spec {
             len_range: self.length.range.clone(),
             method_count_range,
             num_comps: self.num_comps,
-
-            queue_limit: 10_000_000,
         })
     }
 }

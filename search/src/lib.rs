@@ -19,6 +19,7 @@ use graph::NodeIdx;
 pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     graph: &m_gr::Graph,
     data: &Data,
+    queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
@@ -118,8 +119,8 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
         }
 
         // If the queue gets too long, then halve its size
-        if frontier.len() >= data.queue_limit {
-            frontier.truncate(data.queue_limit / 2);
+        if frontier.len() >= queue_limit {
+            frontier.truncate(queue_limit / 2);
         }
 
         // Print stats every so often
