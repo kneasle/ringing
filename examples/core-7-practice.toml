@@ -1,0 +1,25 @@
+length = "practice"
+base_calls = "near"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    "Bristol Surprise Major",
+    "London Surprise Major",
+    # "Deva Surprise Major",
+]
+
+method_count.min = 32 # Require at least one lead of every method
+
+[[music]]
+run_lengths = [4, 5, 6, 7]
+
+[[music]]
+patterns = ["*6578"]
+
+# Boost 5678s off the front
+[[music]]
+patterns = ["5678*", "8765*"]
+weight = 3
