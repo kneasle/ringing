@@ -26,6 +26,7 @@ pub(super) fn from_methods(
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
     let (mut method_datas, stage) = gen_method_data(methods, calls, ch_masks)?;
+    let is_spliced = method_datas.len() > 1;
 
     // Pre-process & check CH masks:
     for d in &mut method_datas {
@@ -35,14 +36,24 @@ pub(super) fn from_methods(
         check_for_ambiguous_courses(&d.ch_masks, &d.lead_heads)?;
     }
 
+    // Generate links
+    let links = generate_links(
+        &method_datas,
+        plain_lead_weight,
+        stage,
+        is_spliced,
+        splice_style,
+    )?
+    .into();
+
     Ok(Layout {
-        links: generate_links(&method_datas, plain_lead_weight, stage, splice_style)?.into(),
+        links,
         starts: rounds_locations(&method_datas, stage, allowed_start_indices, "<").into(),
         ends: rounds_locations(&method_datas, stage, allowed_end_indices, ">").into(),
         // Create a block for each method
         blocks: method_datas
             .into_iter()
-            .map(MethodData::into_block)
+            .map(|d| d.into_block(is_spliced))
             .collect::<BlockVec<_>>(),
         stage,
     })
@@ -287,6 +298,7 @@ fn generate_links(
     method_datas: &[MethodData],
     plain_lead_weight: f32,
     stage: Stage,
+    is_spliced: bool,
     mut splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
     // If there's only one method, then plain leads are only required where there could be calls.
@@ -309,6 +321,7 @@ fn generate_links(
         &call_starts_by_label,
         plain_lead_weight,
         stage,
+        is_spliced,
         splice_style,
     )?;
     filter_plain_links(&mut links, splice_style);
@@ -414,10 +427,9 @@ fn generate_all_links(
     call_starts_by_label: &HashMap<&str, Vec<RowIdx>>,
     plain_lead_weight: f32,
     stage: Stage,
+    is_spliced: bool,
     splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
-    let is_spliced = method_datas.len() > 1;
-
     let mut links = Vec::<Link>::new();
     let link_gen_data = LinkGenData {
         method_datas,
@@ -783,9 +795,10 @@ impl<'a> MethodData<'a> {
         }
     }
 
-    fn into_block(self) -> AnnotBlock<Option<String>> {
+    fn into_block(self, is_spliced: bool) -> AnnotBlock<Option<String>> {
         let shorthand = &self.shorthand;
-        self.plain_course
-            .map_annots(|annot| (annot.sub_lead_idx() == 0).then(|| shorthand.clone()))
+        self.plain_course.map_annots(|annot| {
+            (annot.sub_lead_idx() == 0 && is_spliced).then(|| shorthand.clone())
+        })
     }
 }
