@@ -6,11 +6,13 @@ mod graph;
 pub mod layout; // High-level description of the 'shape' of a [`Graph`]
 pub mod music;
 pub mod optimise;
+mod row_counts;
 
 use std::ops::Range;
 
 pub use graph::{Graph, Node};
 pub use layout::NodeId;
+pub use row_counts::RowCounts;
 
 /// Data about a composition external to the node graph.  This can be used for lookup during
 /// composing, and to inform optimisation decisions.
@@ -20,9 +22,8 @@ pub struct Data {
     pub layout: layout::Layout,
     pub music_types: Vec<music::MusicType>,
     pub len_range: Range<usize>,
+    pub method_count_range: Range<usize>,
     pub num_comps: usize,
-
-    pub queue_limit: usize,
 }
 
 impl Data {

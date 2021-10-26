@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::ParseIntError, path::Path};
+use std::{collections::HashMap, num::ParseIntError, ops::Range, path::Path};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -23,6 +23,9 @@ use self::{
 };
 
 mod calls;
+
+const SPLICE_STYLE: SpliceStyle = SpliceStyle::Calls; // TODO: Make this configurable
+const METHOD_BALANCE_ALLOWANCE: f32 = 0.03; // By how much the method balance is allowed to vary
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
@@ -139,7 +142,7 @@ impl Spec {
         let layout = Layout::from_methods(
             &methods,
             &calls,
-            SpliceStyle::Calls, // TODO: Make this configurable
+            SPLICE_STYLE,
             course_head_masks,
             if self.snap_start {
                 None
@@ -150,11 +153,14 @@ impl Spec {
         )
         .map_err(Error::LayoutGen)?;
 
+        let method_count_range = method_count_range(methods.len(), &self.length.range);
+
         // Build this layout into a `Graph`
         Ok(Data {
             layout,
             music_types,
             len_range: self.length.range.clone(),
+            method_count_range,
             num_comps: self.num_comps,
 
             queue_limit: 10_000_000,
@@ -170,6 +176,14 @@ fn gen_tenors_together_mask(stage: Stage) -> Mask {
     let mut fixed_bells = vec![Bell::TREBLE];
     fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
     Mask::fix_bells(stage, fixed_bells)
+}
+
+/// Determine a suitable default range in which method counts must lie, thus enforcing decent
+/// method balance.
+fn method_count_range(num_methods: usize, len_range: &Range<usize>) -> Range<usize> {
+    let min_count = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
+    let max_count = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
+    (min_count as usize)..(max_count.ceil() as usize)
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail

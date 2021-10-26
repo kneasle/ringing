@@ -8,7 +8,7 @@ use std::{
 use bellframe::{AnnotBlock, Bell, Mask, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
-use crate::{music::MusicType, Graph};
+use crate::{music::MusicType, row_counts::RowCounts, Graph};
 
 pub mod from_methods;
 
@@ -111,8 +111,15 @@ impl Layout {
     pub(crate) fn get_segment(&self, id: &NodeId) -> Option<Segment> {
         match id {
             NodeId::Standard(std_id) => self.get_segment_std(std_id),
-            NodeId::ZeroLengthEnd(end_idx) => Some(Segment::zero_len_end(*end_idx)),
+            NodeId::ZeroLengthEnd(end_idx) => {
+                Some(Segment::zero_len_end(*end_idx, self.num_methods()))
+            }
         }
+    }
+
+    pub fn num_methods(&self) -> usize {
+        // TODO: Track methods properly
+        self.blocks.len()
     }
 
     /// Returns the [`Segment`], starting at a given [`StandardNodeId`].  If this [`Segment`] would
@@ -256,6 +263,11 @@ impl Layout {
         Some(Segment {
             links: deduped_links,
             length: shortest_length,
+            method_counts: RowCounts::single_count(
+                shortest_length,
+                id.row_idx.block.index(),
+                self.num_methods(),
+            ),
             label,
             node_id: NodeId::Standard(id.clone()),
             end_idx,
@@ -499,6 +511,7 @@ pub(crate) struct Segment {
     /// The [`String`] which should be printed when this node is expanded.  This is usually a
     /// sequence of method shorthands (e.g. "YYY") when ringing spliced.
     pub(crate) label: String,
+    pub(crate) method_counts: RowCounts,
 
     /// If this `Segment` is a end point, then this is `Some(idx)` where `idx` indexes into
     /// [`Layout::ends`].
@@ -506,10 +519,11 @@ pub(crate) struct Segment {
 }
 
 impl Segment {
-    pub(crate) fn zero_len_end(end_idx: EndIdx) -> Self {
+    pub(crate) fn zero_len_end(end_idx: EndIdx, num_methods: usize) -> Self {
         Self {
             node_id: NodeId::ZeroLengthEnd(end_idx),
             length: 0,
+            method_counts: RowCounts::zero(num_methods),
             links: Vec::new(),
             label: String::new(),
             end_idx: Some(end_idx),

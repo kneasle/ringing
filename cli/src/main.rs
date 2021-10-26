@@ -66,8 +66,9 @@ fn main() {
 
 fn print_comp(c: &Comp, layout: &Layout) {
     println!(
-        "len: {}, score: {:>6.2}, avg: {:.6}, str: {}",
+        "len: {}, ms: {:?}, score: {:>6.2}, avg: {:.6}, str: {}",
         c.length,
+        c.method_counts.counts(),
         c.score,
         c.avg_score,
         c.display_string(layout)

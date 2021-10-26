@@ -5,7 +5,7 @@ use itertools::Itertools;
 use monument_graph::{
     layout::{EndIdx, LinkIdx, StartIdx},
     music::Score,
-    Data, NodeId,
+    Data, NodeId, RowCounts,
 };
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
@@ -20,6 +20,7 @@ pub struct Graph {
 pub struct Node {
     pub score: Score,
     pub length: usize,
+    pub method_counts: RowCounts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub dist_to_rounds: usize,
     pub label: String,
@@ -79,6 +80,7 @@ impl Graph {
                 Node {
                     score: source_node.score(),
                     length: source_node.length(),
+                    method_counts: source_node.method_counts().clone(),
                     dist_to_rounds: source_node.lb_distance_to_rounds,
                     label: source_node.label().to_owned(),
                     end_idx: source_node.end_idx(),
