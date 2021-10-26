@@ -51,7 +51,7 @@ pub struct Breakdown {
     pub(crate) total: Score,
     /// The number of occurrences of each [`MusicType`] (the list of music types is stored in the
     /// [`Engine`] singleton).
-    pub(crate) breakdown: Vec<usize>,
+    pub(crate) occurences: Vec<usize>,
 }
 
 impl Breakdown {
@@ -59,7 +59,7 @@ impl Breakdown {
     pub fn zero(num_music_types: usize) -> Self {
         Self {
             total: Score::from(0.0),
-            breakdown: vec![0; num_music_types],
+            occurences: vec![0; num_music_types],
         }
     }
 
@@ -70,12 +70,12 @@ impl Breakdown {
         music_types: &[MusicType],
     ) -> Self {
         let mut temp_row = RowBuf::rounds(Stage::ONE);
-        let mut breakdown = vec![0; music_types.len()];
+        let mut occurences = vec![0; music_types.len()];
         // For every (transposed) row ...
         for r in rows {
             course_head.mul_into(r, &mut temp_row).unwrap();
             // ... for every music type ...
-            for (num_instances, ty) in breakdown.iter_mut().zip_eq(music_types) {
+            for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
                 // ... count the number of instances of that type of music
                 for regex in &ty.regexes {
                     if regex.matches(&temp_row) {
@@ -86,12 +86,12 @@ impl Breakdown {
         }
 
         Self {
-            total: breakdown
+            total: occurences
                 .iter()
                 .zip_eq(music_types)
                 .map(|(&num_instances, ty)| Score::from(num_instances as f32) * ty.weight)
                 .sum(),
-            breakdown,
+            occurences,
         }
     }
 }
@@ -107,10 +107,10 @@ impl Add for &Breakdown {
     fn add(self, rhs: &Breakdown) -> Self::Output {
         Breakdown {
             total: self.total + rhs.total,
-            breakdown: self
-                .breakdown
+            occurences: self
+                .occurences
                 .iter()
-                .zip_eq(rhs.breakdown.iter())
+                .zip_eq(rhs.occurences.iter())
                 .map(|(a, b)| a + b)
                 .collect_vec(),
         }
@@ -126,7 +126,7 @@ impl AddAssign<&Breakdown> for Breakdown {
     /// Panics if the number of [`MusicType`]s in `rhs` is different to that of `self`.
     fn add_assign(&mut self, rhs: &Breakdown) {
         self.total += rhs.total;
-        for (a, b) in self.breakdown.iter_mut().zip_eq(rhs.breakdown.iter()) {
+        for (a, b) in self.occurences.iter_mut().zip_eq(rhs.occurences.iter()) {
             *a += *b;
         }
     }

@@ -1,4 +1,4 @@
-length = { min = 0, max = 300 }
+length = "practice"
 num_comps = 30
 base_calls = "near"
 methods = ["Norwich Surprise Minor", "Ipswich Surprise Minor", "Dunwich Bob Minor"]

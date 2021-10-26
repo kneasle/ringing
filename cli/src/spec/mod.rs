@@ -128,7 +128,7 @@ impl Spec {
             // If no masks were given but `split_tenors` was `true`, then only fix tenor and treble
             (None, true) => vec![(Mask::fix_bells(stage, vec![Bell::TREBLE, tenor]), tenor)],
             // Default to tenors together, with the tenor as 'calling bell'
-            (None, false) => vec![(gen_tenors_together_mask(stage), tenor)],
+            (None, false) => vec![(tenors_together_mask(stage), tenor)],
         };
         let calls = calls::gen_calls(
             stage,
@@ -168,11 +168,16 @@ impl Spec {
 
 /// Generate the course head mask representing the tenors together.  This corresponds to
 /// `1xxxxx7890ET...`, truncated to the correct stage.
-fn gen_tenors_together_mask(stage: Stage) -> Mask {
-    // By default, fix the treble and >=7.  Also, make sure to always fix the tenor even on Minor
-    // or lower.  Note that we're numbering the bells where the treble is `0`
-    let mut fixed_bells = vec![Bell::TREBLE];
-    fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
+fn tenors_together_mask(stage: Stage) -> Mask {
+    let mut fixed_bells = vec![Bell::TREBLE]; // Always fix the treble
+    if stage <= Stage::MINOR {
+        // On Minor or below, only fix the tenor
+        fixed_bells.push(stage.tenor());
+    } else {
+        // On stages above minor, fix 7-tenor.  Note that we're using 0-indexing here so bell #6 is
+        // actually the 7th
+        fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
+    }
     Mask::fix_bells(stage, fixed_bells)
 }
 
@@ -455,7 +460,9 @@ mod length {
         type Value = Length;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a positive integer or a name like 'peal' or a 'min/max' range")
+            formatter.write_str(
+                r#"a positive integer, a 'min/max' range, "practice", "qp", "half peal" or "peal""#,
+            )
         }
 
         fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
