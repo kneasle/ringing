@@ -68,6 +68,13 @@ fn main() {
     }
 
     // TODO: Display all the comps in sorted order
+
+    println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
+    let mut comps = comps.lock().unwrap().clone();
+    comps.sort_by_key(|comp| comp.avg_score);
+    for c in comps {
+        print_comp(&c, &data.layout);
+    }
 }
 
 fn print_comp(c: &Comp, layout: &Layout) {
