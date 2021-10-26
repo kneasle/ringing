@@ -24,7 +24,7 @@ use self::{
 
 mod calls;
 
-const SPLICE_STYLE: SpliceStyle = SpliceStyle::Calls; // TODO: Make this configurable
+const SPLICE_STYLE: SpliceStyle = SpliceStyle::LeadLabels; // TODO: Make this configurable
 const METHOD_BALANCE_ALLOWANCE: f32 = 0.03; // By how much the method balance is allowed to vary
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
@@ -78,6 +78,9 @@ pub struct Spec {
     #[serde(default)]
     /// A list of [`Method`] who are being spliced together
     methods: Vec<MethodSpec>,
+    /// Bounds on how many rows of each method is allowed
+    #[serde(default)]
+    method_count: OptRange,
 
     /// Data for the testing/benchmark harness.  It is public so that it can be accessed by the
     /// testing harness.
@@ -153,7 +156,8 @@ impl Spec {
         )
         .map_err(Error::LayoutGen)?;
 
-        let method_count_range = method_count_range(methods.len(), &self.length.range);
+        let method_count_range =
+            method_count_range(methods.len(), &self.length.range, self.method_count);
 
         // Build this layout into a `Graph`
         Ok(Data {
@@ -183,10 +187,16 @@ fn tenors_together_mask(stage: Stage) -> Mask {
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent
 /// method balance.
-fn method_count_range(num_methods: usize, len_range: &Range<usize>) -> Range<usize> {
-    let min_count = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
-    let max_count = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
-    (min_count as usize)..(max_count.ceil() as usize)
+fn method_count_range(
+    num_methods: usize,
+    len_range: &Range<usize>,
+    user_range: OptRange,
+) -> Range<usize> {
+    let min_f32 = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
+    let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
+    let min = user_range.min.unwrap_or(min_f32.floor() as usize);
+    let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
+    min..max
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
@@ -306,7 +316,16 @@ impl MethodSpec {
     }
 }
 
-/* Music */
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OptRange {
+    min: Option<usize>,
+    max: Option<usize>,
+}
+
+///////////
+// MUSIC //
+///////////
 
 /// The specification for one type of music
 #[derive(Debug, Clone, Deserialize)]

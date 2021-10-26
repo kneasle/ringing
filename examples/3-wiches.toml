@@ -2,7 +2,7 @@ length = "practice"
 num_comps = 30
 base_calls = "near"
 methods = ["Norwich Surprise Minor", "Ipswich Surprise Minor", "Dunwich Bob Minor"]
-course_heads = ["1xxxx6"]
+method_count.min = 3
 
 [[music]]
 run_lengths = [4, 5, 6]
