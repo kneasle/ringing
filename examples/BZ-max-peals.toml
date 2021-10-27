@@ -1,7 +1,11 @@
 length = "peal"
 num_comps = 50
 base_calls = "near"
-methods = ["Bristol Surprise Maximus", "Zanussi Surprise Maximus"]
+methods = [
+    "Bristol Surprise Maximus",
+    "Zanussi Surprise Maximus",
+]
+splice_style = "calls"
 
 # Punish calls more because Maximus generates too much music
 bob_weight = -10

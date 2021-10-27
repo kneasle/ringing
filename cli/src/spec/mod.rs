@@ -22,7 +22,6 @@ use self::{
 
 mod calls;
 
-const SPLICE_STYLE: SpliceStyle = SpliceStyle::LeadLabels; // TODO: Make this configurable
 const METHOD_BALANCE_ALLOWANCE: f32 = 0.03; // By how much the method balance is allowed to vary
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
@@ -37,6 +36,9 @@ pub struct Spec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "get_30")]
     num_comps: usize,
+    /// Monument won't stop until it generates the `num_comps` best compositions
+    #[serde(default)]
+    splice_style: SpliceStyle,
 
     #[serde(default)]
     snap_start: bool,
@@ -137,7 +139,7 @@ impl Spec {
         let layout = Layout::from_methods(
             &methods,
             &calls,
-            SPLICE_STYLE,
+            self.splice_style,
             course_head_masks,
             if self.snap_start {
                 None

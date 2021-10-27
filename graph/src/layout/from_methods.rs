@@ -5,6 +5,7 @@ use std::{
 
 use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage};
 use itertools::Itertools;
+use serde::Deserialize;
 
 use super::{BlockIdx, BlockVec, CourseHeadMask, Layout, Link, RowIdx, StartOrEnd};
 
@@ -60,14 +61,23 @@ pub(super) fn from_methods(
 }
 
 /// The different styles of spliced that can be generated
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
 pub enum SpliceStyle {
     /// Splices could happen at any lead label
+    #[serde(rename = "leads")]
     LeadLabels,
     /// Splice only happen whenever a call _could_ have happened
+    #[serde(rename = "call locations")]
     CallLocations,
     /// Splices only happen when calls are actually made
+    #[serde(rename = "calls")]
     Calls,
+}
+
+impl Default for SpliceStyle {
+    fn default() -> Self {
+        Self::LeadLabels
+    }
 }
 
 /// The ways that [`Layout::single_method`] can fail

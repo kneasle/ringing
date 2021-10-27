@@ -511,6 +511,7 @@ dependencies = [
  "itertools",
  "monument_utils",
  "ordered-float",
+ "serde",
 ]
 
 [[package]]

@@ -1,6 +1,5 @@
 length = "QP"
 base_calls = "near"
-start_indices = [0]
 method = "Superlative Surprise Major"
 
 [[music]]
