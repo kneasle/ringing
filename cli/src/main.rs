@@ -10,7 +10,6 @@ use structopt::StructOpt;
 
 mod args;
 mod spec;
-mod test_data;
 
 /// Max number of comp prefixes stored in the queues of all threads
 const QUEUE_LIMIT: usize = 10_000_000;
@@ -21,10 +20,7 @@ fn main() {
     let log_level = args.log_level();
 
     // Generate & debug print the TOML file specifying the search
-    let mut spec = Spec::read_from_file(&args.input_file).unwrap();
-    // Remove data for the testing harness; it's not useful for the CLI version and just clogs up
-    // any debugging.
-    spec.test_data = None;
+    let spec = Spec::read_from_file(&args.input_file).unwrap();
     if log_level >= LevelFilter::Debug {
         println!("{:#?}", spec);
     }

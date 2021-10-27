@@ -15,8 +15,6 @@ use monument_graph::{
 };
 use serde::Deserialize;
 
-use crate::test_data::TestData;
-
 use self::{
     calls::{BaseCalls, SpecificCall},
     length::Length,
@@ -81,12 +79,6 @@ pub struct Spec {
     /// Bounds on how many rows of each method is allowed
     #[serde(default)]
     method_count: OptRange,
-
-    /// Data for the testing/benchmark harness.  It is public so that it can be accessed by the
-    /// testing harness.
-    ///
-    /// TODO: Move testing data to its own files, and figure out how to test non-optimal engines
-    pub test_data: Option<TestData>,
 }
 
 impl Spec {

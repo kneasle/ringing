@@ -9,24 +9,3 @@ run_lengths = [4, 5, 6, 7]
 
 [[music]]
 patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
-
-# This data is only used by the test/benchmark runner and will be ignored by Monument
-[test_data]
-runtime_estimate = 36 # seconds
-results = [
-    { length = 1280, score = 721554505728, call_string = "HWsHBsHVsMsMsFsHWH", ranking_score = 563714457 },
-    { length = 1280, score = 721554505728, call_string = "BVMsFsMsMsHWHHH", ranking_score = 563714457 },
-    { length = 1344, score = 760209211392, call_string = "BVMMsFMBsHWHHH", ranking_score = 565631853 },
-    { length = 1312, score = 743029342208, call_string = "BBHWsHBsHMHWHHH", ranking_score = 566333340 },
-    { length = 1312, score = 743029342208, call_string = "BBsHsWsHBsHMHWHHH", ranking_score = 566333340 },
-    { length = 1312, score = 743029342208, call_string = "BBWVMMsVMsHBWsHsH", ranking_score = 566333340 },
-    { length = 1312, score = 743029342208, call_string = "BBsWsVMMsVMsHBWsHsH", ranking_score = 566333340 },
-    { length = 1280, score = 725849473024, call_string = "BVsMMsFHHWsHsH", ranking_score = 567069900 },
-    { length = 1280, score = 725849473024, call_string = "BVsMMsFHsWsWHW", ranking_score = 567069900 },
-    { length = 1280, score = 730144440320, call_string = "HWHBHVsMsMsFHsWH", ranking_score = 570425344 },
-    { length = 1312, score = 751619276800, call_string = "BBHWHBHMHWHHH", ranking_score = 572880546 },
-    { length = 1312, score = 751619276800, call_string = "BBsHsWHBHMHWHHH", ranking_score = 572880546 },
-    { length = 1280, score = 738734374912, call_string = "HWHBHVsMsMsFsHWH", ranking_score = 577136230 },
-    { length = 1280, score = 738734374912, call_string = "sHsWHBHVsMMsFHsWsH", ranking_score = 577136230 },
-    { length = 1280, score = 743029342208, call_string = "BVMFMMHWHHH", ranking_score = 580491673 },
-]
