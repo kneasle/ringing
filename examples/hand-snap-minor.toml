@@ -1,6 +1,5 @@
 length = "practice"
 num_comps = 30
-base_calls = "near"
 methods = [
     "Cambridge Surprise Minor",
     "London Surprise Minor",

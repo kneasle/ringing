@@ -1,6 +1,5 @@
 length = "qp"
 num_comps = 40
-base_calls = "near"
 method = "Yorkshire Surprise Major"
 
 course_heads = ["xxxxxx78", "xxxx8765", "xxxx7856"]

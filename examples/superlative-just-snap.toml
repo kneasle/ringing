@@ -1,5 +1,4 @@
 length = "QP"
-base_calls = "near"
 start_indices = [2]
 method = "Superlative Surprise Major"
 

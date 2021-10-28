@@ -1,5 +1,4 @@
 length = "QP"
-base_calls = "near"
 methods = [
     "Yorkshire Surprise Major",
     { title = "Lessness Surprise Major", shorthand = "E" },

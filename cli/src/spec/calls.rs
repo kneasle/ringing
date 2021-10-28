@@ -7,6 +7,7 @@ use super::Error;
 /// The values of the `base_calls` attribute
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BaseCalls {
+    None,
     Near,
     Far,
 }
@@ -25,6 +26,7 @@ impl BaseCalls {
         assert!(num_bells >= 4);
 
         let (mut bob, mut single) = match self {
+            BaseCalls::None => return vec![],
             BaseCalls::Near => (
                 Call::lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
                 Call::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
@@ -60,6 +62,12 @@ impl BaseCalls {
     }
 }
 
+impl Default for BaseCalls {
+    fn default() -> Self {
+        Self::Near
+    }
+}
+
 impl<'de> Deserialize<'de> for BaseCalls {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -68,6 +76,7 @@ impl<'de> Deserialize<'de> for BaseCalls {
         let s = String::deserialize(deserializer)?;
         let lower_str = s.to_lowercase();
         Ok(match lower_str.as_str() {
+            "none" => BaseCalls::None,
             "near" => BaseCalls::Near,
             "far" => BaseCalls::Far,
             _ => return Err(de::Error::custom(format!("unknown call type '{}'", s))),
@@ -105,25 +114,21 @@ impl SpecificCall {
 
 pub fn gen_calls<'s>(
     stage: Stage,
-    base_calls: Option<&'s BaseCalls>,
+    base_calls: BaseCalls,
     bob_weight: Option<f32>,
     single_weight: Option<f32>,
     calls: &'s [SpecificCall],
 ) -> Result<Vec<Call>, Error> {
-    // Check if the user hasn't specified any calls
-    if base_calls.is_none() && calls.is_empty() {
-        return Err(Error::NoCalls);
-    }
-
-    // Expand base calls into `Call`s
-    let mut call_specs = base_calls.map_or_else(Vec::new, |bc| {
-        bc.to_call_specs(stage, bob_weight, single_weight)
-    });
+    let mut call_specs = base_calls.to_call_specs(stage, bob_weight, single_weight);
     for specific_call in calls {
         call_specs.push(specific_call.to_call_spec(stage)?);
     }
 
-    Ok(call_specs)
+    if call_specs.is_empty() {
+        Err(Error::NoCalls)
+    } else {
+        Ok(call_specs)
+    }
 }
 
 #[inline(always)]

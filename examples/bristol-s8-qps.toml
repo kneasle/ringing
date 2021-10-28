@@ -1,6 +1,5 @@
 length = { min = 1250, max = 1280 }
 num_comps = 50
-base_calls = "near"
 method = "Bristol Surprise Major"
 
 [[music]]

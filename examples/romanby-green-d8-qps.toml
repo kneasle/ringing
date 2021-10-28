@@ -1,6 +1,5 @@
 length = "qp"
 num_comps = 15
-base_calls = "near"
 course_heads = ["1xxxxx78", "1xxx7856", "1xxx8765", "13456782", "18234567"]
 method = "Romanby Green Delight Major"
 

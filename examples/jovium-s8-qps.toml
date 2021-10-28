@@ -1,5 +1,4 @@
 length = "QP"
-base_calls = "near"
 course_heads = ["1xxxxx78", "1xxx8765", "15678xxx"]
 method = "Jovium Surprise Major"
 

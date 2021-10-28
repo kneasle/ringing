@@ -1,5 +1,4 @@
 length = { min = 1250, max = 1300 }
-base_calls = "near"
 num_comps = 50
 method = "Plain Bob Major"
 

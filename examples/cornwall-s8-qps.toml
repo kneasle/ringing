@@ -1,6 +1,5 @@
 length = "qp"
 num_comps = 20
-base_calls = "near"
 method = "Cornwall Surprise Major"
 
 [[music]]

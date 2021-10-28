@@ -51,7 +51,8 @@ pub struct Spec {
     end_indices: Option<Vec<usize>>,
 
     /// Which calls should be used by default
-    base_calls: Option<BaseCalls>,
+    #[serde(default)] // Default to near calls
+    base_calls: BaseCalls,
     /// Which calls to use in the compositions
     #[serde(default)]
     calls: Vec<SpecificCall>,
@@ -129,7 +130,7 @@ impl Spec {
         };
         let calls = calls::gen_calls(
             stage,
-            self.base_calls.as_ref(),
+            self.base_calls,
             self.bob_weight,
             self.single_weight,
             &self.calls,

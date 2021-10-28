@@ -37,11 +37,10 @@ which has lots of falseness and all courses have roughly the same (bad) music ou
 
 The following TOML file (found [here](examples/yorkshire-lessness-qps.toml)) will run a search for
 QPs of Yorkshire and Lessness spliced, using entirely tenors-together courses but allowing
-`15678xxx` for the 8765s:
+`15678xxx` for the 8765s.  4ths place (near) calls are used by default:
 
 ```toml
 length = "QP"
-base_calls = "near"
 methods = [
     "Yorkshire Surprise Major",
     { title = "Lessness Surprise Major", shorthand = "E" },

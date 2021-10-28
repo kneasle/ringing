@@ -1,6 +1,5 @@
 length = "peal"
 num_comps = 40
-base_calls = "near"
 method = "Bristol Surprise Maximus"
 
 [[music]]

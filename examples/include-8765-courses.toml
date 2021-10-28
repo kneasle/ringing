@@ -1,6 +1,5 @@
 length = "QP"
 num_comps = 20
-base_calls = "near"
 method = "Yorkshire Surprise Major"
 # Monument will deduplicate the CH masks, removing `1xxx5678` because it is a subset of `1xxxxx78`.
 course_heads = ["1xxx5678", "1xxxxx78", "1xxx8765", "15678xxx"]

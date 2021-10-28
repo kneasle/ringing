@@ -1,6 +1,5 @@
 length = "half peal"
 num_comps = 50
-base_calls = "near"
 methods = ["Bristol Surprise Royal", "Triton Delight Royal"]
 splice_style = "calls"
 
