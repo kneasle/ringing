@@ -502,6 +502,7 @@ fn generate_all_links(
                     };
 
                     // Add links for this call, splicing to any available method
+                    let len_before_calls = links.len();
                     add_links_for_call(
                         from_idx,
                         &from_ch_mask.mask,
@@ -513,9 +514,11 @@ fn generate_all_links(
                         &link_gen_data,
                         &mut links,
                     );
+                    let is_call_possible = links.len() > len_before_calls;
 
-                    // Add corresponding plain links, according to the splicing style
-                    if splice_style != SpliceStyle::LeadLabels {
+                    // Plain links should be added whenever there's a call, or every lead for
+                    // `SpliceStyle::LeadLabels`
+                    if splice_style == SpliceStyle::LeadLabels || is_call_possible {
                         let idx_after_plain = (from_idx.row + 1) % d.plain_course.len();
                         let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
                         add_links_for_call(
@@ -525,45 +528,14 @@ fn generate_all_links(
                             &fmt_call("p", calling_position),
                             "", // Don't display plain leads in output
                             plain_lead_weight,
-                            // Splicing on plain leads at call locations is allowed for
-                            // `CallLocations`, but not for just `Calls`
-                            (splice_style == SpliceStyle::CallLocations).then(|| method_idx),
+                            // If we're only splicing on calls, then don't add plain links that
+                            // change method
+                            (splice_style == SpliceStyle::Calls).then(|| method_idx),
                             &link_gen_data,
                             &mut links,
                         );
                     }
                 }
-            }
-        }
-    }
-
-    /* Generate plain links for method splices */
-
-    // If splices are possible every lead, then the composition can branch at every lead.
-    // Therefore, we need a plain link at every lead to every possible method (including the one
-    // being spliced from).
-    if splice_style == SpliceStyle::LeadLabels {
-        for &from_idx in call_starts_by_label.values().flatten() {
-            let d = &method_datas[from_idx.block.index()];
-            let row_after_plain = d
-                .plain_course
-                .get_row((from_idx.row + 1) % d.plain_course.len())
-                .unwrap();
-
-            // Note that we need to create specific plain links per mask in case different methods
-            // have different CH mask requirements
-            for from_ch_mask in &d.ch_masks {
-                add_links_for_call(
-                    from_idx,
-                    &from_ch_mask.mask,
-                    row_after_plain,
-                    if is_spliced { "[p]" } else { "p" }, // Debug with no call position
-                    "",                                   // Don't display plain leads
-                    plain_lead_weight,
-                    None, // We want to allow splices at every lead
-                    &link_gen_data,
-                    &mut links,
-                );
             }
         }
     }
