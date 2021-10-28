@@ -48,7 +48,8 @@ pub fn compute_distances(mut view: DirectionalView, data: &Data) {
 
         // Expand this node
         expanded_node_distances.insert(id.to_owned(), distance);
-        for (_, succ_id) in node_view.successors() {
+        for succ_link in node_view.successors() {
+            let succ_id = &succ_link.id;
             if let Some(succ_node) = view.get_node(succ_id) {
                 let new_frontier_item = FrontierItem {
                     item: (succ_id, succ_node),

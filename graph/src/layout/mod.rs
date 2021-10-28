@@ -5,10 +5,10 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{AnnotBlock, Bell, Mask, Method, PlaceNot, Row, RowBuf, Stage};
+use bellframe::{AnnotBlock, Bell, IncompatibleStages, Mask, Method, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
-use crate::{music::MusicType, row_counts::RowCounts, Graph};
+use crate::row_counts::RowCounts;
 
 pub mod from_methods;
 
@@ -74,11 +74,6 @@ impl Layout {
             allowed_end_indices,
             0.0, // Neither punish nor reward plain leads
         )
-    }
-
-    /// Builds a [`Graph`] according to this `Layout`.
-    pub fn to_graph(&self, music_types: &[MusicType], max_length: usize) -> Graph {
-        Graph::from_layout(self, music_types, max_length)
     }
 
     pub fn num_methods(&self) -> usize {
@@ -217,9 +212,9 @@ impl Layout {
         // 2. Handling 0-length end nodes in spliced.  If a splice is made just before rounds, then
         //    we'll end up with a `link` for each method that could be spliced into.  However, this
         //    is equivalent to saying 'splicing to Bristol and instantly coming round' is somehow
-        //    different to 'splicing to Yorkshire and instantly coming round'.  However, the
-        //    `NodeId`s of 0-length end nodes are all equal, so the de-duplication will consider
-        //    all of these to be equivalent and keeps only one.
+        //    different to 'splicing to Yorkshire and instantly coming round'.  By the definition
+        //    of `NodeId`, 0-length ends are defined to be equal, so the de-duplication will
+        //    consider all of these to be equivalent and keep only one.
         let mut deduped_links = Vec::<(LinkIdx, NodeId)>::with_capacity(outgoing_links.len());
         for (link_idx, resulting_id) in outgoing_links {
             if deduped_links.iter().all(|(_, id)| id != &resulting_id) {
@@ -415,24 +410,46 @@ impl NodeId {
         })
     }
 
-    pub fn row_idx(&self) -> Option<RowIdx> {
+    pub fn is_standard(&self) -> bool {
+        matches!(self, Self::Standard(_))
+    }
+
+    pub fn std_id(&self) -> Option<&StandardNodeId> {
         match self {
             Self::ZeroLengthEnd => None,
-            Self::Standard(StandardNodeId { row_idx, .. }) => Some(*row_idx),
+            Self::Standard(std_id) => Some(std_id),
         }
     }
 
-    pub fn course_head(&self) -> Option<&Row> {
+    pub fn into_std_id(self) -> Option<StandardNodeId> {
         match self {
             Self::ZeroLengthEnd => None,
-            Self::Standard(StandardNodeId { course_head, .. }) => Some(course_head),
+            Self::Standard(std_id) => Some(std_id),
+        }
+    }
+
+    pub fn row_idx(&self) -> Option<RowIdx> {
+        self.std_id().map(|std_id| std_id.row_idx)
+    }
+
+    pub fn course_head(&self) -> Option<&Row> {
+        self.std_id().map(|std_id| std_id.course_head.as_ref())
+    }
+
+    pub fn pre_multiply(&self, r: &Row) -> Result<Self, IncompatibleStages> {
+        match self {
+            Self::ZeroLengthEnd => Ok(Self::ZeroLengthEnd),
+            Self::Standard(s) => s.pre_multiply(r).map(Self::Standard),
         }
     }
 
     pub fn is_start(&self) -> bool {
-        match self {
-            Self::ZeroLengthEnd => false,
-            Self::Standard(std_id) => std_id.is_start,
+        self.std_id().map_or(false, |std_id| std_id.is_start)
+    }
+
+    pub fn set_start(&mut self, new_start: bool) {
+        if let Self::Standard(StandardNodeId { is_start, .. }) = self {
+            *is_start = new_start;
         }
     }
 }
@@ -461,6 +478,14 @@ impl StandardNodeId {
     pub fn ch_and_row_idx(&self) -> (&Row, RowIdx) {
         (&self.course_head, self.row_idx)
     }
+
+    pub fn pre_multiply(&self, r: &Row) -> Result<Self, IncompatibleStages> {
+        Ok(Self {
+            course_head: r.mul_result(&self.course_head)?.to_arc(),
+            row_idx: self.row_idx,
+            is_start: self.is_start,
+        })
+    }
 }
 
 impl Debug for NodeId {
@@ -469,6 +494,12 @@ impl Debug for NodeId {
             Self::ZeroLengthEnd => write!(f, "NodeId::ZeroLengthEnd"),
             Self::Standard(std_id) => write!(f, "NodeId({})", std_id),
         }
+    }
+}
+
+impl Debug for StandardNodeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Std({})", self)
     }
 }
 
@@ -483,6 +514,12 @@ impl Display for StandardNodeId {
             write!(f, ",is_start")?;
         }
         Ok(())
+    }
+}
+
+impl From<StandardNodeId> for NodeId {
+    fn from(std_id: StandardNodeId) -> NodeId {
+        NodeId::Standard(std_id)
     }
 }
 

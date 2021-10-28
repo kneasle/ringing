@@ -1,2 +1,5 @@
 [workspace]
 members = ["cli", "graph", "search", "utils"]
+
+[profile.dev]
+opt-level = 2

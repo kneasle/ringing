@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::{Data, Graph};
+use crate::{Data, Graph, NodeId};
 
 /// Removes node references which point to non-existent nodes.  This cannot fail.
 pub(super) fn strip_refs(graph: &mut Graph, _data: &Data) {
@@ -14,10 +14,11 @@ pub(super) fn strip_refs(graph: &mut Graph, _data: &Data) {
     // Strip node refs (i.e. predecessor, successor or falseness)
     for (_id, node) in graph.nodes_mut() {
         node.successors_mut()
-            .retain(|(_link_idx, id)| node_ids.contains(id));
+            .retain(|link| node_ids.contains(&link.id));
         node.predecessors_mut()
-            .retain(|(_link_idx, id)| node_ids.contains(id));
-        node.false_nodes_mut().retain(|id| node_ids.contains(id));
+            .retain(|link| node_ids.contains(&link.id));
+        node.false_nodes_mut()
+            .retain(|id| node_ids.contains(&NodeId::Standard(id.clone())));
     }
 
     // TODO: Strip `successor` ptrs which don't have a matching `predecessor` (or vice versa)

@@ -27,7 +27,7 @@ fn main() {
 
     // Convert the `Spec` into a `Graph` and other data required for running a search
     let data = spec.lower().unwrap();
-    let graph = data.unoptimised_graph();
+    let graph = data.unoptimised_graph().to_multipart(&data).unwrap();
     // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
     // independently and then searching in parallel is almost always better because the
     // optimisation passes have more concrete information about each graph.
@@ -63,8 +63,7 @@ fn main() {
         h.join().unwrap();
     }
 
-    // TODO: Display all the comps in sorted order
-
+    // Display all the comps in sorted order
     println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
     let mut comps = comps.lock().unwrap().clone();
     comps.sort_by_key(|comp| comp.avg_score);
@@ -75,11 +74,12 @@ fn main() {
 
 fn print_comp(c: &Comp, layout: &Layout) {
     println!(
-        "len: {}, ms: {:?}, score: {:>6.2}, avg: {:.6}, str: {}",
+        "len: {}, ms: {:?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
         c.length,
         c.method_counts.counts(),
         c.score,
         c.avg_score,
+        c.rotation,
         c.display_string(layout)
     );
 }

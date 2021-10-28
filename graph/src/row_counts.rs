@@ -1,9 +1,9 @@
-use std::ops::{Add, AddAssign, Range};
+use std::ops::{Add, AddAssign, Mul, Range};
 
 use itertools::Itertools;
 
 /// A collection of counts of something (usually rows of each method in spliced).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RowCounts {
     counts: Vec<usize>,
 }
@@ -62,5 +62,19 @@ impl AddAssign<&RowCounts> for RowCounts {
             .iter_mut()
             .zip_eq(&rhs.counts)
             .for_each(|(lhs, inc)| *lhs += *inc);
+    }
+}
+
+impl Mul<usize> for &RowCounts {
+    type Output = RowCounts;
+
+    fn mul(self, multiplier: usize) -> Self::Output {
+        RowCounts {
+            counts: self
+                .counts
+                .iter()
+                .map(|&count| count * multiplier)
+                .collect_vec(),
+        }
     }
 }

@@ -3,7 +3,7 @@
 
 use std::{fmt::Debug, ops::Not};
 
-use crate::{layout::LinkIdx, Data, Graph, Node, NodeId};
+use crate::{graph, Data, Graph, Node, NodeId};
 
 use self::Direction::{Backward, Forward};
 
@@ -141,14 +141,14 @@ impl<'graph> NodeView<'graph> {
         Self { node, direction }
     }
 
-    pub fn successors(self) -> &'graph [(LinkIdx, NodeId)] {
+    pub fn successors(self) -> &'graph [graph::Link] {
         match self.direction {
             Forward => self.node.successors(),
             Backward => self.node.predecessors(),
         }
     }
 
-    pub fn predecessors(self) -> &'graph [(LinkIdx, NodeId)] {
+    pub fn predecessors(self) -> &'graph [graph::Link] {
         match self.direction {
             Forward => self.node.predecessors(),
             Backward => self.node.successors(),
@@ -170,14 +170,14 @@ impl<'graph> NodeViewMut<'graph> {
         Self { node, direction }
     }
 
-    pub fn successors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {
+    pub fn successors_mut(&mut self) -> &mut Vec<graph::Link> {
         match self.direction {
             Forward => self.node.successors_mut(),
             Backward => self.node.predecessors_mut(),
         }
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<(LinkIdx, NodeId)> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<graph::Link> {
         match self.direction {
             Forward => self.node.predecessors_mut(),
             Backward => self.node.successors_mut(),
@@ -273,8 +273,8 @@ pub mod passes {
                     let other_false_node_ids = node
                         .false_nodes()
                         .iter()
-                        .filter(|false_id| *false_id != id)
-                        .cloned();
+                        .map(|id| NodeId::Standard(id.clone()))
+                        .filter(|false_id| false_id != id);
                     node_ids_to_remove.extend(other_false_node_ids);
                 }
             }

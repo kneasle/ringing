@@ -5,7 +5,7 @@ use bellframe::{
     method_lib::QueryError,
     music::Regex,
     place_not::{self, PnBlockParseError},
-    Bell, Mask, Method, MethodLib, Stage,
+    Bell, InvalidRowError, Mask, Method, MethodLib, RowBuf, Stage,
 };
 use itertools::Itertools;
 use monument_graph::{
@@ -39,6 +39,8 @@ pub struct Spec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default)]
     splice_style: SpliceStyle,
+    /// A [`Row`] which generates the part heads of this composition
+    part_head: Option<String>,
 
     #[serde(default)]
     snap_start: bool,
@@ -151,13 +153,20 @@ impl Spec {
         )
         .map_err(Error::LayoutGen)?;
 
+        // Generate data external to the `Layout`
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
+        let part_head = match &self.part_head {
+            Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
+            None => RowBuf::rounds(stage),
+        };
 
         // Build this layout into a `Graph`
         Ok(Data {
             layout,
             music_types,
+            part_head,
+
             len_range: self.length.range.clone(),
             method_count_range,
             num_comps: self.num_comps,
@@ -200,6 +209,7 @@ pub enum Error {
     NoCalls,
     NoMethods,
     CcLibNotFound,
+    PartHeadParse(InvalidRowError),
     MethodNotFound { suggestions: Vec<String> },
     CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),

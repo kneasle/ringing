@@ -5,7 +5,7 @@ use itertools::Itertools;
 use monument_graph::{
     layout::{End, LinkIdx, StartIdx},
     music::Score,
-    Data, NodeId, RowCounts,
+    Data, NodeId, Rotation, RowCounts,
 };
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
@@ -25,7 +25,8 @@ pub struct Node {
     pub dist_to_rounds: usize,
     pub label: String,
 
-    pub succs: Vec<(Score, LinkIdx, NodeIdx)>, // Indices must be aligned with those from the source graph
+    // Indices must be aligned with those from the source graph
+    pub succs: Vec<(Score, LinkIdx, NodeIdx, Rotation)>,
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
     // unreachable.  This includes `Self`
     pub falseness: BitVec,
@@ -60,19 +61,22 @@ impl Graph {
 
                 // Generate a BitVec with a 1 for every node which is false against this node
                 let mut falseness = BitVec::from_elem(num_nodes, false);
-                for false_id in source_node.false_nodes() {
-                    let false_node_idx = id_to_index[false_id];
+                for false_std_id in source_node.false_nodes() {
+                    let false_id = NodeId::Standard(false_std_id.clone());
+                    let false_node_idx = id_to_index[&false_id];
                     falseness.set(false_node_idx.index(), true);
                 }
 
                 let succs = source_node
                     .successors()
                     .iter()
-                    .map(|(link_idx, succ_id)| {
+                    .map(|link| {
+                        let link_idx = link.source_idx;
                         (
-                            Score::from(data.layout.links[*link_idx].weight),
-                            *link_idx,
-                            id_to_index[succ_id],
+                            Score::from(data.layout.links[link_idx].weight),
+                            link_idx,
+                            id_to_index[&link.id],
+                            link.rotation,
                         )
                     })
                     .collect_vec();

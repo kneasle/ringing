@@ -1,0 +1,24 @@
+length = "QP"
+methods = [
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Cambridge Surprise Major",
+    "Bristol Surprise Major",
+    "London Surprise Major",
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    # "Deva Surprise Major",
+]
+course_heads = ["1xxxxx78"] # , "15678xxx"]
+part_head = "124365"
+method_count = { min = 100, max = 250 }
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = [
+    "6578*", "*6578",
+    "8765*", "*8765",
+    "5678*", "*5678",
+]

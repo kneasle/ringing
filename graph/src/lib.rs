@@ -10,7 +10,8 @@ mod row_counts;
 
 use std::ops::Range;
 
-pub use graph::{Graph, Node};
+use bellframe::RowBuf;
+pub use graph::{Graph, Node, Rotation};
 pub use layout::NodeId;
 pub use row_counts::RowCounts;
 
@@ -21,6 +22,7 @@ pub use row_counts::RowCounts;
 pub struct Data {
     pub layout: layout::Layout,
     pub music_types: Vec<music::MusicType>,
+    pub part_head: RowBuf,
     pub len_range: Range<usize>,
     pub method_count_range: Range<usize>,
     pub num_comps: usize,

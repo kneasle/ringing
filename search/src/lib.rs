@@ -4,7 +4,7 @@ use bit_vec::BitVec;
 use frontier::Frontier;
 use m_gr::{
     layout::{End, Layout, StartIdx},
-    RowCounts,
+    Rotation, RowCounts,
 };
 use monument_graph::{self as m_gr, layout::LinkIdx, music::Score, Data};
 
@@ -22,6 +22,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
+    let num_parts = graph.num_parts() as Rotation;
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
     let graph = crate::graph::Graph::new(graph, data);
 
@@ -33,6 +34,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             CompPath::Start(*start_idx),
             *node_idx,
             node.falseness.clone(),
+            0, // Start out with no rotation (i.e. we start at the 0th part head, which is rounds)
             node.score,
             node.length,
             node.method_counts.clone(),
@@ -48,6 +50,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             path,
             node_idx,
             unreachable_nodes,
+            rotation,
 
             score,
             length,
@@ -58,6 +61,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
 
         // Check if the comp has come round
         if let Some(end) = node.end {
+            // TODO: Check that the rotation is valid
             if data.len_range.contains(&length)
                 && method_counts.is_feasible(0, data.method_count_range.clone())
             {
@@ -68,6 +72,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                     links,
                     end,
 
+                    rotation,
                     length,
                     method_counts,
                     score,
@@ -85,9 +90,10 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
 
         // Expand this node
         let path = Rc::new(path);
-        for &(link_score, link_idx, succ_idx) in &node.succs {
+        for &(link_score, link_idx, succ_idx, link_rot) in &node.succs {
             let succ_node = &graph.nodes[succ_idx];
 
+            let rotation = (rotation + link_rot) % num_parts;
             let length = length + succ_node.length;
             let score = score + succ_node.score + link_score;
             let method_counts = &method_counts + &succ_node.method_counts;
@@ -112,6 +118,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                 CompPath::Cons(path.clone(), link_idx, succ_idx),
                 succ_idx,
                 new_unreachable_nodes,
+                rotation,
                 score,
                 length,
                 method_counts,
@@ -138,6 +145,7 @@ pub struct Comp {
     pub links: Vec<(LinkIdx, String)>,
     pub end: End,
 
+    pub rotation: Rotation,
     pub length: usize,
     pub method_counts: RowCounts,
     pub score: Score,
@@ -176,6 +184,10 @@ pub struct CompPrefix {
     node_idx: NodeIdx,
     unreachable_nodes: BitVec,
 
+    /// The number of part heads through which we have rotated.  This is kept in the range
+    /// `0..graph.num_parts`
+    rotation: Rotation,
+
     /// Score refers to the **end** of the current node
     score: Score,
     /// Length refers to the **end** of the current node
@@ -192,6 +204,7 @@ impl CompPrefix {
         path: CompPath,
         node_idx: NodeIdx,
         unreachable_nodes: BitVec,
+        rotation: Rotation,
         score: Score,
         length: usize,
         method_counts: RowCounts,
@@ -200,6 +213,7 @@ impl CompPrefix {
             path,
             node_idx,
             unreachable_nodes,
+            rotation,
             score,
             length,
             method_counts,

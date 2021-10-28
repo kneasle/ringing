@@ -1,7 +1,14 @@
-length = "half peal"
+length = "peal"
 num_comps = 50
-methods = ["Bristol Surprise Royal", "Triton Delight Royal"]
+methods = [
+    "Bristol Surprise Royal",
+    "Triton Delight Royal",
+]
 splice_style = "calls"
+part_head = "165432"
+
+bob_weight = -4
+single_weight = -5
 
 [[music]]
 run_lengths = [4, 5, 6, 7]
@@ -17,4 +24,4 @@ weight = -0.8
 # make Monument prefer LB5 courses over just keeping the 6 at home for ages).
 [[music]]
 patterns = ["*65432", "*23456", "23456*", "65432*"]
-weight = 2
+weight = 1
