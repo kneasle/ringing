@@ -1,0 +1,9 @@
+length = "QP"
+music = [
+    { run_lengths = [4, 5, 6, 7] },
+    { patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"] },
+]
+
+[method]
+place_notation = "-58-1458-58-1238-14-1458-36-58,18"
+stage = 8
