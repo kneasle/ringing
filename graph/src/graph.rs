@@ -589,6 +589,7 @@ impl Graph {
         }
         // Map any source 0-length end node to a 0-rotation 0-length end node (because rounds
         // becomes the 0th part head)
+        #[allow(clippy::unnecessary_cast)]
         class_by_id.insert(
             NodeId::ZeroLengthEnd,
             Some(Equiv::std(NodeId::ZeroLengthEnd, 0 as Rotation)),
@@ -700,8 +701,8 @@ impl Graph {
             end: zero_rot_node.end,
             label: zero_rot_node.label.clone(),
 
-            successors: combine_links(&zero_rot_node, LinkDirection::Succ, class_by_id),
-            predecessors: combine_links(&zero_rot_node, LinkDirection::Pred, class_by_id),
+            successors: combine_links(zero_rot_node, LinkDirection::Succ, class_by_id),
+            predecessors: combine_links(zero_rot_node, LinkDirection::Pred, class_by_id),
             false_nodes: combine_falseness(zero_rot_node, class_by_id),
 
             length: zero_rot_node.length * source_nodes.len(),

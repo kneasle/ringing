@@ -112,12 +112,12 @@ impl SpecificCall {
     }
 }
 
-pub fn gen_calls<'s>(
+pub fn gen_calls(
     stage: Stage,
     base_calls: BaseCalls,
     bob_weight: Option<f32>,
     single_weight: Option<f32>,
-    calls: &'s [SpecificCall],
+    calls: &[SpecificCall],
 ) -> Result<Vec<Call>, Error> {
     let mut call_specs = base_calls.to_call_specs(stage, bob_weight, single_weight);
     for specific_call in calls {

@@ -90,18 +90,19 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
 
         // Expand this node
         let path = Rc::new(path);
-        for &(link_score, link_idx, succ_idx, link_rot) in &node.succs {
-            let succ_node = &graph.nodes[succ_idx];
+        for link in &node.succs {
+            let next_idx = link.next_node;
+            let succ_node = &graph.nodes[next_idx];
 
-            let rotation = (rotation + link_rot) % num_parts;
+            let rotation = (rotation + link.rot) % num_parts;
             let length = length + succ_node.length;
-            let score = score + succ_node.score + link_score;
+            let score = score + succ_node.score + link.score;
             let method_counts = &method_counts + &succ_node.method_counts;
 
             if length + succ_node.dist_to_rounds >= data.len_range.end {
                 continue; // Node would make comp too long
             }
-            if unreachable_nodes.get(succ_idx.index()).unwrap() {
+            if unreachable_nodes.get(next_idx.index()).unwrap() {
                 continue; // Node is unreachable (i.e. false against something already in the comp)
             }
             if !method_counts
@@ -115,8 +116,8 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             new_unreachable_nodes.or(&succ_node.falseness);
 
             frontier.push(CompPrefix::new(
-                CompPath::Cons(path.clone(), link_idx, succ_idx),
-                succ_idx,
+                CompPath::Cons(path.clone(), link.source_idx, next_idx),
+                next_idx,
                 new_unreachable_nodes,
                 rotation,
                 score,

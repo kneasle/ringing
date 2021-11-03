@@ -26,12 +26,32 @@ pub struct Node {
     pub label: String,
 
     // Indices must be aligned with those from the source graph
-    pub succs: Vec<(Score, LinkIdx, NodeIdx, Rotation)>,
+    pub succs: Vec<Link>,
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
     // unreachable.  This includes `Self`
     pub falseness: BitVec,
 
     pub end: Option<End>,
+}
+
+/// A link between a node and its successor
+#[derive(Debug, Clone)]
+pub struct Link {
+    pub score: Score,
+    pub source_idx: LinkIdx,
+    pub next_node: NodeIdx,
+    pub rot: Rotation,
+}
+
+impl Link {
+    pub fn new(score: f32, source_idx: LinkIdx, next_node: NodeIdx, rot: Rotation) -> Self {
+        Self {
+            score: Score::from(score),
+            source_idx,
+            next_node,
+            rot,
+        }
+    }
 }
 
 ///////////////////////////////////////////
@@ -72,12 +92,9 @@ impl Graph {
                     .iter()
                     .map(|link| {
                         let link_idx = link.source_idx;
-                        (
-                            Score::from(data.layout.links[link_idx].weight),
-                            link_idx,
-                            id_to_index[&link.id],
-                            link.rotation,
-                        )
+                        let score =
+                            data.layout.links[link_idx].weight * source_graph.num_parts() as f32;
+                        Link::new(score, link_idx, id_to_index[&link.id], link.rotation)
                     })
                     .collect_vec();
 
