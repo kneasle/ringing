@@ -41,6 +41,9 @@ pub struct Spec {
     splice_style: SpliceStyle,
     /// A [`Row`] which generates the part heads of this composition
     part_head: Option<String>,
+    /// If `true`, generate compositions lead-wise, rather than course-wise
+    #[serde(default)]
+    leadwise: bool,
 
     #[serde(default)]
     snap_start: bool,
@@ -118,18 +121,22 @@ impl Spec {
             .iter()
             .map(|b| b.to_music_type(stage))
             .collect_vec();
-        let course_head_masks = match (self.course_heads.as_ref(), self.split_tenors) {
+        let course_head_masks = if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
-            (Some(ch_mask_strings), _) => ch_mask_strings
+            ch_mask_strings
                 .iter()
                 .map(|s| (Mask::parse(s), tenor))
-                .collect_vec(),
-            // If no masks were given but `split_tenors` was `true`, then only fix tenor and treble
-            (None, true) => vec![(Mask::fix_bells(stage, vec![Bell::TREBLE, tenor]), tenor)],
+                .collect_vec()
+        } else if self.split_tenors {
+            // If no masks were given but `split_tenors` was `true`, then only fix the tenor.
+            // `Layout::from_methods` will add the treble if it's fixed
+            vec![(Mask::fix_bells(stage, vec![tenor]), tenor)]
+        } else {
             // Default to tenors together, with the tenor as 'calling bell'
-            (None, false) => vec![(tenors_together_mask(stage), tenor)],
+            vec![(tenors_together_mask(stage), tenor)]
         };
+
         let calls = calls::gen_calls(
             stage,
             self.base_calls,
@@ -139,19 +146,25 @@ impl Spec {
         )?;
 
         // Generate a `Layout` from the data about the method and calls
-        let layout = Layout::from_methods(
-            &methods,
-            &calls,
-            self.splice_style,
-            course_head_masks,
-            if self.snap_start {
-                None
-            } else {
-                self.start_indices.as_deref()
-            },
-            self.end_indices.as_deref(),
-        )
-        .map_err(Error::LayoutGen)?;
+        let start_indices = if self.snap_start {
+            None
+        } else {
+            self.start_indices.as_deref()
+        };
+
+        let layout = if self.leadwise {
+            Layout::leadwise(&methods, &calls, start_indices, self.end_indices.as_deref())
+        } else {
+            Layout::from_methods(
+                &methods,
+                &calls,
+                self.splice_style,
+                course_head_masks,
+                start_indices,
+                self.end_indices.as_deref(),
+            )
+            .map_err(Error::LayoutGen)?
+        };
 
         // Generate data external to the `Layout`
         let method_count_range =
@@ -175,9 +188,9 @@ impl Spec {
 }
 
 /// Generate the course head mask representing the tenors together.  This corresponds to
-/// `1xxxxx7890ET...`, truncated to the correct stage.
+/// `xxxxxx7890ET...` or just the tenor.
 fn tenors_together_mask(stage: Stage) -> Mask {
-    let mut fixed_bells = vec![Bell::TREBLE]; // Always fix the treble
+    let mut fixed_bells = vec![];
     if stage <= Stage::MINOR {
         // On Minor or below, only fix the tenor
         fixed_bells.push(stage.tenor());

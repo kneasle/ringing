@@ -4,6 +4,7 @@ use std::{
 };
 
 use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage};
+use index_vec::IndexVec;
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -49,8 +50,18 @@ pub(super) fn from_methods(
 
     Ok(Layout {
         links,
-        starts: rounds_locations(&method_datas, stage, allowed_start_indices, "<").into(),
-        ends: rounds_locations(&method_datas, stage, allowed_end_indices, ">").into(),
+        starts: rounds_locations(
+            &method_datas,
+            stage,
+            allowed_start_indices,
+            super::SNAP_START_LABEL,
+        ),
+        ends: rounds_locations(
+            &method_datas,
+            stage,
+            allowed_end_indices,
+            super::SNAP_FINISH_LABEL,
+        ),
         // Create a block for each method
         blocks: method_datas
             .into_iter()
@@ -180,7 +191,7 @@ fn add_fixed_bells(
 
 /// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
 /// bells in non-variable-hunt compositions).
-fn fixed_bells(
+pub(super) fn fixed_bells(
     methods: &[(Method, String)],
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
@@ -622,7 +633,7 @@ fn add_links_for_call(
 /// generation code has to perform de-duplication regardless.  However, de-duplication makes the
 /// code both more performant and, more importantly, makes the resulting [`Layout`]s easier to
 /// debug.
-fn dedup_links(links: &mut Vec<Link>) {
+pub(super) fn dedup_links(links: &mut Vec<Link>) {
     // The indices of links which are special cases of some other link (or are identical to other
     // links)
     let mut redundant_link_idxs = Vec::<usize>::new();
@@ -705,15 +716,15 @@ fn filter_plain_links(links: &mut Vec<Link>, splice_style: SpliceStyle) {
 // STARTS/ENDS //
 /////////////////
 
-fn rounds_locations(
+fn rounds_locations<I: index_vec::Idx>(
     method_datas: &[MethodData],
     stage: Stage,
     allowed_sub_lead_indices: Option<&[usize]>,
     snap_label: &str,
-) -> Vec<StartOrEnd> {
+) -> IndexVec<I, StartOrEnd> {
     let rounds = RowBuf::rounds(stage);
 
-    let mut positions = Vec::new();
+    let mut positions = IndexVec::new();
     for (method_idx, d) in method_datas.iter().enumerate() {
         for ch_mask in &d.ch_masks {
             for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {

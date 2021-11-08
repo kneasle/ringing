@@ -5,14 +5,20 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{AnnotBlock, Bell, IncompatibleStages, Mask, Method, PlaceNot, Row, RowBuf, Stage};
+use bellframe::{AnnotBlock, Bell, IncompatibleStages, Mask, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::row_counts::RowCounts;
 
 pub mod from_methods;
+mod leadwise;
 
 pub use self::from_methods::SpliceStyle;
+
+/// Label used when the comp starts part-way through a lead
+const SNAP_START_LABEL: &str = "<";
+/// Label used when the comp finishes part-way through a lead
+const SNAP_FINISH_LABEL: &str = ">";
 
 /// A somewhat human-friendly representation of the course layout of a composition, meant to be
 /// easy to generate.  A `Layout` consists of a set of blocks of rows, which are usually the plain
@@ -53,7 +59,7 @@ pub struct Layout {
 impl Layout {
     /// Create a new `Layout` for a single [`Method`].
     pub fn from_methods(
-        method: &[(Method, String)],
+        methods: &[(bellframe::Method, String)],
         calls: &[self::Call],
         splice_style: SpliceStyle,
         // The course head masks, along with the 'calling bell' for that course.  Allowing
@@ -66,7 +72,7 @@ impl Layout {
         allowed_end_indices: Option<&[usize]>,
     ) -> Result<Self, from_methods::Error> {
         from_methods::from_methods(
-            method,
+            methods,
             calls,
             splice_style,
             ch_masks,
@@ -74,6 +80,16 @@ impl Layout {
             allowed_end_indices,
             0.0, // Neither punish nor reward plain leads
         )
+    }
+
+    /// Creates a `Layout` where every course is exactly one lead long.
+    pub fn leadwise(
+        methods: &[(bellframe::Method, String)],
+        calls: &[self::Call],
+        start_indices: Option<&[usize]>,
+        end_indices: Option<&[usize]>,
+    ) -> Self {
+        leadwise::leadwise(methods, calls, start_indices, end_indices)
     }
 
     pub fn num_methods(&self) -> usize {
