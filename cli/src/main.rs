@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use args::CliArgs;
 use itertools::Itertools;
-use log::LevelFilter;
+use log::log;
 use monument_graph::{layout::Layout, optimise::passes};
 use monument_search::{frontier::BestFirst, search, Comp};
 use spec::Spec;
@@ -19,13 +19,19 @@ fn main() {
     let args = CliArgs::from_args();
     let log_level = args.log_level();
 
+    pretty_logger::init(
+        pretty_logger::Destination::Stderr,
+        log_level,
+        pretty_logger::Theme::default(),
+    )
+    .unwrap();
+
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::read_from_file(&args.input_file).unwrap();
-    if log_level >= LevelFilter::Debug {
-        println!("{:#?}", spec);
-    }
+    log::trace!("spec = {:#?}", spec);
 
     // Convert the `Spec` into a `Graph` and other data required for running a search
+    log::info!("Generating `Layout`");
     let data = spec.lower().unwrap();
     let graph = data.unoptimised_graph().to_multipart(&data).unwrap();
     // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
@@ -33,12 +39,14 @@ fn main() {
     // optimisation passes have more concrete information about each graph.
     let mut graphs = graph.split_by_start_node();
 
+    log::info!("Optimising `Graph`s");
     // Optimise the graphs
     let mut passes = passes::default();
     for g in &mut graphs {
         g.optimise(&mut passes, &data);
     }
 
+    log::info!("Starting tree search");
     // Run graph search on each graph in parallel
     let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let data = Arc::new(data);

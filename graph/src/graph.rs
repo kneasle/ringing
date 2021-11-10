@@ -7,6 +7,7 @@ use std::{
 
 use bellframe::{IncompatibleStages, RowBuf};
 use itertools::Itertools;
+use log::log;
 use monument_utils::FrontierItem;
 
 use crate::{
@@ -361,6 +362,8 @@ impl Node {
 impl Graph {
     /// Generate a graph of all nodes which are reachable within a given length constraint.
     pub fn from_layout(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
+        log::info!("Building `Graph`");
+
         // The set of reachable nodes and whether or not they are a start node (each mapping to a
         // distance from rounds)
         let mut expanded_nodes: HashMap<NodeId, (Segment, Distance)> = HashMap::new();
@@ -480,7 +483,16 @@ impl Graph {
             .collect_vec();
 
         // Compute falseness between the nodes
+        log::info!(
+            "Graph has {:?} nodes, with {:?} starts and {:?} ends.",
+            nodes.len(),
+            start_nodes.len(),
+            end_nodes.len()
+        );
+        log::debug!("Building falseness table");
         let table = FalsenessTable::from_layout(layout, &node_ids_and_lengths);
+        log::trace!("Table: {:#?}", table);
+        log::debug!("Setting falseness links");
         for (id, node) in nodes.iter_mut() {
             node.false_nodes = node_ids_and_lengths
                 .iter()
@@ -491,6 +503,7 @@ impl Graph {
         }
 
         // Add predecessor references (every node is a predecessor to all of its successors)
+        log::debug!("Setting predecessor links");
         for (id, _dist) in expanded_nodes {
             for succ_link in nodes.get(&id).unwrap().successors.clone() {
                 assert_eq!(succ_link.rotation, 0);
