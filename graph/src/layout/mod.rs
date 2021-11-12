@@ -272,13 +272,13 @@ impl Layout {
     /// Gets the [`RowIdx`] of the last row within a [`RowRange`] (or `None` if that range has size
     /// 0).
     pub(crate) fn last_row_idx(&self, row_range: RowRange) -> Option<RowIdx> {
-        (row_range.length > 0).then(|| {
+        (row_range.len > 0).then(|| {
             let block_len = self.blocks[row_range.start.block].len();
             RowIdx::new(
                 row_range.start.block,
                 // The subtraction here cannot overflow, because this code only executes when
                 // `row_range.length > 0`
-                (row_range.start.row + row_range.length - 1) % block_len,
+                (row_range.start.row + row_range.len - 1) % block_len,
             )
         })
     }
@@ -448,8 +448,12 @@ impl NodeId {
         self.std_id().map(|std_id| std_id.row_idx)
     }
 
+    pub fn course_head_arc(&self) -> Option<&Arc<Row>> {
+        self.std_id().map(|std_id| &std_id.course_head)
+    }
+
     pub fn course_head(&self) -> Option<&Row> {
-        self.std_id().map(|std_id| std_id.course_head.as_ref())
+        self.course_head_arc().map(Arc::as_ref)
     }
 
     pub fn pre_multiply(&self, r: &Row) -> Result<Self, IncompatibleStages> {
@@ -543,12 +547,12 @@ impl From<StandardNodeId> for NodeId {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RowRange {
     pub start: RowIdx,
-    pub length: usize,
+    pub len: usize,
 }
 
 impl RowRange {
-    pub fn new(start: RowIdx, length: usize) -> Self {
-        Self { start, length }
+    pub fn new(start: RowIdx, len: usize) -> Self {
+        Self { start, len }
     }
 }
 

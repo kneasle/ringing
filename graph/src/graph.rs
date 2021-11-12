@@ -2,7 +2,7 @@
 
 use std::{
     cmp::{Ordering, Reverse},
-    collections::{BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap, HashSet},
 };
 
 use bellframe::{IncompatibleStages, RowBuf};
@@ -12,7 +12,7 @@ use monument_utils::FrontierItem;
 
 use crate::{
     falseness::FalsenessTable,
-    layout::{End, Layout, LinkIdx, NodeId, Segment, StandardNodeId, StartIdx},
+    layout::{End, Layout, LinkIdx, NodeId, RowRange, Segment, StandardNodeId, StartIdx},
     music::{Breakdown, MusicType, Score},
     optimise::Pass,
     row_counts::RowCounts,
@@ -475,31 +475,50 @@ impl Graph {
             })
             .collect();
 
-        // We need to clone the `NodeId`s, because otherwise they would borrow from `nodes` whilst
-        // the loop is modifying the contents (i.e. breaking reference aliasing)
+        // For each `(range, course head)` triple, is there a corresponding (start node, non-start node)
         let node_ids_and_lengths = nodes
             .iter()
-            .map(|(id, node)| (id.to_owned(), node.length))
-            .collect_vec();
+            .map(|(id, node)| (id.clone(), node.length))
+            .collect::<HashSet<_>>();
 
-        // Compute falseness between the nodes
         log::info!(
             "Graph has {:?} nodes, with {:?} starts and {:?} ends.",
             nodes.len(),
             start_nodes.len(),
             end_nodes.len()
         );
+
+        // Compute falseness between the nodes
         log::debug!("Building falseness table");
-        let table = FalsenessTable::from_layout(layout, &node_ids_and_lengths);
-        log::trace!("Table: {:#?}", table);
+        let falseness_table = FalsenessTable::from_layout(layout, &node_ids_and_lengths);
+        log::trace!("Table: {:#?}", falseness_table);
+
         log::debug!("Setting falseness links");
         for (id, node) in nodes.iter_mut() {
-            node.false_nodes = node_ids_and_lengths
-                .iter()
-                .filter(|(id2, length2)| table.are_false(id, node.length, id2, *length2))
-                .map(|(id2, _)| id2.to_owned())
-                .filter_map(|id| id.into_std_id())
-                .collect_vec();
+            // Only compute falseness for standard IDs
+            if let NodeId::Standard(std_id) = id {
+                let range = RowRange {
+                    start: std_id.row_idx,
+                    len: node.length,
+                };
+                node.false_nodes.clear();
+                for (false_range, false_ch_transposition) in
+                    falseness_table.false_course_heads(range)
+                {
+                    let false_ch = std_id.course_head.as_ref() * false_ch_transposition;
+                    for is_start in [true, false] {
+                        let false_id =
+                            StandardNodeId::new(false_ch.clone(), false_range.start, is_start);
+                        let false_id_and_len =
+                            (NodeId::Standard(false_id.clone()), false_range.len);
+                        if node_ids_and_lengths.contains(&false_id_and_len) {
+                            // If the node at `false_id` is in the graph, then it's false against
+                            // `node`
+                            node.false_nodes.push(false_id);
+                        }
+                    }
+                }
+            }
         }
 
         // Add predecessor references (every node is a predecessor to all of its successors)

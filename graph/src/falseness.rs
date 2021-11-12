@@ -9,43 +9,30 @@ use std::collections::{HashMap, HashSet};
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
-use crate::layout::{Layout, NodeId, RowIdx, RowRange, StandardNodeId};
+use crate::layout::{Layout, NodeId, RowIdx, RowRange};
 
-/// The falseness table between two types of [`RowRange`]s
-type RangeTable = Vec<(Mask, Mask, HashSet<RowBuf>)>;
-
-/// A pre-computed table used to quickly determine falseness between two [`Node`](crate::Node)s in
-/// a [`Graph`](crate::Graph).
+/// A pre-computed table used to quickly determine the falseness in an entire
+/// [`Graph`](crate::Graph).
 ///
-/// Naively iterating through every pair of nodes is far too slow, so this approach takes advantage
-/// of the structure of the node graph: namely that the nodes will all come from a limited set of
-/// row ranges, and within each pair of ranges the falseness can simply be determined by testing
-/// the (pre-)transposition between the two course heads.  This is very similar to False Course
-/// Heads: two courses of a given method are false if and only if the (pre-)transposition between
-/// their course heads is contained in the False Course Head groups for that method.  This gives
-/// the outer type of the `grouped_falseness` field: `HashMap<(RowRange, RowRange), RangeTable>`
-/// stores individual FCH tables for each pair of [`RowRange`]s (i.e. node groups).
-///
-/// We can further reduce the size of the resulting table by only computing the falseness for
-/// known course head masks.  For example, if the composition will only be tenors-together with a
-/// fixed treble, then we can discard any FCHs which aren't of the form `1xxxxx789...`.  This isn't
-/// quite so simple for our case, since the user can specify arbitrary sets of CH masks.  However,
-/// for each pair of CH masks, this trick is possible.  Thus, for each pair of row ranges we split
-/// the FCHs by the corresponding CH masks, giving [`RangeTable`] a type signature of
-/// `Vec<(Mask, Mask, HashSet<RowBuf>)>` instead of simply `HashSet<RowBuf>`.
+/// Naively iterating through every pair of nodes is far too slow, so this instead stores a set of
+/// false course heads between the different node types.  This way, computing the falseness of a
+/// node is one [`HashMap`] lookup and some row transpositions.
 #[derive(Debug, Clone)]
 pub(crate) struct FalsenessTable {
-    grouped_falseness: HashMap<(RowRange, RowRange), RangeTable>,
+    falseness: HashMap<RowRange, Vec<(RowRange, RowBuf)>>,
 }
 
 impl FalsenessTable {
     /// Creates a new `FalsenessTable` which describes the falseness between [`Segment`]s in a
     /// given [`Layout`].
-    pub fn from_layout(layout: &Layout, nodes: &[(NodeId, usize)]) -> Self {
+    pub fn from_layout<'a>(
+        layout: &Layout,
+        nodes: impl IntoIterator<Item = &'a (NodeId, usize)>,
+    ) -> Self {
         // Extract (from the layout's links) which CH masks apply to each range start/end
         let (masks_by_range_start, masks_by_range_end) = ch_masks_from_links(layout);
 
-        // Group the (range, course head) pairs by their range
+        // For each `RowRange`, which course heads are used
         let mut chs_by_range = HashMap::<RowRange, Vec<&Row>>::new();
         for (id, length) in nodes {
             if let NodeId::Standard(id) = id {
@@ -59,9 +46,9 @@ impl FalsenessTable {
         // Determine which masks/range pairs are actually needed (pre-filtering the number of masks
         // is very worthwhile, because the overall time requirement for proving is at least
         // quadratic in the length of `mask_ranges`).
-        let mut mask_ranges: Vec<(RowRange, &Mask)> = Vec::new();
+        let mut range_masks: Vec<(RowRange, &Mask)> = Vec::new();
         for (range, chs) in chs_by_range {
-            mask_ranges.extend(
+            range_masks.extend(
                 get_masks_for_range(
                     range,
                     &chs,
@@ -74,36 +61,39 @@ impl FalsenessTable {
             );
         }
 
-        // Group the rows in each segment by the transposed course head masks
-        let grouped_rows: Vec<(RowRange, &Mask, HashMap<Mask, Vec<&Row>>)> = mask_ranges
+        // For every `(RowRange, CH mask)` pair, group the rows by the locations of the bells in
+        // the CH mask.  For example, if the CH mask is `1xxxxx78` then the first few rows of
+        // Cornwall would end up something like:
+        // 1xxxxx78 -> 12345678
+        // x1xxxx87 -> 21436587
+        // 1xxxxx78 -> 12346578
+        // x1xxxx87 -> 21435687
+        //    ...         ...
+        //
+        // These would be grouped by the LHS into:
+        // 1xxxxx78 -> [12345678, 12346578]
+        // x1xxxx87 -> [21436587, 21435687]
+        //
+        // This is important because falseness can exist between two rows **only** if their 'group'
+        // masks are compatible.  For example, any rows of the form `xx1xx8x7` can't be false
+        // against a row of the form `x1xxx8x7` because the treble would have to be in two
+        // different places.
+        let grouped_rows: Vec<(RowRange, HashMap<Mask, Vec<&Row>>)> = range_masks
             .into_iter()
             .map(|(range, mask)| {
                 (
                     range,
-                    mask,
-                    group_rows(layout.untransposed_rows(range.start, range.length), mask),
+                    group_rows(layout.untransposed_rows(range.start, range.len), mask),
                 )
             })
             .collect_vec();
 
-        /*
-        // Debug print the groups
-        for (range, mask, groups) in &grouped_rows {
-            println!("\n{}: {:?}", mask, range);
-            for (mask, rows) in groups {
-                print!("  {}:", mask);
-                for r in rows {
-                    print!(" {}", r);
-                }
-                println!();
-            }
-        }
-        */
+        // For the 'plain course' of every `RowRange`, which other `RowRange`s are false.  We use a
+        // `HashSet` rather than a `Vec` to prevent duplication of FCHs
+        let mut falseness = HashMap::<RowRange, HashSet<(RowRange, RowBuf)>>::new();
 
-        // Determine which course heads are false between each pair of `(range, course_head_mask)`s
-        let mut falseness = HashSet::<((RowRange, &Mask), (RowRange, &Mask), RowBuf)>::new();
         // For every pair of segments ...
-        for ((range1, ch_mask1, groups1), (range2, ch_mask2, groups2)) in
+        for ((range1, groups1), (range2, groups2)) in
             grouped_rows.iter().cartesian_product(grouped_rows.iter())
         {
             // ... and for every pair of row groups within them ...
@@ -114,98 +104,28 @@ impl FalsenessTable {
                     // will generate a false course head between `i1` and `i2`
                     for (row1, row2) in rows1.iter().cartesian_product(rows2) {
                         let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
-                        falseness.insert((
-                            (*range1, ch_mask1),
-                            (*range2, ch_mask2),
-                            false_course_head,
-                        ));
+                        falseness
+                            .entry(*range1)
+                            .or_insert_with(HashSet::new)
+                            .insert((*range2, false_course_head));
                     }
                 }
             }
         }
 
-        // Group this falseness table by the ranges, then the masks, then finally the HashSet of
-        // FCHs.  This has the effect of further subdividing the false course heads
-        let mut grouped_falseness: HashMap<
-            (RowRange, RowRange),
-            HashMap<(&Mask, &Mask), HashSet<RowBuf>>,
-        > = HashMap::new();
-        for ((range1, mask1), (range2, mask2), false_course_head) in falseness {
-            grouped_falseness
-                .entry((range1, range2))
-                .or_insert_with(HashMap::new)
-                .entry((mask1, mask2))
-                .or_insert_with(HashSet::new)
-                .insert(false_course_head);
-        }
-
-        // Convert the inner `HashMap` to a `Vec` and take ownership of the `Mask`s before returning
-        let grouped_falseness: HashMap<(RowRange, RowRange), Vec<(Mask, Mask, HashSet<RowBuf>)>> =
-            grouped_falseness
+        Self {
+            // Convert `HashMap<RowRange, HashSet<(RowRange, RowBuf)>>`
+            //      to `HashMap<RowRange,     Vec<(RowRange, RowBuf)>>`
+            falseness: falseness
                 .into_iter()
-                .map(|(ranges, fchs_by_masks)| {
-                    (
-                        ranges,
-                        fchs_by_masks
-                            .into_iter()
-                            .map(|((mask1, mask2), fchs)| {
-                                (mask1.to_owned(), mask2.to_owned(), fchs)
-                            })
-                            .collect_vec(),
-                    )
-                })
-                .collect();
-
-        Self { grouped_falseness }
-    }
-
-    /// Returns `true` if `node1` and `node2` are false against each other (slightly
-    /// counterintuitive, but read the function name).
-    pub fn are_false(&self, node1: &NodeId, len1: usize, node2: &NodeId, len2: usize) -> bool {
-        match (node1, node2) {
-            (NodeId::Standard(s1), NodeId::Standard(s2)) => self.are_false_std(s1, len1, s2, len2),
-            _ => false, // If either of the nodes are 0-length then no falseness can occur
+                .map(|(k, v)| (k, v.into_iter().collect_vec()))
+                .collect(),
         }
     }
 
-    /// Returns `true` if two standard nodes are false against each other (slightly
-    /// counterintuitive, but read the function name).
-    fn are_false_std(
-        &self,
-        node1: &StandardNodeId,
-        len1: usize,
-        node2: &StandardNodeId,
-        len2: usize,
-    ) -> bool {
-        let range1 = RowRange::new(node1.row_idx, len1);
-        let range2 = RowRange::new(node2.row_idx, len2);
-
-        // Get the falseness sub-map for this pair of `range`s (if no such map exists, then all
-        // such pairs of ranges must be true).
-        let fchs_by_masks = match self.grouped_falseness.get(&(range1, range2)) {
-            Some(v) => v,
-            None => return false,
-        };
-
-        // For each pair of CH masks ...
-        for (mask1, mask2, fchs) in fchs_by_masks {
-            // ... if the masks match ...
-            if mask1.matches(&node1.course_head) && mask2.matches(&node2.course_head) {
-                // ... then falseness is possible between `node1` and `node2`, and `fchs` are the
-                // possible false course head transpositions.
-                //
-                // Figure out what course head transposition this node pair corresponds to
-                let course_head_transposition =
-                    Row::solve_ax_equals_b(&node1.course_head, &node2.course_head).unwrap();
-                if fchs.contains(&course_head_transposition) {
-                    // If there is a FCH containing this node pair, then the nodes are false
-                    return true;
-                }
-            }
-        }
-
-        // If none of the masks generated falseness, then the nodes are true
-        false
+    /// For a given [`RowRange`], which course head transpositions are false
+    pub fn false_course_heads(&self, range: RowRange) -> &[(RowRange, RowBuf)] {
+        self.falseness.get(&range).map(Vec::as_slice).unwrap_or(&[])
     }
 }
 
