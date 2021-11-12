@@ -8,6 +8,8 @@ use monument_search::{frontier::BestFirst, search, Comp};
 use spec::Spec;
 use structopt::StructOpt;
 
+use crate::args::DebugPrint;
+
 mod args;
 mod spec;
 
@@ -26,28 +28,46 @@ fn main() {
     )
     .unwrap();
 
+    /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
+    /// corresponding value and exit.
+    macro_rules! debug_print {
+        ($variant: ident, $val: expr) => {
+            if args.debug_print == Some(DebugPrint::$variant) {
+                dbg!($val);
+                panic!();
+            }
+        };
+    }
+
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::read_from_file(&args.input_file).unwrap();
-    log::trace!("spec = {:#?}", spec);
+    debug_print!(Spec, spec);
 
-    // Convert the `Spec` into a `Graph` and other data required for running a search
+    // Convert the `Spec` into a `Layout` and other data required for running a search
     log::info!("Generating `Layout`");
     let data = spec.lower().unwrap();
+    debug_print!(Data, data);
+    debug_print!(Layout, data.layout);
+
+    // Compile this `Layout` to an unoptimised `Graph`
+    log::info!("Building `Graph`");
     let graph = data.unoptimised_graph().to_multipart(&data).unwrap();
+    debug_print!(Graph, graph);
     // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
     // independently and then searching in parallel is almost always better because the
     // optimisation passes have more concrete information about each graph.
+    // let mut graphs = vec![graph];
     let mut graphs = graph.split_by_start_node();
 
-    log::info!("Optimising `Graph`s");
     // Optimise the graphs
+    log::info!("Optimising `Graph`s");
     let mut passes = passes::default();
     for g in &mut graphs {
         g.optimise(&mut passes, &data);
     }
 
-    log::info!("Starting tree search");
     // Run graph search on each graph in parallel
+    log::info!("Starting tree search");
     let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let data = Arc::new(data);
     let num_threads = graphs.len();

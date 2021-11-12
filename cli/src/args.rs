@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use log::LogLevelFilter as LevelFilter;
 use structopt::StructOpt;
@@ -22,10 +22,15 @@ pub struct CliArgs {
     /// Makes Monument print less output (`-qq` will only produce errors).
     #[structopt(short, long = "quiet", parse(from_occurrences))]
     pub quietness: usize,
+
+    /// Debug print an internal data structure and terminate.  Options are `spec`, `data`,
+    /// `layout` and `graph`.
+    #[structopt(short = "D")]
+    pub debug_print: Option<DebugPrint>,
 }
 
 impl CliArgs {
-    /// Parse the `-q`/`-v` args into verbosity
+    /// Parse the `-q`/`-v` args into the [`LevelFilter`] to give to the `log` library
     pub fn log_level(&self) -> LevelFilter {
         match self.verbosity as isize - self.quietness as isize {
             x if x < -2 => LevelFilter::Off, // -qqq (or more `q`s)
@@ -36,5 +41,33 @@ impl CliArgs {
             2 => LevelFilter::Trace,         // -vv
             _ => LevelFilter::Trace,         // -vvv (or more `v`s)
         }
+    }
+}
+
+/// What item should be debug printed
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DebugPrint {
+    Spec,
+    Data,
+    Layout,
+    Graph,
+}
+
+impl FromStr for DebugPrint {
+    type Err = String;
+
+    fn from_str(v: &str) -> Result<Self, String> {
+        Ok(match v.to_lowercase().as_str() {
+            "spec" => Self::Spec,
+            "data" => Self::Data,
+            "layout" => Self::Layout,
+            "graph" => Self::Graph,
+            _ => {
+                return Err(format!(
+                    "Unknown value {:?}. Expected `spec`, `data`, `layout` or `graph`.",
+                    v
+                ))
+            }
+        })
     }
 }
