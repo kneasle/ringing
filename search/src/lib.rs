@@ -7,6 +7,7 @@ use m_gr::{
     Rotation, RowCounts,
 };
 use monument_graph::{self as m_gr, layout::LinkIdx, music::Score, Data};
+use monument_utils::coprime_bitmap;
 
 pub mod frontier;
 mod graph;
@@ -23,6 +24,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     mut comp_fn: CompFn,
 ) {
     let num_parts = graph.num_parts() as Rotation;
+    let rotation_bitmap = coprime_bitmap(num_parts);
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
     let graph = crate::graph::Graph::new(graph, data);
 
@@ -64,6 +66,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             // TODO: Check that the rotation is valid
             if data.len_range.contains(&length)
                 && method_counts.is_feasible(0, data.method_count_range.clone())
+                && rotation_bitmap & (1 << rotation) != 0
             {
                 let (start_idx, start_node_label, links) = path.flatten(&graph, data);
                 let comp = Comp {
