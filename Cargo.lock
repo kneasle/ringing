@@ -563,6 +563,7 @@ dependencies = [
  "bit-vec",
  "index_vec",
  "itertools",
+ "log 0.3.9",
  "monument_graph",
  "monument_utils",
 ]

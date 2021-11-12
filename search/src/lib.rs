@@ -2,6 +2,7 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 
 use bit_vec::BitVec;
 use frontier::Frontier;
+use log::log;
 use m_gr::{
     layout::{End, Layout, StartIdx},
     Rotation, RowCounts,
@@ -131,13 +132,27 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
 
         // If the queue gets too long, then halve its size
         if frontier.len() >= queue_limit {
+            log::debug!("Truncating queue");
             frontier.truncate(queue_limit / 2);
         }
 
         // Print stats every so often
         iter_count += 1;
         if iter_count % 1_000_000 == 0 {
-            println!("{} iters, {} items in queue.", iter_count, frontier.len());
+            let mut total_len = 0;
+            let mut max_len = 0;
+            frontier.iter().for_each(|n| {
+                total_len += n.length;
+                max_len = max_len.max(n.length);
+            });
+
+            log::info!(
+                "{} iters, {} items in queue, avg/max len {:.0}/{}",
+                iter_count,
+                frontier.len(),
+                total_len as f32 / frontier.len() as f32,
+                max_len
+            );
         }
     }
 }

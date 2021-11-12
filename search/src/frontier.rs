@@ -11,6 +11,8 @@ pub trait Frontier<Node>: Default {
     /// Remove nodes from `self` until the length is under `len`.  The nodes removed should have
     /// the longest time to go before being `pop`ped.
     fn truncate(&mut self, len: usize);
+    /// Return an [`Iterator`] over every `Node` in this frontier
+    fn iter(&self) -> Box<dyn Iterator<Item = &Node> + '_>;
 
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -48,6 +50,10 @@ impl<Node: Ord> Frontier<Node> for BestFirst<Node> {
             nodes.drain(len..);
         }
         self.heap = BinaryHeap::from(nodes);
+    }
+
+    fn iter(&self) -> Box<dyn Iterator<Item = &Node> + '_> {
+        Box::new(self.heap.iter())
     }
 }
 
