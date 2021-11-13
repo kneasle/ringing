@@ -1,8 +1,8 @@
 length = "peal"
-num_comps = 50
 methods = [
     "Bristol Surprise Maximus",
     "Zanussi Surprise Maximus",
+    # "Ariel Surprise Maximus",
     # "Phobos Surprise Maximus",
     "Avon Delight Maximus",
 ]
@@ -10,8 +10,8 @@ splice_style = "leads"
 part_head = "165432"
 
 # Punish calls more because Maximus generates too much music
-bob_weight = -12
-single_weight = -15
+bob_weight = -15
+single_weight = -20
 
 [[music]]
 run_lengths = [4, 5, 6]

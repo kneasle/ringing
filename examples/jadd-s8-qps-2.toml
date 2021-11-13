@@ -1,0 +1,14 @@
+length = { min = 1250, max = 1299 }
+base_calls = "far"
+music = [
+    { run_lengths = [4, 5, 6, 7] },
+    { patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"] },
+]
+
+bob_weight = -5
+single_weight = -7
+
+[method]
+place_notation = "-34-14-56-1238-12-58-16-78,18"
+name = "Ivy Was The Best Sheep"
+stage = 8

@@ -9,7 +9,7 @@ methods = [
     { title = "Cornwall Surprise Major", shorthand = "W" },
     # "Deva Surprise Major",
 ]
-course_heads = ["1xxxxx78"] # , "15678xxx"]
+course_heads = ["1xxxxx78"]
 part_head = "124365"
 method_count = { min = 100, max = 250 }
 
