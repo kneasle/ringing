@@ -8,6 +8,7 @@ use bellframe::{
     Bell, InvalidRowError, Mask, Method, MethodLib, RowBuf, Stage,
 };
 use itertools::Itertools;
+use log::log;
 use monument_graph::{
     layout::{from_methods, Layout, SpliceStyle},
     music::MusicType,
@@ -22,7 +23,7 @@ use self::{
 
 mod calls;
 
-const METHOD_BALANCE_ALLOWANCE: f32 = 0.03; // By how much the method balance is allowed to vary
+const METHOD_BALANCE_ALLOWANCE: f32 = 0.1; // By how much the method balance is allowed to vary
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
@@ -169,6 +170,7 @@ impl Spec {
         // Generate data external to the `Layout`
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
+        log::info!("Method count range: {:?}", method_count_range);
         let part_head = match &self.part_head {
             Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
             None => RowBuf::rounds(stage),
