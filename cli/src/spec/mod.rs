@@ -356,12 +356,16 @@ pub enum MusicSpec {
     Runs {
         #[serde(rename = "run_length")]
         length: usize,
+        #[serde(default)]
+        internal: bool,
         #[serde(default = "get_one")]
         weight: f32,
     },
     RunsList {
         #[serde(rename = "run_lengths")]
         lengths: Vec<usize>,
+        #[serde(default)]
+        internal: bool,
         #[serde(default = "get_one")]
         weight: f32,
     },
@@ -396,10 +400,14 @@ impl MusicSpec {
     /// Gets the [`Regex`]es which match this `MusicSpec`
     fn regexes(&self, stage: Stage) -> Vec<Regex> {
         match self {
-            Self::Runs { length, .. } => Regex::runs_front_or_back(stage, *length),
-            Self::RunsList { lengths, .. } => lengths
+            Self::Runs {
+                length, internal, ..
+            } => Regex::runs(stage, *length, *internal),
+            Self::RunsList {
+                lengths, internal, ..
+            } => lengths
                 .iter()
-                .flat_map(|length| Regex::runs_front_or_back(stage, *length))
+                .flat_map(|length| Regex::runs(stage, *length, *internal))
                 .collect_vec(),
             Self::Pattern { pattern, .. } => vec![Regex::parse(pattern)],
             Self::Patterns { patterns, .. } => {

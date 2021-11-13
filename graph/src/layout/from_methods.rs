@@ -547,6 +547,8 @@ fn generate_call_links(
                 links,
             );
 
+            /* ADD CORRESPONDING PLAIN LINKS */
+
             // Plain links should be added whenever there's a call, or every lead for
             // `SpliceStyle::LeadLabels`
             if link_gen_data.splice_style != SpliceStyle::LeadLabels && is_call_possible {

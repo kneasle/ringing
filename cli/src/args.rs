@@ -25,7 +25,7 @@ pub struct CliArgs {
 
     /// Debug print an internal data structure and terminate.  Options are `spec`, `data`,
     /// `layout` and `graph`.
-    #[structopt(short = "D")]
+    #[structopt(short = "D", long)]
     pub debug_print: Option<DebugPrint>,
 }
 
