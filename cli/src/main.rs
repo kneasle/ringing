@@ -45,7 +45,7 @@ fn main() {
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::info!("Generating `Layout`");
-    let data = spec.lower().unwrap();
+    let data = spec.lower(&args.input_file).unwrap();
     debug_print!(Data, data);
     debug_print!(Layout, data.layout);
 

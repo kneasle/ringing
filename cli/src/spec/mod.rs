@@ -1,4 +1,9 @@
-use std::{collections::HashMap, num::ParseIntError, ops::Range, path::Path};
+use std::{
+    collections::HashMap,
+    num::ParseIntError,
+    ops::Range,
+    path::{Path, PathBuf},
+};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -69,7 +74,10 @@ pub struct Spec {
     /// The weight given to each single from `base_calls`
     single_weight: Option<f32>,
 
-    /// Which music to use
+    /// Path to a file containing a music definition, relative to **this** TOML file
+    music_file: Option<PathBuf>,
+    /// Specification of which classes of music Monument should consider
+    #[serde(default)]
     music: Vec<MusicSpec>,
 
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
@@ -91,13 +99,13 @@ pub struct Spec {
 
 impl Spec {
     /// Read a `Spec` from a TOML file
-    pub fn read_from_file(path: &Path) -> Result<Self, toml::de::Error> {
-        let spec_toml = std::fs::read_to_string(&path).unwrap();
-        toml::from_str(&spec_toml)
+    pub fn read_from_file(path: &Path) -> Result<Self, TomlReadError> {
+        let mut toml_buf = String::new();
+        read_toml(path, &mut toml_buf)
     }
 
     /// 'Lower' this specification into the information required to build a composition.
-    pub fn lower(&self) -> Result<Data, Error> {
+    pub fn lower(&self, toml_path: &Path) -> Result<Data, Error> {
         // Generate methods
         let mut methods: Vec<(Method, String)> = self
             .methods
@@ -108,7 +116,7 @@ impl Spec {
             methods.push(m.gen_method()?);
         }
 
-        // Compute useful values
+        // Stage & tenor
         let stage = methods
             .iter()
             .map(|(m, _)| m.stage())
@@ -116,11 +124,36 @@ impl Spec {
             .ok_or(Error::NoMethods)?;
         let tenor = Bell::tenor(stage);
 
-        let music_types = self
+        // Music
+        let mut music_types = self
             .music
             .iter()
-            .map(|b| b.to_music_type(stage))
+            .map(|spec| spec.to_music_type(stage))
             .collect_vec();
+        if let Some(relative_music_path) = &self.music_file {
+            // Compute the path of the music TOML file
+            let mut music_path = toml_path
+                .parent()
+                .expect("files should always have a parent")
+                .to_owned();
+            music_path.push(relative_music_path);
+            // Parse the TOML
+            let mut toml_buf = String::new();
+            let music_file: MusicFile = read_toml(&music_path, &mut toml_buf)
+                .map_err(|toml_err| Error::MusicFile(music_path.to_owned(), toml_err))?;
+            // Add the music types
+            music_types.extend(
+                music_file
+                    .music
+                    .iter()
+                    .map(|spec| spec.to_music_type(stage)),
+            );
+        }
+        if music_types.is_empty() {
+            log::warn!("No music patterns specified.  Are you sure you don't care about music?");
+        }
+
+        // CH masks
         let course_head_masks = if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
@@ -137,6 +170,7 @@ impl Spec {
             vec![(tenors_together_mask(stage), tenor)]
         };
 
+        // Calls
         let calls = calls::gen_calls(
             stage,
             self.base_calls,
@@ -166,7 +200,7 @@ impl Spec {
             .map_err(Error::LayoutGen)?
         };
 
-        // Generate data external to the `Layout`
+        // Data external to the `Layout`
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
         log::info!("Method count range: {:?}", method_count_range);
@@ -218,16 +252,32 @@ fn method_count_range(
 }
 
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Error {
     NoMethods,
     CcLibNotFound,
     PartHeadParse(InvalidRowError),
+    MusicFile(PathBuf, TomlReadError),
     MethodNotFound { suggestions: Vec<String> },
     CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(String, ParseIntError),
     LayoutGen(from_methods::Error),
+}
+
+/// Error generated when a user tries to read a TOML file from the FS
+#[derive(Debug)]
+pub enum TomlReadError {
+    Io(std::io::Error),
+    Parse(toml::de::Error),
+}
+
+fn read_toml<'de, T: Deserialize<'de>>(
+    path: &Path,
+    buf: &'de mut String,
+) -> Result<T, TomlReadError> {
+    *buf = std::fs::read_to_string(&path).map_err(TomlReadError::Io)?;
+    toml::from_str(buf).map_err(TomlReadError::Parse)
 }
 
 ///////////////
@@ -348,6 +398,12 @@ struct OptRange {
 ///////////
 // MUSIC //
 ///////////
+
+/// The specification for a music file
+#[derive(Debug, Clone, Deserialize)]
+pub struct MusicFile {
+    music: Vec<MusicSpec>,
+}
 
 /// The specification for one type of music
 #[derive(Debug, Clone, Deserialize)]
