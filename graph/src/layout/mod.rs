@@ -78,7 +78,6 @@ impl Layout {
             ch_masks,
             allowed_start_indices,
             allowed_end_indices,
-            0.0, // Neither punish nor reward plain leads
         )
     }
 
@@ -146,8 +145,7 @@ impl Layout {
 
             let cmp_to_shortest_len = match shortest_length {
                 Some(best_len) => length.cmp(&best_len),
-                // If no lengths have been found, then all lengths are strictly better than no
-                // length
+                // If no links have been found then this is automatically the best
                 None => Ordering::Less,
             };
 
@@ -161,10 +159,6 @@ impl Layout {
             // If this node is at least as good as the current best, then add this link to the list
             if cmp_to_shortest_len != Ordering::Greater {
                 outgoing_links.push((link_idx, self.id_after(link, &id.course_head)));
-                /* println!(
-                    "{:>3?} --[{:>2}]-> {:>3?} = {} ({:?})",
-                    link.from, link.debug_name, id.row_idx, length, cmp_to_shortest_len
-                ); */
             }
         }
 
@@ -176,16 +170,16 @@ impl Layout {
             if end.course_head.as_row() == id.course_head.as_ref()
                 && end.row_idx.block == id.row_idx.block
             {
-                let len = length_between(id.row_idx.row, end.row_idx.row);
+                let mut len = length_between(id.row_idx.row, end.row_idx.row);
 
                 // Make a special case to disallow 0-length blocks which are both starts and ends.
                 // This happens a lot because almost all compositions start and end at the same row
                 // (rounds), and therefore the starts and ends will happen at the same locations.
                 // Thus, each start node would generate a 0-length segment corresponding to a
                 // 0-length composition which immediately comes round.  This is clearly not useful,
-                // so we explicitly prevent it here.
+                // so instead we require that the whole block is rung before reaching the end.
                 if len == 0 && id.is_start {
-                    continue;
+                    len = block_len;
                 }
 
                 // `true` if this end is reached before any of the links out of this segment
@@ -199,7 +193,7 @@ impl Layout {
                 if is_improvement {
                     end_idx = Some(idx);
                     shortest_length = Some(len);
-                    outgoing_links.clear();
+                    outgoing_links.clear(); // Ends take precedence over links
                 }
             }
         }

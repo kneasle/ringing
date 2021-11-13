@@ -221,7 +221,6 @@ fn method_count_range(
 /// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
 #[derive(Debug, Clone)]
 pub enum Error {
-    NoCalls,
     NoMethods,
     CcLibNotFound,
     PartHeadParse(InvalidRowError),

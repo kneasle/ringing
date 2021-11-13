@@ -123,12 +123,7 @@ pub fn gen_calls(
     for specific_call in calls {
         call_specs.push(specific_call.to_call_spec(stage)?);
     }
-
-    if call_specs.is_empty() {
-        Err(Error::NoCalls)
-    } else {
-        Ok(call_specs)
-    }
+    Ok(call_specs)
 }
 
 #[inline(always)]

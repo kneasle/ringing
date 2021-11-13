@@ -24,7 +24,6 @@ pub(super) fn from_methods(
     // composition.  If these are `None`, then any location is allowed
     allowed_start_indices: Option<&[usize]>,
     allowed_end_indices: Option<&[usize]>,
-    plain_lead_weight: f32,
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
     let (mut method_datas, stage) = gen_method_data(methods, calls, ch_masks)?;
@@ -39,14 +38,7 @@ pub(super) fn from_methods(
     }
 
     // Generate links
-    let links = generate_links(
-        &method_datas,
-        plain_lead_weight,
-        stage,
-        is_spliced,
-        splice_style,
-    )?
-    .into();
+    let links = generate_links(&method_datas, stage, is_spliced, splice_style)?.into();
 
     Ok(Layout {
         links,
@@ -317,7 +309,6 @@ fn check_for_ambiguous_courses(
 /// Generates the set of [`Link`]s which are valid according to the `course_head_masks`
 fn generate_links(
     method_datas: &[MethodData],
-    plain_lead_weight: f32,
     stage: Stage,
     is_spliced: bool,
     mut splice_style: SpliceStyle,
@@ -340,7 +331,6 @@ fn generate_links(
         method_datas,
         &call_ends,
         &call_starts_by_label,
-        plain_lead_weight,
         stage,
         is_spliced,
         splice_style,
@@ -432,10 +422,14 @@ fn call_ends<'meth>(method_datas: &[MethodData<'meth>]) -> Vec<CallEnd<'meth>> {
     call_ends
 }
 
+/// Static data used when generating links.
 #[derive(Debug)]
 struct LinkGenData<'a> {
     method_datas: &'a [MethodData<'a>],
+    call_starts_by_label: &'a HashMap<&'a str, Vec<RowIdx>>,
     call_ends: &'a [CallEnd<'a>],
+    splice_style: SpliceStyle,
+    is_spliced: bool,
     stage: Stage,
 }
 
@@ -446,7 +440,6 @@ fn generate_all_links(
     method_datas: &[MethodData],
     call_ends: &[CallEnd],
     call_starts_by_label: &HashMap<&str, Vec<RowIdx>>,
-    plain_lead_weight: f32,
     stage: Stage,
     is_spliced: bool,
     splice_style: SpliceStyle,
@@ -454,7 +447,10 @@ fn generate_all_links(
     let mut links = Vec::<Link>::new();
     let link_gen_data = LinkGenData {
         method_datas,
+        call_starts_by_label,
         call_ends,
+        splice_style,
+        is_spliced,
         stage,
     };
 
@@ -466,98 +462,147 @@ fn generate_all_links(
     */
 
     // For every method and CH mask ...
-    for (method_idx, d) in method_datas.iter().enumerate() {
-        for from_ch_mask in &d.ch_masks {
-            // ... test every call in every valid position in the course ...
-            for call in &d.calls {
-                let lead_label = call.lead_location.as_str();
-                let call_starts = call_starts_by_label
-                    .get(lead_label)
-                    .ok_or_else(|| Error::UndefinedLeadLocation(lead_label.to_owned()))?;
-                for &from_idx in call_starts {
-                    if from_idx.block.index() != method_idx {
-                        continue; // Skip any call starts which aren't from this method
-                    }
-
-                    /* ADD CALL LINKS */
-
-                    // Link corresponding to placing this call
-                    let row_before_call = d.plain_course.get_row(from_idx.row).unwrap();
-                    let row_after_call = call.place_not.permute_new(row_before_call).unwrap();
-                    // Get the mask required by the row **after** this call.  This link can be
-                    // generated only if a `CallEnd` is compatible with this mask.
-                    let mask_after_call = from_ch_mask.mask.mul(&row_after_call);
-
-                    // Get the debug/display names for any link in this position
-                    let tenor_place = mask_after_call
-                        .place_of(from_ch_mask.calling_bell())
-                        .expect("Course head mask doesn't fix the calling bell");
-                    let calling_position =
-                        call.calling_positions.get(tenor_place).ok_or_else(|| {
-                            Error::CallingPositionsTooShort {
-                                call_name: call.debug_symbol.to_owned(),
-                                calling_position_len: call.calling_positions.len(),
-                                stage,
-                            }
-                        })?;
-
-                    // Closure used to format a call string
-                    let fmt_call = |symbol: &str, calling_pos: &str| -> String {
-                        if is_spliced {
-                            // If we're ringing spliced, then put calls in `[]`s to differentiate
-                            // them from method names
-                            format!("[{}{}]", symbol, calling_pos)
-                        } else {
-                            format!("{}{}", symbol, calling_pos)
-                        }
-                    };
-
-                    // Add links for this call, splicing to any available method
-                    let len_before_calls = links.len();
-                    add_links_for_call(
-                        from_idx,
-                        &from_ch_mask.mask,
-                        &row_after_call,
-                        &fmt_call(&call.debug_symbol, calling_position),
-                        &fmt_call(&call.display_symbol, calling_position),
-                        call.weight,
-                        None, // Calls are always allowed to change method
-                        &link_gen_data,
-                        &mut links,
-                    );
-                    let is_call_possible = links.len() > len_before_calls;
-
-                    // Plain links should be added whenever there's a call, or every lead for
-                    // `SpliceStyle::LeadLabels`
-                    if splice_style == SpliceStyle::LeadLabels || is_call_possible {
-                        let idx_after_plain = (from_idx.row + 1) % d.plain_course.len();
-                        let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
-                        add_links_for_call(
-                            from_idx,
-                            &from_ch_mask.mask,
-                            row_after_plain,
-                            &fmt_call("p", calling_position),
-                            "", // Don't display plain leads in output
-                            plain_lead_weight,
-                            // If we're only splicing on calls, then don't add plain links that
-                            // change method
-                            (splice_style == SpliceStyle::Calls).then(|| method_idx),
-                            &link_gen_data,
-                            &mut links,
-                        );
-                    }
-                }
-            }
+    for (method_idx, method_data) in method_datas.iter().enumerate() {
+        for from_ch_mask in &method_data.ch_masks {
+            generate_call_links(
+                method_idx,
+                method_data,
+                from_ch_mask,
+                &link_gen_data,
+                &mut links,
+            )?;
         }
+    }
+    if splice_style == SpliceStyle::LeadLabels {
+        generate_plain_links(method_datas, &link_gen_data, &mut links);
     }
 
     Ok(links)
 }
 
+/// For a given [`Method`] and [`CourseHeadMask`], generate all calls leading **out** of this call,
+/// along with any corresponding plain leads (if `splice_style` isn't [`SpliceStyle::LeadLabels`],
+/// in which case plain splices are bulk-added separately).
+fn generate_call_links(
+    method_idx: usize,
+    d: &MethodData,
+    from_ch_mask: &CourseHeadMask,
+    link_gen_data: &LinkGenData,
+    links: &mut Vec<Link>,
+) -> Result<()> {
+    // Closure used to format a call string
+    let fmt_call = |symbol: &str, calling_pos: &str| -> String {
+        if link_gen_data.is_spliced {
+            // If we're ringing spliced, then put calls in `[]`s to differentiate
+            // them from method names
+            format!("[{}{}]", symbol, calling_pos)
+        } else {
+            format!("{}{}", symbol, calling_pos)
+        }
+    };
+
+    // ... test every call in every valid position in the course ...
+    for call in &d.calls {
+        let lead_label = call.lead_location.as_str();
+        let call_starts = link_gen_data
+            .call_starts_by_label
+            .get(lead_label)
+            .ok_or_else(|| Error::UndefinedLeadLocation(lead_label.to_owned()))?;
+        for &from_idx in call_starts {
+            if from_idx.block.index() != method_idx {
+                continue; // Skip any call starts which aren't from this method
+            }
+
+            /* ADD CALL LINKS */
+
+            // Link corresponding to placing this call
+            let row_before_call = d.plain_course.get_row(from_idx.row).unwrap();
+            let row_after_call = call.place_not.permute_new(row_before_call).unwrap();
+            // Get the mask required by the row **after** this call.  This link can be
+            // generated only if a `CallEnd` is compatible with this mask.
+            let mask_after_call = from_ch_mask.mask.mul(&row_after_call);
+
+            // Get the debug/display names for any link in this position
+            let tenor_place = mask_after_call
+                .place_of(from_ch_mask.calling_bell())
+                .expect("Course head mask doesn't fix the calling bell");
+            let calling_position = call.calling_positions.get(tenor_place).ok_or_else(|| {
+                Error::CallingPositionsTooShort {
+                    call_name: call.debug_symbol.to_owned(),
+                    calling_position_len: call.calling_positions.len(),
+                    stage: link_gen_data.stage,
+                }
+            })?;
+
+            // Add links for this call, splicing to any available method
+            let is_call_possible = add_links_for_call_position(
+                from_idx,
+                &from_ch_mask.mask,
+                &row_after_call,
+                &fmt_call(&call.debug_symbol, calling_position),
+                &fmt_call(&call.display_symbol, calling_position),
+                call.weight,
+                None, // Calls are always allowed to change method
+                link_gen_data,
+                links,
+            );
+
+            // Plain links should be added whenever there's a call, or every lead for
+            // `SpliceStyle::LeadLabels`
+            if link_gen_data.splice_style != SpliceStyle::LeadLabels && is_call_possible {
+                let idx_after_plain = (from_idx.row + 1) % d.plain_course.len();
+                let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
+                add_links_for_call_position(
+                    from_idx,
+                    &from_ch_mask.mask,
+                    row_after_plain,
+                    &fmt_call("p", calling_position),
+                    "",  // Don't display plain leads in output
+                    0.0, // Plain leads have no weight
+                    // If we're only splicing on calls, then don't add plain links that
+                    // change method
+                    (link_gen_data.splice_style == SpliceStyle::Calls).then(|| method_idx),
+                    link_gen_data,
+                    links,
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Generate plain links at every possible lead location (i.e. what's expected for
+/// [`SpliceStyle::LeadLabels`]).
+fn generate_plain_links(
+    method_datas: &[MethodData],
+    link_gen_data: &LinkGenData,
+    links: &mut Vec<Link>,
+) {
+    for starts in link_gen_data.call_starts_by_label.values() {
+        for &from_idx in starts {
+            let method_data = &method_datas[from_idx.block.index()];
+            let row_after_plain = method_data.plain_course.get_row(from_idx.row + 1).unwrap();
+            for ch_mask_from in &method_data.ch_masks {
+                add_links_for_call_position(
+                    from_idx,
+                    &ch_mask_from.mask,
+                    row_after_plain,
+                    if link_gen_data.is_spliced { "[p]" } else { "p" },
+                    "",   // Don't display plain leads in output
+                    0.0,  // Plain leads have no weight
+                    None, // Splices to any methods are allowed
+                    link_gen_data,
+                    links,
+                );
+            }
+        }
+    }
+}
+
 /// For a given call in a given position, create links which come out of this into any possible
-/// method
+/// method.  Returns `true` if calls were added.
 #[allow(clippy::too_many_arguments)]
-fn add_links_for_call(
+fn add_links_for_call_position(
     from_idx: RowIdx,
     from_ch_mask: &Mask,
     row_after_call: &Row,
@@ -571,8 +616,9 @@ fn add_links_for_call(
     // Same across all calls:
     data: &LinkGenData,
     links: &mut Vec<Link>,
-) {
+) -> bool {
     let mask_after_call = from_ch_mask.mul(row_after_call);
+    let mut was_call_added = false;
 
     // Find any `CallEnd`s which this call could lead to
     for call_end in data.call_ends {
@@ -620,7 +666,9 @@ fn add_links_for_call(
             display_name: display_name.to_owned(),
             weight,
         });
+        was_call_added = true;
     }
+    was_call_added
 }
 
 /// Remove any [`Link`]s which are equal to another [`Link`] (ignoring names).

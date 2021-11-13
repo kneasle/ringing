@@ -4,7 +4,10 @@
 // show how the code works (both to the reader and the compiler)
 #![allow(clippy::type_complexity)]
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
@@ -46,7 +49,7 @@ impl FalsenessTable {
         // Determine which masks/range pairs are actually needed (pre-filtering the number of masks
         // is very worthwhile, because the overall time requirement for proving is at least
         // quadratic in the length of `mask_ranges`).
-        let mut range_masks: Vec<(RowRange, &Mask)> = Vec::new();
+        let mut range_masks: Vec<(RowRange, Cow<Mask>)> = Vec::new();
         for (range, chs) in chs_by_range {
             range_masks.extend(
                 get_masks_for_range(
@@ -83,7 +86,7 @@ impl FalsenessTable {
             .map(|(range, mask)| {
                 (
                     range,
-                    group_rows(layout.untransposed_rows(range.start, range.len), mask),
+                    group_rows(layout.untransposed_rows(range.start, range.len), &mask),
                 )
             })
             .collect_vec();
@@ -169,20 +172,26 @@ fn get_masks_for_range<'a>(
     masks_by_range_start: &'a HashMap<RowIdx, Vec<Mask>>,
     masks_by_range_end: &HashMap<RowIdx, Vec<&'a Mask>>,
     layout: &Layout,
-) -> Vec<&'a Mask> {
+) -> Vec<Cow<'a, Mask>> {
     // Use the link masks to determine which CH masks this range could have
-    let mut possible_masks = HashSet::<&Mask>::new();
+    let mut possible_masks = HashSet::<Cow<Mask>>::new();
     if let Some(start_masks) = masks_by_range_start.get(&range.start) {
         for start_mask in start_masks {
-            possible_masks.insert(start_mask);
+            possible_masks.insert(Cow::Borrowed(start_mask));
         }
     }
     if let Some(end) = layout.last_row_idx(range) {
         if let Some(end_masks) = masks_by_range_end.get(&end) {
             for end_mask in end_masks {
-                possible_masks.insert(end_mask);
+                possible_masks.insert(Cow::Borrowed(end_mask));
             }
         }
+    }
+    // If no masks are generated, then the `Layout` must have no links.  In this case, we simply
+    // take all the possible course heads as CH masks (we'll have as many CH masks as start nodes,
+    // which is fine).
+    if possible_masks.is_empty() {
+        possible_masks.extend(chs.iter().cloned().map(Mask::full_row).map(Cow::Owned));
     }
 
     // Because the speed of the falseness generation is quadratic in the number of
@@ -195,12 +204,12 @@ fn get_masks_for_range<'a>(
     // Note that this is also quadratic in the number of masks, but is performed only once per pair
     // of node **classes** whereas the falseness test is called for every pair of nodes (~10,000
     // times more calls).
-    let mut unnecessary_masks = HashSet::<&Mask>::new();
+    let mut unnecessary_masks = HashSet::<Cow<Mask>>::new();
     for m in &possible_masks {
         // If this mask doesn't satisfy any of the course heads in the node graph, then
         // there's no point determining its truth
         if !chs.iter().any(|ch| m.matches(ch)) {
-            unnecessary_masks.insert(m);
+            unnecessary_masks.insert(m.clone());
             continue;
         }
 
@@ -209,6 +218,7 @@ fn get_masks_for_range<'a>(
         let refinements = possible_masks
             .iter()
             .filter(|m2| *m2 != m && m2.is_subset_of(m))
+            .cloned()
             .collect_vec();
         // If there are some refined masks ...
         if !refinements.is_empty() {
@@ -227,7 +237,7 @@ fn get_masks_for_range<'a>(
 
             if !should_keep_m {
                 // If `m` doesn't need to be kept, then reject it
-                unnecessary_masks.insert(m);
+                unnecessary_masks.insert(m.clone());
             } else {
                 // If `m` does need to be kept, then all the falseness covered by
                 // `refinements` is also covered by `m`, making all the refinements

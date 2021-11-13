@@ -362,8 +362,6 @@ impl Node {
 impl Graph {
     /// Generate a graph of all nodes which are reachable within a given length constraint.
     pub fn from_layout(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
-        log::info!("Building `Graph`");
-
         // The set of reachable nodes and whether or not they are a start node (each mapping to a
         // distance from rounds)
         let mut expanded_nodes: HashMap<NodeId, (Segment, Distance)> = HashMap::new();
