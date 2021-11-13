@@ -1,8 +1,8 @@
-/target
+# Cargo's output directory
+*/target
 
-# Files storing local benchmark runs
-.benches_pinned.json
-.benches_prev.json
+# Where I store comps I'm working on that I don't want to be checked into Monument
+comps/
 
 # Ignore all callgrind files
 **/callgrind*

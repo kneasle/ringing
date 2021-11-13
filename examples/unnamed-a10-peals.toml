@@ -1,8 +1,0 @@
-length = "peal"
-music_file = "music-10.toml"
-
-# course_heads = ["1xxxxx7890", "1234567xxx"]
-
-[method]
-stage = 10
-place_notation = "-30-16-56-18-30-56-50-18-90,12"
