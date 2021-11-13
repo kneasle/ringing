@@ -42,10 +42,12 @@ pub struct Spec {
     splice_style: SpliceStyle,
     /// A [`Row`] which generates the part heads of this composition
     part_head: Option<String>,
-    /// If `true`, generate compositions lead-wise, rather than course-wise
+    /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
+    /// cases like cyclic comps where no course heads are preserved across parts.
     #[serde(default)]
     leadwise: bool,
 
+    /// Set to `true` to allow comps to not start at the lead head.
     #[serde(default)]
     snap_start: bool,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
@@ -69,9 +71,6 @@ pub struct Spec {
 
     /// Which music to use
     music: Vec<MusicSpec>,
-    /// Should Monument normalise music scores by length when generating comps.
-    #[serde(default = "get_true")]
-    normalise_music: bool,
 
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
@@ -418,10 +417,6 @@ fn get_one() -> f32 {
 
 fn get_30() -> usize {
     30
-}
-
-fn get_true() -> bool {
-    true
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
