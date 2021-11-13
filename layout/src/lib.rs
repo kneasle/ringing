@@ -24,9 +24,8 @@ pub mod node_range;
 /// [`HashMap`](std::collections::HashMap).
 #[derive(Debug, Clone)]
 pub struct Layout {
-    /// A list of blocks of [`Row`]s, from which the [`Segment`]s are taken (more precisely, each
-    /// [`Segment`] corresponds to a subsequence of some block in `blocks`).  In most cases, this
-    /// will be the plain course of the given method(s).
+    /// The blocks that make up the composition.  [`Node`]s correspond to ranges of these `blocks`
+    /// (pre-)transposed by some course head.
     pub blocks: BlockVec<AnnotBlock<Option<String>>>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
     /// but can also be the _absence_ of a call - note here that Monument will not implicitly add
@@ -324,7 +323,6 @@ impl From<StandardNodeId> for NodeId {
     }
 }
 
-/// A range of [`Row`]s covered by a [`Segment`]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RowRange {
     pub start: RowIdx,

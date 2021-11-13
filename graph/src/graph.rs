@@ -9,7 +9,7 @@ use bellframe::{IncompatibleStages, RowBuf};
 use itertools::Itertools;
 use log::log;
 use monument_layout::{
-    node_range::{End, Segment},
+    node_range::{End, NodeRange},
     Layout, LinkIdx, NodeId, RowRange, StandardNodeId, StartIdx,
 };
 use monument_utils::{FrontierItem, RowCounts};
@@ -366,7 +366,7 @@ impl Graph {
     pub fn from_layout(layout: &Layout, music_types: &[MusicType], max_length: usize) -> Self {
         // The set of reachable nodes and whether or not they are a start node (each mapping to a
         // distance from rounds)
-        let mut expanded_nodes: HashMap<NodeId, (Segment, Distance)> = HashMap::new();
+        let mut expanded_nodes: HashMap<NodeId, (NodeRange, Distance)> = HashMap::new();
 
         let mut end_nodes = Vec::new();
 
@@ -405,7 +405,7 @@ impl Graph {
                 continue;
             }
             // If the node hasn't been expanded yet, then add its reachable nodes to the frontier
-            let segment = Segment::new(layout, &node_id).expect("Infinite segment found");
+            let segment = NodeRange::new(layout, &node_id).expect("Infinite segment found");
 
             // If the shortest composition including this node is longer the length limit, then don't
             // include it in the node graph

@@ -103,7 +103,7 @@ fn main() {
 
 fn print_comp(c: &Comp, layout: &Layout) {
     println!(
-        "len: {}, ms: {:?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
+        "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
         c.length,
         c.method_counts.counts(),
         c.score,

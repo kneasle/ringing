@@ -26,8 +26,8 @@ pub(crate) struct FalsenessTable {
 }
 
 impl FalsenessTable {
-    /// Creates a new `FalsenessTable` which describes the falseness between [`Segment`]s in a
-    /// given [`Layout`].
+    /// Creates a `FalsenessTable` capable of efficiently generating falseness between a given set
+    /// of nodes.
     pub fn from_layout<'a>(
         layout: &Layout,
         nodes: impl IntoIterator<Item = &'a (NodeId, usize)>,

@@ -6,9 +6,9 @@ use monument_utils::RowCounts;
 use crate::{EndIdx, Layout, LinkIdx, NodeId, StandardNodeId};
 
 /// A section of a composition with no internal links, uniquely determined by a [`NodeId`] (which
-/// specifies the first row of the [`Segment`]).
+/// specifies the first row of the [`Node`]).
 #[derive(Debug, Clone)]
-pub struct Segment {
+pub struct NodeRange {
     pub node_id: NodeId,
     pub length: usize,
     pub links: Vec<(LinkIdx, NodeId)>,
@@ -18,22 +18,22 @@ pub struct Segment {
     pub label: String,
     pub method_counts: RowCounts,
 
-    /// If this `Segment` is a end point, then this is `Some(idx)` where `idx` indexes into
+    /// If this `NodeRange` is a end point, then this is `Some(idx)` where `idx` indexes into
     /// [`Layout::ends`].
     pub end: Option<End>,
 }
 
-impl Segment {
-    /// Returns the [`Segment`], starting at a given [`StandardNodeId`].  If this [`Segment`] would
+impl NodeRange {
+    /// Returns the [`NodeRange`], starting at a given [`StandardNodeId`].  If this [`NodeRange`] would
     /// never terminate (because no [`Link`]s can be applied to it), then `None` is returned.
     pub fn new(layout: &Layout, id: &NodeId) -> Option<Self> {
         match id {
             NodeId::Standard(std_id) => Self::new_standard(layout, std_id),
-            NodeId::ZeroLengthEnd => Some(Segment::zero_len_end(layout.num_methods())),
+            NodeId::ZeroLengthEnd => Some(NodeRange::zero_len_end(layout.num_methods())),
         }
     }
 
-    /// Returns the [`Segment`], starting at a given [`StandardNodeId`].  If this [`Segment`] would
+    /// Returns the [`NodeRange`], starting at a given [`StandardNodeId`].  If this [`NodeRange`] would
     /// never terminate (because no [`Link`]s can be applied to it), then `None` is returned.
     fn new_standard(layout: &Layout, id: &StandardNodeId) -> Option<Self> {
         let block = &layout.blocks[id.row_idx.block];
@@ -165,8 +165,8 @@ impl Segment {
         }
 
         // If some way of ending this segment was found (i.e. a Link or an end-point), then build a
-        // new Some(Segment), otherwise bubble the `None` value
-        Some(Segment {
+        // new Some(NodeRange), otherwise bubble the `None` value
+        Some(NodeRange {
             links: deduped_links,
             length: shortest_length,
             method_counts: RowCounts::single_count(
@@ -191,7 +191,7 @@ impl Segment {
         }
     }
 
-    /// Returns the [`Row`]s covered by this [`Segment`] **of the plain course**
+    /// Returns the [`Row`]s covered by this [`NodeRange`] **of the plain course**
     pub fn untransposed_rows<'l>(
         &self,
         layout: &'l Layout,
