@@ -12,15 +12,8 @@ methods = [
     # "Deva Surprise Major",
     # { title = "Double Norwich Court Bob Major", shorthand = "N" },
 ]
-
-method_count.min = 32 # Require at least one lead of every method
-method_count.max = 300
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*6578"]
+method_count = { min = 32, max = 300 }
+music_file = "music-8.toml"
 
 # Boost 5678s off the front
 [[music]]

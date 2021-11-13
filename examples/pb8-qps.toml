@@ -1,9 +1,4 @@
 length = { min = 1250, max = 1300 }
 num_comps = 50
 method = "Plain Bob Major"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*6578"]
+music_file = "music-8.toml"

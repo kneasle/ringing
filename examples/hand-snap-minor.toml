@@ -1,5 +1,4 @@
 length = "practice"
-num_comps = 30
 methods = [
     "Cambridge Surprise Minor",
     "London Surprise Minor",
@@ -8,14 +7,4 @@ methods = [
     # "Ipswich Surprise Minor",
 ]
 end_indices = [21] # Only allow finishing at the handstroke snap
-
-[[music]]
-run_lengths = [4, 5, 6]
-
-[[music]]
-patterns = ["*56"]
-
-# Queens, exploded tittums and tittums are worth 4
-[[music]]
-patterns = ["135246", "342516", "142536"]
-weight = 4
+music_file = "music-6.toml"

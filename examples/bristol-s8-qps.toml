@@ -1,14 +1,9 @@
 length = { min = 1250, max = 1280 }
 num_comps = 50
 method = "Bristol Surprise Major"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*6578"]
+music_file = "music-8.toml"
 
 # Boost 5678s off the front
 [[music]]
 patterns = ["5678*", "8765*"]
-weight = 3
+weight = 2

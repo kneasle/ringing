@@ -1,9 +1,3 @@
 length = "QP"
-num_comps = 30
 method = "Lessness Surprise Major"
-
-[[music]]
-run_length = 4
-
-[[music]]
-patterns = [ "*6578", "*5678", "*8765", "5678*", "8765*" ]
+music_file = "music-8.toml"

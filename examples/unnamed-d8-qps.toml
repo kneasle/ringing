@@ -2,6 +2,7 @@ length = "QP"
 course_heads = ["1xxx87xx", "1xxx5678"]
 base_calls = "none" # We need custom calls (12 bobs, 1234 singles)
 snap_start = true
+music_file = "music-8.toml"
 
 
 [method]
@@ -17,10 +18,3 @@ place_notation = "12"
 [[calls]]
 symbol = "s"
 place_notation = "1234"
-
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]

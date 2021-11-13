@@ -3,9 +3,4 @@ num_comps = 20
 method = "Yorkshire Surprise Major"
 # Monument will deduplicate the CH masks, removing `1xxx5678` because it is a subset of `1xxxxx78`.
 course_heads = ["1xxx5678", "1xxxxx78", "1xxx8765", "15678xxx"]
-
-[[music]]
-run_lengths = [4, 5, 6, 7, 8]
-
-[[music]]
-patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
+music_file = "music-8.toml"

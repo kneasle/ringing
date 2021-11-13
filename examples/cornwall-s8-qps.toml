@@ -1,6 +1,4 @@
 length = "qp"
 num_comps = 20
 method = "Cornwall Surprise Major"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
+music_file = "music-8.toml"

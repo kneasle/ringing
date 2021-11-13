@@ -11,13 +11,4 @@ methods = [
 ]
 part_head = "124365"
 method_count = { min = 100, max = 250 }
-
-[[music]]
-run_lengths = [4, 5, 6, 7, 8]
-
-[[music]]
-patterns = [
-    "6578*", "*6578",
-    "8765*", "*8765",
-    "5678*", "*5678",
-]
+music_file = "music-8.toml"

@@ -2,10 +2,8 @@ length = 2520
 method = "Yorkshire Surprise Royal"
 # Allow Monument to affect the tenors if the resulting course has 6-bell runs of 2-7
 course_heads = ["1xxxxx7890", "1234567xxx", "1674523xxx"]
+music_file = "music-10.toml"
 
 # [[calls]]
 # symbol = "x"
 # place_notation = "16"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]

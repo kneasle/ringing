@@ -1,9 +1,4 @@
-length = "QP"
-course_heads = ["1xxxxx78", "1xxx8765", "15678xxx"]
+length = "qp"
+course_heads = ["1xxxxx78", "15678xxx"]
 method = "Jovium Surprise Major"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
+music_file = "music-8.toml"

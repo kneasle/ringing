@@ -1,27 +1,11 @@
 length = "peal"
-num_comps = 50
 methods = [
     "Bristol Surprise Maximus",
     "Zanussi Surprise Maximus",
 ]
 splice_style = "calls"
+music_file = "music-12.toml"
 
 # Punish calls more because Maximus generates too much music
 bob_weight = -10
 single_weight = -15
-
-[[music]]
-run_lengths = [4, 5, 6, 7, 8, 9, 10, 11]
-
-# Counting 67890s as 5-bell runs tends to make Monument generate very static compositions, leaving 6
-# unaffected for as long as possible.  So we nerf 67890s to encourage it to generate more
-# interesting comps
-[[music]]
-patterns = ["TE0987*", "*7890ET"]
-weight = -2
-
-# Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
-# make Monument prefer LB5 courses over just keeping the 6 at home for ages).
-[[music]]
-patterns = ["*65432", "*23456", "23456*", "65432*"]
-weight = 3

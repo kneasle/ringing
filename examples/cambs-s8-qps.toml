@@ -1,9 +1,3 @@
 length = "qp"
-num_comps = 15
 method = "Cambridge Surprise Major"
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*5678", "*8765", "5678*", "8765*", "*6578"]
+music_file = "music-8.toml"

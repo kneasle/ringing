@@ -1,13 +1,5 @@
 length = "qp"
 num_comps = 40
 method = "Yorkshire Surprise Major"
-
 course_heads = ["xxxxxx78", "xxxx8765", "xxxx7856"]
-
-
-[[music]]
-run_lengths = [4, 5, 6, 7]
-
-[[music]]
-patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
-weight = 6
+music_file = "music-8.toml"
