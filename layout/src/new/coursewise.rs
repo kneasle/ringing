@@ -6,13 +6,13 @@ use std::{
 use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage};
 use index_vec::IndexVec;
 use itertools::Itertools;
-use serde::Deserialize;
 
-use super::{BlockIdx, BlockVec, CourseHeadMask, Layout, Link, RowIdx, StartOrEnd};
+use super::{CourseHeadMask, SpliceStyle};
+use crate::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
 /// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
 /// [`Call`](super::Call)s and course heads to use).
-pub(super) fn from_methods(
+pub fn coursewise(
     methods: &[(Method, String)],
     calls: &[super::Call],
     splice_style: SpliceStyle,
@@ -61,26 +61,6 @@ pub(super) fn from_methods(
             .collect::<BlockVec<_>>(),
         stage,
     })
-}
-
-/// The different styles of spliced that can be generated
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
-pub enum SpliceStyle {
-    /// Splices could happen at any lead label
-    #[serde(rename = "leads")]
-    LeadLabels,
-    /// Splice only happen whenever a call _could_ have happened
-    #[serde(rename = "call locations")]
-    CallLocations,
-    /// Splices only happen when calls are actually made
-    #[serde(rename = "calls")]
-    Calls,
-}
-
-impl Default for SpliceStyle {
-    fn default() -> Self {
-        Self::LeadLabels
-    }
 }
 
 /// The ways that [`Layout::single_method`] can fail
@@ -161,7 +141,7 @@ fn add_fixed_bells(
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
 ) -> Vec<(Mask, Bell)> {
-    let fixed_bells = fixed_bells(methods, calls_per_method, stage);
+    let fixed_bells = super::fixed_bells(methods, calls_per_method, stage);
 
     let mut fixed_ch_masks = Vec::with_capacity(ch_masks.len());
     'mask_loop: for (mut mask, calling_bell) in ch_masks {
@@ -179,58 +159,6 @@ fn add_fixed_bells(
         fixed_ch_masks.push((mask, calling_bell))
     }
     fixed_ch_masks
-}
-
-/// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
-/// bells in non-variable-hunt compositions).
-pub(super) fn fixed_bells(
-    methods: &[(Method, String)],
-    calls_per_method: &[Vec<&super::Call>],
-    stage: Stage,
-) -> Vec<Bell> {
-    // Start off with all bells fixed
-    let mut all_fixed_bells = stage.bells().collect_vec();
-    for ((method, _shorthand), calls) in methods.iter().zip_eq(calls_per_method) {
-        // Start the set with the bells which are fixed by the plain lead of every method
-        let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-        for call in calls {
-            // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
-            // Grandsire is unaffected by a plain lead, but affected by calls)
-            filter_bells_fixed_by_call(method, call, &mut fixed_bells);
-        }
-        // Intersect the fixed bells of this method with the full list
-        all_fixed_bells.retain(|b| fixed_bells.contains(b));
-    }
-    all_fixed_bells
-}
-
-// For every position that this call could be placed, remove any bells which **aren't** preserved
-// by placing the call at this location.
-fn filter_bells_fixed_by_call(method: &Method, call: &super::Call, set: &mut HashSet<Bell>) {
-    // Note that all calls are required to only substitute one piece of place notation.
-    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
-        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
-        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
-
-        // The row before a call in this location in the _first lead_
-        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
-        // The row after a plain call in this location in the _first lead_
-        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
-        // The row after a call in this location in the _first lead_
-        let mut row_after_call = row_before_call.to_owned();
-        call.place_not.permute(&mut row_after_call).unwrap();
-
-        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
-        // `row_after_no_call`.  These should be removed from the set, because they are no longer
-        // fixed.
-        for (bell_after_no_call, bell_after_call) in
-            row_after_no_call.bell_iter().zip(&row_after_call)
-        {
-            if bell_after_call != bell_after_no_call {
-                set.remove(&bell_after_call);
-            }
-        }
-    }
 }
 
 /////////////////////////////////
@@ -336,7 +264,7 @@ fn generate_links(
         splice_style,
     )?;
     filter_plain_links(&mut links, splice_style);
-    dedup_links(&mut links);
+    super::dedup_links(&mut links);
     Ok(links)
 }
 
@@ -671,62 +599,6 @@ fn add_links_for_call_position(
         was_call_added = true;
     }
     was_call_added
-}
-
-/// Remove any [`Link`]s which are equal to another [`Link`] (ignoring names).
-///
-/// This is required because [`generate_all_links`] creates a large number of identical plain call
-/// links if there are multiple calls at the same position (which there almost always are).
-///
-/// This doesn't always actually lead to the generation of duplicate compositions (because there
-/// could be two identical calls with different but compatible course head masks), so the graph
-/// generation code has to perform de-duplication regardless.  However, de-duplication makes the
-/// code both more performant and, more importantly, makes the resulting [`Layout`]s easier to
-/// debug.
-pub(super) fn dedup_links(links: &mut Vec<Link>) {
-    // The indices of links which are special cases of some other link (or are identical to other
-    // links)
-    let mut redundant_link_idxs = Vec::<usize>::new();
-    for (i, link) in links.iter().enumerate() {
-        for (i2, link2) in links.iter().enumerate() {
-            // Links are always compatible with themselves, and there's no point 'de-duplicating' a
-            // link because it's redundant against itself
-            if i == i2 {
-                continue;
-            }
-
-            // This is 'true' if `link` and `link2` are equal apart from their course head masks.
-            // We don't check the names, since it's possible that the same link is given two
-            // different names (e.g. near near would generate `pI` and `pT` which should be
-            // considered identical).  If the links do have different names, then one of them is
-            // picked arbitrarily.
-            let are_links_otherwise_equal = link.eq_without_name_or_ch_mask(link2);
-
-            if are_links_otherwise_equal {
-                if link.ch_mask == link2.ch_mask {
-                    // If the links are identical, then we remove the one with the least index.
-                    // This way, exactly one link from a group of identical links (the one with the
-                    // highest index) will survive
-                    if i < i2 {
-                        redundant_link_idxs.push(i);
-                    }
-                } else if link.ch_mask.is_subset_of(&link2.ch_mask) {
-                    // If `link2`'s CH mask is more general than `link`'s, and `link` and `link2`
-                    // are otherwise equal, then `link` is a special case of `link2` and is
-                    // therefore redundant
-                    redundant_link_idxs.push(i);
-                }
-            }
-        }
-    }
-
-    // Now actually remove the unnecessary links, making sure to iterate backwards so that the
-    // indices keep pointing to the right elements
-    redundant_link_idxs.sort_unstable();
-    redundant_link_idxs.dedup();
-    for idx in redundant_link_idxs.into_iter().rev() {
-        links.remove(idx);
-    }
 }
 
 /// Remove any plain links which violate the given [`SpliceStyle`].  If there's only one method,

@@ -1,6 +1,10 @@
 use gcd::Gcd;
 use std::cmp::Ordering;
 
+mod row_counts;
+
+pub use row_counts::RowCounts;
+
 /// Returns a bitmap where there's a `1` for every number that's co-prime to `n`
 pub fn coprime_bitmap(n: u16) -> u64 {
     assert!(n <= 64);

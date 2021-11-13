@@ -535,6 +535,7 @@ dependencies = [
  "itertools",
  "log 0.3.9",
  "monument_graph",
+ "monument_layout",
  "monument_search",
  "pretty_logger",
  "serde",
@@ -544,6 +545,20 @@ dependencies = [
 
 [[package]]
 name = "monument_graph"
+version = "0.1.0"
+dependencies = [
+ "bellframe",
+ "index_vec",
+ "itertools",
+ "log 0.3.9",
+ "monument_layout",
+ "monument_utils",
+ "ordered-float",
+ "serde",
+]
+
+[[package]]
+name = "monument_layout"
 version = "0.1.0"
 dependencies = [
  "bellframe",
@@ -565,6 +580,7 @@ dependencies = [
  "itertools",
  "log 0.3.9",
  "monument_graph",
+ "monument_layout",
  "monument_utils",
 ]
 
@@ -573,6 +589,7 @@ name = "monument_utils"
 version = "0.1.0"
 dependencies = [
  "gcd",
+ "itertools",
 ]
 
 [[package]]

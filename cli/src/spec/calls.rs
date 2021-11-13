@@ -1,5 +1,5 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
-use monument_graph::layout::Call;
+use monument_layout::new::Call;
 use serde::{de, Deserialize, Deserializer};
 
 use super::Error;

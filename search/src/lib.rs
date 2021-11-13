@@ -3,12 +3,9 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 use bit_vec::BitVec;
 use frontier::Frontier;
 use log::log;
-use m_gr::{
-    layout::{End, Layout, StartIdx},
-    Rotation, RowCounts,
-};
-use monument_graph::{self as m_gr, layout::LinkIdx, music::Score, Data};
-use monument_utils::coprime_bitmap;
+use monument_graph::{self as m_gr, music::Score, Data, Rotation};
+use monument_layout::{node_range::End, Layout, LinkIdx, StartIdx};
+use monument_utils::{coprime_bitmap, RowCounts};
 
 pub mod frontier;
 mod graph;
@@ -185,7 +182,7 @@ impl Comp {
             s.push_str(link_label);
         }
         // End
-        s.push_str(layout.end_label(self.end));
+        s.push_str(self.end.label(layout));
         s
     }
 }

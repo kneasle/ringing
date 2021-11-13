@@ -14,11 +14,8 @@ use bellframe::{
 };
 use itertools::Itertools;
 use log::log;
-use monument_graph::{
-    layout::{from_methods, Layout, SpliceStyle},
-    music::MusicType,
-    Data,
-};
+use monument_graph::{music::MusicType, Data};
+use monument_layout::new::{coursewise, leadwise, SpliceStyle};
 use serde::Deserialize;
 
 use self::{
@@ -187,9 +184,9 @@ impl Spec {
         };
 
         let layout = if self.leadwise {
-            Layout::leadwise(&methods, &calls, start_indices, self.end_indices.as_deref())
+            leadwise::leadwise(&methods, &calls, start_indices, self.end_indices.as_deref())
         } else {
-            Layout::from_methods(
+            coursewise::coursewise(
                 &methods,
                 &calls,
                 self.splice_style,
@@ -262,7 +259,7 @@ pub enum Error {
     CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(String, ParseIntError),
-    LayoutGen(from_methods::Error),
+    LayoutGen(coursewise::Error),
 }
 
 /// Error generated when a user tries to read a TOML file from the FS

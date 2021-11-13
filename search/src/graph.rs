@@ -2,11 +2,9 @@ use std::collections::HashMap;
 
 use bit_vec::BitVec;
 use itertools::Itertools;
-use monument_graph::{
-    layout::{End, LinkIdx, StartIdx},
-    music::Score,
-    Data, NodeId, Rotation, RowCounts,
-};
+use monument_graph::{music::Score, Data, NodeId, Rotation};
+use monument_layout::{node_range::End, LinkIdx, StartIdx};
+use monument_utils::RowCounts;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.

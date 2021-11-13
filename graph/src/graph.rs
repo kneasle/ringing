@@ -8,14 +8,16 @@ use std::{
 use bellframe::{IncompatibleStages, RowBuf};
 use itertools::Itertools;
 use log::log;
-use monument_utils::FrontierItem;
+use monument_layout::{
+    node_range::{End, Segment},
+    Layout, LinkIdx, NodeId, RowRange, StandardNodeId, StartIdx,
+};
+use monument_utils::{FrontierItem, RowCounts};
 
 use crate::{
     falseness::FalsenessTable,
-    layout::{End, Layout, LinkIdx, NodeId, RowRange, Segment, StandardNodeId, StartIdx},
     music::{Breakdown, MusicType, Score},
     optimise::Pass,
-    row_counts::RowCounts,
     Data,
 };
 
@@ -403,9 +405,7 @@ impl Graph {
                 continue;
             }
             // If the node hasn't been expanded yet, then add its reachable nodes to the frontier
-            let segment = layout
-                .get_segment(&node_id)
-                .expect("Infinite segment found");
+            let segment = Segment::new(layout, &node_id).expect("Infinite segment found");
 
             // If the shortest composition including this node is longer the length limit, then don't
             // include it in the node graph

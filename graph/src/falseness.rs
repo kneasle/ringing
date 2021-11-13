@@ -12,7 +12,7 @@ use std::{
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
-use crate::layout::{Layout, NodeId, RowIdx, RowRange};
+use monument_layout::{Layout, NodeId, RowIdx, RowRange};
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).

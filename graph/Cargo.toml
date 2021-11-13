@@ -8,6 +8,7 @@ bellframe.path = "../../bellframe/"
 index_vec = "0.1"
 itertools = "0.10"
 log = "0.3"
+monument_layout.path = "../layout/"
 monument_utils.path = "../utils/"
 ordered-float = "2.8"
 serde = { version = "1.0", features = ["derive"] }
