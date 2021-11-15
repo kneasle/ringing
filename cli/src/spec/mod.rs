@@ -194,8 +194,8 @@ impl Spec {
                 start_indices,
                 self.end_indices.as_deref(),
             )
-            .map_err(Error::LayoutGen)?
-        };
+        }
+        .map_err(Error::LayoutGen)?;
 
         // Data external to the `Layout`
         let method_count_range =
@@ -259,7 +259,7 @@ pub enum Error {
     CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(String, ParseIntError),
-    LayoutGen(coursewise::Error),
+    LayoutGen(monument_layout::new::Error),
 }
 
 /// Error generated when a user tries to read a TOML file from the FS

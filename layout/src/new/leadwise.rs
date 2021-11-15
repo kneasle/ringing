@@ -4,7 +4,7 @@ use bellframe::{AnnotBlock, Mask, Row, RowBuf};
 use index_vec::IndexVec;
 use itertools::Itertools;
 
-use super::{SNAP_FINISH_LABEL, SNAP_START_LABEL};
+use super::{check_duplicate_shorthand, Result, SNAP_FINISH_LABEL, SNAP_START_LABEL};
 use crate::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
 /// Creates a `Layout` where every course is exactly one lead long.
@@ -13,7 +13,9 @@ pub fn leadwise(
     calls: &[super::Call],
     start_indices: Option<&[usize]>,
     end_indices: Option<&[usize]>,
-) -> Layout {
+) -> Result<Layout> {
+    check_duplicate_shorthand(methods)?;
+
     let stage = methods
         .iter()
         .map(|(m, _shorthand)| m.stage())
@@ -38,13 +40,13 @@ pub fn leadwise(
     let lead_head_mask = Mask::fix_bells(stage, fixed_bells);
 
     let blks = blocks.as_raw_slice();
-    Layout {
+    Ok(Layout {
         starts: start_or_ends(start_indices, SNAP_START_LABEL, &lead_head_mask, blks),
         ends: start_or_ends(end_indices, SNAP_FINISH_LABEL, &lead_head_mask, blks),
         links: links(methods, calls, &lead_head_mask),
         blocks,
         stage,
-    }
+    })
 }
 
 fn start_or_ends<I: index_vec::Idx>(

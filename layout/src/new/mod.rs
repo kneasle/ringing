@@ -11,6 +11,37 @@ use crate::Link;
 pub mod coursewise;
 pub mod leadwise;
 
+/// The ways that [`Layout::single_method`] can fail
+#[derive(Debug, Clone)]
+pub enum Error {
+    NoMethods,
+    UndefinedLeadLocation(String),
+    DuplicateShorthand {
+        shorthand: String,
+        title1: String,
+        title2: String,
+    },
+    CallingPositionsTooShort {
+        call_name: String,
+        calling_position_len: usize,
+        stage: Stage,
+    },
+    /// Some courses match two different [`CourseHeadMask`]s with **different** calling bells.
+    ConflictingCallingBell(CourseHeadMask, CourseHeadMask),
+    AmbiguousCourseHeadPosition {
+        /// The first possible course head for the ambiguous course
+        mask1: Mask,
+        /// The course head mask given by the user which `mask1` satisfies
+        input_mask1: Mask,
+        /// The second possible course head for the ambiguous course
+        mask2: Mask,
+        /// The course head mask given by the user which `mask1` satisfies
+        input_mask2: Mask,
+    },
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 /// The different styles of spliced that can be generated
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
 pub enum SpliceStyle {
@@ -252,6 +283,22 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 ////////////////////////////////////////////////////
 // UTILITIES COMMON BETWEEN LEAD- AND COURSE-WISE //
 ////////////////////////////////////////////////////
+
+/// Return an error if two methods share a shorthand
+fn check_duplicate_shorthand(methods: &[(bellframe::Method, String)]) -> Result<()> {
+    for (i1, (meth1, shorthand1)) in methods.iter().enumerate() {
+        for (meth2, shorthand2) in &methods[..i1] {
+            if shorthand1 == shorthand2 {
+                return Err(Error::DuplicateShorthand {
+                    shorthand: shorthand1.to_owned(),
+                    title1: meth1.title().to_owned(),
+                    title2: meth2.title().to_owned(),
+                });
+            }
+        }
+    }
+    Ok(())
+}
 
 /// Remove any [`Link`]s which are equal to another [`Link`] (ignoring names).
 ///

@@ -7,7 +7,7 @@ use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, S
 use index_vec::IndexVec;
 use itertools::Itertools;
 
-use super::{CourseHeadMask, SpliceStyle};
+use super::{check_duplicate_shorthand, CourseHeadMask, Error, Result, SpliceStyle};
 use crate::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
 /// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
@@ -26,6 +26,7 @@ pub fn coursewise(
     allowed_end_indices: Option<&[usize]>,
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
+    check_duplicate_shorthand(methods)?;
     let (mut method_datas, stage) = gen_method_data(methods, calls, ch_masks)?;
     let is_spliced = method_datas.len() > 1;
 
@@ -62,32 +63,6 @@ pub fn coursewise(
         stage,
     })
 }
-
-/// The ways that [`Layout::single_method`] can fail
-#[derive(Debug, Clone)]
-pub enum Error {
-    NoMethods,
-    UndefinedLeadLocation(String),
-    CallingPositionsTooShort {
-        call_name: String,
-        calling_position_len: usize,
-        stage: Stage,
-    },
-    /// Some courses match two different [`CourseHeadMask`]s with **different** calling bells.
-    ConflictingCallingBell(CourseHeadMask, CourseHeadMask),
-    AmbiguousCourseHeadPosition {
-        /// The first possible course head for the ambiguous course
-        mask1: Mask,
-        /// The course head mask given by the user which `mask1` satisfies
-        input_mask1: Mask,
-        /// The second possible course head for the ambiguous course
-        mask2: Mask,
-        /// The course head mask given by the user which `mask1` satisfies
-        input_mask2: Mask,
-    },
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 ///////////////////////////////
 // GENERATION OF METHOD DATA //
