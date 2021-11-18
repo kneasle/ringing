@@ -9,7 +9,7 @@ Goals are roughly ordered with most important first.
 
 - **Correct**: Monument should always produce compositions which satisfy your requirements, without
   crashes or unexpected behaviour.
-- **Speed**: Monument should complete most searches in the order of seconds.  Monument achieves this
+- **Fast**: Monument should complete most searches in the order of seconds.  Monument achieves this
   at the cost of _optimality_: Monument can't guarantee that its compositions are the _best_
   (according to your definition of 'good') but instead tries to generate very good compositions
   as quickly as it can.
@@ -35,7 +35,7 @@ which has lots of falseness and all courses have roughly the same (bad) music ou
 
 ## Example
 
-The following TOML file (found [here](examples/yorkshire-lessness-qps.toml)) will run a search for
+The following TOML file (found [here](examples/include-8765-courses.toml)) will run a search for
 QPs of Yorkshire and Lessness spliced, using entirely tenors-together courses but allowing
 `15678xxx` for the 8765s.  4ths place (near) calls are used by default:
 
