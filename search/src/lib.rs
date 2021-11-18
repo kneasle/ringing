@@ -3,8 +3,8 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 use bit_vec::BitVec;
 use frontier::Frontier;
 use log::log;
-use monument_graph::{self as m_gr, music::Score, Data, Rotation};
-use monument_layout::{node_range::End, Layout, LinkIdx, StartIdx};
+use monument_graph::{self as m_gr, music::Score, Data};
+use monument_layout::{node_range::End, Layout, LinkIdx, Rotation, StartIdx};
 use monument_utils::{coprime_bitmap, RowCounts};
 
 pub mod frontier;
@@ -28,13 +28,13 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
 
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();
-    for (node_idx, start_idx) in graph.starts.iter() {
+    for (node_idx, start_idx, rotation) in graph.starts.iter() {
         let node = &graph.nodes[*node_idx];
         frontier.push(CompPrefix::new(
             CompPath::Start(*start_idx),
             *node_idx,
             node.falseness.clone(),
-            0, // Start out with no rotation (i.e. we start at the 0th part head, which is rounds)
+            *rotation,
             node.score,
             node.length,
             node.method_counts.clone(),
@@ -104,7 +104,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                 continue; // Node would make comp too long
             }
             if unreachable_nodes.get(next_idx.index()).unwrap() {
-                continue; // Node is unreachable (i.e. false against something already in the comp)
+                continue; // Node is false against something already in the comp
             }
             if !method_counts
                 .is_feasible(data.len_range.end - length, data.method_count_range.clone())
@@ -277,7 +277,7 @@ impl CompPath {
         (start_idx, start_node_label, links)
     }
 
-    // Recursively flatten `self`, returning the start idx
+    /// Recursively flatten `self`, returning the start idx
     fn flatten_recursive(
         &self,
         graph: &Graph,
@@ -286,10 +286,10 @@ impl CompPath {
     ) -> (StartIdx, String) {
         match self {
             &Self::Start(start_idx) => {
-                let (start_node_idx, _) = graph
+                let (start_node_idx, _, _) = graph
                     .starts
                     .iter()
-                    .find(|(_, start_idx_2)| start_idx == *start_idx_2)
+                    .find(|(_, start_idx_2, _)| start_idx == *start_idx_2)
                     .unwrap();
                 let label = graph.node_label(*start_node_idx);
                 (start_idx, label)

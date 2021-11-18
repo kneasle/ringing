@@ -9,7 +9,7 @@ pub(super) fn strip_refs(graph: &mut Graph, _data: &Data) {
     let node_ids = graph.ids().cloned().collect::<HashSet<_>>();
 
     // Strip start/end nodes
-    graph.retain_start_nodes(|(id, _start_idx)| node_ids.contains(id));
+    graph.retain_start_nodes(|(id, _start_idx, _rotation)| node_ids.contains(id));
     graph.retain_end_nodes(|(id, _end_idx)| node_ids.contains(id));
     // Strip node refs (i.e. predecessor, successor or falseness)
     for (_id, node) in graph.nodes_mut() {

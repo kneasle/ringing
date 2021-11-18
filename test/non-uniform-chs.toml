@@ -1,0 +1,8 @@
+# Up to (and including) commit 65da271, this file caused a panic when generating falseness because
+# the falseness table would output some FCHs which didn't correspond to valid nodes.  This acts as a
+# regression test for that.
+
+length = "QP"
+method = "Yorkshire Surprise Major"
+course_heads = ["1xxxxx78", "15678xxx"]
+music_file = "music-8.toml"

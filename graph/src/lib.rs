@@ -9,7 +9,7 @@ pub mod optimise;
 use std::ops::Range;
 
 use bellframe::RowBuf;
-pub use graph::{Graph, Node, Rotation};
+pub use graph::{Graph, Node};
 pub use monument_layout::NodeId;
 
 /// Data about a composition external to the node graph.  This can be used for lookup during
@@ -28,6 +28,11 @@ pub struct Data {
 impl Data {
     pub fn unoptimised_graph(&self) -> Graph {
         // `- 1` on `len_range.end` makes sure that the length limit is an **inclusive** bound
-        Graph::from_layout(&self.layout, &self.music_types, self.len_range.end - 1)
+        Graph::from_layout(
+            &self.layout,
+            &self.music_types,
+            self.len_range.end - 1,
+            &self.part_head,
+        )
     }
 }

@@ -94,7 +94,7 @@ impl<'graph> DirectionalView<'graph> {
     /// Gets the IDs of the 'start' nodes of the [`Graph`] going in this [`Direction`]
     pub fn start_nodes(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
         match self.direction {
-            Forward => Box::new(self.graph.start_nodes().iter().map(|(id, _)| id)),
+            Forward => Box::new(self.graph.start_nodes().iter().map(|(id, _, _)| id)),
             Backward => Box::new(self.graph.end_nodes().iter().map(|(id, _)| id)),
         }
     }
@@ -103,7 +103,7 @@ impl<'graph> DirectionalView<'graph> {
     pub fn end_nodes(&self) -> Box<dyn Iterator<Item = &NodeId> + '_> {
         match self.direction {
             Forward => Box::new(self.graph.end_nodes().iter().map(|(id, _)| id)),
-            Backward => Box::new(self.graph.start_nodes().iter().map(|(id, _)| id)),
+            Backward => Box::new(self.graph.start_nodes().iter().map(|(id, _, _)| id)),
         }
     }
 

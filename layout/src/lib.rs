@@ -5,6 +5,7 @@ use std::{
 };
 
 use bellframe::{AnnotBlock, IncompatibleStages, Mask, Row, RowBuf, Stage};
+use node_range::PerPartLength;
 
 pub mod new;
 pub mod node_range;
@@ -57,13 +58,13 @@ impl Layout {
     /// Gets the [`RowIdx`] of the last row within a [`RowRange`] (or `None` if that range has size
     /// 0).
     pub fn last_row_idx(&self, row_range: RowRange) -> Option<RowIdx> {
-        (row_range.len > 0).then(|| {
+        (row_range.len.0 > 0).then(|| {
             let block_len = self.blocks[row_range.start.block].len();
             RowIdx::new(
                 row_range.start.block,
                 // The subtraction here cannot overflow, because this code only executes when
                 // `row_range.length > 0`
-                (row_range.start.row + row_range.len - 1) % block_len,
+                (row_range.start.row + row_range.len.0 - 1) % block_len,
             )
         })
     }
@@ -72,35 +73,18 @@ impl Layout {
     pub fn untransposed_rows(
         &self,
         row_idx: RowIdx,
-        length: usize,
+        length: PerPartLength,
     ) -> impl Iterator<Item = &'_ Row> {
         self.blocks[row_idx.block]
             .rows()
             .cycle()
             .skip(row_idx.row)
-            .take(length)
+            .take(length.0)
     }
 
     /////////////
     // HELPERS //
     /////////////
-
-    /// Gets the [`NodeId`] of the node that would appear after this [`Link`] is applied to a given
-    /// course.
-    fn id_after(&self, link: &Link, course_head: &Row) -> NodeId {
-        assert!(link.ch_mask.matches(course_head));
-        let new_ch = course_head * link.ch_transposition.as_row();
-
-        if self.idx_of_end(&new_ch, link.to).is_some() {
-            NodeId::ZeroLengthEnd
-        } else {
-            NodeId::Standard(StandardNodeId {
-                course_head: new_ch.to_arc(),
-                row_idx: link.to,
-                is_start: false, // Nodes reached by taking a link can't be start nodes
-            })
-        }
-    }
 
     /// Returns the [`EndIdx`] of the end at a given position, if it exists.  Used for detecting
     /// 0-length end nodes.
@@ -180,6 +164,11 @@ impl StartOrEnd {
         (&self.course_head, self.row_idx)
     }
 }
+
+/// Measure which determines which part head has been reached.  Each node link is given a
+/// `Rotation` which, when summed modulo [`Graph::num_parts`], will determine which part head has
+/// been reached (and therefore whether the composition is valid).
+pub type Rotation = u16;
 
 //////////////////////
 // INTERNAL STRUCTS //
@@ -326,11 +315,11 @@ impl From<StandardNodeId> for NodeId {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RowRange {
     pub start: RowIdx,
-    pub len: usize,
+    pub len: PerPartLength,
 }
 
 impl RowRange {
-    pub fn new(start: RowIdx, len: usize) -> Self {
+    pub fn new(start: RowIdx, len: PerPartLength) -> Self {
         Self { start, len }
     }
 }

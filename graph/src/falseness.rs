@@ -12,7 +12,7 @@ use std::{
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
-use monument_layout::{Layout, NodeId, RowIdx, RowRange};
+use monument_layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange};
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).
@@ -30,7 +30,7 @@ impl FalsenessTable {
     /// of nodes.
     pub fn from_layout<'a>(
         layout: &Layout,
-        nodes: impl IntoIterator<Item = &'a (NodeId, usize)>,
+        nodes: impl IntoIterator<Item = &'a (NodeId, PerPartLength)>,
     ) -> Self {
         // Extract (from the layout's links) which CH masks apply to each range start/end
         let (masks_by_range_start, masks_by_range_end) = ch_masks_from_links(layout);

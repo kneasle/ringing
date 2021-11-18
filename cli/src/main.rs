@@ -1,6 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    num::ParseIntError,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 
 use args::CliArgs;
+use bellframe::{
+    place_not::{self, PnBlockParseError},
+    InvalidRowError,
+};
 use itertools::Itertools;
 use log::log;
 use monument_graph::optimise::passes;
@@ -20,39 +28,60 @@ const QUEUE_LIMIT: usize = 10_000_000;
 fn main() {
     // Parse CLI args
     let args = CliArgs::from_args();
-    let log_level = args.log_level();
 
+    // Initialise logging
     pretty_logger::init(
         pretty_logger::Destination::Stderr,
-        log_level,
+        args.log_level(),
         pretty_logger::Theme::default(),
     )
     .unwrap();
 
+    // Run Monument
+    run(&args.input_file, args.debug_print).unwrap();
+}
+
+/// The possible ways that a run of Monument could fail
+#[derive(Debug)]
+pub enum Error {
+    NoMethods,
+    CcLibNotFound,
+    PartHeadParse(InvalidRowError),
+    SpecFile(PathBuf, spec::TomlReadError),
+    MusicFile(PathBuf, spec::TomlReadError),
+    MethodNotFound { suggestions: Vec<String> },
+    CallPnParse(String, place_not::ParseError),
+    MethodPnParse(PnBlockParseError),
+    LeadLocationIndex(String, ParseIntError),
+    LayoutGen(monument_layout::new::Error),
+}
+
+fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
         ($variant: ident, $val: expr) => {
-            if args.debug_print == Some(DebugPrint::$variant) {
+            if debug_print == Some(DebugPrint::$variant) {
                 dbg!($val);
-                panic!();
+                return Ok(());
             }
         };
     }
 
     // Generate & debug print the TOML file specifying the search
-    let spec = Spec::read_from_file(&args.input_file).unwrap();
+    let spec =
+        Spec::read_from_file(input_file).map_err(|e| Error::SpecFile(input_file.to_owned(), e))?;
     debug_print!(Spec, spec);
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::info!("Generating `Layout`");
-    let data = spec.lower(&args.input_file).unwrap();
+    let data = spec.lower(input_file)?;
     debug_print!(Data, data);
     debug_print!(Layout, data.layout);
 
     // Compile this `Layout` to an unoptimised `Graph`
     log::info!("Building `Graph`");
-    let graph = data.unoptimised_graph().to_multipart(&data).unwrap();
+    let graph = data.unoptimised_graph();
     debug_print!(Graph, graph);
     // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
     // independently and then searching in parallel is almost always better because the
@@ -65,6 +94,12 @@ fn main() {
     let mut passes = passes::default();
     for g in &mut graphs {
         g.optimise(&mut passes, &data);
+        log::debug!(
+            "{} nodes, {} starts, {} ends",
+            g.node_map().len(),
+            g.start_nodes().len(),
+            g.end_nodes().len()
+        );
     }
 
     // Run graph search on each graph in parallel
@@ -99,6 +134,8 @@ fn main() {
     for c in comps {
         print_comp(&c, &data.layout);
     }
+
+    Ok(())
 }
 
 fn print_comp(c: &Comp, layout: &Layout) {

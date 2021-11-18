@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use bit_vec::BitVec;
 use itertools::Itertools;
-use monument_graph::{music::Score, Data, NodeId, Rotation};
-use monument_layout::{node_range::End, LinkIdx, StartIdx};
+use monument_graph::{music::Score, Data, NodeId};
+use monument_layout::{node_range::End, LinkIdx, Rotation, StartIdx};
 use monument_utils::RowCounts;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub starts: Vec<(NodeIdx, StartIdx)>,
+    pub starts: Vec<(NodeIdx, StartIdx, Rotation)>,
     pub nodes: NodeVec<Node>,
 }
 
@@ -88,11 +88,12 @@ impl Graph {
                 let succs = source_node
                     .successors()
                     .iter()
-                    .map(|link| {
+                    .filter_map(|link| {
                         let link_idx = link.source_idx;
                         let score =
                             data.layout.links[link_idx].weight * source_graph.num_parts() as f32;
-                        Link::new(score, link_idx, id_to_index[&link.id], link.rotation)
+                        let succ_idx = id_to_index.get(&link.id)?;
+                        Some(Link::new(score, link_idx, *succ_idx, link.rotation))
                     })
                     .collect_vec();
 
@@ -111,10 +112,10 @@ impl Graph {
 
         // Compute the list of start nodes and their labels
         let mut starts = Vec::new();
-        for (start_id, start_idx) in source_graph.start_nodes() {
+        for (start_id, start_idx, rotation) in source_graph.start_nodes() {
             if source_graph.get_node(start_id).is_some() {
                 let node_idx = id_to_index[start_id];
-                starts.push((node_idx, *start_idx));
+                starts.push((node_idx, *start_idx, *rotation));
             }
         }
 

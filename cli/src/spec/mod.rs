@@ -1,16 +1,12 @@
 use std::{
     collections::HashMap,
-    num::ParseIntError,
     ops::Range,
     path::{Path, PathBuf},
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END,
-    method_lib::QueryError,
-    music::Regex,
-    place_not::{self, PnBlockParseError},
-    Bell, InvalidRowError, Mask, Method, MethodLib, RowBuf, Stage,
+    method::LABEL_LEAD_END, method_lib::QueryError, music::Regex, Bell, Mask, Method, MethodLib,
+    RowBuf, Stage,
 };
 use itertools::Itertools;
 use log::log;
@@ -22,6 +18,7 @@ use self::{
     calls::{BaseCalls, SpecificCall},
     length::Length,
 };
+use crate::Error;
 
 mod calls;
 
@@ -176,27 +173,6 @@ impl Spec {
             &self.calls,
         )?;
 
-        // Generate a `Layout` from the data about the method and calls
-        let start_indices = if self.snap_start {
-            None
-        } else {
-            self.start_indices.as_deref()
-        };
-
-        let layout = if self.leadwise {
-            leadwise::leadwise(&methods, &calls, start_indices, self.end_indices.as_deref())
-        } else {
-            coursewise::coursewise(
-                &methods,
-                &calls,
-                self.splice_style,
-                course_head_masks,
-                start_indices,
-                self.end_indices.as_deref(),
-            )
-        }
-        .map_err(Error::LayoutGen)?;
-
         // Data external to the `Layout`
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
@@ -205,6 +181,58 @@ impl Spec {
             Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
             None => RowBuf::rounds(stage),
         };
+
+        // Compute the start/end indices.
+        let mut start_indices = if self.snap_start {
+            None
+        } else {
+            self.start_indices.as_deref()
+        };
+        let mut end_indices = self.end_indices.as_deref();
+
+        // If this is a multi-part, then we require that
+        // `start_indices` and `end_indices` must specify the same set of nodes.
+        //
+        // TODO: This is not quite correct; more specifically, we need to create separate graphs
+        // for each of the possible start/end indices.  This is because most of Monument can't tell
+        // the difference between multi- and single-part comps, and therefore assumes that any pair
+        // of starts/finishes are allowed.  In a multi-part this is not true, because we really
+        // want the part-head to randomly cause a lead to re-start.  For the time being, we just
+        // panic if we'd generate a multi-part graph with more than one node.
+        let mut union_vec = Vec::new();
+        if !part_head.is_rounds() {
+            let idx_union = match (start_indices, end_indices) {
+                (Some(starts), Some(ends)) => {
+                    // We put the contents into `union_vec` so that our output has type
+                    // `Option<&[usize]>`.  The lifetime of the output is tied to the outer
+                    // function scope, which is long enough to be used to generate the `Layout`
+                    union_vec.extend(starts.iter().copied().filter(|i| ends.contains(i)));
+                    Some(union_vec.as_slice())
+                }
+                (Some(idxs), None) | (None, Some(idxs)) => Some(idxs),
+                (None, None) => None,
+            };
+            start_indices = idx_union;
+            end_indices = idx_union;
+            // Check that we only have one start/end index.  If we don't, Monument will try to
+            // mix-and-match, usually causing things like reaching part heads at the snap
+            assert!(idx_union.map_or(false, |idxs| idxs.len() == 1));
+        }
+
+        // Generate a `Layout` from the data about the method and calls
+        let layout = if self.leadwise {
+            leadwise::leadwise(&methods, &calls, start_indices, end_indices)
+        } else {
+            coursewise::coursewise(
+                &methods,
+                &calls,
+                self.splice_style,
+                course_head_masks,
+                start_indices,
+                end_indices,
+            )
+        }
+        .map_err(Error::LayoutGen)?;
 
         // Build this layout into a `Graph`
         Ok(Data {
@@ -246,20 +274,6 @@ fn method_count_range(
     let min = user_range.min.unwrap_or(min_f32.floor() as usize);
     let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
     min..max
-}
-
-/// The possible ways that a [`Spec`] -> [`Engine`] conversion can fail
-#[derive(Debug)]
-pub enum Error {
-    NoMethods,
-    CcLibNotFound,
-    PartHeadParse(InvalidRowError),
-    MusicFile(PathBuf, TomlReadError),
-    MethodNotFound { suggestions: Vec<String> },
-    CallPnParse(String, place_not::ParseError),
-    MethodPnParse(PnBlockParseError),
-    LeadLocationIndex(String, ParseIntError),
-    LayoutGen(monument_layout::new::Error),
 }
 
 /// Error generated when a user tries to read a TOML file from the FS
