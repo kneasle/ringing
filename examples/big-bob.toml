@@ -1,6 +1,4 @@
 length = "QP"
-# length = { min = 0, max = 400 }
-num_comps = 16
 method = "Yorkshire Surprise Royal"
 music_file = "music-10.toml"
 

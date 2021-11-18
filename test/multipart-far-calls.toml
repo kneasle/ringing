@@ -1,0 +1,7 @@
+# This tests what happens when the part-head appears part-way through a node.
+
+length = "peal"
+base_calls = "far"
+methods = ["Bristol Surprise Royal"]
+music_file = "music-10.toml"
+part_head = "165432"

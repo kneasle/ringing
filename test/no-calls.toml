@@ -5,10 +5,5 @@ methods = [
     "Yorkshire Surprise Major",
 ]
 splice_style = "leads"
-method_count = { min = 0, max = 400 }
-
-[[music]]
-run_lengths = [4, 5, 6, 7, 8]
-
-[[music]]
-patterns = ["*6578", "*5678", "*8765", "5678*", "8765*"]
+method_count = { min = 0, max = 300 }
+music_file = "music-8.toml"

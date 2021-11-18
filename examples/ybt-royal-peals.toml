@@ -1,9 +1,0 @@
-length = "peal"
-methods = ["Bristol Surprise Royal", "Yorkshire Surprise Royal", "Triton Delight Royal"]
-music_file = "music-10.toml"
-part_head = "165432"
-
-bob_weight = -3
-single_weight = -5
-
-method_count = { min = 1300, max = 2400 }
