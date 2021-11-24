@@ -2,10 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 use log::log;
-use monument_layout::{NodeId, StandardNodeId};
 use ordered_float::OrderedFloat;
 
-use crate::{music::Breakdown, Data, Graph, Node};
+use crate::{
+    graph::{music::Breakdown, Data, Graph, Node},
+    layout::{NodeId, StandardNodeId},
+};
 
 /// How many nodes will be searched to determine which node patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
@@ -18,7 +20,7 @@ pub(super) fn required_music_min(graph: &mut Graph, data: &Data) {
         .music_types
         .iter()
         .enumerate()
-        .filter_map(|(i, ty)| ty.count_range.min.map(|min| (i, min)))
+        .filter_map(|(i, ty)| ty.count_range().min.map(|min| (i, min)))
         .collect::<HashMap<_, _>>();
 
     if min_music_counts.is_empty() {

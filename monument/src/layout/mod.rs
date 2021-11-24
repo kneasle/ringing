@@ -126,7 +126,7 @@ impl Link {
     }
 
     /// Returns `true` if `self` and `other` are equal (but ignoring the name and CH masks)
-    pub(crate) fn eq_without_name_or_ch_mask(&self, other: &Self) -> bool {
+    fn eq_without_name_or_ch_mask(&self, other: &Self) -> bool {
         self.from == other.from
             && self.to == other.to
             && self.ch_transposition == other.ch_transposition

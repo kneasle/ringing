@@ -6,7 +6,7 @@ use bellframe::{Bell, Mask, PlaceNot, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
-use crate::Link;
+use super::Link;
 
 pub mod coursewise;
 pub mod leadwise;
@@ -92,7 +92,7 @@ impl CourseHeadMask {
     /// bell for the course mask `12345xxx`.  This generates a situation where the same call is
     /// given different names depending on the exact course head used (e.g. a call at `123458xx`
     /// would be called a `M`, whereas a call at `12345xx8` would be called `H`).
-    pub(crate) fn new(mask: Mask, calling_bell: Bell) -> Vec<Self> {
+    fn new(mask: Mask, calling_bell: Bell) -> Vec<Self> {
         if mask.place_of(calling_bell).is_some() {
             return vec![Self { mask, calling_bell }];
         } else {

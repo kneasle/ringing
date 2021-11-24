@@ -11,9 +11,11 @@ use bellframe::{
 };
 use itertools::Itertools;
 use log::log;
-use monument_graph::optimise::passes;
-use monument_layout::Layout;
-use monument_search::{frontier::BestFirst, search, Comp};
+use monument::{
+    graph::optimise::passes,
+    layout::Layout,
+    search::{frontier::BestFirst, search, Comp},
+};
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -53,7 +55,7 @@ pub enum Error {
     CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
     LeadLocationIndex(String, ParseIntError),
-    LayoutGen(monument_layout::new::Error),
+    LayoutGen(monument::layout::new::Error),
 }
 
 fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> {

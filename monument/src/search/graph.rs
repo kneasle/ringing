@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use crate::{
+    graph::{music::Score, Data},
+    layout::{node_range::End, LinkIdx, NodeId, Rotation, StartIdx},
+    utils::RowCounts,
+};
 use bit_vec::BitVec;
 use itertools::Itertools;
-use monument_graph::{music::Score, Data, NodeId};
-use monument_layout::{node_range::End, LinkIdx, Rotation, StartIdx};
-use monument_utils::RowCounts;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
@@ -57,13 +59,13 @@ impl Link {
 ///////////////////////////////////////////
 
 impl Graph {
-    pub fn new(source_graph: &monument_graph::Graph, data: &Data) -> Self {
+    pub fn new(source_graph: &crate::graph::Graph, data: &Data) -> Self {
         let num_nodes = source_graph.node_map().len();
 
         // Assign each node ID to a unique `NodeIdx`, and vice versa.  This way, we can now label
         // the set of nodes with numbers that can be used to index into a BitVec for falseness
         // computation.
-        let mut index_to_id = NodeVec::<(NodeId, &monument_graph::Node)>::new();
+        let mut index_to_id = NodeVec::<(NodeId, &crate::graph::Node)>::new();
         let mut id_to_index = HashMap::<NodeId, NodeIdx>::new();
         for (id, node) in source_graph.nodes() {
             let index = index_to_id.push((id.to_owned(), node));

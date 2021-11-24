@@ -10,9 +10,11 @@ use bellframe::{
 };
 use itertools::Itertools;
 use log::log;
-use monument_graph::{music::MusicType, Data};
-use monument_layout::new::{coursewise, leadwise, SpliceStyle};
-use monument_utils::OptRange;
+use monument::{
+    graph::{music::MusicType, Data},
+    layout::new::{coursewise, leadwise, SpliceStyle},
+    OptRange,
+};
 use serde::Deserialize;
 
 use self::{

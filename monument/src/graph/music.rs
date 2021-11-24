@@ -1,8 +1,8 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use crate::utils::OptRange;
 use bellframe::{music::Regex, Row, RowBuf, Stage};
 use itertools::Itertools;
-use monument_utils::OptRange;
 use ordered_float::OrderedFloat;
 
 pub type Score = OrderedFloat<f32>;
@@ -12,7 +12,7 @@ pub type Score = OrderedFloat<f32>;
 pub struct MusicType {
     regexes: Vec<Regex>,
     weight: Score,
-    pub(crate) count_range: OptRange,
+    count_range: OptRange,
 }
 
 impl MusicType {
@@ -36,6 +36,10 @@ impl MusicType {
         }
         // Give each match a score of `self.weight`
         Score::from(num_matches as f32) * self.weight
+    }
+
+    pub fn count_range(&self) -> OptRange {
+        self.count_range
     }
 }
 

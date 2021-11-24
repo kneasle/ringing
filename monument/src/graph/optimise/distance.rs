@@ -3,11 +3,9 @@ use std::{
     collections::{BinaryHeap, HashMap},
 };
 
-use monument_utils::FrontierItem;
+use crate::utils::FrontierItem;
 
-use crate::{optimise::NodeView, Data, NodeId};
-
-use super::DirectionalView;
+use super::{Data, DirectionalView, NodeId, NodeView};
 
 /// Compute node distances to/from rounds
 pub fn compute_distances(mut view: DirectionalView, data: &Data) {

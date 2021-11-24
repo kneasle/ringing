@@ -8,16 +8,17 @@ pub mod optimise;
 
 use std::ops::Range;
 
+use crate::layout::Layout;
 use bellframe::RowBuf;
+
 pub use graph::{Graph, Node};
-pub use monument_layout::NodeId;
 
 /// Data about a composition external to the node graph.  This can be used for lookup during
 /// composing, and to inform optimisation decisions.
 // TODO: Put this in its own file?
 #[derive(Debug, Clone)]
 pub struct Data {
-    pub layout: monument_layout::Layout,
+    pub layout: Layout,
     pub music_types: Vec<music::MusicType>,
     pub part_head: RowBuf,
     pub len_range: Range<usize>,

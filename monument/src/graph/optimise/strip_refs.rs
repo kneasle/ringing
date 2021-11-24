@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::{Data, Graph, NodeId};
+use crate::{
+    graph::{Data, Graph},
+    layout::NodeId,
+};
 
 /// Removes node references which point to non-existent nodes.  This cannot fail.
 pub(super) fn strip_refs(graph: &mut Graph, _data: &Data) {

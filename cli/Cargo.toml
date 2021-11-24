@@ -7,10 +7,7 @@ edition = "2018"
 bellframe = { path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
 log = "0.3" # TODO: Bump this to 0.4
-monument_graph.path = "../graph/"
-monument_layout.path = "../layout/"
-monument_search.path = "../search/"
-monument_utils.path = "../utils/"
+monument.path = "../monument/"
 pretty_logger = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 structopt = "0.3"

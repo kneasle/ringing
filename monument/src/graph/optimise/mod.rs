@@ -3,7 +3,9 @@
 
 use std::{fmt::Debug, ops::Not};
 
-use crate::{graph, Data, Graph, Node, NodeId};
+use crate::layout::NodeId;
+
+use super::{graph, Data, Graph, Node};
 
 use self::Direction::{Backward, Forward};
 
@@ -201,9 +203,12 @@ pub mod passes {
 
     use itertools::Itertools;
 
-    use crate::{optimise::DirectionalView, Data, Graph, NodeId};
+    use crate::{
+        graph::{Data, Graph},
+        layout::NodeId,
+    };
 
-    use super::Pass;
+    use super::{DirectionalView, Pass};
 
     /// A default sequence of built-in optimisation passes
     pub fn default() -> Vec<Pass> {

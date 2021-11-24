@@ -8,13 +8,16 @@ use std::{
 use bellframe::{Row, RowBuf};
 use itertools::Itertools;
 use log::log;
-use monument_layout::{
-    node_range::{End, NodeRange, PerPartLength, RangeEnd, RangeFactory, TotalLength},
-    Layout, LinkIdx, NodeId, Rotation, RowRange, StandardNodeId, StartIdx,
-};
-use monument_utils::{FrontierItem, RowCounts};
 
 use crate::{
+    layout::{
+        node_range::{End, NodeRange, PerPartLength, RangeEnd, RangeFactory, TotalLength},
+        Layout, LinkIdx, NodeId, Rotation, RowRange, StandardNodeId, StartIdx,
+    },
+    utils::{FrontierItem, RowCounts},
+};
+
+use super::{
     falseness::FalsenessTable,
     music::{Breakdown, MusicType, Score},
     optimise::Pass,

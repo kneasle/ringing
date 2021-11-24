@@ -5,7 +5,7 @@ use index_vec::IndexVec;
 use itertools::Itertools;
 
 use super::{check_duplicate_shorthand, Result, SNAP_FINISH_LABEL, SNAP_START_LABEL};
-use crate::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
+use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
 /// Creates a `Layout` where every course is exactly one lead long.
 pub fn leadwise(

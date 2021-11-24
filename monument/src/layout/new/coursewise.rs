@@ -8,7 +8,7 @@ use index_vec::IndexVec;
 use itertools::Itertools;
 
 use super::{check_duplicate_shorthand, CourseHeadMask, Error, Result, SpliceStyle};
-use crate::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
+use crate::layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
 /// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
 /// [`Call`](super::Call)s and course heads to use).

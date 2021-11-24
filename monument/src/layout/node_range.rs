@@ -2,9 +2,11 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use bellframe::{Row, RowBuf};
 use itertools::Itertools;
-use monument_utils::RowCounts;
 
-use crate::{EndIdx, Layout, Link, LinkIdx, NodeId, Rotation, StandardNodeId, StartIdx};
+use crate::{
+    layout::{EndIdx, Layout, Link, LinkIdx, NodeId, Rotation, StandardNodeId, StartIdx},
+    utils::RowCounts,
+};
 
 /// The length of a `Node` **in one part**.  This and [`TotalLength`] allow the compiler to catch
 /// people mistaking the different length semantics.

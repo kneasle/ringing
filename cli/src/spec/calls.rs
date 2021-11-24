@@ -1,5 +1,5 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
-use monument_layout::new::Call;
+use monument::layout::new::Call;
 use serde::{de, Deserialize, Deserializer};
 
 use super::Error;
@@ -13,7 +13,7 @@ pub enum BaseCalls {
 }
 
 impl BaseCalls {
-    pub(crate) fn to_call_specs(
+    pub fn to_call_specs(
         self,
         stage: Stage,
         bob_weight: Option<f32>,

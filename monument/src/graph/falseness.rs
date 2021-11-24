@@ -12,7 +12,7 @@ use std::{
 use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
-use monument_layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange};
+use crate::layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange};
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).
@@ -21,7 +21,7 @@ use monument_layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRang
 /// false course heads between the different node types.  This way, computing the falseness of a
 /// node is one [`HashMap`] lookup and some row transpositions.
 #[derive(Debug, Clone)]
-pub(crate) struct FalsenessTable {
+pub(super) struct FalsenessTable {
     falseness: HashMap<RowRange, Vec<(RowRange, RowBuf)>>,
 }
 

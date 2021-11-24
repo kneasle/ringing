@@ -3,9 +3,12 @@ use std::{cmp::Ordering, fmt::Debug, rc::Rc};
 use bit_vec::BitVec;
 use frontier::Frontier;
 use log::log;
-use monument_graph::{self as m_gr, music::Score, Data};
-use monument_layout::{node_range::End, Layout, LinkIdx, Rotation, StartIdx};
-use monument_utils::{coprime_bitmap, RowCounts};
+
+use crate::{
+    graph::{music::Score, Data},
+    layout::{node_range::End, Layout, LinkIdx, Rotation, StartIdx},
+    utils::{coprime_bitmap, RowCounts},
+};
 
 pub mod frontier;
 mod graph;
@@ -16,7 +19,7 @@ use graph::NodeIdx;
 /// Searches a [`Graph`](m_gr::Graph) for composition, according to some extra [`Data`].  For each
 /// composition `c` found, `on_comp(c)` will be called.
 pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
-    graph: &m_gr::Graph,
+    graph: &crate::graph::Graph,
     data: &Data,
     queue_limit: usize,
     mut comp_fn: CompFn,
@@ -24,7 +27,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
-    let graph = crate::graph::Graph::new(graph, data);
+    let graph = self::graph::Graph::new(graph, data);
 
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();

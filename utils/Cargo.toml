@@ -1,9 +1,0 @@
-[package]
-name = "monument_utils"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-gcd = "2.0"
-itertools = "0.10"
-serde = { version = "1.0", features = ["derive"] }
