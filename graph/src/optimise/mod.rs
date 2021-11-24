@@ -29,16 +29,20 @@ pub enum Pass {
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
     pub fn run(&mut self, graph: &mut Graph, data: &Data) {
+        let mut run_in_direction = |direction: Direction, pass: &mut DirectionalPass| {
+            pass(DirectionalView::new(graph, direction), data)
+        };
+
         match self {
             Pass::Single(pass) => pass(graph, data),
-            Pass::OneDirection(pass, direction) => run_in_direction(*direction, pass, graph, data),
+            Pass::OneDirection(pass, direction) => run_in_direction(*direction, pass),
             Pass::BothDirections(pass) => {
-                run_in_direction(Forward, pass, graph, data);
-                run_in_direction(Backward, pass, graph, data);
+                run_in_direction(Forward, pass);
+                run_in_direction(Backward, pass);
             }
             Pass::BothDirectionsRev(pass) => {
-                run_in_direction(Backward, pass, graph, data);
-                run_in_direction(Forward, pass, graph, data);
+                run_in_direction(Backward, pass);
+                run_in_direction(Forward, pass);
             }
         }
     }
@@ -47,15 +51,6 @@ impl Pass {
 ////////////////////////
 // DIRECTIONAL PASSES //
 ////////////////////////
-
-fn run_in_direction(
-    direction: Direction,
-    pass: &mut DirectionalPass,
-    graph: &mut Graph,
-    data: &Data,
-) {
-    pass(DirectionalView::new(graph, direction), data)
-}
 
 /// A `Direction` in which a [`DirectionalPass`] can be run
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Copy)]
@@ -198,6 +193,7 @@ impl<'graph> NodeViewMut<'graph> {
 ////////////////////
 
 mod distance; // Compute node distances
+mod music; // Proving nodes as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent nodes
 
 pub mod passes {
@@ -219,6 +215,7 @@ pub mod passes {
             // Required node optimisation
             single_start_or_end_required(),
             remove_nodes_false_against_required(),
+            required_music(),
         ]
     }
 
@@ -228,6 +225,12 @@ pub mod passes {
     /// removing any which can't reach rounds in either direction.
     pub fn strip_refs() -> Pass {
         Pass::Single(Box::new(super::strip_refs::strip_refs))
+    }
+
+    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
+    /// removing any which can't reach rounds in either direction.
+    pub fn required_music() -> Pass {
+        Pass::Single(Box::new(super::music::required_music_min))
     }
 
     /* Distance related passes */

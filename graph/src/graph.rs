@@ -308,11 +308,15 @@ impl Node {
     }
 
     pub fn score(&self) -> Score {
-        self.music.total
+        self.music.score
     }
 
     pub fn label(&self) -> &str {
         self.label.as_str()
+    }
+
+    pub fn music(&self) -> &Breakdown {
+        &self.music
     }
 
     // STARTS/ENDS //

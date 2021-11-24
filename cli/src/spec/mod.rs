@@ -12,6 +12,7 @@ use itertools::Itertools;
 use log::log;
 use monument_graph::{music::MusicType, Data};
 use monument_layout::new::{coursewise, leadwise, SpliceStyle};
+use monument_utils::OptRange;
 use serde::Deserialize;
 
 use self::{
@@ -122,7 +123,7 @@ impl Spec {
         let mut music_types = self
             .music
             .iter()
-            .map(|spec| spec.to_music_type(stage))
+            .flat_map(|spec| spec.to_music_types(stage))
             .collect_vec();
         if let Some(relative_music_path) = &self.music_file {
             // Compute the path of the music TOML file
@@ -140,7 +141,7 @@ impl Spec {
                 music_file
                     .music
                     .iter()
-                    .map(|spec| spec.to_music_type(stage)),
+                    .flat_map(|spec| spec.to_music_types(stage)),
             );
         }
         if music_types.is_empty() {
@@ -399,13 +400,6 @@ impl MethodSpec {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct OptRange {
-    min: Option<usize>,
-    max: Option<usize>,
-}
-
 ///////////
 // MUSIC //
 ///////////
@@ -417,6 +411,7 @@ pub struct MusicFile {
 }
 
 /// The specification for one type of music
+// TODO: Find a way to get good deserialization without duplicating fields in every enum variant.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum MusicSpec {
@@ -427,6 +422,9 @@ pub enum MusicSpec {
         internal: bool,
         #[serde(default = "get_one")]
         weight: f32,
+        /// Possibly unbounded range of counts which are allowed in this music type
+        #[serde(default)]
+        count: OptRange,
     },
     RunsList {
         #[serde(rename = "run_lengths")]
@@ -435,50 +433,109 @@ pub enum MusicSpec {
         internal: bool,
         #[serde(default = "get_one")]
         weight: f32,
+        /// Possibly unbounded range of counts which are allowed in this music type
+        #[serde(default)]
+        count: OptRange,
     },
     Pattern {
         pattern: String,
+        /// For each pattern, which music counts are allowed
+        #[serde(default)]
+        count_each: OptRange,
         #[serde(default = "get_one")]
         weight: f32,
+        /// Possibly unbounded range of counts which are allowed in this music type
+        #[serde(default)]
+        count: OptRange,
     },
     Patterns {
         patterns: Vec<String>,
+        /// For each pattern, which music counts are allowed
+        #[serde(default)]
+        count_each: OptRange,
         #[serde(default = "get_one")]
         weight: f32,
+        /// Possibly unbounded range of counts which are allowed in this music type
+        #[serde(default)]
+        count: OptRange,
     },
 }
 
 impl MusicSpec {
     /// Generates a [`MusicType`] representing `self`.
-    pub fn to_music_type(&self, stage: Stage) -> MusicType {
-        MusicType::new(self.regexes(stage), self.weight())
-    }
-
-    /// Gets the weight given to one instance of this `MusicSpec`
-    fn weight(&self) -> f32 {
-        match self {
-            Self::Runs { weight, .. } => *weight,
-            Self::RunsList { weight, .. } => *weight,
-            Self::Pattern { weight, .. } => *weight,
-            Self::Patterns { weight, .. } => *weight,
+    pub fn to_music_types(&self, stage: Stage) -> Vec<MusicType> {
+        enum LoweredType<'_self> {
+            /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
+            Runs(&'_self [usize], &'_self bool),
+            /// Equivalent to [`Self::Pattern`] or [`Self::Pattern`]
+            Patterns(&'_self [String], &'_self OptRange),
         }
-    }
 
-    /// Gets the [`Regex`]es which match this `MusicSpec`
-    fn regexes(&self, stage: Stage) -> Vec<Regex> {
-        match self {
+        // Extract the information from `self` into a normalised form
+        let (lowered_type, weight, count) = match self {
             Self::Runs {
-                length, internal, ..
-            } => Regex::runs(stage, *length, *internal),
+                length,
+                internal,
+                weight,
+                count,
+            } => (
+                LoweredType::Runs(std::slice::from_ref(length), internal),
+                weight,
+                count,
+            ),
             Self::RunsList {
-                lengths, internal, ..
-            } => lengths
-                .iter()
-                .flat_map(|length| Regex::runs(stage, *length, *internal))
-                .collect_vec(),
-            Self::Pattern { pattern, .. } => vec![Regex::parse(pattern)],
-            Self::Patterns { patterns, .. } => {
-                patterns.iter().map(|s| Regex::parse(s)).collect_vec()
+                lengths,
+                internal,
+                weight,
+                count,
+            } => (LoweredType::Runs(lengths, internal), weight, count),
+            Self::Pattern {
+                pattern,
+                count_each,
+                weight,
+                count,
+            } => (
+                LoweredType::Patterns(std::slice::from_ref(pattern), count_each),
+                weight,
+                count,
+            ),
+            Self::Patterns {
+                patterns,
+                count_each,
+                weight,
+                count,
+            } => (LoweredType::Patterns(patterns, count_each), weight, count),
+        };
+        let weight = *weight;
+        let count = *count;
+
+        match lowered_type {
+            LoweredType::Runs(lengths, internal) => {
+                let regexes = lengths
+                    .iter()
+                    .flat_map(|length| Regex::runs(stage, *length, *internal))
+                    .collect_vec();
+                // Runs can't take the `count_each` parameter, so can all be grouped into one
+                // `MusicType`
+                vec![MusicType::new(regexes, weight, count)]
+            }
+            LoweredType::Patterns(patterns, count_each) => {
+                let regexes = patterns.iter().map(|s| Regex::parse(s));
+                if count_each.is_set() {
+                    if count.is_set() {
+                        todo!("Mixing `count` and `count_each` isn't implemented yet!");
+                    }
+                    // If just `count_each` is set, we generate a separate `MusicType` for each
+                    // pattern.  Each `MusicType` will contain exactly one `regex` corresponding to
+                    // that pattern.
+                    regexes
+                        .map(|regex| MusicType::new(vec![regex], weight, *count_each))
+                        .collect_vec()
+                } else {
+                    // If `count_each` isn't set, we group all the patterns into one `MusicType` and
+                    // apply `count` to all the regexes
+                    vec![MusicType::new(regexes.collect_vec(), weight, count)]
+                }
             }
         }
     }

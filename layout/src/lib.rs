@@ -135,7 +135,7 @@ impl Link {
 
 /// The unique index of a [`Row`] within a [`Layout`].  This is essentially a `(block_idx,
 /// row_idx)` pair.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RowIdx {
     pub block: BlockIdx,
     pub row: usize,
@@ -187,7 +187,7 @@ pub enum NodeId {
 }
 
 impl NodeId {
-    pub fn standard(course_head: Arc<Row>, row_idx: RowIdx, is_start: bool) -> Self {
+    pub fn new_standard(course_head: Arc<Row>, row_idx: RowIdx, is_start: bool) -> Self {
         Self::Standard(StandardNodeId {
             course_head,
             row_idx,
@@ -196,7 +196,14 @@ impl NodeId {
     }
 
     pub fn is_standard(&self) -> bool {
-        matches!(self, Self::Standard(_))
+        self.standard().is_some()
+    }
+
+    pub fn standard(&self) -> Option<&StandardNodeId> {
+        match self {
+            NodeId::Standard(s) => Some(s),
+            NodeId::ZeroLengthEnd => None,
+        }
     }
 
     pub fn std_id(&self) -> Option<&StandardNodeId> {
@@ -244,7 +251,7 @@ impl NodeId {
 }
 
 /// The ID of a node which isn't a 0-length end
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct StandardNodeId {
     pub course_head: Arc<Row>, // `Arc` is used to make cloning cheaper
     pub row_idx: RowIdx,

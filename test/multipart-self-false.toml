@@ -1,0 +1,9 @@
+# The first lead of Oxford is false against itself in the other part.  Thus, no compositions should
+# possible because the first lead can't be used.  If self-false nodes aren't removed then touches
+# like `sH` would be considered possible, so this makes sure that self-false nodes are always
+# removed
+
+length = "practice"
+method = "Oxford Treble Bob Major"
+part_head = "1243"
+music_file = "music-8.toml"

@@ -51,6 +51,9 @@ pub enum DebugPrint {
     Data,
     Layout,
     Graph,
+    /// Stop just before the search starts, to let the user see what's been printed out without
+    /// scrolling
+    Search,
 }
 
 impl FromStr for DebugPrint {
@@ -62,9 +65,10 @@ impl FromStr for DebugPrint {
             "data" => Self::Data,
             "layout" => Self::Layout,
             "graph" => Self::Graph,
+            "search" => Self::Search,
             _ => {
                 return Err(format!(
-                    "Unknown value {:?}. Expected `spec`, `data`, `layout` or `graph`.",
+                    "Unknown value {:?}. Expected `spec`, `data`, `layout`, `graph` or `search`.",
                     v
                 ))
             }

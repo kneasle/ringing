@@ -1,4 +1,5 @@
 use gcd::Gcd;
+use serde::Deserialize;
 use std::cmp::Ordering;
 
 mod row_counts;
@@ -51,5 +52,24 @@ impl<T> PartialOrd for FrontierItem<T> {
 impl<T> Ord for FrontierItem<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.distance.cmp(&other.distance)
+    }
+}
+
+/// An inclusive range where each side is optionally bounded.  This is essentially a combination of
+/// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),
+/// [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and
+/// [`RangeFull`](std::ops::RangeFull) (`..`).
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OptRange {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+
+impl OptRange {
+    /// Returns `true` if at least one of `min` or `max` is set
+    pub fn is_set(&self) -> bool {
+        self.min.is_some() || self.max.is_some()
     }
 }

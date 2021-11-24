@@ -537,6 +537,7 @@ dependencies = [
  "monument_graph",
  "monument_layout",
  "monument_search",
+ "monument_utils",
  "pretty_logger",
  "serde",
  "structopt",
@@ -590,6 +591,7 @@ version = "0.1.0"
 dependencies = [
  "gcd",
  "itertools",
+ "serde",
 ]
 
 [[package]]

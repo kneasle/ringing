@@ -103,6 +103,9 @@ fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> 
     }
 
     // Run graph search on each graph in parallel
+    if debug_print == Some(DebugPrint::Search) {
+        return Ok(());
+    }
     log::info!("Starting tree search");
     let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let data = Arc::new(data);
