@@ -25,7 +25,7 @@ mod args;
 mod spec;
 
 /// Max number of comp prefixes stored in the queues of all threads
-const QUEUE_LIMIT: usize = 10_000_000;
+const DEFAULT_QUEUE_LIMIT: usize = 10_000_000;
 
 fn main() {
     // Parse CLI args
@@ -40,7 +40,12 @@ fn main() {
     .unwrap();
 
     // Run Monument
-    run(&args.input_file, args.debug_print).unwrap();
+    run(
+        &args.input_file,
+        args.debug_print,
+        args.queue_limit.unwrap_or(DEFAULT_QUEUE_LIMIT),
+    )
+    .unwrap();
 }
 
 /// The possible ways that a run of Monument could fail
@@ -58,7 +63,11 @@ pub enum Error {
     LayoutGen(monument::layout::new::Error),
 }
 
-fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> {
+fn run(
+    input_file: &Path,
+    debug_print: Option<DebugPrint>,
+    queue_limit: usize,
+) -> Result<(), Error> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
@@ -112,7 +121,6 @@ fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> 
     let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let data = Arc::new(data);
     let num_threads = graphs.len();
-    let queue_limit = QUEUE_LIMIT / num_threads;
     let handles = graphs
         .into_iter()
         .map(|graph| {
@@ -123,7 +131,7 @@ fn run(input_file: &Path, debug_print: Option<DebugPrint>) -> Result<(), Error> 
                     print_comp(&c, &data.layout);
                     comps.lock().unwrap().push(c);
                 };
-                search::<BestFirst<_>, _>(&graph, &data, queue_limit, on_find_comp);
+                search::<BestFirst<_>, _>(&graph, &data, queue_limit / num_threads, on_find_comp);
             })
         })
         .collect_vec();

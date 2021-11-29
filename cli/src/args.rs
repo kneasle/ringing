@@ -15,6 +15,9 @@ pub struct CliArgs {
     /// The maximum number of threads that Monument will use
     #[structopt(short = "T", long)]
     pub num_threads: Option<usize>,
+    /// The maximum number of threads that Monument will use
+    #[structopt(short = "Q", long)]
+    pub queue_limit: Option<usize>,
 
     /// Makes Monument print more output (`-vv` will produce all output).
     #[structopt(short, long = "verbose", parse(from_occurrences))]
