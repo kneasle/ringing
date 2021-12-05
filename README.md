@@ -9,7 +9,7 @@ Goals are roughly ordered with most important first.
 
 - **Correct**: Monument should always produce compositions which satisfy your requirements, without
   crashes or unexpected behaviour.
-- **Fast**: Monument should complete most searches in the order of seconds.  Monument achieves this
+- **Fast**: Monument should complete most searches in the order of seconds to minutes.  Monument persues this goal
   at the cost of _optimality_: Monument can't guarantee that its compositions are the _best_
   (according to your definition of 'good') but instead tries to generate very good compositions
   as quickly as it can.
