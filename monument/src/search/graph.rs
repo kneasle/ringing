@@ -19,10 +19,10 @@ pub struct Graph {
 #[derive(Debug, Clone)]
 pub struct Node {
     pub score: Score,
-    pub length: usize,
+    pub length: u32,
     pub method_counts: RowCounts,
     /// Minimum number of rows required to go from the end of `self` to rounds
-    pub dist_to_rounds: usize,
+    pub dist_to_rounds: u32,
     pub label: String,
 
     // Indices must be aligned with those from the source graph
@@ -101,9 +101,9 @@ impl Graph {
 
                 Node {
                     score: source_node.score(),
-                    length: source_node.length(),
+                    length: source_node.length() as u32,
                     method_counts: source_node.method_counts().clone(),
-                    dist_to_rounds: source_node.lb_distance_to_rounds,
+                    dist_to_rounds: source_node.lb_distance_to_rounds as u32,
                     label: source_node.label().to_owned(),
                     end: source_node.end(),
                     succs,

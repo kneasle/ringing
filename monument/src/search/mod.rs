@@ -24,6 +24,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
+    let len_range = (data.len_range.start as u32)..(data.len_range.end as u32);
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
@@ -50,22 +51,25 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     let mut num_comps = 0;
     while let Some(prefix) = frontier.pop() {
         let CompPrefix {
+            inner,
+            avg_score,
+            length,
+        } = prefix;
+        let PrefixInner {
             path,
             node_idx,
             unreachable_nodes,
             rotation,
 
             score,
-            length,
             method_counts,
-            avg_score,
-        } = prefix;
+        } = *inner;
         let node = &graph.nodes[node_idx];
 
         // Check if the comp has come round
         if let Some(end) = node.end {
             // TODO: Check that the rotation is valid
-            if data.len_range.contains(&length)
+            if len_range.contains(&length)
                 && method_counts.is_feasible(0, data.method_count_range.clone())
                 && rotation_bitmap & (1 << rotation) != 0
             {
@@ -77,7 +81,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                     end,
 
                     rotation,
-                    length,
+                    length: length as usize,
                     method_counts,
                     score,
                     avg_score,
@@ -103,15 +107,16 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             let score = score + succ_node.score + link.score;
             let method_counts = &method_counts + &succ_node.method_counts;
 
-            if length + succ_node.dist_to_rounds >= data.len_range.end {
+            if length + succ_node.dist_to_rounds >= len_range.end {
                 continue; // Node would make comp too long
             }
             if unreachable_nodes.get(next_idx.index()).unwrap() {
                 continue; // Node is false against something already in the comp
             }
-            if !method_counts
-                .is_feasible(data.len_range.end - length, data.method_count_range.clone())
-            {
+            if !method_counts.is_feasible(
+                (len_range.end - length) as usize,
+                data.method_count_range.clone(),
+            ) {
                 continue; // Can't recover the method balance before running out of rows
             }
 
@@ -142,7 +147,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             let mut total_len = 0;
             let mut max_len = 0;
             frontier.iter().for_each(|n| {
-                total_len += n.length;
+                total_len += n.length as usize;
                 max_len = max_len.max(n.length);
             });
 
@@ -194,9 +199,23 @@ impl Comp {
 // COMP PREFIX //
 /////////////////
 
-/// The prefix of a composition.  These are ordered by score.
 #[derive(Debug, Clone)]
 pub struct CompPrefix {
+    /// Data for this prefix which isn't accessed as much as `avg_score` or `length`.  We store it
+    /// in a [`Box`] because the frontier spends a lot of time swapping elements, and copying a
+    /// 128-bit struct is much much faster than copying an inlined [`PrefixInner`].  `avg_score`
+    /// and `length` are accessed so often that they are left unboxed.
+    inner: Box<PrefixInner>,
+    /// Score per row in the composition
+    avg_score: Score,
+    /// Length refers to the **end** of the current node.  We use `u32` because [`Score`] is also
+    /// 32 bits long, making `CompPrefix` pack into 128 bits
+    length: u32,
+}
+
+/// The prefix of a composition.  These are ordered by score.
+#[derive(Debug, Clone)]
+struct PrefixInner {
     /// The path traced to this node
     path: CompPath,
 
@@ -209,13 +228,8 @@ pub struct CompPrefix {
 
     /// Score refers to the **end** of the current node
     score: Score,
-    /// Length refers to the **end** of the current node
-    length: usize,
     /// Method counts refers to the **end** of the current node
     method_counts: RowCounts,
-
-    /// Score per row in the composition
-    avg_score: Score,
 }
 
 impl CompPrefix {
@@ -225,17 +239,19 @@ impl CompPrefix {
         unreachable_nodes: BitVec,
         rotation: Rotation,
         score: Score,
-        length: usize,
+        length: u32,
         method_counts: RowCounts,
     ) -> Self {
         Self {
-            path,
-            node_idx,
-            unreachable_nodes,
-            rotation,
-            score,
+            inner: Box::new(PrefixInner {
+                path,
+                node_idx,
+                unreachable_nodes,
+                rotation,
+                score,
+                method_counts,
+            }),
             length,
-            method_counts,
             avg_score: score / length as f32,
         }
     }
