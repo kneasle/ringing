@@ -2,6 +2,7 @@ use std::{
     num::ParseIntError,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
+    time::Instant,
 };
 
 use args::CliArgs;
@@ -68,6 +69,8 @@ fn run(
     debug_print: Option<DebugPrint>,
     queue_limit: usize,
 ) -> Result<(), Error> {
+    let start_time = Instant::now();
+
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
@@ -147,6 +150,8 @@ fn run(
     for c in comps {
         print_comp(&c, &data.layout);
     }
+
+    println!("Search completed in {:?}", Instant::now() - start_time);
 
     Ok(())
 }
