@@ -5,9 +5,10 @@ use frontier::Frontier;
 use log::log;
 
 use crate::{
-    graph::{music::Score, Data},
     layout::{node_range::End, Layout, LinkIdx, Rotation, StartIdx},
+    music::Score,
     utils::{coprime_bitmap, RowCounts},
+    Query,
 };
 
 pub mod frontier;
@@ -20,15 +21,15 @@ use graph::NodeIdx;
 /// composition `c` found, `on_comp(c)` will be called.
 pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     graph: &crate::graph::Graph,
-    data: &Data,
+    query: &Query,
     queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
-    let len_range = (data.len_range.start as u32)..(data.len_range.end as u32);
+    let len_range = (query.len_range.start as u32)..(query.len_range.end as u32);
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
-    let graph = self::graph::Graph::new(graph, data);
+    let graph = self::graph::Graph::new(graph, query);
 
     // Initialise the frontier to just the start nodes
     let mut frontier = Ftr::default();
@@ -70,10 +71,10 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
         if let Some(end) = node.end {
             // TODO: Check that the rotation is valid
             if len_range.contains(&length)
-                && method_counts.is_feasible(0, data.method_count_range.clone())
+                && method_counts.is_feasible(0, query.method_count_range.clone())
                 && rotation_bitmap & (1 << rotation) != 0
             {
-                let (start_idx, start_node_label, links) = path.flatten(&graph, data);
+                let (start_idx, start_node_label, links) = path.flatten(&graph, query);
                 let comp = Comp {
                     start_idx,
                     start_node_label,
@@ -89,7 +90,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
                 comp_fn(comp);
                 num_comps += 1;
 
-                if num_comps == data.num_comps {
+                if num_comps == query.num_comps {
                     break; // Stop the search once we've got enough comps
                 }
             }
@@ -115,7 +116,7 @@ pub fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
             }
             if !method_counts.is_feasible(
                 (len_range.end - length) as usize,
-                data.method_count_range.clone(),
+                query.method_count_range.clone(),
             ) {
                 continue; // Can't recover the method balance before running out of rows
             }
@@ -290,9 +291,9 @@ enum CompPath {
 }
 
 impl CompPath {
-    fn flatten(&self, graph: &Graph, data: &Data) -> (StartIdx, String, Vec<(LinkIdx, String)>) {
+    fn flatten(&self, graph: &Graph, query: &Query) -> (StartIdx, String, Vec<(LinkIdx, String)>) {
         let mut links = Vec::new();
-        let (start_idx, start_node_label) = self.flatten_recursive(graph, data, &mut links);
+        let (start_idx, start_node_label) = self.flatten_recursive(graph, query, &mut links);
         (start_idx, start_node_label, links)
     }
 
@@ -300,21 +301,21 @@ impl CompPath {
     fn flatten_recursive(
         &self,
         graph: &Graph,
-        data: &Data,
+        query: &Query,
         out: &mut Vec<(LinkIdx, String)>,
     ) -> (StartIdx, String) {
         match self {
-            &Self::Start(start_idx) => {
+            Self::Start(start_idx) => {
                 let (start_node_idx, _, _) = graph
                     .starts
                     .iter()
-                    .find(|(_, start_idx_2, _)| start_idx == *start_idx_2)
+                    .find(|(_, start_idx_2, _)| start_idx == start_idx_2)
                     .unwrap();
                 let label = graph.node_label(*start_node_idx);
-                (start_idx, label)
+                (*start_idx, label)
             }
             Self::Cons(lhs, link, node_idx) => {
-                let start = lhs.flatten_recursive(graph, data, out);
+                let start = lhs.flatten_recursive(graph, query, out);
                 out.push((*link, graph.node_label(*node_idx)));
                 start
             }

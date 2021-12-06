@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph::{music::Score, Data},
     layout::{node_range::End, LinkIdx, NodeId, Rotation, StartIdx},
+    music::Score,
     utils::RowCounts,
+    Query,
 };
 use bit_vec::BitVec;
 use itertools::Itertools;
@@ -59,7 +60,7 @@ impl Link {
 ///////////////////////////////////////////
 
 impl Graph {
-    pub fn new(source_graph: &crate::graph::Graph, data: &Data) -> Self {
+    pub fn new(source_graph: &crate::graph::Graph, query: &Query) -> Self {
         let num_nodes = source_graph.node_map().len();
 
         // Assign each node ID to a unique `NodeIdx`, and vice versa.  This way, we can now label
@@ -93,7 +94,7 @@ impl Graph {
                     .filter_map(|link| {
                         let link_idx = link.source_idx;
                         let score =
-                            data.layout.links[link_idx].weight * source_graph.num_parts() as f32;
+                            query.layout.links[link_idx].weight * source_graph.num_parts() as f32;
                         let succ_idx = id_to_index.get(&link.id)?;
                         Some(Link::new(score, link_idx, *succ_idx, link.rotation))
                     })

@@ -11,9 +11,9 @@ use bellframe::{
 use itertools::Itertools;
 use log::log;
 use monument::{
-    graph::{music::MusicType, Data},
     layout::new::{coursewise, leadwise, SpliceStyle},
-    OptRange,
+    music::MusicType,
+    OptRange, Query,
 };
 use serde::Deserialize;
 
@@ -102,7 +102,7 @@ impl Spec {
     }
 
     /// 'Lower' this specification into the information required to build a composition.
-    pub fn lower(&self, toml_path: &Path) -> Result<Data, Error> {
+    pub fn lower(&self, toml_path: &Path) -> Result<Query, Error> {
         // Generate methods
         let mut methods: Vec<(Method, String)> = self
             .methods
@@ -238,7 +238,7 @@ impl Spec {
         .map_err(Error::LayoutGen)?;
 
         // Build this layout into a `Graph`
-        Ok(Data {
+        Ok(Query {
             layout,
             music_types,
             part_head,

@@ -14,15 +14,12 @@ use crate::{
         node_range::{End, NodeRange, PerPartLength, RangeEnd, RangeFactory, TotalLength},
         Layout, LinkIdx, NodeId, Rotation, RowRange, StandardNodeId, StartIdx,
     },
+    music::{Breakdown, MusicType, Score},
     utils::{FrontierItem, RowCounts},
+    Query,
 };
 
-use super::{
-    falseness::FalsenessTable,
-    music::{Breakdown, MusicType, Score},
-    optimise::Pass,
-    Data,
-};
+use super::{falseness::FalsenessTable, optimise::Pass};
 
 /// The number of rows required to get from a point in the graph to a start/end.
 type Distance = usize;
@@ -114,17 +111,17 @@ impl Graph {
 
     /// Repeatedly apply a sequence of [`Pass`]es until the graph stops getting smaller, or 20
     /// iterations are made.  Use [`Graph::optimise_with_iter_limit`] to set a custom iteration limit.
-    pub fn optimise(&mut self, passes: &mut [Pass], data: &Data) {
-        self.optimise_with_iter_limit(passes, data, 20);
+    pub fn optimise(&mut self, passes: &mut [Pass], query: &Query) {
+        self.optimise_with_iter_limit(passes, query, 20);
     }
 
     /// Repeatedly apply a sequence of [`Pass`]es until the graph either becomes static, or `limit`
     /// many iterations are performed.
-    pub fn optimise_with_iter_limit(&mut self, passes: &mut [Pass], data: &Data, limit: usize) {
+    pub fn optimise_with_iter_limit(&mut self, passes: &mut [Pass], query: &Query, limit: usize) {
         let mut last_size = Size::from(&*self);
 
         for _ in 0..limit {
-            self.run_passes(passes, data);
+            self.run_passes(passes, query);
 
             let new_size = Size::from(&*self);
             // Stop optimising if the optimisations don't make the graph strictly smaller.  If
@@ -138,9 +135,9 @@ impl Graph {
     }
 
     /// Run a sequence of [`Pass`]es on `self`
-    pub fn run_passes(&mut self, passes: &mut [Pass], data: &Data) {
+    pub fn run_passes(&mut self, passes: &mut [Pass], query: &Query) {
         for p in &mut *passes {
-            p.run(self, data);
+            p.run(self, query);
         }
     }
 

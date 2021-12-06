@@ -1,6 +1,7 @@
 use std::{path::PathBuf, str::FromStr};
 
 use log::LogLevelFilter as LevelFilter;
+use monument::DebugOutput;
 use structopt::StructOpt;
 
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
@@ -26,7 +27,7 @@ pub struct CliArgs {
     #[structopt(short, long = "quiet", parse(from_occurrences))]
     pub quietness: usize,
 
-    /// Debug print an internal data structure and terminate.  Options are `spec`, `data`,
+    /// Debug print an internal data structure and terminate.  Options are `spec`, `query`,
     /// `layout` and `graph`.
     #[structopt(short = "D", long)]
     pub debug_print: Option<DebugPrint>,
@@ -51,7 +52,7 @@ impl CliArgs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DebugPrint {
     Spec,
-    Data,
+    Query,
     Layout,
     Graph,
     /// Stop just before the search starts, to let the user see what's been printed out without
@@ -65,16 +66,26 @@ impl FromStr for DebugPrint {
     fn from_str(v: &str) -> Result<Self, String> {
         Ok(match v.to_lowercase().as_str() {
             "spec" => Self::Spec,
-            "data" => Self::Data,
+            "query" => Self::Query,
             "layout" => Self::Layout,
             "graph" => Self::Graph,
             "search" => Self::Search,
             _ => {
                 return Err(format!(
-                    "Unknown value {:?}. Expected `spec`, `data`, `layout`, `graph` or `search`.",
+                    "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `search`.",
                     v
                 ))
             }
+        })
+    }
+}
+
+impl Into<Option<DebugOutput>> for DebugPrint {
+    fn into(self) -> Option<DebugOutput> {
+        Some(match self {
+            DebugPrint::Graph => DebugOutput::Graph,
+            DebugPrint::Search => DebugOutput::StopBeforeSearch,
+            _ => return None,
         })
     }
 }

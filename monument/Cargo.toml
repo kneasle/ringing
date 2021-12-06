@@ -12,3 +12,4 @@ itertools = "0.10"
 log = "0.3"
 ordered-float = "2.8"
 serde = { version = "1.0", features = ["derive"] }
+num_cpus = "1.13"

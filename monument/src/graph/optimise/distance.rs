@@ -5,10 +5,10 @@ use std::{
 
 use crate::utils::FrontierItem;
 
-use super::{Data, DirectionalView, NodeId, NodeView};
+use super::{DirectionalView, NodeId, NodeView, Query};
 
 /// Compute node distances to/from rounds
-pub fn compute_distances(mut view: DirectionalView, data: &Data) {
+pub fn compute_distances(mut view: DirectionalView, query: &Query) {
     // TODO: Refactor out Dijkstra's algorithm into its own method?
 
     // Set of nodes which are reachable within the range limit, mapped to their shortest distance
@@ -40,7 +40,7 @@ pub fn compute_distances(mut view: DirectionalView, data: &Data) {
         // Skip this node if any node succeeding it would take longer to reach than the length of
         // the composition
         let distance_after_node = distance + node_view.node.length();
-        if distance_after_node > data.len_range.end {
+        if distance_after_node > query.len_range.end {
             continue;
         }
 

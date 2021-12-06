@@ -3,16 +3,16 @@
 
 use std::{fmt::Debug, ops::Not};
 
-use crate::layout::NodeId;
+use crate::{layout::NodeId, Query};
 
-use super::{graph, Data, Graph, Node};
+use super::{graph, Graph, Node};
 
 use self::Direction::{Backward, Forward};
 
-pub type SinglePass = Box<dyn FnMut(&mut Graph, &Data)>;
+pub type SinglePass = Box<dyn FnMut(&mut Graph, &Query)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  For example,
 /// computing distances to/from rounds (removing unreachable nodes).
-pub type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Data)>;
+pub type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
@@ -30,13 +30,13 @@ pub enum Pass {
 
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
-    pub fn run(&mut self, graph: &mut Graph, data: &Data) {
+    pub fn run(&mut self, graph: &mut Graph, query: &Query) {
         let mut run_in_direction = |direction: Direction, pass: &mut DirectionalPass| {
-            pass(DirectionalView::new(graph, direction), data)
+            pass(DirectionalView::new(graph, direction), query)
         };
 
         match self {
-            Pass::Single(pass) => pass(graph, data),
+            Pass::Single(pass) => pass(graph, query),
             Pass::OneDirection(pass, direction) => run_in_direction(*direction, pass),
             Pass::BothDirections(pass) => {
                 run_in_direction(Forward, pass);
@@ -203,10 +203,7 @@ pub mod passes {
 
     use itertools::Itertools;
 
-    use crate::{
-        graph::{Data, Graph},
-        layout::NodeId,
-    };
+    use crate::{graph::Graph, layout::NodeId, Query};
 
     use super::{DirectionalView, Pass};
 
@@ -248,8 +245,8 @@ pub mod passes {
 
     /// A [`Pass`] which removes any nodes which can't be included in a short enough round block.
     pub fn strip_long_nodes() -> Pass {
-        fn pass(graph: &mut Graph, data: &Data) {
-            graph.retain_nodes(|_id, node| node.min_comp_length() < data.len_range.end);
+        fn pass(graph: &mut Graph, query: &Query) {
+            graph.retain_nodes(|_id, node| node.min_comp_length() < query.len_range.end);
         }
         Pass::Single(Box::new(pass))
     }

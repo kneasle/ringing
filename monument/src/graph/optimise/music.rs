@@ -5,18 +5,20 @@ use log::log;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    graph::{music::Breakdown, Data, Graph, Node},
+    graph::{Graph, Node},
     layout::{NodeId, StandardNodeId},
+    music::Breakdown,
+    Query,
 };
 
 /// How many nodes will be searched to determine which node patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
 
-pub(super) fn required_music_min(graph: &mut Graph, data: &Data) {
+pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     log::debug!("\n\n\n");
 
     // For each `MusicType`, maps its index to minimum count
-    let min_music_counts = data
+    let min_music_counts = query
         .music_types
         .iter()
         .enumerate()
@@ -40,7 +42,7 @@ pub(super) fn required_music_min(graph: &mut Graph, data: &Data) {
         .partition::<Vec<_>, _>(|(_id, node)| node.required);
 
     // Determine how much music is contributed by required nodes.
-    let mut required_music_counts = vec![0; data.music_types.len()];
+    let mut required_music_counts = vec![0; query.music_types.len()];
     for (idx, min) in &min_music_counts {
         required_music_counts[*idx] = *min;
     }

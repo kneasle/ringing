@@ -1,7 +1,7 @@
 use std::{
     num::ParseIntError,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::Instant,
 };
 
@@ -10,13 +10,8 @@ use bellframe::{
     place_not::{self, PnBlockParseError},
     InvalidRowError,
 };
-use itertools::Itertools;
 use log::log;
-use monument::{
-    graph::optimise::passes,
-    layout::Layout,
-    search::{frontier::BestFirst, search, Comp},
-};
+use monument::{layout::Layout, Comp, Config};
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -89,69 +84,32 @@ fn run(
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::info!("Generating `Layout`");
-    let data = spec.lower(input_file)?;
-    debug_print!(Data, data);
-    debug_print!(Layout, data.layout);
+    let query = Arc::new(spec.lower(input_file)?);
+    debug_print!(Query, query);
+    debug_print!(Layout, &query.layout);
 
-    // Compile this `Layout` to an unoptimised `Graph`
-    log::info!("Building `Graph`");
-    let graph = data.unoptimised_graph();
-    debug_print!(Graph, graph);
-    // Split the graph into multiple graphs, each with exactly one start node.  Optimising these
-    // independently and then searching in parallel is almost always better because the
-    // optimisation passes have more concrete information about each graph.
-    // let mut graphs = vec![graph];
-    let mut graphs = graph.split_by_start_node();
+    // Generate config
+    let mut config = Config::default();
+    config.queue_limit = queue_limit;
+    config.num_threads = Some(1);
 
-    // Optimise the graphs
-    log::info!("Optimising `Graph`s");
-    let mut passes = passes::default();
-    for g in &mut graphs {
-        g.optimise(&mut passes, &data);
-        log::debug!(
-            "{} nodes, {} starts, {} ends",
-            g.node_map().len(),
-            g.start_nodes().len(),
-            g.end_nodes().len()
-        );
-    }
+    // Run query and handle its debug output
+    let query_result =
+        monument::run_query(query.clone(), &mut config, debug_print.and_then(Into::into));
+    match query_result {
+        Ok(comps) => {
+            println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
+            for c in comps {
+                print_comp(&c, &query.layout);
+            }
 
-    // Run graph search on each graph in parallel
-    if debug_print == Some(DebugPrint::Search) {
-        return Ok(());
-    }
-    log::info!("Starting tree search");
-    let comps = Arc::from(Mutex::new(Vec::<Comp>::new()));
-    let data = Arc::new(data);
-    let num_threads = graphs.len();
-    let handles = graphs
-        .into_iter()
-        .map(|graph| {
-            let data = data.clone();
-            let comps = comps.clone();
-            std::thread::spawn(move || {
-                let on_find_comp = |c: Comp| {
-                    print_comp(&c, &data.layout);
-                    comps.lock().unwrap().push(c);
-                };
-                search::<BestFirst<_>, _>(&graph, &data, queue_limit / num_threads, on_find_comp);
-            })
-        })
-        .collect_vec();
-    // Wait for the worker threads to finish
-    for h in handles {
-        h.join().unwrap();
-    }
-
-    // Display all the comps in sorted order
-    println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
-    let mut comps = comps.lock().unwrap().clone();
-    comps.sort_by_key(|comp| comp.avg_score);
-    for c in comps {
-        print_comp(&c, &data.layout);
-    }
-
-    println!("Search completed in {:?}", Instant::now() - start_time);
+            println!("Search completed in {:?}", Instant::now() - start_time);
+        }
+        Err(Some(graph)) => {
+            dbg!(graph);
+        }
+        Err(None) => {}
+    };
 
     Ok(())
 }
