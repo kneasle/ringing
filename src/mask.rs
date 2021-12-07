@@ -67,7 +67,7 @@ impl Mask {
     /// Modifies `self` so that a [`Bell`] is fixed in its home position.  Returns `Err(())` if
     /// that [`Bell`] already appears in this `Mask`.
     #[inline]
-    pub fn fix(&mut self, b: Bell) -> Result<(), ()> {
+    pub fn fix(&mut self, b: Bell) -> Result<(), BellAlreadySet> {
         self.set_bell(b, b.index())
     }
 
@@ -130,14 +130,14 @@ impl Mask {
     }
 
     /// Updates this `Mask` so that a given [`Bell`] is required at a given place.
-    pub fn set_bell(&mut self, bell: Bell, place: usize) -> Result<(), ()> {
+    pub fn set_bell(&mut self, bell: Bell, place: usize) -> Result<(), BellAlreadySet> {
         let existing_bell_place = self
             .bells
             .iter()
             .position(|maybe_bell| maybe_bell == &Some(bell));
         match existing_bell_place {
             Some(p) if p == place => Ok(()), // Bell is already fixed, so nothing to do
-            Some(_) => Err(()), // Bell is fixed to a different place, adding it would fix it twice
+            Some(_) => Err(BellAlreadySet), // Bell is fixed to a different place, adding it would fix it twice
             None => {
                 // Unsafety is OK because this match arm only executes if the bell isn't fixed in
                 // `self`
@@ -261,6 +261,10 @@ impl Mask {
         })
     }
 }
+
+/// Error struct returned by [`Mask::fix`]
+#[derive(Debug, Clone, Copy)]
+pub struct BellAlreadySet;
 
 /* ===== FORMATTING ===== */
 

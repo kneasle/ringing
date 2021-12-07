@@ -325,7 +325,7 @@ fn classify<A>(first_lead: &AnnotBlock<A>) -> FullClass {
             sub_classify_plain(cycles)
         }
         HuntBellClass::TrebleDodging => {
-            sub_classify_treble_dodging(&first_lead, &hunt_cycles_in_best_class)
+            sub_classify_treble_dodging(first_lead, &hunt_cycles_in_best_class)
         }
         HuntBellClass::TreblePlace => Class::TreblePlace,
         HuntBellClass::Alliance => Class::Alliance,

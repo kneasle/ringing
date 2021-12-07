@@ -3,7 +3,7 @@
 mod bell;
 pub mod block;
 pub mod call;
-mod mask;
+pub mod mask;
 pub mod method;
 pub mod method_lib;
 pub mod music;

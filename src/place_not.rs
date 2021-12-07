@@ -452,7 +452,7 @@ impl PnBlock {
 
             // Handle the output of parsing the current block
             if is_single_block || is_asymmetric {
-                pns.extend(sym_block_buf.drain(..));
+                pns.append(&mut sym_block_buf);
             } else {
                 // Clone sym_block_buf into `pns` in order
                 pns.extend_from_slice(&sym_block_buf);

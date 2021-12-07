@@ -214,7 +214,7 @@ impl<A> AnnotBlock<A> {
     /// checking.
     #[inline]
     pub fn leftover_row(&self) -> &Row {
-        &self.rows.last().unwrap()
+        self.rows.last().unwrap()
     }
 
     //////////////////////////////
