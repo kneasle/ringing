@@ -105,8 +105,8 @@ fn search_node_combinations<'gr>(
     let mut iter_count_down = ITERATION_LIMIT;
     search_nodes(
         non_required_nodes.iter(),
-        &counts_needed_from_non_required_nodes,
-        &non_required_nodes,
+        counts_needed_from_non_required_nodes,
+        non_required_nodes,
         &mut nodes_used,
         &mut node_patterns,
         &mut iter_count_down,

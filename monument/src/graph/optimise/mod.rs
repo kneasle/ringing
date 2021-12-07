@@ -5,7 +5,7 @@ use std::{fmt::Debug, ops::Not};
 
 use crate::{layout::NodeId, Query};
 
-use super::{graph, Graph, Node};
+use super::{Graph, Node};
 
 use self::Direction::{Backward, Forward};
 
@@ -138,14 +138,14 @@ impl<'graph> NodeView<'graph> {
         Self { node, direction }
     }
 
-    pub fn successors(self) -> &'graph [graph::Link] {
+    pub fn successors(self) -> &'graph [super::Link] {
         match self.direction {
             Forward => self.node.successors(),
             Backward => self.node.predecessors(),
         }
     }
 
-    pub fn predecessors(self) -> &'graph [graph::Link] {
+    pub fn predecessors(self) -> &'graph [super::Link] {
         match self.direction {
             Forward => self.node.predecessors(),
             Backward => self.node.successors(),
@@ -167,14 +167,14 @@ impl<'graph> NodeViewMut<'graph> {
         Self { node, direction }
     }
 
-    pub fn successors_mut(&mut self) -> &mut Vec<graph::Link> {
+    pub fn successors_mut(&mut self) -> &mut Vec<super::Link> {
         match self.direction {
             Forward => self.node.successors_mut(),
             Backward => self.node.predecessors_mut(),
         }
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<graph::Link> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<super::Link> {
         match self.direction {
             Forward => self.node.predecessors_mut(),
             Backward => self.node.successors_mut(),
