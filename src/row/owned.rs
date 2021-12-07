@@ -491,6 +491,18 @@ impl FromStr for RowBuf {
     }
 }
 
+impl PartialEq<Row> for RowBuf {
+    fn eq(&self, other: &Row) -> bool {
+        self.as_row() == other
+    }
+}
+
+impl PartialEq<RowBuf> for Row {
+    fn eq(&self, other: &RowBuf) -> bool {
+        self == other.as_row()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

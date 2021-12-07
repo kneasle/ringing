@@ -926,10 +926,69 @@ impl Mul for &RowBuf {
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     fn mul(self, rhs: &RowBuf) -> Self::Output {
-        assert_eq!(self.stage(), rhs.stage());
-        // This unsafety is OK because the product of two valid Rows of the same Stage is always
-        // valid (because groups are closed under their binary operation).
-        unsafe { self.mul_unchecked(rhs) }
+        self * rhs.as_row()
+    }
+}
+
+impl Mul<&Row> for &RowBuf {
+    type Output = RowBuf;
+
+    /// Uses the RHS to permute the LHS without consuming either argument.
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::{RowBuf};
+    ///
+    /// // Multiplying two Rows of the same Stage just returns a new RowBuf
+    /// assert_eq!(
+    ///     &RowBuf::parse("13425678")? * &RowBuf::parse("43217568")?,
+    ///     RowBuf::parse("24317568")?
+    /// );
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    ///
+    /// ```should_panic
+    /// use bellframe::{RowBuf};
+    ///
+    /// // Multiplying two Rows of different Stages will panic rather than
+    /// // produce undefined behaviour
+    /// let _unrow = &RowBuf::parse("13425678")? * &RowBuf::parse("4321")?;
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    #[inline]
+    fn mul(self, rhs: &Row) -> Self::Output {
+        self.as_row() * rhs
+    }
+}
+
+impl Mul<&RowBuf> for &Row {
+    type Output = RowBuf;
+
+    /// Uses the RHS to permute the LHS without consuming either argument.
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::{RowBuf};
+    ///
+    /// // Multiplying two Rows of the same Stage just returns a new RowBuf
+    /// assert_eq!(
+    ///     &RowBuf::parse("13425678")? * &RowBuf::parse("43217568")?,
+    ///     RowBuf::parse("24317568")?
+    /// );
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    ///
+    /// ```should_panic
+    /// use bellframe::{RowBuf};
+    ///
+    /// // Multiplying two Rows of different Stages will panic rather than
+    /// // produce undefined behaviour
+    /// let _unrow = &*RowBuf::parse("13425678")? * &*RowBuf::parse("4321")?;
+    /// # Ok::<(), bellframe::InvalidRowError>(())
+    /// ```
+    #[inline]
+    fn mul(self, rhs: &RowBuf) -> Self::Output {
+        self * rhs.as_row()
     }
 }
 
@@ -958,11 +1017,9 @@ impl Mul for &Row {
     /// let _unrow = &*RowBuf::parse("13425678")? * &*RowBuf::parse("4321")?;
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
+    #[inline]
     fn mul(self, rhs: &Row) -> Self::Output {
-        assert_eq!(self.stage(), rhs.stage());
-        // This unsafety is OK because the product of two valid Rows of the same Stage is always
-        // valid (because groups are closed under their binary operation).
-        unsafe { self.mul_unchecked(rhs) }
+        self.mul_result(rhs).unwrap()
     }
 }
 
