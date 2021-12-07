@@ -37,16 +37,8 @@ symbol = "x"
 #(opt) calling_positions = "LIBFVXSMWH"
 
 [[music]]
-run_length = 4
-#(opt) weight = 1
-
-[[music]]
 run_lengths = [5, 6, 7, 8]
 #(opt) weight = 1
-
-[[music]]
-pattern = "*7x8x9x0"
-weight = 3
 
 [[music]]
 patterns = ["*7x8x9x0", "*657890"]

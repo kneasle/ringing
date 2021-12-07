@@ -418,32 +418,10 @@ pub struct MusicFile {
 #[serde(untagged, deny_unknown_fields)]
 pub enum MusicSpec {
     Runs {
-        #[serde(rename = "run_length")]
-        length: usize,
-        #[serde(default)]
-        internal: bool,
-        #[serde(default = "get_one")]
-        weight: f32,
-        /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(default)]
-        count: OptRange,
-    },
-    RunsList {
         #[serde(rename = "run_lengths")]
         lengths: Vec<usize>,
         #[serde(default)]
         internal: bool,
-        #[serde(default = "get_one")]
-        weight: f32,
-        /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(default)]
-        count: OptRange,
-    },
-    Pattern {
-        pattern: String,
-        /// For each pattern, which music counts are allowed
-        #[serde(default)]
-        count_each: OptRange,
         #[serde(default = "get_one")]
         weight: f32,
         /// Possibly unbounded range of counts which are allowed in this music type
@@ -476,31 +454,11 @@ impl MusicSpec {
         // Extract the information from `self` into a normalised form
         let (lowered_type, weight, count) = match self {
             Self::Runs {
-                length,
-                internal,
-                weight,
-                count,
-            } => (
-                LoweredType::Runs(std::slice::from_ref(length), internal),
-                weight,
-                count,
-            ),
-            Self::RunsList {
                 lengths,
                 internal,
                 weight,
                 count,
             } => (LoweredType::Runs(lengths, internal), weight, count),
-            Self::Pattern {
-                pattern,
-                count_each,
-                weight,
-                count,
-            } => (
-                LoweredType::Patterns(std::slice::from_ref(pattern), count_each),
-                weight,
-                count,
-            ),
             Self::Patterns {
                 patterns,
                 count_each,
