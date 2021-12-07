@@ -406,5 +406,6 @@ fn equiv_ch(
     }
     // If the first part head is rounds, then `ph * ch = ch` when `rotation = 0`.  Therefore, this
     // CH will be given class 0.
+    #[allow(clippy::unnecessary_cast)]
     (ch.to_owned(), 0 as Rotation)
 }

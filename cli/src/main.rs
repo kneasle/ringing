@@ -89,9 +89,11 @@ fn run(
     debug_print!(Layout, &query.layout);
 
     // Generate config
-    let mut config = Config::default();
-    config.queue_limit = queue_limit;
-    config.num_threads = Some(1);
+    let mut config = Config {
+        queue_limit,
+        num_threads: Some(1),
+        ..Config::default()
+    };
 
     // Run query and handle its debug output
     let query_result =

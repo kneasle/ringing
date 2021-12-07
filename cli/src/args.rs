@@ -80,9 +80,9 @@ impl FromStr for DebugPrint {
     }
 }
 
-impl Into<Option<DebugOutput>> for DebugPrint {
-    fn into(self) -> Option<DebugOutput> {
-        Some(match self {
+impl From<DebugPrint> for Option<DebugOutput> {
+    fn from(dbg_print: DebugPrint) -> Option<DebugOutput> {
+        Some(match dbg_print {
             DebugPrint::Graph => DebugOutput::Graph,
             DebugPrint::Search => DebugOutput::StopBeforeSearch,
             _ => return None,
