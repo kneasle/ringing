@@ -206,6 +206,42 @@ impl Regex {
         runs
     }
 
+    /// Creates a set of `Regex`es which match runs of a given length anywhere in a [`Row`].  If
+    /// the run length is longer than the stage, then no `Regex`es are returned.
+    pub fn all_runs(stage: Stage, len: usize) -> Vec<Self> {
+        let num_bells = stage.num_bells();
+
+        let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
+        // Iterate over every bell which could start a run
+        for i in 0..=num_bells - len {
+            // An iterator that yields the bells forming this run in ascending order
+            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+
+            // This unsafety is OK because all of the input patterns must be normalised because
+            // they contain only one wildcard
+            let descending_regex = unsafe {
+                // Descending runs (e.g. `*1234*`)
+                Self::from_elems_unchecked(
+                    once(RegexElem::Glob)
+                        .chain(run_iterator.clone())
+                        .chain(once(RegexElem::Glob)),
+                )
+            };
+            let ascending_regex = unsafe {
+                // Ascending runs (e.g. `*4321*`)
+                Self::from_elems_unchecked(
+                    once(RegexElem::Glob)
+                        .chain(run_iterator.clone().rev())
+                        .chain(once(RegexElem::Glob)),
+                )
+            };
+
+            runs.push(descending_regex);
+            runs.push(ascending_regex);
+        }
+        runs
+    }
+
     /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
     pub fn runs_front_or_back(stage: Stage, len: usize) -> Vec<Self> {
@@ -213,6 +249,16 @@ impl Regex {
         runs.extend(Self::runs_front(stage, len));
         runs.extend(Self::runs_back(stage, len));
         runs
+    }
+
+    /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    pub fn runs(stage: Stage, len: usize, internal: bool) -> Vec<Self> {
+        if internal {
+            Self::all_runs(stage, len)
+        } else {
+            Self::runs_front_or_back(stage, len)
+        }
     }
 
     /// Gets a slice over the [`RegexElem`]s making up this `Regex`
