@@ -157,6 +157,10 @@ impl Mask {
         self.bells[place] = Some(bell);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.bells.iter().all(Option::is_none)
+    }
+
     /// If this mask matches exactly one [`Row`], then return that [`Row`] (otherwise `None`).
     pub fn as_row(&self) -> Option<RowBuf> {
         if self.bells.iter().all(Option::is_some) {
