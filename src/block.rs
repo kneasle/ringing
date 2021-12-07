@@ -248,7 +248,7 @@ impl<A> AnnotBlock<A> {
     /// `AnnotBlock`.  This does not include the 'left-over' row; if you want to include the
     /// left-over [`Row`], use [`AnnotBlock::all_rows`] instead.
     #[inline]
-    pub fn annot_rows(&self) -> impl Iterator<Item = AnnotRow<A>> {
+    pub fn annot_rows(&self) -> impl Iterator<Item = AnnotRow<A>> + Clone {
         self.rows()
             .zip_eq(self.annots())
             .map(|(r, a)| AnnotRow::new(r, a))
