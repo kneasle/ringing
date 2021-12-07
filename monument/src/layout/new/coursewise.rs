@@ -3,7 +3,9 @@ use std::{
     ops::Mul,
 };
 
-use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage};
+use bellframe::{
+    mask::BellAlreadySet, method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage,
+};
 use index_vec::IndexVec;
 use itertools::Itertools;
 
@@ -122,7 +124,7 @@ fn add_fixed_bells(
     'mask_loop: for (mut mask, calling_bell) in ch_masks {
         // Attempt to add the fixed bells to this mask
         for &b in &fixed_bells {
-            if let Err(()) = mask.fix(b) {
+            if let Err(BellAlreadySet) = mask.fix(b) {
                 // If a bell is known to be fixed in its home position but a mask requires it to be
                 // outside of its home position, then that mask will never be satisfied and can be
                 // removed.  For example, this would remove `x1xxx...` as a course head in Surprise
