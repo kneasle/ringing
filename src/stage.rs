@@ -88,6 +88,11 @@ impl Stage {
         self.0
     }
 
+    /// Returns the highest numbered [`Bell`] in this `Stage`
+    pub fn tenor(self) -> Bell {
+        Bell::tenor(self)
+    }
+
     /// Gets an [`Iterator`] over the [`Bell`]s contained within this `Stage`, in increasing order.
     pub fn bells(self) -> impl Iterator<Item = Bell> {
         (0..self.num_bells()).map(Bell::from_index)
