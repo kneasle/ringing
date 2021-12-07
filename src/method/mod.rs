@@ -119,6 +119,10 @@ impl Method {
         &self.name
     }
 
+    pub fn title(&self) -> &str {
+        self.title.as_ref()
+    }
+
     //////////////////////////////
     // BLOCK-RELATED OPERATIONS //
     //////////////////////////////
@@ -149,10 +153,7 @@ impl Method {
         let first_lead_with_indices = self
             .first_lead
             // We use `as_deref` to convert `&Option<String>` to `Option<&str>`
-            .clone_map_annots_with_index(|i, label| RowAnnot {
-                sub_lead_idx: i,
-                label: label.as_deref(),
-            });
+            .clone_map_annots_with_index(|i, label| RowAnnot::new(i, label.as_deref()));
 
         // Start with the first lead, and repeatedly add leads until we get back to rounds
         let mut plain_course = first_lead_with_indices;
@@ -228,6 +229,13 @@ pub struct RowAnnot<'meth> {
 }
 
 impl<'meth> RowAnnot<'meth> {
+    fn new(sub_lead_idx: usize, label: Option<&'meth str>) -> Self {
+        Self {
+            sub_lead_idx,
+            label,
+        }
+    }
+
     pub fn sub_lead_idx(&self) -> usize {
         self.sub_lead_idx
     }
