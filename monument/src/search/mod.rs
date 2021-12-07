@@ -1,7 +1,6 @@
-use std::{cmp::Ordering, fmt::Debug, rc::Rc};
+use std::{cmp::Ordering, collections::BinaryHeap, fmt::Debug, rc::Rc};
 
 use bit_vec::BitVec;
-use frontier::Frontier;
 use log::log;
 
 use crate::{
@@ -11,7 +10,6 @@ use crate::{
     Comp, Query,
 };
 
-pub mod frontier;
 mod graph;
 
 pub use graph::Graph;
@@ -19,7 +17,7 @@ use graph::NodeIdx;
 
 /// Searches a [`Graph`](m_gr::Graph) for composition, according to some extra [`Data`].  For each
 /// composition `c` found, `on_comp(c)` will be called.
-pub(crate) fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
+pub(crate) fn search<CompFn: FnMut(Comp)>(
     graph: &crate::graph::Graph,
     query: &Query,
     queue_limit: usize,
@@ -32,7 +30,7 @@ pub(crate) fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     let graph = self::graph::Graph::new(graph, query);
 
     // Initialise the frontier to just the start nodes
-    let mut frontier = Ftr::default();
+    let mut frontier = BinaryHeap::new();
     for (node_idx, start_idx, rotation) in graph.starts.iter() {
         let node = &graph.nodes[*node_idx];
         frontier.push(CompPrefix::new(
@@ -138,7 +136,7 @@ pub(crate) fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
         // If the queue gets too long, then halve its size
         if frontier.len() >= queue_limit {
             log::debug!("Truncating queue");
-            frontier.truncate(queue_limit / 2);
+            truncate_heap(&mut frontier, queue_limit / 2);
         }
 
         // Print stats every so often
@@ -162,13 +160,22 @@ pub(crate) fn search<Ftr: Frontier<CompPrefix> + Debug, CompFn: FnMut(Comp)>(
     }
 }
 
+fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
+    let heap = std::mem::take(heap_ref);
+    let mut nodes = heap.into_vec();
+    nodes.sort_by(|a, b| b.cmp(a)); // Sort highest score first
+    if len < nodes.len() {
+        nodes.drain(len..);
+    }
+    *heap_ref = BinaryHeap::from(nodes);
+}
+
 ///////////////////
 // COMP PREFIXES //
 ///////////////////
 
 #[derive(Debug, Clone)]
-// TODO: Not pub(crate)
-pub(crate) struct CompPrefix {
+struct CompPrefix {
     /// Data for this prefix which isn't accessed as much as `avg_score` or `length`.  We store it
     /// in a [`Box`] because the frontier spends a lot of time swapping elements, and copying a
     /// 128-bit struct is much much faster than copying an inlined [`PrefixInner`].  `avg_score`

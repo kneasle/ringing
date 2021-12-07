@@ -131,12 +131,7 @@ pub fn run_query(
                     print_comp(&c, &query.layout);
                     comps.lock().unwrap().push(c);
                 };
-                search::search::<search::frontier::BestFirst<_>, _>(
-                    &graph,
-                    &query,
-                    queue_limit / num_threads,
-                    on_find_comp,
-                );
+                search::search(&graph, &query, queue_limit / num_threads, on_find_comp);
             })
         })
         .collect_vec();
