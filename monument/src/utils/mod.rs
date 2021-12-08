@@ -30,8 +30,8 @@ pub struct FrontierItem<T> {
 }
 
 impl<T> FrontierItem<T> {
-    pub fn new(item: T) -> Self {
-        Self { item, distance: 0 }
+    pub fn new(item: T, distance: usize) -> Self {
+        Self { item, distance }
     }
 }
 

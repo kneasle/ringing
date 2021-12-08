@@ -1,9 +1,14 @@
 //! A plugin-able system of passes made over the composition [`Graph`], in order to modify or
 //! optimise the graph.
 
-use std::{fmt::Debug, ops::Not};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, HashMap},
+    fmt::Debug,
+    ops::Not,
+};
 
-use crate::{layout::NodeId, Query};
+use crate::{layout::NodeId, utils::FrontierItem, Query};
 
 use super::{Graph, Node};
 
@@ -194,7 +199,6 @@ impl<'graph> NodeViewMut<'graph> {
 // BUILTIN PASSES //
 ////////////////////
 
-mod distance; // Compute node distances
 mod music; // Proving nodes as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent nodes
 
@@ -240,15 +244,29 @@ pub mod passes {
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
     /// removing any which can't reach rounds in either direction.
     pub fn compute_distances() -> Pass {
-        Pass::BothDirections(Box::new(super::distance::compute_distances))
+        Pass::BothDirections(Box::new(|mut view: DirectionalView, query: &Query| {
+            let expanded_node_distances = super::compute_distances(
+                view.start_nodes().map(|id| (id, 0)),
+                &view,
+                query.len_range.end,
+            );
+            // Set the node distances and strip out unreachable nodes
+            view.retain_nodes(|id, mut node_view| match expanded_node_distances.get(id) {
+                // keep reachable nodes and update their distance lower bounds
+                Some(&new_distance) => {
+                    *node_view.distance_mut() = new_distance;
+                    true
+                }
+                None => false, // Remove unreachable nodes
+            });
+        }))
     }
 
-    /// A [`Pass`] which removes any nodes which can't be included in a short enough round block.
+    /// A [`Pass`] which removes any nodes which can't be included in a short enough composition.
     pub fn strip_long_nodes() -> Pass {
-        fn pass(graph: &mut Graph, query: &Query) {
+        Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
             graph.retain_nodes(|_id, node| node.min_comp_length() < query.len_range.end);
-        }
-        Pass::Single(Box::new(pass))
+        }))
     }
 
     /* Passes related to required nodes */
@@ -286,4 +304,63 @@ pub mod passes {
             graph.retain_nodes(|id, _node| !node_ids_to_remove.contains(id));
         }))
     }
+}
+
+///////////
+// UTILS //
+///////////
+
+/// Given a set of starting nodes (and their distances), compute the shortest distance to every
+/// reachable node.
+fn compute_distances<'a>(
+    start_nodes: impl IntoIterator<Item = (&'a NodeId, usize)>,
+    view: &DirectionalView<'a>,
+    dist_limit: usize,
+) -> HashMap<NodeId, usize> {
+    // Set of nodes which are reachable within the range limit, mapped to their shortest distance
+    // from a start node.  These are the nodes which will be kept in the graph.
+    let mut expanded_node_distances: HashMap<NodeId, usize> = HashMap::new();
+
+    // A priority queue of NodeIds, sorted by distance with the nearest nodes at the front of the
+    // queue.  Initialise this with just the start nodes.
+    let mut frontier: BinaryHeap<Reverse<FrontierItem<&NodeId>>> = start_nodes
+        .into_iter()
+        .map(|(id, dist)| FrontierItem::new(id, dist))
+        .map(Reverse)
+        .collect();
+
+    // Run Dijkstra's algorithm on the nodes
+    while let Some(Reverse(FrontierItem { item: id, distance })) = frontier.pop() {
+        // Mark this node as expanded, and ignore it if we've already expanded it (because
+        // Dijkstra's guarantees it must have been given a distance <= to `distance`)
+        if let Some(&existing_dist) = expanded_node_distances.get(id) {
+            assert!(existing_dist <= distance);
+            continue;
+        }
+
+        let node_view = match view.get_node(id) {
+            Some(v) => v,
+            None => continue, // Don't expand node links which don't lead anywhere
+        };
+
+        // Skip this node if any node succeeding it would take longer to reach than the length of
+        // the composition
+        let distance_after_node = distance + node_view.node.length();
+        if distance_after_node > dist_limit {
+            continue;
+        }
+
+        // Expand this node
+        expanded_node_distances.insert(id.to_owned(), distance);
+        for succ_link in node_view.successors() {
+            let succ_id = &succ_link.id;
+            let new_frontier_item = FrontierItem {
+                item: succ_id,
+                distance: distance_after_node,
+            };
+            frontier.push(Reverse(new_frontier_item));
+        }
+    }
+
+    expanded_node_distances
 }

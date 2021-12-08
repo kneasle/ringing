@@ -503,7 +503,7 @@ fn build_graph(
         start_nodes
             .iter()
             .cloned()
-            .map(|(id, _, _)| FrontierItem::new(id))
+            .map(|(id, _, _)| FrontierItem::new(id, 0))
             .map(Reverse),
     );
 
