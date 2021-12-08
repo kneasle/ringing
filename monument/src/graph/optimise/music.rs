@@ -15,7 +15,7 @@ use crate::{
 const ITERATION_LIMIT: usize = 10_000;
 
 pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
-    log::debug!("\n\n\n");
+    // log::debug!("\n\n\n");
 
     // For each `MusicType`, maps its index to minimum count
     let min_music_counts = query

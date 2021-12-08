@@ -25,11 +25,11 @@ pub type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query)>;
 pub enum Pass {
     /// Run a single non-directional pass
     Single(SinglePass),
-    /// Apply a `DirectionalPass` but only in one [`Direction`]
+    /// Run a `DirectionalPass` but only in one [`Direction`]
     OneDirection(DirectionalPass, Direction),
-    /// Apply a `DirectionalPass` twice, [`Forward`] first
+    /// Run a `DirectionalPass` twice, [`Forward`] first
     BothDirections(DirectionalPass),
-    /// Apply a `DirectionalPass` twice, [`Backward`] first
+    /// Run a `DirectionalPass` twice, [`Backward`] first
     BothDirectionsRev(DirectionalPass),
 }
 
@@ -91,6 +91,12 @@ pub struct DirectionalView<'graph> {
 impl<'graph> DirectionalView<'graph> {
     pub fn new(graph: &'graph mut Graph, direction: Direction) -> Self {
         Self { graph, direction }
+    }
+
+    pub fn nodes(&self) -> impl Iterator<Item = (&NodeId, NodeView)> {
+        self.graph
+            .nodes()
+            .map(|(id, node)| (id, NodeView::new(node, self.direction)))
     }
 
     /// Gets the IDs of the 'start' nodes of the [`Graph`] going in this [`Direction`]
@@ -193,6 +199,14 @@ impl<'graph> NodeViewMut<'graph> {
             Backward => &mut self.node.lb_distance_to_rounds,
         }
     }
+
+    /// Mutable reference to the distance from rounds **to** the start of this node
+    pub fn non_duffer_distance_mut(&mut self) -> &mut usize {
+        match self.direction {
+            Forward => &mut self.node.lb_distance_from_non_duffer,
+            Backward => &mut self.node.lb_distance_to_non_duffer,
+        }
+    }
 }
 
 ////////////////////
@@ -218,6 +232,9 @@ pub mod passes {
             // Distance-related optimisation
             compute_distances(),
             strip_long_nodes(),
+            // Duffer-related optimisation
+            compute_duffer_distances(),
+            strip_duff_nodes(),
             // Required node optimisation
             single_start_or_end_required(),
             remove_nodes_false_against_required(),
@@ -257,7 +274,7 @@ pub mod passes {
                     *node_view.distance_mut() = new_distance;
                     true
                 }
-                None => false, // Remove unreachable nodes
+                None => true, // Remove unreachable nodes
             });
         }))
     }
@@ -266,6 +283,49 @@ pub mod passes {
     pub fn strip_long_nodes() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
             graph.retain_nodes(|_id, node| node.min_comp_length() < query.len_range.end);
+        }))
+    }
+
+    /// Creates a [`Pass`] which recomputes how close nodes are to non-duffer nodes, removing any
+    /// which can't reach a non-duffer node in either direction.
+    pub fn compute_duffer_distances() -> Pass {
+        Pass::BothDirections(Box::new(|mut view: DirectionalView, query: &Query| {
+            let duffer_distances = super::compute_distances(
+                // Give all non-duffer nodes a distance of 0, and assign all start/end nodes to
+                // their own length (thus treating rounds as a 0-length non-duffer)
+                view.graph
+                    .nodes()
+                    .filter(|&(_id, node)| !node.duffer)
+                    .map(|(id, _node)| (id, 0))
+                    .chain(view.start_nodes().filter_map(|id| {
+                        let node = view.graph.get_node(id)?;
+                        node.duffer.then(|| (id, node.length()))
+                    })),
+                &view,
+                query.max_duffer_rows.unwrap_or(usize::MAX),
+            );
+            // Set the node distances and strip out unreachable nodes
+            view.retain_nodes(|id, mut node_view| match duffer_distances.get(id) {
+                // keep reachable nodes and update their distance lower bounds
+                Some(&new_distance) => {
+                    *node_view.non_duffer_distance_mut() = new_distance;
+                    true
+                }
+                // Remove unreachable duffer nodes
+                None => {
+                    assert!(node_view.node.duffer);
+                    false
+                }
+            });
+        }))
+    }
+
+    /// A [`Pass`] which removes any nodes which can't connect two non-duffer nodes quickly enough
+    pub fn strip_duff_nodes() -> Pass {
+        Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
+            if let Some(max_duffer_rows) = query.max_duffer_rows {
+                graph.retain_nodes(|_id, node| node.min_duffer_length() <= max_duffer_rows);
+            }
         }))
     }
 
@@ -331,6 +391,11 @@ fn compute_distances<'a>(
 
     // Run Dijkstra's algorithm on the nodes
     while let Some(Reverse(FrontierItem { item: id, distance })) = frontier.pop() {
+        let node_view = match view.get_node(id) {
+            Some(v) => v,
+            None => continue, // Don't expand node links which don't lead anywhere
+        };
+
         // Mark this node as expanded, and ignore it if we've already expanded it (because
         // Dijkstra's guarantees it must have been given a distance <= to `distance`)
         if let Some(&existing_dist) = expanded_node_distances.get(id) {
@@ -338,10 +403,7 @@ fn compute_distances<'a>(
             continue;
         }
 
-        let node_view = match view.get_node(id) {
-            Some(v) => v,
-            None => continue, // Don't expand node links which don't lead anywhere
-        };
+        expanded_node_distances.insert(id.to_owned(), distance);
 
         // Skip this node if any node succeeding it would take longer to reach than the length of
         // the composition
@@ -351,7 +413,6 @@ fn compute_distances<'a>(
         }
 
         // Expand this node
-        expanded_node_distances.insert(id.to_owned(), distance);
         for succ_link in node_view.successors() {
             let succ_id = &succ_link.id;
             let new_frontier_item = FrontierItem {

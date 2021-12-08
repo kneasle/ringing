@@ -13,14 +13,16 @@ pub struct MusicType {
     regexes: Vec<Regex>,
     weight: Score,
     count_range: OptRange,
+    non_duffer: bool,
 }
 
 impl MusicType {
-    pub fn new(regexes: Vec<Regex>, weight: f32, count_range: OptRange) -> Self {
+    pub fn new(regexes: Vec<Regex>, weight: f32, count_range: OptRange, non_duffer: bool) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
+            non_duffer,
         }
     }
 
@@ -40,6 +42,10 @@ impl MusicType {
 
     pub fn count_range(&self) -> OptRange {
         self.count_range
+    }
+
+    pub fn non_duffer(&self) -> bool {
+        self.non_duffer
     }
 }
 

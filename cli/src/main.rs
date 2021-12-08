@@ -11,7 +11,7 @@ use bellframe::{
     InvalidRowError,
 };
 use log::log;
-use monument::{layout::Layout, Comp, Config};
+use monument::Config;
 use spec::Spec;
 use structopt::StructOpt;
 
@@ -102,7 +102,7 @@ fn run(
         Ok(comps) => {
             println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
             for c in comps {
-                print_comp(&c, &query.layout);
+                c.long_string(&query.layout);
             }
 
             println!("Search completed in {:?}", Instant::now() - start_time);
@@ -114,16 +114,4 @@ fn run(
     };
 
     Ok(())
-}
-
-fn print_comp(c: &Comp, layout: &Layout) {
-    println!(
-        "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
-        c.length,
-        c.method_counts.counts(),
-        c.score,
-        c.avg_score,
-        c.rotation,
-        c.display_string(layout)
-    );
 }

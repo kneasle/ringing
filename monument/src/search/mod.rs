@@ -23,6 +23,7 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
     queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
+    let max_duffer_rows = query.max_duffer_rows.map_or(u32::MAX, |m| m as u32);
     let len_range = (query.len_range.start as u32)..(query.len_range.end as u32);
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
@@ -41,6 +42,11 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
             node.score,
             node.length,
             node.method_counts.clone(),
+            if node.duffer {
+                node.length // Rounds counts as a non-duffer
+            } else {
+                0
+            },
         ));
     }
 
@@ -59,6 +65,7 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
             node_idx,
             unreachable_nodes,
             rotation,
+            len_since_non_duffer,
 
             score,
             method_counts,
@@ -104,9 +111,17 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
             let length = length + succ_node.length;
             let score = score + succ_node.score + link.score;
             let method_counts = &method_counts + &succ_node.method_counts;
+            let len_since_non_duffer = if succ_node.duffer {
+                len_since_non_duffer + succ_node.length
+            } else {
+                0 // Reset the counter whenever we encounter a non-duffer node
+            };
 
             if length + succ_node.dist_to_rounds >= len_range.end {
                 continue; // Node would make comp too long
+            }
+            if len_since_non_duffer + succ_node.dist_to_non_duffer >= max_duffer_rows {
+                continue; // Can't get to a non-duffer fast enough
             }
             if unreachable_nodes.get(next_idx.index()).unwrap() {
                 continue; // Node is false against something already in the comp
@@ -130,6 +145,7 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
                 score,
                 length,
                 method_counts,
+                len_since_non_duffer,
             ));
         }
 
@@ -197,6 +213,8 @@ struct PrefixInner {
     node_idx: NodeIdx,
     unreachable_nodes: BitVec,
 
+    len_since_non_duffer: u32,
+
     /// The number of part heads through which we have rotated.  This is kept in the range
     /// `0..graph.num_parts`
     rotation: Rotation,
@@ -216,6 +234,7 @@ impl CompPrefix {
         score: Score,
         length: u32,
         method_counts: RowCounts,
+        len_since_non_duffer: u32,
     ) -> Self {
         Self {
             inner: Box::new(PrefixInner {
@@ -225,6 +244,7 @@ impl CompPrefix {
                 rotation,
                 score,
                 method_counts,
+                len_since_non_duffer,
             }),
             length,
             avg_score: score / length as f32,

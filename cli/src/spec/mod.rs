@@ -76,6 +76,11 @@ pub struct Spec {
     /// Specification of which classes of music Monument should consider
     #[serde(default)]
     music: Vec<MusicSpec>,
+    /// The value for `non_duffer` given to music types when none is explicitly given
+    #[serde(default = "get_true")]
+    default_non_duffer: bool,
+    /// The most consecutive rows of duffer nodes.
+    max_duffer_rows: Option<usize>,
 
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
@@ -125,7 +130,7 @@ impl Spec {
         let mut music_types = self
             .music
             .iter()
-            .flat_map(|spec| spec.to_music_types(stage))
+            .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer))
             .collect_vec();
         if let Some(relative_music_path) = &self.music_file {
             // Compute the path of the music TOML file
@@ -143,9 +148,10 @@ impl Spec {
                 music_file
                     .music
                     .iter()
-                    .flat_map(|spec| spec.to_music_types(stage)),
+                    .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer)),
             );
         }
+
         if music_types.is_empty() {
             log::warn!("No music patterns specified.  Are you sure you don't care about music?");
         }
@@ -240,12 +246,13 @@ impl Spec {
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
-            music_types,
             part_head,
-
             len_range: self.length.range.clone(),
-            method_count_range,
             num_comps: self.num_comps,
+
+            method_count_range,
+            music_types,
+            max_duffer_rows: self.max_duffer_rows,
         })
     }
 }
@@ -427,6 +434,8 @@ pub enum MusicSpec {
         /// Possibly unbounded range of counts which are allowed in this music type
         #[serde(default)]
         count: OptRange,
+        /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
+        non_duffer: Option<bool>,
     },
     Patterns {
         patterns: Vec<String>,
@@ -438,12 +447,14 @@ pub enum MusicSpec {
         /// Possibly unbounded range of counts which are allowed in this music type
         #[serde(default)]
         count: OptRange,
+        /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
+        non_duffer: Option<bool>,
     },
 }
 
 impl MusicSpec {
     /// Generates a [`MusicType`] representing `self`.
-    pub fn to_music_types(&self, stage: Stage) -> Vec<MusicType> {
+    pub fn to_music_types(&self, stage: Stage, default_non_duffer: bool) -> Vec<MusicType> {
         enum LoweredType<'_self> {
             /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
             Runs(&'_self [usize], &'_self bool),
@@ -452,22 +463,35 @@ impl MusicSpec {
         }
 
         // Extract the information from `self` into a normalised form
-        let (lowered_type, weight, count) = match self {
+        let (lowered_type, weight, count, non_duffer) = match self {
             Self::Runs {
                 lengths,
                 internal,
                 weight,
                 count,
-            } => (LoweredType::Runs(lengths, internal), weight, count),
+                non_duffer,
+            } => (
+                LoweredType::Runs(lengths, internal),
+                weight,
+                count,
+                non_duffer,
+            ),
             Self::Patterns {
                 patterns,
                 count_each,
                 weight,
                 count,
-            } => (LoweredType::Patterns(patterns, count_each), weight, count),
+                non_duffer,
+            } => (
+                LoweredType::Patterns(patterns, count_each),
+                weight,
+                count,
+                non_duffer,
+            ),
         };
         let weight = *weight;
         let count = *count;
+        let non_duffer = non_duffer.unwrap_or(default_non_duffer);
 
         match lowered_type {
             LoweredType::Runs(lengths, internal) => {
@@ -477,7 +501,7 @@ impl MusicSpec {
                     .collect_vec();
                 // Runs can't take the `count_each` parameter, so can all be grouped into one
                 // `MusicType`
-                vec![MusicType::new(regexes, weight, count)]
+                vec![MusicType::new(regexes, weight, count, non_duffer)]
             }
             LoweredType::Patterns(patterns, count_each) => {
                 let regexes = patterns.iter().map(|s| Regex::parse(s));
@@ -489,12 +513,17 @@ impl MusicSpec {
                     // pattern.  Each `MusicType` will contain exactly one `regex` corresponding to
                     // that pattern.
                     regexes
-                        .map(|regex| MusicType::new(vec![regex], weight, *count_each))
+                        .map(|regex| MusicType::new(vec![regex], weight, *count_each, non_duffer))
                         .collect_vec()
                 } else {
                     // If `count_each` isn't set, we group all the patterns into one `MusicType` and
                     // apply `count` to all the regexes
-                    vec![MusicType::new(regexes.collect_vec(), weight, count)]
+                    vec![MusicType::new(
+                        regexes.collect_vec(),
+                        weight,
+                        count,
+                        non_duffer,
+                    )]
                 }
             }
         }
@@ -509,6 +538,10 @@ fn get_one() -> f32 {
 
 fn get_30() -> usize {
     30
+}
+
+fn get_true() -> bool {
+    true
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).

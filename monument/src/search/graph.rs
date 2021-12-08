@@ -26,6 +26,9 @@ pub struct Node {
     pub dist_to_rounds: u32,
     pub label: String,
 
+    pub duffer: bool,
+    pub dist_to_non_duffer: u32,
+
     // Indices must be aligned with those from the source graph
     pub succs: Vec<Link>,
     // If this node is added to a composition, these bits denote the set of nodes will be marked as
@@ -107,6 +110,8 @@ impl Graph {
                     dist_to_rounds: source_node.lb_distance_to_rounds as u32,
                     label: source_node.label().to_owned(),
                     end: source_node.end(),
+                    duffer: source_node.duffer(),
+                    dist_to_non_duffer: source_node.lb_distance_to_non_duffer as u32,
                     succs,
                     falseness,
                 }

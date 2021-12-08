@@ -26,11 +26,13 @@ use log::log;
 #[derive(Debug, Clone)]
 pub struct Query {
     pub layout: layout::Layout,
-    pub music_types: Vec<music::MusicType>,
     pub part_head: RowBuf,
     pub len_range: Range<usize>,
-    pub method_count_range: Range<usize>,
     pub num_comps: usize,
+
+    pub method_count_range: Range<usize>,
+    pub music_types: Vec<music::MusicType>,
+    pub max_duffer_rows: Option<usize>,
 }
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
@@ -84,6 +86,18 @@ impl Comp {
         s.push_str(self.end.label(layout));
         s
     }
+
+    pub fn long_string(&self, layout: &Layout) {
+        println!(
+            "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
+            self.length,
+            self.method_counts.counts(),
+            self.score,
+            self.avg_score,
+            self.rotation,
+            self.display_string(layout)
+        );
+    }
 }
 
 ////////////
@@ -104,8 +118,8 @@ pub fn run_query(
 
     log::debug!("Optimising graph");
     graph.optimise(&mut config.optimisation_passes, &query_arc);
-    log::debug!(
-        "{} nodes, {} starts, {} ends",
+    log::info!(
+        "Optimised graph has {} nodes, {} starts, {} ends",
         graph.node_map().len(),
         graph.start_nodes().len(),
         graph.end_nodes().len()
@@ -124,11 +138,11 @@ pub fn run_query(
     let handles = (0..num_threads)
         .map(|_i| {
             let query = query_arc.clone();
-            let comps = comps_arc.clone();
             let graph = graph_arc.clone();
+            let comps = comps_arc.clone();
             std::thread::spawn(move || {
                 let on_find_comp = |c: Comp| {
-                    print_comp(&c, &query.layout);
+                    c.long_string(&query.layout);
                     comps.lock().unwrap().push(c);
                 };
                 search::search(&graph, &query, queue_limit / num_threads, on_find_comp);
@@ -165,16 +179,4 @@ impl Query {
             &self.part_head,
         )
     }
-}
-
-fn print_comp(c: &Comp, layout: &layout::Layout) {
-    println!(
-        "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
-        c.length,
-        c.method_counts.counts(),
-        c.score,
-        c.avg_score,
-        c.rotation,
-        c.display_string(layout)
-    );
 }
