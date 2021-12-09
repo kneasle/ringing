@@ -845,6 +845,11 @@ impl Row {
 impl Index<usize> for Row {
     type Output = Bell;
 
+    /// `row[n]` gets the `n`th bell in `row` (0-indexed).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `n >= row.stage().num_bells()`
     fn index(&self, index: usize) -> &Bell {
         &self.bell_slice[index]
     }
@@ -881,20 +886,6 @@ impl Not for &Row {
     /// Find the inverse of a [`Row`].  If `X` is the input [`Row`], and `Y = !X`, then
     /// `XY = YX = I` where `I` is the identity on the same stage as `X` (i.e. rounds).  This
     /// operation cannot fail, since valid [`Row`]s are guaruteed to have an inverse.
-    ///
-    /// # Example
-    /// ```
-    /// use bellframe::{RowBuf, Stage};
-    ///
-    /// // The inverse of Queens is Tittums
-    /// assert_eq!(!&*RowBuf::parse("135246")?, RowBuf::parse("142536")?);
-    /// // Backrounds is self-inverse
-    /// assert_eq!(!&*RowBuf::backrounds(Stage::MAJOR), RowBuf::backrounds(Stage::MAJOR));
-    /// // `1324` inverts to `1423`
-    /// assert_eq!(!&*RowBuf::parse("1342")?, RowBuf::parse("1423")?);
-    /// #
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
     fn not(self) -> Self::Output {
         self.inv()
     }
@@ -904,27 +895,6 @@ impl Mul for &RowBuf {
     type Output = RowBuf;
 
     /// Uses the RHS to permute the LHS without consuming either argument.
-    ///
-    /// # Example
-    /// ```
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of the same Stage just returns a new RowBuf
-    /// assert_eq!(
-    ///     &RowBuf::parse("13425678")? * &RowBuf::parse("43217568")?,
-    ///     RowBuf::parse("24317568")?
-    /// );
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
-    ///
-    /// ```should_panic
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of different Stages will panic rather than
-    /// // produce undefined behaviour
-    /// let _unrow = &RowBuf::parse("13425678")? * &RowBuf::parse("4321")?;
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
     fn mul(self, rhs: &RowBuf) -> Self::Output {
         self * rhs.as_row()
     }
@@ -934,27 +904,6 @@ impl Mul<&Row> for &RowBuf {
     type Output = RowBuf;
 
     /// Uses the RHS to permute the LHS without consuming either argument.
-    ///
-    /// # Example
-    /// ```
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of the same Stage just returns a new RowBuf
-    /// assert_eq!(
-    ///     &RowBuf::parse("13425678")? * &RowBuf::parse("43217568")?,
-    ///     RowBuf::parse("24317568")?
-    /// );
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
-    ///
-    /// ```should_panic
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of different Stages will panic rather than
-    /// // produce undefined behaviour
-    /// let _unrow = &RowBuf::parse("13425678")? * &RowBuf::parse("4321")?;
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
     #[inline]
     fn mul(self, rhs: &Row) -> Self::Output {
         self.as_row() * rhs
@@ -965,27 +914,6 @@ impl Mul<&RowBuf> for &Row {
     type Output = RowBuf;
 
     /// Uses the RHS to permute the LHS without consuming either argument.
-    ///
-    /// # Example
-    /// ```
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of the same Stage just returns a new RowBuf
-    /// assert_eq!(
-    ///     &RowBuf::parse("13425678")? * &RowBuf::parse("43217568")?,
-    ///     RowBuf::parse("24317568")?
-    /// );
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
-    ///
-    /// ```should_panic
-    /// use bellframe::{RowBuf};
-    ///
-    /// // Multiplying two Rows of different Stages will panic rather than
-    /// // produce undefined behaviour
-    /// let _unrow = &*RowBuf::parse("13425678")? * &*RowBuf::parse("4321")?;
-    /// # Ok::<(), bellframe::InvalidRowError>(())
-    /// ```
     #[inline]
     fn mul(self, rhs: &RowBuf) -> Self::Output {
         self * rhs.as_row()
