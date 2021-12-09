@@ -1,0 +1,29 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      # Note that we run tests in release mode because doing so makes loading the CC method library much faster
+      run: cargo build --release --verbose
+    - name: Run tests
+      run: cargo test --release --verbose
+    - name: Run clippy
+      run: cargo clippy --no-deps
+    - name: Check formatting
+      run: cargo fmt -- --check
+    - name: Check docs
+      run: cargo doc --no-deps
