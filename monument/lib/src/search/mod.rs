@@ -226,6 +226,7 @@ struct PrefixInner {
 }
 
 impl CompPrefix {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         path: CompPath,
         node_idx: NodeIdx,

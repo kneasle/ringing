@@ -346,14 +346,14 @@ impl<'de> Visitor<'de> for BellVisitor {
     where
         E: Error,
     {
-        Bell::from_number(v as usize).ok_or(E::custom("can't have Bell #0"))
+        Bell::from_number(v as usize).ok_or_else(|| E::custom("can't have Bell #0"))
     }
 
     fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Bell::from_name(v).ok_or(E::custom(format!("'{}' is not a bell name", v)))
+        Bell::from_name(v).ok_or_else(|| E::custom(format!("'{}' is not a bell name", v)))
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -367,7 +367,7 @@ impl<'de> Visitor<'de> for BellVisitor {
         v.chars()
             .next()
             .and_then(Bell::from_name)
-            .ok_or(E::custom(format!("'{}' is not a bell name", v)))
+            .ok_or_else(|| E::custom(format!("'{}' is not a bell name", v)))
     }
 }
 
