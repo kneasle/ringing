@@ -1,0 +1,5 @@
+[workspace]
+members = ["bellframe", "monument/lib", "monument/cli"]
+
+[profile.dev]
+opt-level = 2
