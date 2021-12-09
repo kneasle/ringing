@@ -1,0 +1,17 @@
+# Switching between Bristol and Triton immediately runs false, so there's no point doing lead
+# splicing of Bristol and Triton.  In fact, Monument would not search any slower if we didn't say
+# `splice_style = "calls"`: the node graph optimisation would combine all the separate leads
+# together once it proves that no splicing is possible.  TODO: Actually implement this optimisation :)
+
+length = "peal"
+methods = [
+    "Bristol Surprise Royal",
+    "Triton Delight Royal",
+]
+music_file = "music-10.toml"
+
+splice_style = "calls"
+part_head = "165432"
+
+bob_weight = -4
+single_weight = -5

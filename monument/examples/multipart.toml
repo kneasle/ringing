@@ -1,0 +1,7 @@
+length = "peal"
+methods = ["Bristol Surprise Royal"]
+music_file = "music-10.toml"
+part_head = "165432"
+
+bob_weight = -3
+single_weight = -5

@@ -1,3 +1,9 @@
 # Cargo's build files
-/target
-Cargo.lock
+*/target
+*/Cargo.lock
+
+# Where I store comps I'm working on that I don't want to be checked into Monument
+*/comps/
+
+# Ignore all callgrind files
+**/callgrind*

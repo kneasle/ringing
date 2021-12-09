@@ -1,0 +1,3 @@
+length = { min = 1250, max = 1300 }
+method = "Plain Bob Major"
+music_file = "music-8.toml"

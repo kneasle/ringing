@@ -1,0 +1,16 @@
+length = "peal"
+methods = [
+    "Bristol Surprise Maximus",
+    "Zanussi Surprise Maximus",
+    # "Ariel Surprise Maximus",
+    # "Phobos Surprise Maximus",
+    "Avon Delight Maximus",
+]
+music_file = "music-12.toml"
+
+splice_style = "leads"
+part_head = "165432"
+
+# Punish calls more because Maximus generates too much music
+bob_weight = -15
+single_weight = -20

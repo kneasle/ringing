@@ -1,0 +1,4 @@
+length = "practice"
+methods = ["Norwich Surprise Minor", "Ipswich Surprise Minor", "Dunwich Bob Minor"]
+method_count.min = 3
+music_file = "music-6.toml"

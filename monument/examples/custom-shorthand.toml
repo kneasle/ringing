@@ -1,0 +1,21 @@
+length = "practice"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Bristol Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    "London Surprise Major",
+
+    # Friends of PPE
+    # "Deva Surprise Major",
+    # { title = "Double Norwich Court Bob Major", shorthand = "N" },
+]
+method_count = { min = 32, max = 300 }
+music_file = "music-8.toml"
+
+# Boost 5678s off the front
+[[music]]
+patterns = ["5678*", "8765*"]
+weight = 3

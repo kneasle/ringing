@@ -1,0 +1,9 @@
+length = "practice"
+base_calls = "none"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+]
+splice_style = "leads"
+method_count = { min = 0, max = 300 }
+music_file = "music-8.toml"
