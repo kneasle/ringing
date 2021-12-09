@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    layout::{node_range::End, LinkIdx, NodeId, Rotation, StartIdx},
+    layout::{node_range::End, LinkIdx, NodeId, StartIdx},
     music::Score,
-    utils::RowCounts,
+    utils::{Rotation, RowCounts},
     Query,
 };
 use bit_vec::BitVec;

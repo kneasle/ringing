@@ -32,9 +32,9 @@ impl MethodLib {
     }
 
     /// A version of `get_by_title` which expresses its return type as an [`Option`] rather than a
-    /// [`QueryResult`].  Until the [`Try`](std::ops::Try) trait is stabilised, I think this is a
-    /// good balance - the user of bellframe gets an ergonomic result type and the developers of
-    /// bellframe get to use the `?` operator.
+    /// [`Result`].  Until the [`Try`](std::ops::Try) trait is stabilised, I think this is a good
+    /// balance - the user of bellframe gets an ergonomic result type and bellframe gets to use the
+    /// `?` operator.
     fn get_by_title_option<'s>(
         &'s self,
         lower_case_title: &str,
@@ -253,8 +253,8 @@ pub enum QueryError<'lib, T> {
 }
 
 impl<'lib, T> QueryError<'lib, T> {
-    /// Unwraps the `PnParseErr` part of a [`QueryResult`], expecting the Method's place notation
-    /// to have parsed correctly and panicking if it didn't
+    /// Unwraps the `PnParseErr` part of a `QueryError`, expecting the Method's place notation to
+    /// have parsed correctly and panicking if it didn't
     pub fn unwrap_parse_err(self) -> Result<Method, T> {
         match self {
             Self::PnParseErr { pn, error } => panic!("Error parsing {:?}: {}", pn, error),

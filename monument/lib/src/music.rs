@@ -53,8 +53,8 @@ impl MusicType {
 #[derive(Debug, Clone)]
 pub struct Breakdown {
     pub score: Score,
-    /// The number of occurrences of each [`MusicType`] (the list of music types is stored in the
-    /// [`Engine`] singleton).
+    /// The number of occurrences of each [`MusicType`] specified in the current
+    /// [`Query`](crate::Query)
     pub counts: Vec<usize>,
 }
 

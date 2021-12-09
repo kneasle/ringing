@@ -1,4 +1,5 @@
 #![deny(clippy::all)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod graph;
 pub mod layout;
@@ -6,11 +7,12 @@ pub mod music;
 mod search;
 mod utils;
 
-use itertools::Itertools;
-use layout::{node_range::End, Layout, LinkIdx, Rotation, StartIdx};
-use music::Score;
 pub use utils::OptRange;
-use utils::RowCounts;
+
+use itertools::Itertools;
+use layout::{node_range::End, Layout, LinkIdx, StartIdx};
+use music::Score;
+use utils::{Rotation, RowCounts};
 
 use std::{
     ops::Range,

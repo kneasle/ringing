@@ -16,10 +16,10 @@ use log::log;
 use crate::{
     layout::{
         node_range::{End, NodeRange, PerPartLength, RangeEnd, RangeFactory, TotalLength},
-        Layout, LinkIdx, NodeId, Rotation, RowRange, StandardNodeId, StartIdx,
+        Layout, LinkIdx, NodeId, RowRange, StandardNodeId, StartIdx,
     },
     music::{Breakdown, MusicType, Score},
-    utils::{FrontierItem, RowCounts},
+    utils::{FrontierItem, Rotation, RowCounts},
     Query,
 };
 

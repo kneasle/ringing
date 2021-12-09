@@ -6,8 +6,13 @@ mod row_counts;
 
 pub use row_counts::RowCounts;
 
+/// Measure which determines which part head has been reached.  Each node link is given a
+/// `Rotation` which, when summed modulo [`Graph::num_parts`](crate::graph::Graph::num_parts), will
+/// determine which part head has been reached (and therefore whether the composition is valid).
+pub type Rotation = u16;
+
 /// Returns a bitmap where there's a `1` for every number that's co-prime to `n`
-pub fn coprime_bitmap(n: u16) -> u64 {
+pub fn coprime_bitmap(n: Rotation) -> u64 {
     assert!(n <= 64);
     assert!(n > 0);
     if n == 1 {

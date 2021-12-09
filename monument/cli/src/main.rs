@@ -1,4 +1,5 @@
 #![deny(clippy::all)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 use std::{
     num::ParseIntError,

@@ -4,8 +4,8 @@ use bellframe::{Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    layout::{EndIdx, Layout, Link, LinkIdx, NodeId, Rotation, StandardNodeId, StartIdx},
-    utils::RowCounts,
+    layout::{EndIdx, Layout, Link, LinkIdx, NodeId, StandardNodeId, StartIdx},
+    utils::{Rotation, RowCounts},
 };
 
 /// The length of a `Node` **in one part**.  This and [`TotalLength`] allow the compiler to catch
@@ -18,9 +18,8 @@ pub struct PerPartLength(pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TotalLength(pub usize);
 
-/// A section of a composition with no internal links, uniquely determined by a [`NodeId`] (which
-/// specifies the first row of the [`Node`]).
-// TODO: Remove this and make `RangeFactory` take a constructor function instead
+/// A section of a composition with no internal links, uniquely determined by a [`NodeId`]
+// TODO: Remove this and make `RangeFactory` take a constructor function instead?
 #[derive(Debug, Clone)]
 pub struct NodeRange {
     pub node_id: NodeId,
@@ -92,7 +91,7 @@ pub enum RangeEnd {
 pub enum End {
     /// The composition ends immediately after a call or splice
     ZeroLength,
-    /// The composition ends at a specific [`StartOrEnd`]
+    /// The composition ends at a specific [`StartOrEnd`](super::StartOrEnd)
     Idx(EndIdx),
 }
 

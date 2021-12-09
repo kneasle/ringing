@@ -8,10 +8,14 @@ use serde::Deserialize;
 
 use super::Link;
 
+// Imports only used for doc comments
+#[allow(unused_imports)]
+use super::Layout;
+
 pub mod coursewise;
 pub mod leadwise;
 
-/// The ways that [`Layout::single_method`] can fail
+/// The ways that [`Layout`] creation can fail
 #[derive(Debug, Clone)]
 pub enum Error {
     NoMethods,

@@ -42,7 +42,7 @@ pub struct Spec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default)]
     splice_style: SpliceStyle,
-    /// A [`Row`] which generates the part heads of this composition
+    /// A [`Row`](bellframe::Row) which generates the part heads of this composition
     part_head: Option<String>,
     /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
     /// cases like cyclic comps where no course heads are preserved across parts.

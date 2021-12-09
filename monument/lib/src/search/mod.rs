@@ -4,9 +4,9 @@ use bit_vec::BitVec;
 use log::log;
 
 use crate::{
-    layout::{LinkIdx, Rotation, StartIdx},
+    layout::{LinkIdx, StartIdx},
     music::Score,
-    utils::{coprime_bitmap, RowCounts},
+    utils::{coprime_bitmap, Rotation, RowCounts},
     Comp, Query,
 };
 

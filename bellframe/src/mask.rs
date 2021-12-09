@@ -1,5 +1,3 @@
-//! This module will eventually make its way into [`bellframe`]
-
 use std::{
     fmt::{Debug, Display, Formatter},
     ops::Mul,

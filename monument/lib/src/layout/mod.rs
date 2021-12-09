@@ -10,6 +10,10 @@ use node_range::PerPartLength;
 pub mod new;
 pub mod node_range;
 
+// Imports only used for doc comments
+#[allow(unused_imports)]
+use crate::graph::{Graph, Node};
+
 /// A somewhat human-friendly representation of the course layout of a composition, meant to be
 /// easy to generate.  A `Layout` consists of a set of blocks of rows, which are usually the plain
 /// courses of the methods being rung.  Some of these rows can be annotated with a label, which
@@ -18,10 +22,10 @@ pub mod node_range;
 /// between making/not making calls) are represented as [`Link`]s.
 ///
 /// Every useful composition structure (that I can think of) can be represented like this, but it
-/// is not efficient to use `Layout`s directly in the composing loop.  Therefore, [`Engine`]
+/// is not efficient to use `Layout`s directly in the composing loop.  Therefore, Monument
 /// compiles a `Layout` (along with extra info like desired composition length, music requirements,
-/// etc.) into a [`Graph`] of [`Node`](crate::Node)s.  This graph is then optimised, then usually
-/// compiled _again_ into an immutable copy which stores its nodes as a [`Vec`], rather than a
+/// etc.) into a [`Graph`] of [`Node`]s.  This graph is then optimised, then usually compiled
+/// _again_ into an immutable copy which stores its nodes as a [`Vec`], rather than a
 /// [`HashMap`](std::collections::HashMap).
 #[derive(Debug, Clone)]
 pub struct Layout {
@@ -165,18 +169,13 @@ impl StartOrEnd {
     }
 }
 
-/// Measure which determines which part head has been reached.  Each node link is given a
-/// `Rotation` which, when summed modulo [`Graph::num_parts`], will determine which part head has
-/// been reached (and therefore whether the composition is valid).
-pub type Rotation = u16;
-
 //////////////////////
 // INTERNAL STRUCTS //
 //////////////////////
 
 /// The unique identifier for a single node (i.e. an instantiated course segment) in the
 /// composition.  This node is assumed to end at the closest [`Link`] where the course head matches
-/// one of the supplied [course head masks](Link::course_head_masks).
+/// one of the supplied [course head masks](Link::ch_mask).
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum NodeId {
     /// The ID of any `Node` which comes round instantly.  All such nodes are considered
