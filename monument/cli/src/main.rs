@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 use std::{
     num::ParseIntError,
     path::{Path, PathBuf},

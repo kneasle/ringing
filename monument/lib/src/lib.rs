@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 pub mod graph;
 pub mod layout;
 pub mod music;

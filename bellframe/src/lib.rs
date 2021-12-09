@@ -1,5 +1,7 @@
 //! Idiomatic Rust representations of commonly used primitives for Change Ringing compositions.
 
+#![deny(clippy::all)]
+
 mod bell;
 pub mod block;
 pub mod call;
