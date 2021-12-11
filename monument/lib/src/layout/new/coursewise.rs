@@ -34,7 +34,8 @@ pub fn coursewise(
 
     // Pre-process & check CH masks:
     for d in &mut method_datas {
-        // Remove redundant CH masks, and check that no courses can have two different calling bells.
+        // Remove redundant CH masks, and check that no courses can have two different calling
+        // bells.
         d.ch_masks = dedup_ch_masks(&d.ch_masks)?;
         // Check that two CH masks don't label the same course at two different leads.
         check_for_ambiguous_courses(&d.ch_masks, &d.lead_heads)?;
@@ -277,8 +278,7 @@ fn call_starts_by_label<'m>(method_datas: &[MethodData<'m>]) -> HashMap<&'m str,
 /// A single location where a call could **end**.  Note that this doesn't include information about
 /// _which_ calls lead here, just that they _could_.
 #[derive(Debug, Clone)]
-struct CallEnd<'meth> {
-    lead_location: &'meth str,
+struct CallEnd {
     /// For a call to be valid, it must produce a row which matches this [`Mask`].
     row_mask: Mask,
     /// The [`Method`] to which this would switch
@@ -287,21 +287,20 @@ struct CallEnd<'meth> {
     row_idx: usize,
 }
 
-fn call_ends<'meth>(method_datas: &[MethodData<'meth>]) -> Vec<CallEnd<'meth>> {
+fn call_ends(method_datas: &[MethodData]) -> Vec<CallEnd> {
     let mut call_ends = Vec::new();
 
     // For every method ...
     for (method_idx, d) in method_datas.iter().enumerate() {
         // ... for every labelled row in the plain course ...
         for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {
-            if let Some(label) = annot_row.annot().label() {
+            if annot_row.annot().label().is_some() {
                 let row_after_call = annot_row.row();
                 // ... for every course head mask ...
                 for (ch_mask_idx, ch_mask) in d.ch_masks.iter().enumerate() {
                     // ... add a `CallEnd` corresponding to placing a call at this location to
                     // **enter** this course
                     call_ends.push(CallEnd {
-                        lead_location: label,
                         row_mask: ch_mask.mask().mul(row_after_call),
                         method_idx,
                         ch_mask_idx,
@@ -332,7 +331,7 @@ fn call_ends<'meth>(method_datas: &[MethodData<'meth>]) -> Vec<CallEnd<'meth>> {
 struct LinkGenData<'a> {
     method_datas: &'a [MethodData<'a>],
     call_starts_by_label: &'a HashMap<&'a str, Vec<RowIdx>>,
-    call_ends: &'a [CallEnd<'a>],
+    call_ends: &'a [CallEnd],
     splice_style: SpliceStyle,
     is_spliced: bool,
     stage: Stage,
@@ -654,8 +653,6 @@ fn rounds_locations<I: index_vec::Idx>(
 /// Cached data about each [`Method`] in the resulting [`Layout`]
 #[derive(Debug, Clone)]
 struct MethodData<'a> {
-    /// The [`Method`] which this data is about
-    method: &'a Method,
     /// The string used to represent one lead of this method
     shorthand: String,
     /// The calls which can be applied to this [`Method`].
@@ -677,7 +674,6 @@ impl<'a> MethodData<'a> {
         ch_masks: &[CourseHeadMask],
     ) -> Self {
         Self {
-            method,
             shorthand,
             calls: calls.iter().collect_vec(), // TODO: Allow calls to be assigned to specific methods
             ch_masks: ch_masks.to_owned(), // TODO: Allow CH masks to be assigned to specific methods
