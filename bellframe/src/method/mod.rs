@@ -113,6 +113,11 @@ impl Method {
         self.first_lead.stage()
     }
 
+    #[inline]
+    pub fn class(&self) -> FullClass {
+        self.class
+    }
+
     /// Gets the name of this `Method`
     #[inline]
     pub fn name(&self) -> &str {

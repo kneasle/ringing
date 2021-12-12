@@ -292,7 +292,7 @@ pub enum TomlReadError {
     Parse(toml::de::Error),
 }
 
-fn read_toml<'de, T: Deserialize<'de>>(
+pub fn read_toml<'de, T: Deserialize<'de>>(
     path: &Path,
     buf: &'de mut String,
 ) -> Result<T, TomlReadError> {

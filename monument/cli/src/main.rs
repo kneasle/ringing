@@ -11,19 +11,17 @@ use structopt::StructOpt;
 const DEFAULT_QUEUE_LIMIT: usize = 10_000_000;
 
 fn main() {
-    // Parse CLI args
     let args = CliArgs::from_args();
-
-    // Initialise logging
     monument_cli::init_logging(args.log_level());
-
-    // Run Monument
-    monument_cli::run(
+    let maybe_result = monument_cli::run(
         &args.input_file,
         args.debug_print,
         args.queue_limit.unwrap_or(DEFAULT_QUEUE_LIMIT),
     )
     .unwrap();
+    if let Some(result) = maybe_result {
+        result.print();
+    }
 }
 
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument

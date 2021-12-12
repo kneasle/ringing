@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use bellframe::{
@@ -19,7 +19,7 @@ use bellframe::{
     InvalidRowError,
 };
 use log::{log, LogLevelFilter};
-use monument::{Config, DebugOutput};
+use monument::{Comp, Config, DebugOutput, Query};
 use spec::Spec;
 
 pub fn init_logging(log_level: LogLevelFilter) {
@@ -35,7 +35,7 @@ pub fn run(
     input_file: &Path,
     debug_print: Option<DebugPrint>,
     queue_limit: usize,
-) -> Result<(), Error> {
+) -> Result<Option<QueryResult>, Error> {
     let start_time = Instant::now();
 
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
@@ -44,7 +44,7 @@ pub fn run(
         ($variant: ident, $val: expr) => {
             if debug_print == Some(DebugPrint::$variant) {
                 dbg!($val);
-                return Ok(());
+                return Ok(None);
             }
         };
     }
@@ -70,22 +70,35 @@ pub fn run(
     // Run query and handle its debug output
     let query_result =
         monument::run_query(query.clone(), &mut config, debug_print.and_then(Into::into));
-    match query_result {
-        Ok(comps) => {
-            println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
-            for c in comps {
-                c.long_string(&query.layout);
-            }
-
-            println!("Search completed in {:?}", Instant::now() - start_time);
-        }
+    Ok(match query_result {
+        Ok(comps) => Some(QueryResult {
+            query,
+            comps,
+            duration: Instant::now() - start_time,
+        }),
         Err(Some(graph)) => {
             dbg!(graph);
+            None
         }
-        Err(None) => {}
-    };
+        Err(None) => None,
+    })
+}
 
-    Ok(())
+#[derive(Debug, Clone)]
+pub struct QueryResult {
+    pub query: Arc<Query>,
+    pub comps: Vec<Comp>,
+    pub duration: Duration,
+}
+
+impl QueryResult {
+    pub fn print(&self) {
+        println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
+        for c in &self.comps {
+            println!("{}", c.long_string(&self.query.layout));
+        }
+        println!("Search completed in {:?}", self.duration);
+    }
 }
 
 /// The possible ways that a run of Monument could fail
@@ -112,7 +125,7 @@ pub enum DebugPrint {
     Graph,
     /// Stop just before the search starts, to let the user see what's been printed out without
     /// scrolling
-    Search,
+    StopBeforeSearch,
 }
 
 impl FromStr for DebugPrint {
@@ -124,7 +137,7 @@ impl FromStr for DebugPrint {
             "query" => Self::Query,
             "layout" => Self::Layout,
             "graph" => Self::Graph,
-            "search" => Self::Search,
+            "search" => Self::StopBeforeSearch,
             _ => {
                 return Err(format!(
                     "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `search`.",
@@ -139,7 +152,7 @@ impl From<DebugPrint> for Option<DebugOutput> {
     fn from(dbg_print: DebugPrint) -> Option<DebugOutput> {
         Some(match dbg_print {
             DebugPrint::Graph => DebugOutput::Graph,
-            DebugPrint::Search => DebugOutput::StopBeforeSearch,
+            DebugPrint::StopBeforeSearch => DebugOutput::StopBeforeSearch,
             _ => return None,
         })
     }
