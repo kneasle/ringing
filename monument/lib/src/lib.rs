@@ -91,8 +91,8 @@ impl Comp {
         s
     }
 
-    pub fn long_string(&self, layout: &Layout) {
-        println!(
+    pub fn long_string(&self, layout: &Layout) -> String {
+        format!(
             "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
             self.length,
             self.method_counts.counts(),
@@ -100,7 +100,7 @@ impl Comp {
             self.avg_score,
             self.rotation,
             self.display_string(layout)
-        );
+        )
     }
 }
 
@@ -146,7 +146,7 @@ pub fn run_query(
             let comps = comps_arc.clone();
             std::thread::spawn(move || {
                 let on_find_comp = |c: Comp| {
-                    c.long_string(&query.layout);
+                    log::info!("{}", c.long_string(&query.layout));
                     comps.lock().unwrap().push(c);
                 };
                 search::search(&graph, &query, queue_limit / num_threads, on_find_comp);

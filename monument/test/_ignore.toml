@@ -1,0 +1,7 @@
+# Tells Monument's test runner which files to ignore.  In this case, we don't want to interpret
+# music specification files as integration tests because they'll obviously fail to parse.
+
+ignore = [
+    "music-6", "music-8", "music-10", "music-12",
+    "no-duffers",
+]

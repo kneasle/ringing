@@ -12,3 +12,12 @@ pretty_logger = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 structopt = "0.3"
 toml = "0.5"
+
+[dev-dependencies]
+colored = "2.0"
+difference = "2.0"
+
+[[test]]
+name = "integration"
+path = "../integration_runner.rs"
+harness = false

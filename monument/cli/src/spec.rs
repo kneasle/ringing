@@ -17,13 +17,12 @@ use monument::{
 };
 use serde::Deserialize;
 
-use self::{
-    calls::{BaseCalls, SpecificCall},
-    length::Length,
+use crate::{
+    calls::{gen_calls, BaseCalls, SpecificCall},
+    Error,
 };
-use crate::Error;
 
-mod calls;
+use self::length::Length;
 
 const METHOD_BALANCE_ALLOWANCE: f32 = 0.1; // By how much the method balance is allowed to vary
 
@@ -174,7 +173,7 @@ impl Spec {
         };
 
         // Calls
-        let calls = calls::gen_calls(
+        let calls = gen_calls(
             stage,
             self.base_calls,
             self.bob_weight,
@@ -293,7 +292,7 @@ pub enum TomlReadError {
     Parse(toml::de::Error),
 }
 
-fn read_toml<'de, T: Deserialize<'de>>(
+pub fn read_toml<'de, T: Deserialize<'de>>(
     path: &Path,
     buf: &'de mut String,
 ) -> Result<T, TomlReadError> {

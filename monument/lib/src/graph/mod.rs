@@ -430,16 +430,18 @@ impl Graph {
         // Add predecessor references (every node is a predecessor to all of its successors)
         log::debug!("Setting predecessor links");
         for (id, _dist) in expanded_node_ranges {
-            for succ_link in nodes.get(&id).unwrap().successors.clone() {
-                if let Some(node) = nodes.get_mut(&succ_link.id) {
-                    assert!(succ_link.rotation < num_parts);
-                    node.predecessors.push(Link {
-                        id: id.clone(),
-                        source_idx: succ_link.source_idx,
-                        // Passing backwards over a link gives it the opposite rotation to
-                        // traversing forward
-                        rotation: num_parts - succ_link.rotation,
-                    });
+            if let Some(node) = nodes.get(&id) {
+                for succ_link in node.successors.clone() {
+                    if let Some(succ_node) = nodes.get_mut(&succ_link.id) {
+                        assert!(succ_link.rotation < num_parts);
+                        succ_node.predecessors.push(Link {
+                            id: id.clone(),
+                            source_idx: succ_link.source_idx,
+                            // Passing backwards over a link gives it the opposite rotation to
+                            // traversing forward
+                            rotation: num_parts - succ_link.rotation,
+                        });
+                    }
                 }
             }
         }
@@ -453,11 +455,14 @@ impl Graph {
     }
 }
 
+/// Given an initial set of nodes, compute the pairs of false nodes and remove any nodes which are
+/// self-false.
 fn compute_falseness(
     nodes: &mut HashMap<NodeId, Node>,
     layout: &Layout,
     ch_equiv_map: &HashMap<RowBuf, (RowBuf, Rotation)>,
 ) {
+    // Build a `FalsenessTable` which encodes the falseness for this set of nodes
     log::debug!("Building falseness table");
     let node_ids_and_lengths = nodes
         .iter()
@@ -465,36 +470,57 @@ fn compute_falseness(
         .collect::<HashSet<_>>();
     let falseness_table = FalsenessTable::from_layout(layout, &node_ids_and_lengths);
     log::trace!("Falseness table: {:#?}", falseness_table);
+
+    // Use the table to generate the falseness links and detect which nodes are false against
+    // themselves in a different part
     log::debug!("Setting falseness links");
-    for (id, node) in nodes.iter_mut() {
-        // Only compute falseness for standard IDs
-        if let NodeId::Standard(std_id) = id {
-            let range = RowRange {
-                start: std_id.row_idx,
-                len: node.per_part_length,
-            };
-            node.false_nodes.clear();
-            for (false_range, false_ch_transposition) in falseness_table.false_course_heads(range) {
-                let false_ch = std_id.course_head.as_ref() * false_ch_transposition;
-                if let Some((false_equiv_ch, _rotation)) = ch_equiv_map.get(&false_ch) {
-                    for is_start in [true, false] {
-                        let false_id = StandardNodeId::new(
-                            false_equiv_ch.clone(),
-                            false_range.start,
-                            is_start,
-                        );
-                        let false_id_and_len =
-                            (NodeId::Standard(false_id.clone()), false_range.len);
-                        if node_ids_and_lengths.contains(&false_id_and_len) {
-                            // If the node at `false_id` is in the graph, then it's false against
-                            // `node`
-                            node.false_nodes.push(false_id);
-                        }
+    nodes.retain(|id, node| {
+        set_falseness_links(
+            id,
+            node,
+            &falseness_table,
+            ch_equiv_map,
+            &node_ids_and_lengths,
+        )
+    });
+}
+
+/// Given a node and some lookup tables, set `false_nodes` for that node.  This also returns
+/// `false` if the node is false against itself.
+fn set_falseness_links(
+    id: &NodeId,
+    node: &mut Node,
+    falseness_table: &FalsenessTable,
+    ch_equiv_map: &HashMap<RowBuf, (RowBuf, Rotation)>,
+    node_ids_and_lengths: &HashSet<(NodeId, PerPartLength)>,
+) -> bool {
+    // Only compute falseness for standard IDs (0-length nodes can't have any falseness)
+    if let NodeId::Standard(std_id) = id {
+        let range = RowRange {
+            start: std_id.row_idx,
+            len: node.per_part_length,
+        };
+        node.false_nodes.clear();
+        for (false_range, false_ch_transposition) in falseness_table.false_course_heads(range) {
+            let false_ch = std_id.course_head.as_ref() * false_ch_transposition;
+            if let Some((false_equiv_ch, rotation)) = ch_equiv_map.get(&false_ch) {
+                for is_start in [true, false] {
+                    let false_id =
+                        StandardNodeId::new(false_equiv_ch.clone(), false_range.start, is_start);
+                    let false_id_and_len = (NodeId::Standard(false_id.clone()), false_range.len);
+                    if &false_id == std_id && *rotation != 0 {
+                        return false; // Remove node if it's false against itself in another part
+                    }
+                    if node_ids_and_lengths.contains(&false_id_and_len) {
+                        // If the node at `false_id` is in the graph, then it's false against
+                        // `node`
+                        node.false_nodes.push(false_id);
                     }
                 }
             }
         }
     }
+    true // If all FCHs were checked and `false` hasn't been returned, this node isn't self false
 }
 
 /// Use Dijkstra's algorithm to determine the overall structure of the graph, without computing the

@@ -1,120 +1,69 @@
 #![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-use std::{
-    num::ParseIntError,
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Instant,
-};
+use std::path::PathBuf;
 
-use args::CliArgs;
-use bellframe::{
-    place_not::{self, PnBlockParseError},
-    InvalidRowError,
-};
-use log::log;
-use monument::Config;
-use spec::Spec;
+use log::LogLevelFilter as LevelFilter;
+use monument_cli::DebugPrint;
 use structopt::StructOpt;
-
-use crate::args::DebugPrint;
-
-mod args;
-mod spec;
 
 /// Max number of comp prefixes stored in the queues of all threads
 const DEFAULT_QUEUE_LIMIT: usize = 10_000_000;
 
 fn main() {
-    // Parse CLI args
     let args = CliArgs::from_args();
-
-    // Initialise logging
-    pretty_logger::init(
-        pretty_logger::Destination::Stderr,
-        args.log_level(),
-        pretty_logger::Theme::default(),
-    )
-    .unwrap();
-
-    // Run Monument
-    run(
+    monument_cli::init_logging(args.log_level());
+    let maybe_result = monument_cli::run(
         &args.input_file,
         args.debug_print,
         args.queue_limit.unwrap_or(DEFAULT_QUEUE_LIMIT),
     )
     .unwrap();
-}
-
-/// The possible ways that a run of Monument could fail
-#[derive(Debug)]
-pub enum Error {
-    NoMethods,
-    CcLibNotFound,
-    PartHeadParse(InvalidRowError),
-    SpecFile(PathBuf, spec::TomlReadError),
-    MusicFile(PathBuf, spec::TomlReadError),
-    MethodNotFound { suggestions: Vec<String> },
-    CallPnParse(String, place_not::ParseError),
-    MethodPnParse(PnBlockParseError),
-    LeadLocationIndex(String, ParseIntError),
-    LayoutGen(monument::layout::new::Error),
-}
-
-fn run(
-    input_file: &Path,
-    debug_print: Option<DebugPrint>,
-    queue_limit: usize,
-) -> Result<(), Error> {
-    let start_time = Instant::now();
-
-    /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
-    /// corresponding value and exit.
-    macro_rules! debug_print {
-        ($variant: ident, $val: expr) => {
-            if debug_print == Some(DebugPrint::$variant) {
-                dbg!($val);
-                return Ok(());
-            }
-        };
+    if let Some(result) = maybe_result {
+        result.print();
     }
+}
 
-    // Generate & debug print the TOML file specifying the search
-    let spec =
-        Spec::read_from_file(input_file).map_err(|e| Error::SpecFile(input_file.to_owned(), e))?;
-    debug_print!(Spec, spec);
+/// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
+/// parsing/help code for us.
+#[derive(Debug, Clone, StructOpt)]
+#[structopt(name = "Monument", about = "A music-oriented composing engine")]
+pub struct CliArgs {
+    /// The name of the specification file for Monument (`*.toml`)
+    #[structopt(parse(from_os_str))]
+    pub input_file: PathBuf,
 
-    // Convert the `Spec` into a `Layout` and other data required for running a search
-    log::info!("Generating `Layout`");
-    let query = Arc::new(spec.lower(input_file)?);
-    debug_print!(Query, query);
-    debug_print!(Layout, &query.layout);
+    /// The maximum number of threads that Monument will use
+    #[structopt(short = "T", long)]
+    pub num_threads: Option<usize>,
+    /// The maximum number of threads that Monument will use
+    #[structopt(short = "Q", long)]
+    pub queue_limit: Option<usize>,
 
-    // Generate config
-    let mut config = Config {
-        queue_limit,
-        num_threads: Some(1),
-        ..Config::default()
-    };
+    /// Makes Monument print more output (`-vv` will produce all output).
+    #[structopt(short, long = "verbose", parse(from_occurrences))]
+    pub verbosity: usize,
+    /// Makes Monument print less output (`-qq` will only produce errors).
+    #[structopt(short, long = "quiet", parse(from_occurrences))]
+    pub quietness: usize,
 
-    // Run query and handle its debug output
-    let query_result =
-        monument::run_query(query.clone(), &mut config, debug_print.and_then(Into::into));
-    match query_result {
-        Ok(comps) => {
-            println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
-            for c in comps {
-                c.long_string(&query.layout);
-            }
+    /// Debug print an internal data structure and terminate.  Options are `spec`, `query`,
+    /// `layout` and `graph`.
+    #[structopt(short = "D", long)]
+    pub debug_print: Option<DebugPrint>,
+}
 
-            println!("Search completed in {:?}", Instant::now() - start_time);
+impl CliArgs {
+    /// Parse the `-q`/`-v` args into the [`LevelFilter`] to give to the `log` library
+    pub fn log_level(&self) -> LevelFilter {
+        match self.verbosity as isize - self.quietness as isize {
+            x if x < -2 => LevelFilter::Off, // -qqq (or more `q`s)
+            -2 => LevelFilter::Error,        // -qq
+            -1 => LevelFilter::Warn,         // -q
+            0 => LevelFilter::Info,          // <none of -q or -v>
+            1 => LevelFilter::Debug,         // -v
+            2 => LevelFilter::Trace,         // -vv
+            _ => LevelFilter::Trace,         // -vvv (or more `v`s)
         }
-        Err(Some(graph)) => {
-            dbg!(graph);
-        }
-        Err(None) => {}
-    };
-
-    Ok(())
+    }
 }
