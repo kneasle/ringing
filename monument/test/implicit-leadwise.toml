@@ -1,0 +1,4 @@
+length = "QP"
+methods = ["Plain Bob Major", "Little Bob Major"]
+part_head = "13456782"
+music_file = "music-8.toml"
