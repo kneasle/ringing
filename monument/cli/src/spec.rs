@@ -282,7 +282,7 @@ fn method_count_range(
     let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
     let min = user_range.min.unwrap_or(min_f32.floor() as usize);
     let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
-    min..max
+    min..max + 1 // + 1 because the `method_count` is an **inclusive** range
 }
 
 /// Error generated when a user tries to read a TOML file from the FS

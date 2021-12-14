@@ -1,0 +1,8 @@
+# This checks that the method count is inclusive rather than half-inclusive (i.e. `method_count.max`
+# value must be possible).  If the method range is non-inclusive, then no method counts are possible
+# and thus no comps are generated.  We expect the only comp to be the plain course.
+
+length = 224
+method = "Bristol Surprise Major"
+music_file = "music-8.toml"
+method_count = { min = 224, max = 224 }
