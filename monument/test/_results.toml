@@ -204,6 +204,46 @@ string = "sWsMMBsHHsHsMsWsMHsHH"
 length = 224
 string = ""
 
+[[little-bob-shorthand]]
+length = 48
+string = "LLLPL"
+
+[[little-bob-shorthand]]
+length = 56
+string = "LLLLLLL"
+
+[[little-bob-shorthand]]
+length = 112
+string = "PPPPPPP"
+
+[[little-bob-shorthand]]
+length = 48
+string = "LLLLP"
+
+[[little-bob-shorthand]]
+length = 48
+string = "LPLLL"
+
+[[little-bob-shorthand]]
+length = 48
+string = "LLPLL"
+
+[[little-bob-shorthand]]
+length = 40
+string = "LPP"
+
+[[little-bob-shorthand]]
+length = 48
+string = "PLLLL"
+
+[[little-bob-shorthand]]
+length = 40
+string = "PPL"
+
+[[little-bob-shorthand]]
+length = 40
+string = "PLP"
+
 [[multipart]]
 length = 192
 string = "HsHH"

@@ -347,7 +347,7 @@ impl MethodSpec {
         // Use the custom shorthand, or the first letter of the method's name, or "?" if the method
         // has no name
         let shorthand = self.shorthand().unwrap_or_else(|| {
-            m.name()
+            m.title()
                 .chars()
                 .next()
                 .map_or_else(|| "?".to_owned(), |c| c.to_string())
