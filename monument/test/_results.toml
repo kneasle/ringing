@@ -200,6 +200,126 @@ string = "sHsWHHBHHsHHHBsHMM"
 length = 1280
 string = "sWsMMBsHHsHsMsWsMHsHH"
 
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LLPLL[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LPLL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPP[-]L[-]L[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPP[-]L[-]L[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]LP[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LLLLP[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLLLL[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]PLLLL[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LPL[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1344
+string = "#PL[-]LP[-]LLL[-]PL[-]LPLL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPL[-]LLLP[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPL[-]LLPL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPL[-]LPLL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPL[-]PLLL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPL[-]PP[-]LPL[-]LPL[-]LLL[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]PPL[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLLP[-]LPLLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]PL[s]LPL[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]L[-]LPP[-]PL[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LLPLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]PL[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPL[-]P[-]L"
+
 [[inclusive-method-count]]
 length = 224
 string = ""
@@ -523,3 +643,123 @@ string = "sHBsMVsMsMFHBHsMsH"
 [[non-uniform-chs]]
 length = 1280
 string = "sHsWHBHsMsMsHBHBsH"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[-]P[s]P[-]P[t]PP[s]PP[t]PPP[s]P[-]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[-]P[t]P[-]P[-]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[-]P[t]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[s]P[s]P[-]P[t]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[-]P[-]P[t]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[s]P[s]PP[-]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[t]P[s]PP[s]P[t]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[-]P[-]PP[-]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[s]P[s]P[t]P[-]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[t]P[s]P[s]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[-]P[-]P[t]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[t]P[s]PP[-]P[t]P[s]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[-]P[t]P[-]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[t]P[s]P[s]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[-]P[-]P[t]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[t]P[s]PP[t]P[-]P[s]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#PPP[t]PP[t]P[s]PP[s]PPPP[s]P[t]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[-]P[t]P[-]PP[s]P"
+
+[[pb-split-treble]]
+length = 1274
+string = "#PPP[t]P[s]P[t]PP[-]PPPP[t]P[s]P[s]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]P[-]P[s]PP[-]P[s]PPPP[t]P[-]P[s]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PP[t]P[t]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]P[-]P[s]PP[s]P[-]PPPP[t]P[-]P[s]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[-]P[s]PP[-]P[s]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[s]P[-]PP[-]P[s]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[-]P[s]P[-]P[-]P[-]PP[t]PPPP[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[-]P[s]P[-]PP[s]PP[t]PPP[s]P[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[-]P[-]PP[s]PP[t]P[s]PP[s]P[-]PP"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[-]P[-]PP[s]P[s]"
+
+[[pb-split-treble]]
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[s]P[s]PP[s]P[s]"

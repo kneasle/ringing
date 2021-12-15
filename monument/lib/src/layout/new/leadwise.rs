@@ -7,6 +7,9 @@ use itertools::Itertools;
 use super::{check_duplicate_shorthand, Result, SNAP_FINISH_LABEL, SNAP_START_LABEL};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
+/// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
+const LEADWISE_PREFIX: &str = "#";
+
 /// Creates a `Layout` where every course is exactly one lead long.
 pub fn leadwise(
     methods: &[(bellframe::Method, String)],
@@ -41,8 +44,14 @@ pub fn leadwise(
 
     let blks = blocks.as_raw_slice();
     Ok(Layout {
-        starts: start_or_ends(start_indices, SNAP_START_LABEL, &lead_head_mask, blks),
-        ends: start_or_ends(end_indices, SNAP_FINISH_LABEL, &lead_head_mask, blks),
+        starts: start_or_ends(
+            start_indices,
+            LEADWISE_PREFIX,
+            SNAP_START_LABEL,
+            &lead_head_mask,
+            blks,
+        ),
+        ends: start_or_ends(end_indices, "", SNAP_FINISH_LABEL, &lead_head_mask, blks),
         links: links(methods, calls, &lead_head_mask),
         blocks,
         stage,
@@ -51,23 +60,25 @@ pub fn leadwise(
 
 fn start_or_ends<I: index_vec::Idx>(
     allowed_indices: Option<&[usize]>,
+    label_prefix: &str,
     snap_label: &str,
     lead_head_mask: &Mask,
     blocks: &[AnnotBlock<Option<String>>],
 ) -> IndexVec<I, StartOrEnd> {
     let mut locs = IndexVec::new();
     for (meth_idx, first_lead) in blocks.iter().enumerate() {
-        let block_idx = BlockIdx::new(meth_idx);
         // Closure to construct a `StartOrEnd` at a given row
-        let new_start_or_end = |(row_idx, row): (usize, &Row)| -> StartOrEnd {
+        let block_idx = BlockIdx::new(meth_idx);
+        let new_start_or_end = |(row_idx, row): (usize, &Row)| {
+            let mut label = label_prefix.to_owned();
+            if row_idx != 0 {
+                label.push_str(snap_label);
+            }
+
             StartOrEnd {
                 course_head: !row,
                 row_idx: RowIdx::new(block_idx, row_idx),
-                label: if row_idx == 0 {
-                    String::new()
-                } else {
-                    snap_label.to_owned()
-                },
+                label,
             }
         };
 
@@ -149,7 +160,7 @@ fn links(
                     ch_transposition: &row_after_call * &end.inv_row,
 
                     debug_name: call.debug_symbol.clone(),
-                    display_name: call.debug_symbol.clone(),
+                    display_name: format!("[{}]", call.debug_symbol),
                     weight: call.weight,
                 });
                 // Plain lead
@@ -161,7 +172,7 @@ fn links(
                     ch_transposition: &start.row_after_plain * &end.inv_row,
 
                     debug_name: "p".to_owned(),
-                    display_name: "p".to_owned(),
+                    display_name: String::new(),
                     weight: 0.0,
                 });
             }
