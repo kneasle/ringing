@@ -46,6 +46,7 @@ pub struct Config {
     pub num_threads: Option<usize>,
     pub queue_limit: usize,
     pub optimisation_passes: Vec<Pass>,
+    pub split_by_start_node: bool,
 }
 
 impl Default for Config {
@@ -54,6 +55,7 @@ impl Default for Config {
             num_threads: None,
             queue_limit: 10_000_000,
             optimisation_passes: graph::optimise::passes::default(),
+            split_by_start_node: false,
         }
     }
 }
@@ -115,19 +117,26 @@ pub fn run_query(
     debug_output: Option<DebugOutput>,
 ) -> Result<Vec<Comp>, Option<Graph>> {
     log::info!("Building `Graph`");
-    let mut graph = query_arc.unoptimised_graph();
+    let graph = query_arc.unoptimised_graph();
     if debug_output == Some(DebugOutput::Graph) {
         return Err(Some(graph)); // Return the graph if the caller wants to inspect it
     }
 
-    log::debug!("Optimising graph");
-    graph.optimise(&mut config.optimisation_passes, &query_arc);
-    log::info!(
-        "Optimised graph has {} nodes, {} starts, {} ends",
-        graph.node_map().len(),
-        graph.start_nodes().len(),
-        graph.end_nodes().len()
-    );
+    log::debug!("Optimising graph(s)");
+    let mut graphs = if config.split_by_start_node {
+        graph.split_by_start_node()
+    } else {
+        vec![graph]
+    };
+    for g in &mut graphs {
+        g.optimise(&mut config.optimisation_passes, &query_arc);
+        log::info!(
+            "Optimised graph has {} nodes, {} starts, {} ends",
+            g.node_map().len(),
+            g.start_nodes().len(),
+            g.end_nodes().len()
+        );
+    }
 
     if debug_output == Some(DebugOutput::StopBeforeSearch) {
         return Err(None); // Stop early if the caller requested that
@@ -135,14 +144,13 @@ pub fn run_query(
 
     log::info!("Starting tree search");
     let comps_arc = Arc::from(Mutex::new(Vec::<Comp>::new()));
-    let graph_arc = Arc::from(graph);
-    let num_threads = config.num_threads.unwrap_or_else(num_cpus::get_physical);
+    let num_threads = graphs.len(); // config.num_threads.unwrap_or_else(num_cpus::get_physical);
     let queue_limit = config.queue_limit;
 
-    let handles = (0..num_threads)
-        .map(|_i| {
+    let handles = graphs
+        .into_iter()
+        .map(|graph| {
             let query = query_arc.clone();
-            let graph = graph_arc.clone();
             let comps = comps_arc.clone();
             std::thread::spawn(move || {
                 let on_find_comp = |c: Comp| {
