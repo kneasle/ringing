@@ -74,7 +74,6 @@ fn start_or_ends<I: index_vec::Idx>(
             if row_idx != 0 {
                 label.push_str(snap_label);
             }
-
             StartOrEnd {
                 course_head: !row,
                 row_idx: RowIdx::new(block_idx, row_idx),
@@ -147,10 +146,9 @@ fn links(
         let ends = &call_ends[label];
 
         for start in starts {
+            let mut row_after_call = start.row_before.clone();
+            call.place_not.permute(&mut row_after_call).unwrap();
             for end in ends {
-                let mut row_after_call = start.row_before.clone();
-                call.place_not.permute(&mut row_after_call).unwrap();
-
                 // Call
                 links.push(Link {
                     from: start.row_idx,
@@ -163,25 +161,55 @@ fn links(
                     display_name: format!("[{}]", call.debug_symbol),
                     weight: call.weight,
                 });
-                // Plain lead
-                links.push(Link {
-                    from: start.row_idx,
-                    to: end.row_idx,
-
-                    ch_mask: lead_head_mask.clone(),
-                    ch_transposition: &start.row_after_plain * &end.inv_row,
-
-                    debug_name: "p".to_owned(),
-                    display_name: String::new(),
-                    weight: 0.0,
-                });
+                // Plain
+                links.push(plain_link(
+                    start.row_idx,
+                    end.row_idx,
+                    lead_head_mask,
+                    &start.row_after_plain * &end.inv_row,
+                ));
             }
+        }
+    }
+
+    // Always add plain links at the end of every lead.  In nearly all cases, these will already
+    // exist and be deduplicated, but if there are no calls at the end of each lead (e.g. in
+    // link-cyclic or Stedman) then these will have to be generated separately.
+    for (method_idx_from, (method_from, _)) in methods.iter().enumerate() {
+        for (method_idx_to, _) in methods.iter().enumerate() {
+            links.push(plain_link(
+                RowIdx {
+                    block: method_idx_from.into(),
+                    // - 1 to refer to the lead **end** not the lead **head**
+                    row: method_from.lead_len() - 1,
+                },
+                RowIdx {
+                    block: method_idx_to.into(),
+                    row: 0,
+                },
+                lead_head_mask,
+                method_from.lead_head().to_owned(),
+            ));
         }
     }
 
     // Deduplicate links and return
     super::dedup_links(&mut links);
     links.into()
+}
+
+fn plain_link(from: RowIdx, to: RowIdx, ch_mask: &Mask, ch_transposition: RowBuf) -> Link {
+    Link {
+        from,
+        to,
+
+        ch_mask: ch_mask.clone(),
+        ch_transposition,
+
+        debug_name: "p".to_owned(),
+        display_name: String::new(),
+        weight: 0.0,
+    }
 }
 
 /// A position at which a call could start
