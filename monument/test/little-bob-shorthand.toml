@@ -1,0 +1,8 @@
+# Tests that Little Bob is given 'L', rather than '?' as its shorthand.  This happened because
+# Monument would use the methods _name_ rather than its _title_ to generate the shorthand (Little
+# Bob has no name, because its whole title is a classification).
+
+length = "practice"
+methods = ["Plain Bob Major", "Little Bob Major"]
+base_calls = "none"
+music_file = "music-8.toml"

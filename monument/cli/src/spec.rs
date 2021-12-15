@@ -6,19 +6,19 @@ use std::{
 
 use bellframe::{
     method::LABEL_LEAD_END, method_lib::QueryError, music::Regex, Bell, Mask, Method, MethodLib,
-    RowBuf, Stage,
+    Row, RowBuf, Stage,
 };
 use itertools::Itertools;
 use log::log;
 use monument::{
-    layout::new::{coursewise, leadwise, SpliceStyle},
+    layout::new::{coursewise, leadwise, Call, SpliceStyle},
     music::MusicType,
     OptRange, Query,
 };
 use serde::Deserialize;
 
 use crate::{
-    calls::{gen_calls, BaseCalls, SpecificCall},
+    calls::{BaseCalls, SpecificCall},
     Error,
 };
 
@@ -45,8 +45,10 @@ pub struct Spec {
     part_head: Option<String>,
     /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
     /// cases like cyclic comps where no course heads are preserved across parts.
-    #[serde(default)]
-    leadwise: bool,
+    ///
+    /// If left unset, Monument will determine the best value - i.e. leadwise iff the part head
+    /// affects the tenor
+    leadwise: Option<bool>,
 
     /// Set to `true` to allow comps to not start at the lead head.
     #[serde(default)]
@@ -117,15 +119,70 @@ impl Spec {
             methods.push(m.gen_method()?);
         }
 
-        // Stage & tenor
         let stage = methods
             .iter()
             .map(|(m, _)| m.stage())
             .max()
             .ok_or(Error::NoMethods)?;
-        let tenor = Bell::tenor(stage);
 
-        // Music
+        let part_head = match &self.part_head {
+            Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
+            None => RowBuf::rounds(stage),
+        };
+
+        let (start_indices, end_indices) = self.start_end_indices(&part_head);
+        let start_indices = start_indices.as_deref();
+        let end_indices = end_indices.as_deref();
+
+        let course_head_masks = self.course_head_masks(stage);
+
+        let leadwise = self.leadwise.unwrap_or_else(|| {
+            // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
+            // all fixed bells
+            !course_head_masks
+                .iter()
+                .all(|(_mask, calling_bell)| part_head.is_fixed(*calling_bell))
+        });
+
+        // Generate a `Layout` from the data about the method and calls
+        let calls = self.calls(stage)?;
+        let layout = if leadwise {
+            leadwise::leadwise(&methods, &calls, start_indices, end_indices)
+        } else {
+            coursewise::coursewise(
+                &methods,
+                &calls,
+                self.splice_style,
+                course_head_masks,
+                start_indices,
+                end_indices,
+            )
+        }
+        .map_err(Error::LayoutGen)?;
+
+        let music_types = self.music_types(toml_path, stage)?;
+        if music_types.is_empty() {
+            // TODO: Add default music
+            log::warn!("No music patterns specified.  Are you sure you don't care about music?");
+        }
+
+        let method_count_range =
+            method_count_range(methods.len(), &self.length.range, self.method_count);
+        log::info!("Method count range: {:?}", method_count_range);
+        // Build this layout into a `Graph`
+        Ok(Query {
+            layout,
+            part_head,
+            len_range: self.length.range.clone(),
+            num_comps: self.num_comps,
+
+            method_count_range,
+            music_types,
+            max_duffer_rows: self.max_duffer_rows,
+        })
+    }
+
+    fn music_types(&self, toml_path: &Path, stage: Stage) -> Result<Vec<MusicType>, Error> {
         let mut music_types = self
             .music
             .iter()
@@ -150,13 +207,22 @@ impl Spec {
                     .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer)),
             );
         }
+        Ok(music_types)
+    }
 
-        if music_types.is_empty() {
-            log::warn!("No music patterns specified.  Are you sure you don't care about music?");
+    fn calls(&self, stage: Stage) -> Result<Vec<Call>, Error> {
+        let mut call_specs =
+            self.base_calls
+                .to_call_specs(stage, self.bob_weight, self.single_weight);
+        for specific_call in &self.calls {
+            call_specs.push(specific_call.to_call_spec(stage)?);
         }
+        Ok(call_specs)
+    }
 
-        // CH masks
-        let course_head_masks = if let Some(ch_mask_strings) = &self.course_heads {
+    fn course_head_masks(&self, stage: Stage) -> Vec<(Mask, Bell)> {
+        let tenor = Bell::tenor(stage);
+        if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
             ch_mask_strings
@@ -170,89 +236,48 @@ impl Spec {
         } else {
             // Default to tenors together, with the tenor as 'calling bell'
             vec![(tenors_together_mask(stage), tenor)]
-        };
+        }
+    }
 
-        // Calls
-        let calls = gen_calls(
-            stage,
-            self.base_calls,
-            self.bob_weight,
-            self.single_weight,
-            &self.calls,
-        )?;
-
-        // Data external to the `Layout`
-        let method_count_range =
-            method_count_range(methods.len(), &self.length.range, self.method_count);
-        log::info!("Method count range: {:?}", method_count_range);
-        let part_head = match &self.part_head {
-            Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
-            None => RowBuf::rounds(stage),
-        };
-
-        // Compute the start/end indices.
+    fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<usize>>, Option<Vec<usize>>) {
         let mut start_indices = if self.snap_start {
             None
         } else {
-            self.start_indices.as_deref()
+            self.start_indices.clone()
         };
-        let mut end_indices = self.end_indices.as_deref();
+        let mut end_indices = self.end_indices.clone();
 
-        // If this is a multi-part, then we require that
-        // `start_indices` and `end_indices` must specify the same set of nodes.
+        // If this is a multi-part, then we require that `start_indices` and `end_indices` must be
+        // the same.
         //
-        // TODO: This is not quite correct; more specifically, we need to create separate graphs
+        // TODO: This is not quite correct.  More specifically, we need to create separate graphs
         // for each of the possible start/end indices.  This is because most of Monument can't tell
         // the difference between multi- and single-part comps, and therefore assumes that any pair
         // of starts/finishes are allowed.  In a multi-part this is not true, because we really
         // want the part-head to randomly cause a lead to re-start.  For the time being, we just
-        // panic if we'd generate a multi-part graph with more than one node.
-        let mut union_vec = Vec::new();
+        // panic if we'd generate a multi-part graph with more than one start index.
         if !part_head.is_rounds() {
             let idx_union = match (start_indices, end_indices) {
                 (Some(starts), Some(ends)) => {
-                    // We put the contents into `union_vec` so that our output has type
-                    // `Option<&[usize]>`.  The lifetime of the output is tied to the outer
-                    // function scope, which is long enough to be used to generate the `Layout`
-                    union_vec.extend(starts.iter().copied().filter(|i| ends.contains(i)));
-                    Some(union_vec.as_slice())
+                    let union_vec = starts
+                        .iter()
+                        .copied()
+                        .filter(|i| ends.contains(i))
+                        .collect_vec();
+                    Some(union_vec)
                 }
                 (Some(idxs), None) | (None, Some(idxs)) => Some(idxs),
                 (None, None) => None,
             };
-            start_indices = idx_union;
-            end_indices = idx_union;
             // Check that we only have one start/end index.  If we don't, Monument will try to
             // mix-and-match, usually causing things like reaching part heads at the snap
-            assert!(idx_union.map_or(false, |idxs| idxs.len() == 1));
+            assert!(idx_union.as_ref().map_or(false, |idxs| idxs.len() == 1));
+            // Set both starts and ends to the same value
+            start_indices = idx_union.clone();
+            end_indices = idx_union;
         }
 
-        // Generate a `Layout` from the data about the method and calls
-        let layout = if self.leadwise {
-            leadwise::leadwise(&methods, &calls, start_indices, end_indices)
-        } else {
-            coursewise::coursewise(
-                &methods,
-                &calls,
-                self.splice_style,
-                course_head_masks,
-                start_indices,
-                end_indices,
-            )
-        }
-        .map_err(Error::LayoutGen)?;
-
-        // Build this layout into a `Graph`
-        Ok(Query {
-            layout,
-            part_head,
-            len_range: self.length.range.clone(),
-            num_comps: self.num_comps,
-
-            method_count_range,
-            music_types,
-            max_duffer_rows: self.max_duffer_rows,
-        })
+        (start_indices, end_indices)
     }
 }
 
@@ -282,7 +307,7 @@ fn method_count_range(
     let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
     let min = user_range.min.unwrap_or(min_f32.floor() as usize);
     let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
-    min..max
+    min..max + 1 // + 1 because the `method_count` is an **inclusive** range
 }
 
 /// Error generated when a user tries to read a TOML file from the FS
@@ -347,7 +372,7 @@ impl MethodSpec {
         // Use the custom shorthand, or the first letter of the method's name, or "?" if the method
         // has no name
         let shorthand = self.shorthand().unwrap_or_else(|| {
-            m.name()
+            m.title()
                 .chars()
                 .next()
                 .map_or_else(|| "?".to_owned(), |c| c.to_string())

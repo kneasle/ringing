@@ -7,6 +7,9 @@ use itertools::Itertools;
 use super::{check_duplicate_shorthand, Result, SNAP_FINISH_LABEL, SNAP_START_LABEL};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
+/// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
+const LEADWISE_PREFIX: &str = "#";
+
 /// Creates a `Layout` where every course is exactly one lead long.
 pub fn leadwise(
     methods: &[(bellframe::Method, String)],
@@ -41,8 +44,14 @@ pub fn leadwise(
 
     let blks = blocks.as_raw_slice();
     Ok(Layout {
-        starts: start_or_ends(start_indices, SNAP_START_LABEL, &lead_head_mask, blks),
-        ends: start_or_ends(end_indices, SNAP_FINISH_LABEL, &lead_head_mask, blks),
+        starts: start_or_ends(
+            start_indices,
+            LEADWISE_PREFIX,
+            SNAP_START_LABEL,
+            &lead_head_mask,
+            blks,
+        ),
+        ends: start_or_ends(end_indices, "", SNAP_FINISH_LABEL, &lead_head_mask, blks),
         links: links(methods, calls, &lead_head_mask),
         blocks,
         stage,
@@ -51,23 +60,24 @@ pub fn leadwise(
 
 fn start_or_ends<I: index_vec::Idx>(
     allowed_indices: Option<&[usize]>,
+    label_prefix: &str,
     snap_label: &str,
     lead_head_mask: &Mask,
     blocks: &[AnnotBlock<Option<String>>],
 ) -> IndexVec<I, StartOrEnd> {
     let mut locs = IndexVec::new();
     for (meth_idx, first_lead) in blocks.iter().enumerate() {
-        let block_idx = BlockIdx::new(meth_idx);
         // Closure to construct a `StartOrEnd` at a given row
-        let new_start_or_end = |(row_idx, row): (usize, &Row)| -> StartOrEnd {
+        let block_idx = BlockIdx::new(meth_idx);
+        let new_start_or_end = |(row_idx, row): (usize, &Row)| {
+            let mut label = label_prefix.to_owned();
+            if row_idx != 0 {
+                label.push_str(snap_label);
+            }
             StartOrEnd {
                 course_head: !row,
                 row_idx: RowIdx::new(block_idx, row_idx),
-                label: if row_idx == 0 {
-                    String::new()
-                } else {
-                    snap_label.to_owned()
-                },
+                label,
             }
         };
 
@@ -136,10 +146,9 @@ fn links(
         let ends = &call_ends[label];
 
         for start in starts {
+            let mut row_after_call = start.row_before.clone();
+            call.place_not.permute(&mut row_after_call).unwrap();
             for end in ends {
-                let mut row_after_call = start.row_before.clone();
-                call.place_not.permute(&mut row_after_call).unwrap();
-
                 // Call
                 links.push(Link {
                     from: start.row_idx,
@@ -149,28 +158,58 @@ fn links(
                     ch_transposition: &row_after_call * &end.inv_row,
 
                     debug_name: call.debug_symbol.clone(),
-                    display_name: call.debug_symbol.clone(),
+                    display_name: format!("[{}]", call.debug_symbol),
                     weight: call.weight,
                 });
-                // Plain lead
-                links.push(Link {
-                    from: start.row_idx,
-                    to: end.row_idx,
-
-                    ch_mask: lead_head_mask.clone(),
-                    ch_transposition: &start.row_after_plain * &end.inv_row,
-
-                    debug_name: "p".to_owned(),
-                    display_name: "p".to_owned(),
-                    weight: 0.0,
-                });
+                // Plain
+                links.push(plain_link(
+                    start.row_idx,
+                    end.row_idx,
+                    lead_head_mask,
+                    &start.row_after_plain * &end.inv_row,
+                ));
             }
+        }
+    }
+
+    // Always add plain links at the end of every lead.  In nearly all cases, these will already
+    // exist and be deduplicated, but if there are no calls at the end of each lead (e.g. in
+    // link-cyclic or Stedman) then these will have to be generated separately.
+    for (method_idx_from, (method_from, _)) in methods.iter().enumerate() {
+        for (method_idx_to, _) in methods.iter().enumerate() {
+            links.push(plain_link(
+                RowIdx {
+                    block: method_idx_from.into(),
+                    // - 1 to refer to the lead **end** not the lead **head**
+                    row: method_from.lead_len() - 1,
+                },
+                RowIdx {
+                    block: method_idx_to.into(),
+                    row: 0,
+                },
+                lead_head_mask,
+                method_from.lead_head().to_owned(),
+            ));
         }
     }
 
     // Deduplicate links and return
     super::dedup_links(&mut links);
     links.into()
+}
+
+fn plain_link(from: RowIdx, to: RowIdx, ch_mask: &Mask, ch_transposition: RowBuf) -> Link {
+    Link {
+        from,
+        to,
+
+        ch_mask: ch_mask.clone(),
+        ch_transposition,
+
+        debug_name: "p".to_owned(),
+        display_name: String::new(),
+        weight: 0.0,
+    }
 }
 
 /// A position at which a call could start

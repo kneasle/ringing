@@ -1,0 +1,15 @@
+method = "Plain Bob Triples"
+length = "QP"
+leadwise = true
+part_head = "2345671"
+
+bob_weight = 0
+single_weight = 0
+
+[[calls]]
+symbol = "t"
+place_notation = "34"
+weight = 0
+
+[[music]]
+run_lengths = [4]

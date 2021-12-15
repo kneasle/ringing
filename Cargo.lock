@@ -599,6 +599,7 @@ dependencies = [
  "itertools",
  "log 0.3.9",
  "monument",
+ "ordered-float",
  "pretty_logger",
  "serde",
  "structopt",
@@ -697,6 +698,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97c9d06878b3a851e8026ef94bf7fef9ba93062cd412601da4d9cf369b1cc62d"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]

@@ -11,7 +11,8 @@ use difference::Changeset;
 use itertools::Itertools;
 use monument::layout::Layout;
 use monument_cli::DebugPrint;
-use serde::{Deserialize, Serialize};
+use ordered_float::OrderedFloat;
+use serde::Deserialize;
 use toml::Value;
 
 /// The maximum number of nodes contained in the queue when generating comps
@@ -254,11 +255,14 @@ fn run_test(
         Some(r) => r,
     };
     // Determine the actual comps
-    let comps = result
+    let mut comps = result
         .comps
         .iter()
         .map(|comp| Comp::new(comp, &result.query.layout))
         .collect_vec();
+    // Sort comps by their score, resolving tiebreaks by sorting by the comp string.  This
+    // guarantees a consistent ordering even if Monument's output order is non-deterministic
+    comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
     // Get the expected comps, if they exist
     let expected_comps = match &expected_result {
         ExpectedResult::Ignored => unreachable!("Ignored tests shouldn't be run"),
@@ -396,18 +400,11 @@ impl Suite {
     }
 
     fn results_to_toml_value(results: HashMap<&str, &[Comp]>) -> toml::Value {
-        fn comp_to_toml_value(comp: &Comp) -> Value {
-            let mut comp_map = toml::map::Map::new();
-            comp_map.insert("length".to_owned(), Value::Integer(comp.length as i64));
-            comp_map.insert("string".to_owned(), Value::String(comp.string.clone()));
-            Value::Table(comp_map)
-        }
-
         Value::Table(
             results
                 .into_iter()
                 .map(|(file_name, comps)| {
-                    let comp_values = comps.iter().map(comp_to_toml_value).collect_vec();
+                    let comp_values = comps.iter().map(Comp::ser_to_toml_value).collect_vec();
                     (file_name.to_owned(), Value::Array(comp_values))
                 })
                 .collect(),
@@ -454,10 +451,11 @@ struct TestCase {
     actual_result: TestResult,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 struct Comp {
     length: usize,
     string: String,
+    avg_score: OrderedFloat<f32>,
 }
 
 impl Comp {
@@ -465,17 +463,33 @@ impl Comp {
         Self {
             length: source.length,
             string: source.display_string(layout),
+            avg_score: source.avg_score,
         }
     }
 
     fn multiline_string(comps: &[Self]) -> String {
         comps.iter().map(Self::to_string).join("\n")
     }
+
+    fn ser_to_toml_value(&self) -> Value {
+        let mut comp_map = toml::map::Map::new();
+        comp_map.insert("length".to_owned(), Value::Integer(self.length as i64));
+        comp_map.insert("string".to_owned(), Value::String(self.string.clone()));
+        comp_map.insert(
+            "avg_score".to_owned(),
+            Value::Float(self.avg_score.0 as f64),
+        );
+        Value::Table(comp_map)
+    }
 }
 
 impl Display for Comp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.length, self.string)
+        write!(
+            f,
+            "{:>4}/{:>7.5}: {}",
+            self.length, self.avg_score, self.string
+        )
     }
 }
 

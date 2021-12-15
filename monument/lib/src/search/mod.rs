@@ -151,7 +151,7 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
 
         // If the queue gets too long, then halve its size
         if frontier.len() >= queue_limit {
-            log::debug!("Truncating queue");
+            log::info!("Truncating queue");
             truncate_heap(&mut frontier, queue_limit / 2);
         }
 

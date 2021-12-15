@@ -1,0 +1,13 @@
+length = "qp"
+base_calls = "none"
+methods = [
+    { name = "Devalike", place_notation = "-58-14.58-58.36-14-58-36-78,12", stage = 8 },
+    "Lessness Surprise Major",
+    "Superlative Surprise Major",
+    "York Surprise Major",
+]
+part_head = "13456782"
+method_count = { min = 0, max = 500 }
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]

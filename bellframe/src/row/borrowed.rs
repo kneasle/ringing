@@ -533,6 +533,10 @@ impl Row {
 
     /* MISC FUNCTIONS */
 
+    pub fn is_fixed(&self, bell: Bell) -> bool {
+        self.bell_slice.get(bell.index()) == Some(&bell)
+    }
+
     /// Returns an [`Iterator`] over the [`Bell`]s in this `Row` which are fixed in their home
     /// positions (i.e. they're fixed by the transposition represented by this row).
     pub fn fixed_bells(&self) -> impl Iterator<Item = Bell> + '_ {

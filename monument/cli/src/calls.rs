@@ -99,7 +99,7 @@ pub struct SpecificCall {
 }
 
 impl SpecificCall {
-    fn to_call_spec(&self, stage: Stage) -> Result<Call, Error> {
+    pub(crate) fn to_call_spec(&self, stage: Stage) -> Result<Call, Error> {
         Ok(Call::new(
             self.symbol.clone(),
             self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
@@ -110,20 +110,6 @@ impl SpecificCall {
             self.weight,
         ))
     }
-}
-
-pub fn gen_calls(
-    stage: Stage,
-    base_calls: BaseCalls,
-    bob_weight: Option<f32>,
-    single_weight: Option<f32>,
-    calls: &[SpecificCall],
-) -> Result<Vec<Call>, Error> {
-    let mut call_specs = base_calls.to_call_specs(stage, bob_weight, single_weight);
-    for specific_call in calls {
-        call_specs.push(specific_call.to_call_spec(stage)?);
-    }
-    Ok(call_specs)
 }
 
 #[inline(always)]

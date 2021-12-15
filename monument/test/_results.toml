@@ -1,481 +1,1116 @@
 multipart-self-false = []
 
 [[bristol-s8-qps]]
+avg_score = 0.11079997569322586
 length = 1250
 string = "sWsHHsHBsHHHsHBsWsHBWW>"
 
 [[bristol-s8-qps]]
-length = 1280
-string = "WWHBsHHHsHHsMsWMH"
-
-[[bristol-s8-qps]]
-length = 1280
-string = "sWMsMMMBsHHsHsMsWMH"
-
-[[bristol-s8-qps]]
+avg_score = 0.11140622943639755
 length = 1280
 string = "WWHBHsHHHsHsMsWMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11140622943639755
+length = 1280
+string = "WWHBsHHHsHHsMsWMH"
+
+[[bristol-s8-qps]]
+avg_score = 0.11140622943639755
+length = 1280
+string = "sWMsMMMBsHHsHsMsWMH"
+
+[[bristol-s8-qps]]
+avg_score = 0.11143998056650162
 length = 1250
 string = "sWHHBHHsHsMsWWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11143998056650162
 length = 1250
 string = "sWHsHBsHHsHsMsWWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11143998056650162
 length = 1250
 string = "sWsMMBsHHsHsMsWWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11156247556209564
 length = 1280
 string = "sWHHBHHsHHBsHMMHsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11159997433423996
 length = 1250
 string = "sWHHBHHsHsMMBsWsHBWW>"
 
 [[bristol-s8-qps]]
-length = 1250
-string = "sWsMMBsHHsHsMMBsWsHBWW>"
-
-[[bristol-s8-qps]]
+avg_score = 0.11159997433423996
 length = 1250
 string = "sWHsHBsHHsHsMMBsWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11159997433423996
+length = 1250
+string = "sWsMMBsHHsHsMMBsWsHBWW>"
+
+[[bristol-s8-qps]]
+avg_score = 0.11234372854232788
 length = 1280
 string = "WWHBHsHHHsHBWsWsMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11234372854232788
 length = 1280
 string = "WWHBsHHHsHHBWsWsMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11234372854232788
 length = 1280
 string = "sWMsMMMBsHHsHBWsWsMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11239997297525406
 length = 1250
 string = "WHHBHsHHHBsWsHBsWWsW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11296872794628143
 length = 1280
 string = "sWsMMBHsHHHsHsMsWMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11296872794628143
 length = 1280
 string = "sWsMMBsHHHsHHsMsWMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11383996903896332
 length = 1250
 string = "BsMWHsMMMsMsWsHBsWWsW>"
 
 [[bristol-s8-qps]]
-length = 1280
-string = "sWsMMBsHHHsHHBWsWsMH"
-
-[[bristol-s8-qps]]
+avg_score = 0.11390622705221176
 length = 1280
 string = "sWsMMBHsHHHsHBWsWsMH"
 
 [[bristol-s8-qps]]
-length = 1250
-string = "sWsMMBHsHHHsHsWMWW>"
+avg_score = 0.11390622705221176
+length = 1280
+string = "sWsMMBsHHHsHHBWsWsMH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11447998136281967
 length = 1250
 string = "sWHsHBHsHHHsHsWMWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11447998136281967
 length = 1250
 string = "sWHsHBsHHHsHHsWMWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11447998136281967
+length = 1250
+string = "sWsMMBHsHHHsHsWMWW>"
+
+[[bristol-s8-qps]]
+avg_score = 0.11447998136281967
 length = 1250
 string = "sWsMMBsHHHsHHsWMWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11479997634887695
 length = 1250
 string = "sWHsHBHHsHHHBsWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11479997634887695
 length = 1250
 string = "sWsMMBHHsHHHBsWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11531247943639755
 length = 1280
 string = "sWsMMBHHsMsWMsHHHsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11543998122215271
 length = 1250
 string = "sWWWHHBWHMBsHsMWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11623996496200562
 length = 1250
 string = "BsMsWWMsMsWsHBWsWWWsW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11623996496200562
 length = 1250
 string = "BsMsWWMsMsWsHBsWWWsWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11624997854232788
 length = 1280
 string = "sWsMMBHHBWsWsMsHHHsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.11671998351812363
 length = 1250
 string = "sWWWHHsWsHMHMWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.11783997714519501
 length = 1250
 string = "sWWWHHBWHMsWsHBWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.1202399805188179
 length = 1250
 string = "BWHMsMMsWBsMWsWWWsW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.1202399805188179
 length = 1250
 string = "BWHMsMMsWBsMsWWWsWW>"
 
 [[bristol-s8-qps]]
+avg_score = 0.12093748152256012
 length = 1280
 string = "WWHBHHsHHHBWsWsMsH"
 
 [[bristol-s8-qps]]
-length = 1280
-string = "sWsMMBsHHHsHHsMsWsMsH"
-
-[[bristol-s8-qps]]
-length = 1280
-string = "sWsMMBHsHHHsHsMsWsMsH"
-
-[[bristol-s8-qps]]
-length = 1280
-string = "sWHsHBsHHHsHHsMsWsMsH"
-
-[[bristol-s8-qps]]
+avg_score = 0.12156248092651367
 length = 1280
 string = "sWHsHBHsHHHsHsMsWsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12156248092651367
 length = 1280
-string = "sWHsHBHHsHHHBHMMsH"
+string = "sWHsHBsHHHsHHsMsWsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12156248092651367
 length = 1280
-string = "sWsMMBHHsHHHBHMMsH"
+string = "sWsMMBHsHHHsHsMsWsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12156248092651367
+length = 1280
+string = "sWsMMBsHHHsHHsMsWsMsH"
+
+[[bristol-s8-qps]]
+avg_score = 0.12171872705221176
 length = 1280
 string = "WWHBHHsHHHBsHHsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12171872705221176
+length = 1280
+string = "sWHsHBHHsHHHBHMMsH"
+
+[[bristol-s8-qps]]
+avg_score = 0.12171872705221176
+length = 1280
+string = "sWsMMBHHsHHHBHMMsH"
+
+[[bristol-s8-qps]]
+avg_score = 0.122499980032444
 length = 1280
 string = "sWHsHBHHsHHHBWsWsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.122499980032444
 length = 1280
 string = "sWsMMBHHsHHHBWsWsMsH"
 
 [[bristol-s8-qps]]
-length = 1280
-string = "sWsMMBHHsHHHBsHHsMsH"
-
-[[bristol-s8-qps]]
+avg_score = 0.12328122556209564
 length = 1280
 string = "sWHsHBHHsHHHBsHHsMsH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12328122556209564
+length = 1280
+string = "sWsMMBHHsHHHBsHHsMsH"
+
+[[bristol-s8-qps]]
+avg_score = 0.12468747794628143
 length = 1280
 string = "WWsHBHHsHsMsWsMHsHH"
 
 [[bristol-s8-qps]]
+avg_score = 0.12562498450279236
 length = 1280
 string = "sHsWHHBHHsHHHBsHMM"
 
 [[bristol-s8-qps]]
+avg_score = 0.12703123688697815
 length = 1280
 string = "sWsMMBsHHsHsMsWsMHsHH"
 
+[[cyclic-no-calls]]
+avg_score = 0.02604166604578495
+length = 1344
+string = "#LDYSDS"
+
+[[cyclic-no-calls]]
+avg_score = 0.1443452388048172
+length = 1344
+string = "#DLSYSL"
+
+[[implicit-leadwise]]
+avg_score = 0.08074534684419632
+length = 1288
+string = "#PLLPL[-]LLPLL[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.0810559093952179
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LPLL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08136646449565887
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPP[-]L[-]L[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08214285969734192
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPP[-]L[-]L[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08214286714792252
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]LP[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.082298144698143
+length = 1288
+string = "#PLLPL[-]LLLLP[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.082298144698143
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LPL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.082298144698143
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLLLL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.082298144698143
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]PLLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08244048058986664
+length = 1344
+string = "#PL[-]LP[-]LLL[-]PL[-]LPLL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPL[-]LLLP[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPL[-]LLPL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPL[-]LPLL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPL[-]PLLL[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08260869979858398
+length = 1288
+string = "#PL[-]LPL[-]PP[-]LPL[-]LPL[-]LLL[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08291926234960556
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+avg_score = 0.08307453989982605
+length = 1288
+string = "#PLLLP[-]LPLLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08307453989982605
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08307453989982605
+length = 1288
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08338510245084763
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.0836956575512886
+length = 1288
+string = "#PLLPL[-]L[-]LPP[-]PL[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.0836956575512886
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]PL[s]LPL[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.0836956575512886
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+avg_score = 0.0838509351015091
+length = 1288
+string = "#PLLPL[-]LLPLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08462733775377274
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08757764846086502
+length = 1288
+string = "#PLLPL[-]L[-]PLP[-]PL[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08773292601108551
+length = 1288
+string = "#PLLPL[-]LPLLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08804348856210709
+length = 1288
+string = "#PL[-]LPLL[-]LP[-]LLPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.08881988376379013
+length = 1288
+string = "#PL[-]LPLL[-]PL[-]LLPL[-]LPL[-]P[-]L"
+
+[[inclusive-method-count]]
+avg_score = 0.2589285671710968
+length = 224
+string = ""
+
+[[leadwise-no-calls]]
+avg_score = 0.18125000596046448
+length = 160
+string = "#SSYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1822916716337204
+length = 192
+string = "#SYSESY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1822916716337204
+length = 192
+string = "#YYSYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1830357164144516
+length = 224
+string = "#YYYSESY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1927083283662796
+length = 192
+string = "#ESSYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1953125
+length = 128
+string = "#YSSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "#ESYYYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "#SSSSSSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.20000000298023224
+length = 160
+string = "#YSSYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.20000000298023224
+length = 160
+string = "#YYYSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.203125
+length = 128
+string = "#SYSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.203125
+length = 192
+string = "#YYYSYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.20624999701976776
+length = 160
+string = "#SYSYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.2083333283662796
+length = 192
+string = "#ESYSYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.2083333283662796
+length = 192
+string = "#YYSESS"
+
+[[leadwise-no-calls]]
+avg_score = 0.2098214328289032
+length = 224
+string = "#YYSESYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.21250000596046448
+length = 160
+string = "#SSESS"
+
+[[leadwise-no-calls]]
+avg_score = 0.2135416716337204
+length = 192
+string = "#SSESYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.2291666716337204
+length = 192
+string = "#ESYYSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.2291666716337204
+length = 96
+string = "#SEE"
+
+[[leadwise-no-calls]]
+avg_score = 0.23125000298023224
+length = 160
+string = "#ESSSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.2321428507566452
+length = 224
+string = "#ESYSESS"
+
+[[leadwise-no-calls]]
+avg_score = 0.234375
+length = 64
+string = "#EY"
+
+[[leadwise-no-calls]]
+avg_score = 0.2455357164144516
+length = 224
+string = "#SYSESSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.2552083432674408
+length = 192
+string = "#SSYYSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.26249998807907104
+length = 160
+string = "#SSSSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "#SSESYSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.2760416567325592
+length = 192
+string = "#SYSYSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.359375
+length = 64
+string = "#YE"
+
+[[leadwise-no-calls]]
+avg_score = 0.3645833432674408
+length = 96
+string = "#ESE"
+
+[[little-bob-shorthand]]
+avg_score = 0.5
+length = 48
+string = "LLLPL"
+
+[[little-bob-shorthand]]
+avg_score = 0.5357142686843872
+length = 56
+string = "LLLLLLL"
+
+[[little-bob-shorthand]]
+avg_score = 0.5357142686843872
+length = 112
+string = "PPPPPPP"
+
+[[little-bob-shorthand]]
+avg_score = 0.5625
+length = 48
+string = "LLLLP"
+
+[[little-bob-shorthand]]
+avg_score = 0.5833333134651184
+length = 48
+string = "LPLLL"
+
+[[little-bob-shorthand]]
+avg_score = 0.6041666865348816
+length = 48
+string = "LLPLL"
+
+[[little-bob-shorthand]]
+avg_score = 0.625
+length = 40
+string = "LPP"
+
+[[little-bob-shorthand]]
+avg_score = 0.7916666865348816
+length = 48
+string = "PLLLL"
+
+[[little-bob-shorthand]]
+avg_score = 0.800000011920929
+length = 40
+string = "PPL"
+
+[[little-bob-shorthand]]
+avg_score = 0.875
+length = 40
+string = "PLP"
+
 [[multipart]]
+avg_score = 0.3447916805744171
 length = 192
 string = "HsHH"
 
 [[multipart]]
+avg_score = 0.5375000238418579
 length = 64
 string = "sH"
 
 [[multipart-2]]
+avg_score = 0.06309523433446884
 length = 1344
 string = "sWsWH"
 
 [[multipart-2]]
+avg_score = 0.07425595074892044
 length = 1344
 string = "WHW"
 
 [[multipart-2]]
+avg_score = 0.13779762387275696
 length = 672
 string = "H"
 
 [[multipart-far-calls]]
+avg_score = 0.13625000417232513
 length = 1440
 string = "sVsVBI"
 
 [[multipart-far-calls]]
+avg_score = 0.17791666090488434
 length = 1440
 string = "VBIV"
 
 [[multipart-far-calls]]
+avg_score = 0.2241666615009308
 length = 720
 string = "BI"
 
 [[no-calls]]
+avg_score = 0.2410714328289032
 length = 224
 string = "CCCYCCC"
 
 [[no-calls]]
+avg_score = 0.2410714328289032
 length = 224
 string = "CCCYCCY"
 
 [[no-calls]]
-length = 224
-string = "YYCYCCY"
-
-[[no-calls]]
-length = 224
-string = "YYCYCCC"
-
-[[no-calls]]
+avg_score = 0.2410714328289032
 length = 224
 string = "YCCYCCC"
 
 [[no-calls]]
+avg_score = 0.2410714328289032
 length = 224
 string = "YCCYCCY"
 
 [[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "YYCYCCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "YYCYCCY"
+
+[[no-calls]]
+avg_score = 0.2455357164144516
 length = 224
 string = "CCCYYCC"
 
 [[no-calls]]
+avg_score = 0.2455357164144516
 length = 224
 string = "CCCYYCY"
 
 [[no-calls]]
-length = 224
-string = "YYCYYCC"
-
-[[no-calls]]
-length = 224
-string = "YYCYYCY"
-
-[[no-calls]]
-length = 224
-string = "YCCYYCC"
-
-[[no-calls]]
-length = 224
-string = "YCCYYCY"
-
-[[no-calls]]
+avg_score = 0.2455357164144516
 length = 224
 string = "CYCYYCC"
 
 [[no-calls]]
+avg_score = 0.2455357164144516
 length = 224
 string = "CYCYYCY"
 
 [[no-calls]]
+avg_score = 0.2455357164144516
+length = 224
+string = "YCCYYCC"
+
+[[no-calls]]
+avg_score = 0.2455357164144516
+length = 224
+string = "YCCYYCY"
+
+[[no-calls]]
+avg_score = 0.2455357164144516
+length = 224
+string = "YYCYYCC"
+
+[[no-calls]]
+avg_score = 0.2455357164144516
+length = 224
+string = "YYCYYCY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
 length = 224
 string = "CCCYCYC"
 
 [[no-calls]]
+avg_score = 0.2723214328289032
 length = 224
 string = "CCCYCYY"
 
 [[no-calls]]
-length = 224
-string = "YYCYCYY"
-
-[[no-calls]]
-length = 224
-string = "YYCYCYC"
-
-[[no-calls]]
-length = 224
-string = "YCCYCYC"
-
-[[no-calls]]
-length = 224
-string = "YCCYCYY"
-
-[[no-calls]]
-length = 224
-string = "CYCYCYY"
-
-[[no-calls]]
+avg_score = 0.2723214328289032
 length = 224
 string = "CYCYCYC"
 
 [[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "CYCYCYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YCCYCYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YCCYCYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YYCYCYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YYCYCYY"
+
+[[no-calls]]
+avg_score = 0.2767857015132904
 length = 224
 string = "CCCYYYC"
 
 [[no-calls]]
+avg_score = 0.2767857015132904
 length = 224
 string = "CCCYYYY"
 
 [[no-calls]]
-length = 224
-string = "YYCYYYC"
-
-[[no-calls]]
-length = 224
-string = "YYCYYYY"
-
-[[no-calls]]
-length = 224
-string = "YCCYYYY"
-
-[[no-calls]]
-length = 224
-string = "YCCYYYC"
-
-[[no-calls]]
+avg_score = 0.2767857015132904
 length = 224
 string = "CYCYYYC"
 
 [[no-calls]]
+avg_score = 0.2767857015132904
 length = 224
 string = "CYCYYYY"
 
+[[no-calls]]
+avg_score = 0.2767857015132904
+length = 224
+string = "YCCYYYC"
+
+[[no-calls]]
+avg_score = 0.2767857015132904
+length = 224
+string = "YCCYYYY"
+
+[[no-calls]]
+avg_score = 0.2767857015132904
+length = 224
+string = "YYCYYYC"
+
+[[no-calls]]
+avg_score = 0.2767857015132904
+length = 224
+string = "YYCYYYY"
+
 [[no-links]]
+avg_score = 0.2589285671710968
 length = 224
 string = "BBBBBBB"
 
 [[no-links]]
+avg_score = 0.2723214328289032
 length = 224
 string = "YYYYYYY"
 
 [[non-uniform-chs]]
+avg_score = 0.08624996989965439
 length = 1280
 string = "HWHBHsMsMsHBsHBH"
 
 [[non-uniform-chs]]
+avg_score = 0.08630950003862381
 length = 1344
 string = "HHBVMMMFBH"
 
 [[non-uniform-chs]]
+avg_score = 0.0863095074892044
 length = 1344
 string = "sHBsMVsMsMFsWBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08660712093114853
 length = 1344
 string = "sHBsMVsMMFsHsWHBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08671872317790985
 length = 1280
 string = "HWHBHsHBBsMH"
 
 [[non-uniform-chs]]
+avg_score = 0.08703122287988663
 length = 1280
 string = "sHsWHBHBsWBsHMsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08720235526561737
 length = 1344
 string = "sHsWBsHVMMMFBsH"
 
 [[non-uniform-chs]]
-length = 1280
-string = "sHBsMBsWHBWsH"
-
-[[non-uniform-chs]]
+avg_score = 0.0873437374830246
 length = 1280
 string = "sHBsMBsWBMWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.0873437374830246
+length = 1280
+string = "sHBsMBsWHBWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08749998360872269
 length = 1280
 string = "sHBsHsHsMBBMsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08749998360872269
 length = 1280
 string = "sHBsMsHBBMsWsWsH"
 
 [[non-uniform-chs]]
-length = 1280
-string = "sHsWsHBsHsMsMsHBHBsH"
-
-[[non-uniform-chs]]
+avg_score = 0.08781246840953827
 length = 1280
 string = "sHsMsMsWHBHsHBHBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08781246840953827
 length = 1280
-string = "sHsWBsMsHsHBHBsH"
+string = "sHsWsHBsHsMsMsHBHBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08828122913837433
 length = 1280
 string = "HWWHsTsVBMWH"
 
 [[non-uniform-chs]]
+avg_score = 0.08828122913837433
+length = 1280
+string = "sHsWBsMsHsHBHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08839283883571625
 length = 1344
 string = "sHsWHHsTsFHsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08906247466802597
 length = 1280
 string = "sHsWHsHBMBHBsH"
 
 [[non-uniform-chs]]
-length = 1280
-string = "sHBsMBsWBsHMsWsH"
-
-[[non-uniform-chs]]
+avg_score = 0.08906248211860657
 length = 1280
 string = "sHBBMWBsHHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08906248211860657
+length = 1280
+string = "sHBsMBsWBsHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08921872824430466
 length = 1280
 string = "sHBBsHMsWBsHHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08958331495523453
 length = 1344
 string = "sHBsMVsMMFsHBsHMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08984372764825821
 length = 1280
 string = "sHsWBsHsMBBMsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.0899999812245369
 length = 1280
 string = "sHBsHBWsHBsHHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09015621989965439
 length = 1280
 string = "sHsWHBHsMsMHBsHBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09093747287988663
 length = 1280
 string = "sHsMWsHBBsHBHHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09107140451669693
 length = 1344
 string = "sHsWHBHsMVsMsMFBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09171871840953827
 length = 1280
 string = "sHsWHHBsHBBsHMsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09176827222108841
 length = 1312
 string = "sHBBsHBBsHBsHHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09255950152873993
 length = 1344
 string = "sHBsMVsMsMFHBHsMsH"
 
 [[non-uniform-chs]]
+avg_score = 0.09328122437000275
 length = 1280
 string = "sHsWHBHsMsMsHBHBsH"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+string = "#P[-]P[s]P[-]P[t]PP[s]PP[t]PPP[s]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+string = "#P[-]P[t]P[-]P[-]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#PPP[t]PP[t]P[s]PP[s]PPPP[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#PPP[t]P[s]P[t]PP[-]PPPP[t]P[s]P[s]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[-]P[s]PP[-]P[s]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[-]P[s]P[-]PP[s]PP[t]PPP[s]P[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[-]P[s]P[-]P[-]P[-]PP[t]PPPP[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[s]P[-]PP[-]P[s]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[-]P[-]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[-]P[t]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[-]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[s]P[s]P[-]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]PP[-]PPP[s]PPP[s]P[s]P[t]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[-]P[-]PP[s]PP[t]P[s]PP[s]P[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[-]P[-]PP[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[s]P[s]PP[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[t]P[s]PP[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[-]P[-]P[t]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[-]P[t]P[-]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[-]P[-]PP[t]P[s]P[s]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[-]P[-]P[t]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[-]P[t]P[-]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[s]P[s]PP[t]P[s]P[s]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[t]P[s]PP[-]P[t]P[s]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PPP[t]P[s]PP[t]P[-]P[s]PP[s]P"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]PP[t]P[t]PPP[t]P[s]PP[-]PP"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]P[-]P[s]PP[-]P[s]PPPP[t]P[-]P[s]"
+
+[[pb-split-treble]]
+avg_score = 0.0565149150788784
+length = 1274
+string = "#P[t]P[t]P[-]P[s]PP[s]P[-]PPPP[t]P[-]P[s]"
+
+[[pb-split-treble]]
+avg_score = 0.06279435008764267
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[-]P[-]PP[s]P[s]"
+
+[[pb-split-treble]]
+avg_score = 0.06279435008764267
+length = 1274
+string = "#P[t]P[t]PPPP[s]PP[t]P[s]P[s]PP[s]P[s]"
