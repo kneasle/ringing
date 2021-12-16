@@ -9,7 +9,7 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
 };
 
-use bellframe::{Row, RowBuf};
+use bellframe::{Row, RowBuf, Stroke};
 use itertools::Itertools;
 use log::log;
 
@@ -18,7 +18,7 @@ use crate::{
         node_range::{End, NodeRange, PerPartLength, RangeEnd, RangeFactory, TotalLength},
         Layout, LinkIdx, NodeId, RowRange, StandardNodeId, StartIdx,
     },
-    music::{Breakdown, MusicType, Score},
+    music::{Breakdown, MusicType, Score, StrokeSet},
     utils::{FrontierItem, Rotation, RowCounts},
     Query,
 };
@@ -397,19 +397,47 @@ impl Graph {
         music_types: &[MusicType],
         max_length: usize,
         part_head: &Row,
+        start_stroke: Stroke,
     ) -> Self {
         // Build the shape of the graph using Dijkstra's algorithm
         let (expanded_node_ranges, start_nodes, end_nodes, ch_equiv_map, part_heads) =
             build_graph(layout, max_length, part_head);
         let num_parts = part_heads.len() as Rotation;
 
+        // `true` if any of the `music_types` care about stroke
+        let dependence_on_stroke = music_types
+            .iter()
+            .any(|ty| ty.stroke_set() != StrokeSet::Both);
+
         // Convert each `expanded_node_range` into a full `Node`, albeit without
         // predecessor/falseness references
         let mut nodes: HashMap<NodeId, Node> = expanded_node_ranges
             .iter()
             .map(|(node_id, (node_range, distance))| {
+                // If music types rely on accurate strokes, then we need to make sure that the
+                // nodes always start at the same stroke.
+                //
+                // TODO: If we want to implement this properly, what we should actually check is
+                // the start stroke of any node is unabiguous.  I doubt this assert will ever be
+                // tripped, though.
+                if dependence_on_stroke {
+                    assert!(
+                        node_range.per_part_length.0 % 2 == 0 || node_range.end().is_some(),
+                        "Odd length nodes aren't implemented yet."
+                    );
+                }
                 assert_eq!(node_id, &node_range.node_id);
-                let new_node = build_node(node_range, *distance, layout, music_types, &part_heads);
+                let new_node = build_node(
+                    node_range,
+                    *distance,
+                    layout,
+                    music_types,
+                    &part_heads,
+                    // We've asserted that all nodes have even length, so that all nodes must start
+                    // at the same stroke.  Therefore, we can simply pass 'start_stroke' straight
+                    // to all the comps
+                    start_stroke,
+                );
                 (node_id.clone(), new_node)
             })
             .collect();
@@ -612,13 +640,19 @@ fn build_node(
     layout: &Layout,
     music_types: &[MusicType],
     part_heads: &[RowBuf],
+    start_stroke: Stroke,
 ) -> Node {
     // Add up music from each part
     let mut music = Breakdown::zero(music_types.len());
     for ph in part_heads {
         if let Some(source_ch) = node_range.node_id.course_head() {
             let ch = ph * source_ch;
-            music += &Breakdown::from_rows(node_range.untransposed_rows(layout), &ch, music_types);
+            music += &Breakdown::from_rows(
+                node_range.untransposed_rows(layout),
+                &ch,
+                music_types,
+                start_stroke,
+            );
         }
     }
     // Determine if this node is (not) a duffer.  A node is a duffer it doesn't include any music

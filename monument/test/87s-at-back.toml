@@ -1,0 +1,11 @@
+# Tests specifying music on a single stroke
+
+length = "practice"
+method = "Plain Bob Major"
+course_heads = ["12345xxx"]
+base_calls = "far"
+
+[[music]]
+patterns = ["*87"]
+stroke = "back"
+weight = -10

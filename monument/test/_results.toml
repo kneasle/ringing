@@ -1,5 +1,45 @@
 multipart-self-false = []
 
+[[87s-at-back]]
+avg_score = -0.45625001192092896
+length = 32
+string = "sHsH"
+
+[[87s-at-back]]
+avg_score = -0.4406249523162842
+length = 64
+string = "sHWsMH"
+
+[[87s-at-back]]
+avg_score = -0.33124998211860657
+length = 96
+string = "WMsWMHsH"
+
+[[87s-at-back]]
+avg_score = -0.33124998211860657
+length = 96
+string = "WsMHWsMH"
+
+[[87s-at-back]]
+avg_score = -0.3312499523162842
+length = 96
+string = "sHWMsWMH"
+
+[[87s-at-back]]
+avg_score = -0.28437501192092896
+length = 64
+string = "WsMHsH"
+
+[[87s-at-back]]
+avg_score = -0.11249998956918716
+length = 48
+string = "WMH"
+
+[[87s-at-back]]
+avg_score = 0.0
+length = 112
+string = ""
+
 [[bristol-s8-qps]]
 avg_score = 0.11079997569322586
 length = 1250
@@ -654,6 +694,16 @@ string = "VBIV"
 avg_score = 0.2241666615009308
 length = 720
 string = "BI"
+
+[[no-87s-at-back]]
+avg_score = -0.11249998956918716
+length = 48
+string = "WMH"
+
+[[no-87s-at-back]]
+avg_score = 0.0
+length = 112
+string = ""
 
 [[no-calls]]
 avg_score = 0.2410714328289032

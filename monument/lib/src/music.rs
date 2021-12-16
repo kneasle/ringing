@@ -1,9 +1,10 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::utils::OptRange;
-use bellframe::{music::Regex, Row, RowBuf, Stage};
+use bellframe::{music::Regex, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use serde::Deserialize;
 
 pub type Score = OrderedFloat<f32>;
 
@@ -14,30 +15,24 @@ pub struct MusicType {
     weight: Score,
     count_range: OptRange,
     non_duffer: bool,
+    stroke_set: StrokeSet,
 }
 
 impl MusicType {
-    pub fn new(regexes: Vec<Regex>, weight: f32, count_range: OptRange, non_duffer: bool) -> Self {
+    pub fn new(
+        regexes: Vec<Regex>,
+        weight: f32,
+        count_range: OptRange,
+        non_duffer: bool,
+        strokes: StrokeSet,
+    ) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
             non_duffer,
+            stroke_set: strokes,
         }
-    }
-
-    /// Compute the score of a sequence of [`Row`]s
-    pub fn score<'r>(&self, rows: impl IntoIterator<Item = &'r Row>) -> Score {
-        let mut num_matches = 0usize;
-        for row in rows.into_iter() {
-            for regex in &self.regexes {
-                if regex.matches(row) {
-                    num_matches += 1;
-                }
-            }
-        }
-        // Give each match a score of `self.weight`
-        Score::from(num_matches as f32) * self.weight
     }
 
     pub fn count_range(&self) -> OptRange {
@@ -46,6 +41,10 @@ impl MusicType {
 
     pub fn non_duffer(&self) -> bool {
         self.non_duffer
+    }
+
+    pub fn stroke_set(&self) -> StrokeSet {
+        self.stroke_set
     }
 }
 
@@ -72,18 +71,21 @@ impl Breakdown {
         rows: impl IntoIterator<Item = &'r Row>,
         course_head: &Row,
         music_types: &[MusicType],
+        start_stroke: Stroke,
     ) -> Self {
         let mut temp_row = RowBuf::rounds(Stage::ONE);
         let mut occurences = vec![0; music_types.len()];
         // For every (transposed) row ...
-        for r in rows {
+        for (idx, r) in rows.into_iter().enumerate() {
             course_head.mul_into(r, &mut temp_row).unwrap();
             // ... for every music type ...
             for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
-                // ... count the number of instances of that type of music
-                for regex in &ty.regexes {
-                    if regex.matches(&temp_row) {
-                        *num_instances += 1;
+                if ty.stroke_set.contains(start_stroke.offset(idx)) {
+                    // ... count the number of instances of that type of music
+                    for regex in &ty.regexes {
+                        if regex.matches(&temp_row) {
+                            *num_instances += 1;
+                        }
                     }
                 }
             }
@@ -93,7 +95,7 @@ impl Breakdown {
             score: occurences
                 .iter()
                 .zip_eq(music_types)
-                .map(|(&num_instances, ty)| Score::from(num_instances as f32) * ty.weight)
+                .map(|(&num_instances, ty)| ty.weight * num_instances as f32)
                 .sum(),
             counts: occurences,
         }
@@ -194,5 +196,28 @@ impl SubAssign<&Breakdown> for Breakdown {
         for (a, b) in self.counts.iter_mut().zip_eq(rhs.counts.iter()) {
             *a -= *b;
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl StrokeSet {
+    fn contains(self, stroke: Stroke) -> bool {
+        match (self, stroke) {
+            (Self::Both, _) | (Self::Hand, Stroke::Hand) | (Self::Back, Stroke::Back) => true,
+            (Self::Hand, Stroke::Back) | (Self::Back, Stroke::Hand) => false,
+        }
+    }
+}
+
+impl Default for StrokeSet {
+    fn default() -> Self {
+        StrokeSet::Both
     }
 }
