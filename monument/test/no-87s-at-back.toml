@@ -6,6 +6,6 @@ course_heads = ["12345xxx"]
 base_calls = "far"
 
 [[music]]
-patterns = ["*87"]
+pattern = "*87"
 stroke = "back"
 count.max = 0 # Demand no 87s

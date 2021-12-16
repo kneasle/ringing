@@ -12,4 +12,4 @@ place_notation = "34"
 weight = 0
 
 [[music]]
-run_lengths = [4]
+run_length = 4

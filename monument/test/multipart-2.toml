@@ -1,5 +1,5 @@
 length = { min = 0, max = 2000 }
-methods = ["Yorkshire Surprise Major"]
+method = "Yorkshire Surprise Major"
 music_file = "../examples/music-8.toml"
 part_head = "1423"
 course_heads = ["xxxxx678"]

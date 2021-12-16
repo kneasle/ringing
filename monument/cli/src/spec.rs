@@ -452,38 +452,53 @@ pub struct MusicFile {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum MusicSpec {
-    Runs {
+    RunLength {
+        #[serde(rename = "run_length")]
+        length: usize,
+        #[serde(default)]
+        internal: bool,
+        #[serde(flatten)]
+        common: MusicCommon,
+    },
+    RunLengths {
         #[serde(rename = "run_lengths")]
         lengths: Vec<usize>,
         #[serde(default)]
         internal: bool,
-        #[serde(default = "get_one")]
-        weight: f32,
-        /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(rename = "count", default)]
-        count_range: OptRange,
-        /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
-        non_duffer: Option<bool>,
-        /// Which strokes this music can apply to
-        #[serde(rename = "stroke", default)]
-        strokes: StrokeSet,
+        #[serde(flatten)]
+        common: MusicCommon,
+    },
+    Pattern {
+        pattern: String,
+        /// For each pattern, which music counts are allowed
+        #[serde(default)]
+        count_each: OptRange,
+        #[serde(flatten)]
+        common: MusicCommon,
     },
     Patterns {
         patterns: Vec<String>,
         /// For each pattern, which music counts are allowed
         #[serde(default)]
         count_each: OptRange,
-        #[serde(default = "get_one")]
-        weight: f32,
-        /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(rename = "count", default)]
-        count_range: OptRange,
-        /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
-        non_duffer: Option<bool>,
-        /// Which strokes this music can apply to
-        #[serde(rename = "stroke", default)]
-        strokes: StrokeSet,
+        #[serde(flatten)]
+        common: MusicCommon,
     },
+}
+
+/// Values common to all enum variants of [`MusicSpec`]
+#[derive(Debug, Clone, Deserialize)]
+pub struct MusicCommon {
+    #[serde(default = "get_one")]
+    weight: f32,
+    /// Possibly unbounded range of counts which are allowed in this music type
+    #[serde(rename = "count", default)]
+    count_range: OptRange,
+    /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
+    non_duffer: Option<bool>,
+    /// Which strokes this music can apply to
+    #[serde(rename = "stroke", default)]
+    strokes: StrokeSet,
 }
 
 impl MusicSpec {
@@ -496,38 +511,32 @@ impl MusicSpec {
             Patterns(&'_self [String], &'_self OptRange),
         }
 
+        use std::slice::from_ref;
+
         // Extract the information from `self` into a normalised form
-        let (lowered_type, weight, count_range, non_duffer, strokes) = match self {
-            Self::Runs {
+        let (lowered_type, common) = match self {
+            Self::RunLength {
+                length,
+                internal,
+                common,
+            } => (LoweredType::Runs(from_ref(length), internal), common),
+            Self::RunLengths {
                 lengths,
                 internal,
-                weight,
-                count_range,
-                non_duffer,
-                strokes,
-            } => (
-                LoweredType::Runs(lengths, internal),
-                weight,
-                count_range,
-                non_duffer,
-                strokes,
-            ),
+                common,
+            } => (LoweredType::Runs(lengths, internal), common),
+            Self::Pattern {
+                pattern,
+                count_each,
+                common,
+            } => (LoweredType::Patterns(from_ref(pattern), count_each), common),
             Self::Patterns {
                 patterns,
                 count_each,
-                weight,
-                count_range,
-                non_duffer,
-                strokes,
-            } => (
-                LoweredType::Patterns(patterns, count_each),
-                weight,
-                count_range,
-                non_duffer,
-                strokes,
-            ),
+                common,
+            } => (LoweredType::Patterns(patterns, count_each), common),
         };
-        let non_duffer = non_duffer.unwrap_or(default_non_duffer);
+        let non_duffer = common.non_duffer.unwrap_or(default_non_duffer);
 
         match lowered_type {
             LoweredType::Runs(lengths, internal) => {
@@ -539,16 +548,16 @@ impl MusicSpec {
                 // `MusicType`
                 vec![MusicType::new(
                     regexes,
-                    *weight,
-                    *count_range,
+                    common.weight,
+                    common.count_range,
                     non_duffer,
-                    *strokes,
+                    common.strokes,
                 )]
             }
             LoweredType::Patterns(patterns, count_each) => {
                 let regexes = patterns.iter().map(|s| Regex::parse(s));
                 if count_each.is_set() {
-                    if count_range.is_set() {
+                    if common.count_range.is_set() {
                         todo!("Mixing `count` and `count_each` isn't implemented yet!");
                     }
                     // If just `count_each` is set, we generate a separate `MusicType` for each
@@ -556,7 +565,13 @@ impl MusicSpec {
                     // that pattern.
                     regexes
                         .map(|regex| {
-                            MusicType::new(vec![regex], *weight, *count_each, non_duffer, *strokes)
+                            MusicType::new(
+                                vec![regex],
+                                common.weight,
+                                *count_each,
+                                non_duffer,
+                                common.strokes,
+                            )
                         })
                         .collect_vec()
                 } else {
@@ -564,10 +579,10 @@ impl MusicSpec {
                     // apply `count` to all the regexes
                     vec![MusicType::new(
                         regexes.collect_vec(),
-                        *weight,
-                        *count_range,
+                        common.weight,
+                        common.count_range,
                         non_duffer,
-                        *strokes,
+                        common.strokes,
                     )]
                 }
             }

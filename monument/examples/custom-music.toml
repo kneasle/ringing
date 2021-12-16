@@ -6,7 +6,7 @@ method = "Bristol Surprise Major"
 run_lengths = [4, 5, 6, 7]
 
 [[music]]
-patterns = ["*6578"]
+pattern = "*6578"
 
 # Boost 5678s off the front
 [[music]]

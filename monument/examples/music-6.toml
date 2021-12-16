@@ -4,7 +4,7 @@
 run_lengths = [4, 5, 6]
 
 [[music]]
-patterns = ["*56"]
+pattern = "*56"
 
 [[music]]
 patterns = ["135246", "342516", "142536"] # Queens, exploded tittums and tittums
