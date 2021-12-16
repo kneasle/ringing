@@ -14,6 +14,7 @@ mod parity;
 pub mod place_not;
 pub mod row;
 mod stage;
+mod stroke;
 mod utils;
 
 // Re-export useful data types into the top level of the crate
@@ -27,6 +28,7 @@ pub use parity::Parity;
 pub use place_not::{PlaceNot, PnBlock};
 pub use row::{same_stage_vec::SameStageVec, InvalidRowError, Row, RowBuf};
 pub use stage::{IncompatibleStages, Stage};
+pub use stroke::Stroke;
 pub use utils::run_len;
 
 #[cfg(feature = "cc_lib_gen")]

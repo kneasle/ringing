@@ -228,17 +228,19 @@ pub mod passes {
     /// A default sequence of built-in optimisation passes
     pub fn default() -> Vec<Pass> {
         vec![
-            strip_refs(),
             // Distance-related optimisation
             compute_distances(),
             strip_long_nodes(),
+            strip_refs(),
             // Duffer-related optimisation
             compute_duffer_distances(),
             strip_duff_nodes(),
+            // Music optimisation
+            required_music(),
+            remove_nodes_exceeding_max_count(),
             // Required node optimisation
             single_start_or_end_required(),
             remove_nodes_false_against_required(),
-            required_music(),
         ]
     }
 
@@ -254,6 +256,12 @@ pub mod passes {
     /// removing any which can't reach rounds in either direction.
     pub fn required_music() -> Pass {
         Pass::Single(Box::new(super::music::required_music_min))
+    }
+
+    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every node,
+    /// removing any which can't reach rounds in either direction.
+    pub fn remove_nodes_exceeding_max_count() -> Pass {
+        Pass::Single(Box::new(super::music::remove_nodes_exceeding_max_count))
     }
 
     /* Distance related passes */

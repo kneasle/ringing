@@ -6,13 +6,13 @@ use std::{
 
 use bellframe::{
     method::LABEL_LEAD_END, method_lib::QueryError, music::Regex, Bell, Mask, Method, MethodLib,
-    Row, RowBuf, Stage,
+    Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 use log::log;
 use monument::{
     layout::new::{coursewise, leadwise, Call, SpliceStyle},
-    music::MusicType,
+    music::{MusicType, StrokeSet},
     OptRange, Query,
 };
 use serde::Deserialize;
@@ -77,6 +77,9 @@ pub struct Spec {
     /// Specification of which classes of music Monument should consider
     #[serde(default)]
     music: Vec<MusicSpec>,
+    /// The [`Stroke`] of the first row of the composition
+    #[serde(default = "backstroke")]
+    start_stroke: Stroke,
     /// The value for `non_duffer` given to music types when none is explicitly given
     #[serde(default = "get_true")]
     default_non_duffer: bool,
@@ -176,8 +179,9 @@ impl Spec {
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
 
-            method_count_range,
             music_types,
+            start_stroke: self.start_stroke,
+            method_count_range,
             max_duffer_rows: self.max_duffer_rows,
         })
     }
@@ -456,10 +460,13 @@ pub enum MusicSpec {
         #[serde(default = "get_one")]
         weight: f32,
         /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(default)]
-        count: OptRange,
+        #[serde(rename = "count", default)]
+        count_range: OptRange,
         /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
         non_duffer: Option<bool>,
+        /// Which strokes this music can apply to
+        #[serde(rename = "stroke", default)]
+        strokes: StrokeSet,
     },
     Patterns {
         patterns: Vec<String>,
@@ -469,10 +476,13 @@ pub enum MusicSpec {
         #[serde(default = "get_one")]
         weight: f32,
         /// Possibly unbounded range of counts which are allowed in this music type
-        #[serde(default)]
-        count: OptRange,
+        #[serde(rename = "count", default)]
+        count_range: OptRange,
         /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
         non_duffer: Option<bool>,
+        /// Which strokes this music can apply to
+        #[serde(rename = "stroke", default)]
+        strokes: StrokeSet,
     },
 }
 
@@ -487,34 +497,36 @@ impl MusicSpec {
         }
 
         // Extract the information from `self` into a normalised form
-        let (lowered_type, weight, count, non_duffer) = match self {
+        let (lowered_type, weight, count_range, non_duffer, strokes) = match self {
             Self::Runs {
                 lengths,
                 internal,
                 weight,
-                count,
+                count_range,
                 non_duffer,
+                strokes,
             } => (
                 LoweredType::Runs(lengths, internal),
                 weight,
-                count,
+                count_range,
                 non_duffer,
+                strokes,
             ),
             Self::Patterns {
                 patterns,
                 count_each,
                 weight,
-                count,
+                count_range,
                 non_duffer,
+                strokes,
             } => (
                 LoweredType::Patterns(patterns, count_each),
                 weight,
-                count,
+                count_range,
                 non_duffer,
+                strokes,
             ),
         };
-        let weight = *weight;
-        let count = *count;
         let non_duffer = non_duffer.unwrap_or(default_non_duffer);
 
         match lowered_type {
@@ -525,28 +537,37 @@ impl MusicSpec {
                     .collect_vec();
                 // Runs can't take the `count_each` parameter, so can all be grouped into one
                 // `MusicType`
-                vec![MusicType::new(regexes, weight, count, non_duffer)]
+                vec![MusicType::new(
+                    regexes,
+                    *weight,
+                    *count_range,
+                    non_duffer,
+                    *strokes,
+                )]
             }
             LoweredType::Patterns(patterns, count_each) => {
                 let regexes = patterns.iter().map(|s| Regex::parse(s));
                 if count_each.is_set() {
-                    if count.is_set() {
+                    if count_range.is_set() {
                         todo!("Mixing `count` and `count_each` isn't implemented yet!");
                     }
                     // If just `count_each` is set, we generate a separate `MusicType` for each
                     // pattern.  Each `MusicType` will contain exactly one `regex` corresponding to
                     // that pattern.
                     regexes
-                        .map(|regex| MusicType::new(vec![regex], weight, *count_each, non_duffer))
+                        .map(|regex| {
+                            MusicType::new(vec![regex], *weight, *count_each, non_duffer, *strokes)
+                        })
                         .collect_vec()
                 } else {
                     // If `count_each` isn't set, we group all the patterns into one `MusicType` and
                     // apply `count` to all the regexes
                     vec![MusicType::new(
                         regexes.collect_vec(),
-                        weight,
-                        count,
+                        *weight,
+                        *count_range,
                         non_duffer,
+                        *strokes,
                     )]
                 }
             }
@@ -566,6 +587,10 @@ fn get_30() -> usize {
 
 fn get_true() -> bool {
     true
+}
+
+fn backstroke() -> Stroke {
+    Stroke::Back
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).

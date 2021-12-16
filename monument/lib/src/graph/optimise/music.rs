@@ -93,6 +93,35 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     }
 }
 
+/// Remove any node which exceeds the max count for any music type.  Usually this max count will be
+/// 0 (i.e. any nodes with that music should be removed).
+pub(crate) fn remove_nodes_exceeding_max_count(graph: &mut Graph, query: &Query) {
+    let mut counts_from_required_nodes = Breakdown::zero(query.music_types.len());
+    for node in graph.nodes.values() {
+        if node.required {
+            counts_from_required_nodes += &node.music;
+        }
+    }
+
+    for (music_ty_idx, count_from_required) in counts_from_required_nodes
+        .counts
+        .iter()
+        .copied()
+        .enumerate()
+    {
+        let music_type = &query.music_types[music_ty_idx];
+        if let Some(count_limit) = music_type.count_range().max {
+            let max_count_left_per_node = count_limit.checked_sub(count_from_required).expect(
+                "Search can't be completed because the required nodes exceed a maximum music count.",
+            );
+            // Remove any nodes which exceed the count on their own
+            graph
+                .nodes
+                .retain(|_id, node| node.music.counts[music_ty_idx] <= max_count_left_per_node);
+        }
+    }
+}
+
 /// Search every combination of the musical nodes, adding any working sets of nodes to
 /// `node_patterns`.
 // TODO: Why is this returning duplicates?

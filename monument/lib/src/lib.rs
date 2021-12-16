@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bellframe::RowBuf;
+use bellframe::{RowBuf, Stroke};
 use graph::{optimise::Pass, Graph};
 use log::log;
 
@@ -34,8 +34,9 @@ pub struct Query {
     pub len_range: Range<usize>,
     pub num_comps: usize,
 
-    pub method_count_range: Range<usize>,
     pub music_types: Vec<music::MusicType>,
+    pub start_stroke: Stroke,
+    pub method_count_range: Range<usize>,
     pub max_duffer_rows: Option<usize>,
 }
 
@@ -189,6 +190,7 @@ impl Query {
             // `- 1` makes sure that the length limit is an **inclusive** bound
             self.len_range.end - 1,
             &self.part_head,
+            self.start_stroke,
         )
     }
 }
