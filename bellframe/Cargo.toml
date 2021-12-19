@@ -2,7 +2,7 @@
 name = "bellframe"
 version = "0.4.0"
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Fast and idiomatic primitives for Change Ringing."
 license = "MIT"
 repository = "https://github.com/kneasle/bellframe"
