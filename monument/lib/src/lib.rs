@@ -116,38 +116,45 @@ impl Comp {
 // SEARCH //
 ////////////
 
-/// Run a query
-pub fn run_query(
-    query_arc: Arc<Query>,
-    config: &mut Config,
-    debug_output: Option<DebugOutput>,
-) -> Result<Vec<Comp>, Option<Graph>> {
-    log::info!("Building `Graph`");
-    let graph = query_arc.unoptimised_graph();
-    if debug_output == Some(DebugOutput::Graph) {
-        return Err(Some(graph)); // Return the graph if the caller wants to inspect it
+impl Query {
+    /// Creates an unoptimised [`Graph`] from which our compositions are generated
+    pub fn unoptimised_graph(&self) -> Graph {
+        log::info!("Building `Graph`");
+        graph::Graph::from_layout(
+            &self.layout,
+            &self.music_types,
+            // `- 1` makes sure that the length limit is an **inclusive** bound
+            self.len_range.end - 1,
+            &self.part_head,
+            self.start_stroke,
+        )
     }
 
-    log::debug!("Optimising graph(s)");
-    let mut graphs = if config.split_by_start_node {
-        graph.split_by_start_node()
-    } else {
-        vec![graph]
-    };
-    for g in &mut graphs {
-        g.optimise(&mut config.optimisation_passes, &query_arc);
-        log::info!(
-            "Optimised graph has {} nodes, {} starts, {} ends",
-            g.node_map().len(),
-            g.start_nodes().len(),
-            g.end_nodes().len()
-        );
+    /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
+    /// generate the same overall set of compositions.
+    pub fn optimise_graph(&self, graph: Graph, config: &mut Config) -> Vec<Graph> {
+        log::info!("Optimising graph(s)");
+        let mut graphs = if config.split_by_start_node {
+            graph.split_by_start_node()
+        } else {
+            vec![graph]
+        };
+        for g in &mut graphs {
+            g.optimise(&mut config.optimisation_passes, self);
+            log::info!(
+                "Optimised graph has {} nodes, {} starts, {} ends",
+                g.node_map().len(),
+                g.start_nodes().len(),
+                g.end_nodes().len()
+            );
+        }
+        graphs
     }
+}
 
-    if debug_output == Some(DebugOutput::StopBeforeSearch) {
-        return Err(None); // Stop early if the caller requested that
-    }
-
+/// Given a [`Query`] and a set of optimised [`Graph`]s, run A* search to generate compositions
+/// through those graphs.
+pub fn search(query_arc: Arc<Query>, graphs: Vec<Graph>, config: &Config) -> Vec<Comp> {
     log::info!("Starting tree search");
     let comps_arc = Arc::from(Mutex::new(Vec::<Comp>::new()));
     let num_threads = graphs.len(); // config.num_threads.unwrap_or_else(num_cpus::get_physical);
@@ -180,27 +187,5 @@ pub fn run_query(
     // Return all the comps in ascending order of goodness
     let mut comps = comps_arc.lock().unwrap().clone();
     comps.sort_by_key(|comp| comp.avg_score);
-    Ok(comps)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DebugOutput {
-    /// Return the unoptimised [`Graph`]
-    Graph,
-    /// Stop just before the search starts, to let the user see what's been printed out without
-    /// scrolling
-    StopBeforeSearch,
-}
-
-impl Query {
-    fn unoptimised_graph(&self) -> Graph {
-        graph::Graph::from_layout(
-            &self.layout,
-            &self.music_types,
-            // `- 1` makes sure that the length limit is an **inclusive** bound
-            self.len_range.end - 1,
-            &self.part_head,
-            self.start_stroke,
-        )
-    }
+    comps
 }

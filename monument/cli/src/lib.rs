@@ -68,19 +68,18 @@ pub fn run(
     };
 
     // Run query and handle its debug output
-    let query_result =
-        monument::run_query(query.clone(), &mut config, debug_print.and_then(Into::into));
-    Ok(match query_result {
-        Ok(comps) => Some(QueryResult {
-            comps,
-            duration: Instant::now() - start_time,
-        }),
-        Err(Some(graph)) => {
-            dbg!(graph);
-            None
-        }
-        Err(None) => None,
-    })
+    let graph = query.unoptimised_graph();
+    debug_print!(Graph, graph);
+    let optimised_graphs = query.optimise_graph(graph, &mut config);
+    if debug_print == Some(DebugPrint::StopBeforeSearch) {
+        return Ok(None);
+    }
+
+    let comps = monument::search(query.clone(), optimised_graphs, &mut config);
+    Ok(Some(QueryResult {
+        comps,
+        duration: Instant::now() - start_time,
+    }))
 }
 
 #[derive(Debug, Clone)]
@@ -142,16 +141,6 @@ impl FromStr for DebugPrint {
                     v
                 ))
             }
-        })
-    }
-}
-
-impl From<DebugPrint> for Option<DebugOutput> {
-    fn from(dbg_print: DebugPrint) -> Option<DebugOutput> {
-        Some(match dbg_print {
-            DebugPrint::Graph => DebugOutput::Graph,
-            DebugPrint::StopBeforeSearch => DebugOutput::StopBeforeSearch,
-            _ => return None,
         })
     }
 }
