@@ -1,0 +1,9 @@
+[package]
+name = "monument_gui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.15"
+monument.path = "../lib"
+bellframe.path = "../../bellframe"

@@ -1,5 +1,6 @@
 [workspace]
-members = ["utils", "bellframe", "monument/lib", "monument/cli"]
+members = ["utils", "bellframe", "monument/lib", "monument/cli", "monument/gui"]
+default-members = ["monument/gui"] # Run Monument's GUI by default
 
 # Do some optimisation for debug builds.  -O2 is still fast enough, but makes things like file IO
 # much faster.
