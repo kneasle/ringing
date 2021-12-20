@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BinaryHeap, fmt::Debug, rc::Rc};
+use std::{cmp::Ordering, collections::BinaryHeap, fmt::Debug, rc::Rc, sync::Arc};
 
 use bit_vec::BitVec;
 use log::log;
@@ -19,7 +19,7 @@ use graph::NodeIdx;
 /// composition `c` found, `on_comp(c)` will be called.
 pub(crate) fn search<CompFn: FnMut(Comp)>(
     graph: &crate::graph::Graph,
-    query: &Query,
+    query: Arc<Query>,
     queue_limit: usize,
     mut comp_fn: CompFn,
 ) {
@@ -28,7 +28,7 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
-    let graph = self::graph::Graph::new(graph, query);
+    let graph = self::graph::Graph::new(graph, &query);
 
     // Initialise the frontier to just the start nodes
     let mut frontier = BinaryHeap::new();
@@ -78,8 +78,10 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
                 && method_counts.is_feasible(0, query.method_count_range.clone())
                 && rotation_bitmap & (1 << rotation) != 0
             {
-                let (start_idx, start_node_label, links) = path.flatten(&graph, query);
+                let (start_idx, start_node_label, links) = path.flatten(&graph, &query);
                 let comp = Comp {
+                    query: query.clone(),
+
                     start_idx,
                     start_node_label,
                     links,

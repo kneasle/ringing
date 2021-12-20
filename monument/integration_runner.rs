@@ -9,7 +9,6 @@ use std::{
 use colored::*;
 use difference::Changeset;
 use itertools::Itertools;
-use monument::layout::Layout;
 use monument_cli::DebugPrint;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
@@ -255,11 +254,7 @@ fn run_test(
         Some(r) => r,
     };
     // Determine the actual comps
-    let mut comps = result
-        .comps
-        .iter()
-        .map(|comp| Comp::new(comp, &result.query.layout))
-        .collect_vec();
+    let mut comps = result.comps.iter().map(Comp::from).collect_vec();
     // Sort comps by their score, resolving tiebreaks by sorting by the comp string.  This
     // guarantees a consistent ordering even if Monument's output order is non-deterministic
     comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
@@ -459,14 +454,6 @@ struct Comp {
 }
 
 impl Comp {
-    fn new(source: &monument::Comp, layout: &Layout) -> Self {
-        Self {
-            length: source.length,
-            string: source.display_string(layout),
-            avg_score: source.avg_score,
-        }
-    }
-
     fn multiline_string(comps: &[Self]) -> String {
         comps.iter().map(Self::to_string).join("\n")
     }
@@ -480,6 +467,16 @@ impl Comp {
             Value::Float(self.avg_score.0 as f64),
         );
         Value::Table(comp_map)
+    }
+}
+
+impl From<&monument::Comp> for Comp {
+    fn from(source: &monument::Comp) -> Self {
+        Self {
+            length: source.length,
+            string: source.display_string(),
+            avg_score: source.avg_score,
+        }
     }
 }
 
