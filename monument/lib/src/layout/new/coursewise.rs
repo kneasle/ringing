@@ -21,7 +21,7 @@ pub fn coursewise(
     // The course head masks, along with which bell is 'calling bell' during that course.
     // Allowing different calling bells allows us to do things like keep using W,M,H during
     // courses of e.g. `1xxxxx0987`.
-    ch_masks: Vec<(Mask, Bell)>,
+    ch_masks: &[(Mask, Bell)],
     // Which sub-lead indices are considered valid starting or finishing points for the
     // composition.  If these are `None`, then any location is allowed
     allowed_start_indices: Option<&[usize]>,
@@ -76,7 +76,7 @@ pub fn coursewise(
 fn gen_method_data<'a>(
     methods: &'a [(Method, String)],
     calls: &'a [super::Call],
-    ch_masks: Vec<(Mask, Bell)>,
+    ch_masks: &'a [(Mask, Bell)],
 ) -> Result<(Vec<MethodData<'a>>, Stage)> {
     let stage = methods
         .iter()
@@ -114,7 +114,7 @@ fn gen_method_data<'a>(
 /// fix it in all the course heads.  In most cases, this will add the treble as a fixed bell
 /// (allowing the falseness detection to use it to reduce the size of the falseness table).
 fn add_fixed_bells(
-    ch_masks: Vec<(Mask, Bell)>,
+    ch_masks: &[(Mask, Bell)],
     methods: &[(Method, String)],
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
@@ -122,7 +122,7 @@ fn add_fixed_bells(
     let fixed_bells = super::utils::fixed_bells(methods, calls_per_method, stage);
 
     let mut fixed_ch_masks = Vec::with_capacity(ch_masks.len());
-    'mask_loop: for (mut mask, calling_bell) in ch_masks {
+    'mask_loop: for (mut mask, calling_bell) in ch_masks.iter().cloned() {
         // Attempt to add the fixed bells to this mask
         for &b in &fixed_bells {
             if let Err(BellAlreadySet) = mask.fix(b) {

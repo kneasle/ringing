@@ -1,12 +1,59 @@
 //! Utility code for building [`Layout`]s in common scenarios.
 
-use bellframe::{Bell, Mask, PlaceNot, Stage};
+use bellframe::{Bell, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
+
+use super::Layout;
 
 pub mod coursewise;
 pub mod leadwise;
 mod utils;
+
+impl Layout {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        methods: &[(bellframe::Method, String)],
+        calls: &[self::Call],
+        splice_style: SpliceStyle,
+
+        ch_preset: CourseHeadMaskPreset,
+        part_head: &Row,
+        leadwise: Option<bool>,
+
+        start_indices: Option<&[usize]>,
+        end_indices: Option<&[usize]>,
+    ) -> Result<Self> {
+        let stage = methods
+            .iter()
+            .map(|(m, _)| m.stage())
+            .max()
+            .expect("Can't find stage of 0 methods");
+
+        let ch_masks = ch_preset.into_masks(stage);
+
+        let leadwise = leadwise.unwrap_or_else(|| {
+            // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
+            // all calling bells
+            !ch_masks
+                .iter()
+                .all(|(_mask, calling_bell)| part_head.is_fixed(*calling_bell))
+        });
+
+        if leadwise {
+            leadwise::leadwise(methods, calls, start_indices, end_indices)
+        } else {
+            coursewise::coursewise(
+                methods,
+                calls,
+                splice_style,
+                &ch_masks,
+                start_indices,
+                end_indices,
+            )
+        }
+    }
+}
 
 /// The ways that [`Layout`] creation can fail
 #[derive(Debug, Clone)]
@@ -57,6 +104,40 @@ impl Default for SpliceStyle {
     fn default() -> Self {
         Self::LeadLabels
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum CourseHeadMaskPreset {
+    TenorsTogether,
+    SplitTenors,
+    Custom(Vec<(Mask, Bell)>),
+}
+
+impl CourseHeadMaskPreset {
+    fn into_masks(self, stage: Stage) -> Vec<(Mask, Bell)> {
+        let tenor = stage.tenor();
+        match self {
+            Self::TenorsTogether => vec![(tenors_together_mask(stage), tenor)],
+            // Only fix the tenor for split tenors comps
+            Self::SplitTenors => vec![(Mask::fix_bells(stage, vec![tenor]), tenor)],
+            Self::Custom(ch_masks) => ch_masks,
+        }
+    }
+}
+
+/// Generate the course head mask representing the tenors together.  This corresponds to
+/// `xxxxxx7890ET...` or just the tenor.
+fn tenors_together_mask(stage: Stage) -> Mask {
+    let mut fixed_bells = vec![];
+    if stage <= Stage::MINOR {
+        // On Minor or below, only fix the tenor
+        fixed_bells.push(stage.tenor());
+    } else {
+        // On stages above minor, fix 7-tenor.  Note that we're using 0-indexing here so bell #6 is
+        // actually the 7th
+        fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
+    }
+    Mask::fix_bells(stage, fixed_bells)
 }
 
 ///////////
