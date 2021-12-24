@@ -4,7 +4,10 @@ use bellframe::{AnnotBlock, Mask, Row, RowBuf};
 use index_vec::IndexVec;
 use itertools::Itertools;
 
-use super::{check_duplicate_shorthand, Result, SNAP_FINISH_LABEL, SNAP_START_LABEL};
+use super::{
+    utils::{SNAP_FINISH_LABEL, SNAP_START_LABEL},
+    Result,
+};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
 /// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
@@ -17,7 +20,7 @@ pub fn leadwise(
     start_indices: Option<&[usize]>,
     end_indices: Option<&[usize]>,
 ) -> Result<Layout> {
-    check_duplicate_shorthand(methods)?;
+    super::utils::check_duplicate_shorthand(methods)?;
 
     let stage = methods
         .iter()
@@ -39,7 +42,7 @@ pub fn leadwise(
         .iter()
         .map(|_| calls.iter().collect_vec())
         .collect_vec();
-    let fixed_bells = super::fixed_bells(methods, &calls_per_method, stage);
+    let fixed_bells = super::utils::fixed_bells(methods, &calls_per_method, stage);
     let lead_head_mask = Mask::fix_bells(stage, fixed_bells);
 
     let blks = blocks.as_raw_slice();
@@ -194,7 +197,7 @@ fn links(
     }
 
     // Deduplicate links and return
-    super::dedup_links(&mut links);
+    super::utils::dedup_links(&mut links);
     links.into()
 }
 

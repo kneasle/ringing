@@ -34,9 +34,10 @@ pub struct Query {
     pub len_range: Range<usize>,
     pub num_comps: usize,
 
+    pub method_count_range: Range<usize>,
+
     pub music_types: Vec<music::MusicType>,
     pub start_stroke: Stroke,
-    pub method_count_range: Range<usize>,
     pub max_duffer_rows: Option<usize>,
     /// The `f32` is the weight given to every row in a course
     pub ch_weights: Vec<(Mask, f32)>,

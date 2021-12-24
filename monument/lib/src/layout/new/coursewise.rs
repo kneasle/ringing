@@ -9,7 +9,7 @@ use bellframe::{
 use index_vec::IndexVec;
 use itertools::Itertools;
 
-use super::{check_duplicate_shorthand, CourseHeadMask, Error, Result, SpliceStyle};
+use super::{utils::CourseHeadMask, Error, Result, SpliceStyle};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
 /// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
@@ -28,7 +28,7 @@ pub fn coursewise(
     allowed_end_indices: Option<&[usize]>,
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
-    check_duplicate_shorthand(methods)?;
+    super::utils::check_duplicate_shorthand(methods)?;
     let (mut method_datas, stage) = gen_method_data(methods, calls, ch_masks)?;
     let is_spliced = method_datas.len() > 1;
 
@@ -50,13 +50,13 @@ pub fn coursewise(
             &method_datas,
             stage,
             allowed_start_indices,
-            super::SNAP_START_LABEL,
+            super::utils::SNAP_START_LABEL,
         ),
         ends: rounds_locations(
             &method_datas,
             stage,
             allowed_end_indices,
-            super::SNAP_FINISH_LABEL,
+            super::utils::SNAP_FINISH_LABEL,
         ),
         // Create a block for each method
         blocks: method_datas
@@ -119,7 +119,7 @@ fn add_fixed_bells(
     calls_per_method: &[Vec<&super::Call>],
     stage: Stage,
 ) -> Vec<(Mask, Bell)> {
-    let fixed_bells = super::fixed_bells(methods, calls_per_method, stage);
+    let fixed_bells = super::utils::fixed_bells(methods, calls_per_method, stage);
 
     let mut fixed_ch_masks = Vec::with_capacity(ch_masks.len());
     'mask_loop: for (mut mask, calling_bell) in ch_masks {
@@ -155,8 +155,8 @@ fn dedup_ch_masks(course_head_masks: &[CourseHeadMask]) -> Result<Vec<CourseHead
             if i == other_i {
                 continue; // Don't compare masks against themselves
             }
-            if ch_mask.mask.is_subset_of(&other_ch_mask.mask)
-                && ch_mask.calling_bell == other_ch_mask.calling_bell
+            if ch_mask.mask().is_subset_of(other_ch_mask.mask())
+                && ch_mask.calling_bell() == other_ch_mask.calling_bell()
             {
                 continue 'outer; // Skip this `ch_mask` if it is implied by another mask
             }
@@ -242,7 +242,7 @@ fn generate_links(
         splice_style,
     )?;
     filter_plain_links(&mut links, splice_style);
-    super::dedup_links(&mut links);
+    super::utils::dedup_links(&mut links);
     Ok(links)
 }
 
@@ -424,7 +424,7 @@ fn generate_call_links(
             let row_after_call = call.place_not.permute_new(row_before_call).unwrap();
             // Get the mask required by the row **after** this call.  This link can be
             // generated only if a `CallEnd` is compatible with this mask.
-            let mask_after_call = from_ch_mask.mask.mul(&row_after_call);
+            let mask_after_call = from_ch_mask.mask().mul(&row_after_call);
 
             // Get the debug/display names for any link in this position
             let tenor_place = mask_after_call
@@ -441,7 +441,7 @@ fn generate_call_links(
             // Add links for this call, splicing to any available method
             let is_call_possible = add_links_for_call_position(
                 from_idx,
-                &from_ch_mask.mask,
+                from_ch_mask.mask(),
                 &row_after_call,
                 &fmt_call(&call.debug_symbol, calling_position),
                 &fmt_call(&call.display_symbol, calling_position),
@@ -460,7 +460,7 @@ fn generate_call_links(
                 let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
                 add_links_for_call_position(
                     from_idx,
-                    &from_ch_mask.mask,
+                    from_ch_mask.mask(),
                     row_after_plain,
                     &fmt_call("p", calling_position),
                     "",  // Don't display plain leads in output
@@ -491,7 +491,7 @@ fn generate_plain_links(
             for ch_mask_from in &method_data.ch_masks {
                 add_links_for_call_position(
                     from_idx,
-                    &ch_mask_from.mask,
+                    ch_mask_from.mask(),
                     row_after_plain,
                     if link_gen_data.is_spliced { "[p]" } else { "p" },
                     "",   // Don't display plain leads in output

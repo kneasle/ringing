@@ -119,7 +119,7 @@ impl Spec {
         read_toml(path, &mut toml_buf)
     }
 
-    /// 'Lower' this specification into the information required to build a composition.
+    /// 'Lower' this `Spec`ification into a [`Query`]
     pub fn lower(&self, toml_path: &Path) -> Result<Query, Error> {
         // Generate methods
         let mut methods: Vec<(Method, String)> = self
@@ -188,9 +188,10 @@ impl Spec {
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
 
+            method_count_range,
+
             music_types,
             start_stroke: self.start_stroke,
-            method_count_range,
             max_duffer_rows: self.max_duffer_rows,
             ch_weights: self.ch_weights(stage, &methods)?,
         })
