@@ -23,7 +23,7 @@ impl MethodLib {
     /// and `None` otherwise.  The failure state for this function is not very useful - if you want
     /// to provide useful suggestions for your user, then consider using
     /// [`MethodLib::get_by_title_with_suggestions`].
-    pub fn get_by_title<'s>(&'s self, title: &str) -> Result<Method, QueryError<'s, ()>> {
+    pub fn get_by_title(&self, title: &str) -> Result<Method, QueryError<()>> {
         match self.get_by_title_option(&title.to_lowercase()) {
             Some(Ok(method)) => Ok(method),
             Some(Err((pn, error))) => Err(QueryError::PnParseErr { pn, error }),
@@ -35,10 +35,10 @@ impl MethodLib {
     /// [`Result`].  Until the [`Try`](std::ops::Try) trait is stabilised, I think this is a good
     /// balance - the user of bellframe gets an ergonomic result type and bellframe gets to use the
     /// `?` operator.
-    fn get_by_title_option<'s>(
-        &'s self,
+    fn get_by_title_option(
+        &self,
         lower_case_title: &str,
-    ) -> Option<Result<Method, (&'s str, PnBlockParseError)>> {
+    ) -> Option<Result<Method, (String, PnBlockParseError)>> {
         // Firstly, we extract the stage name from the title.  If the stage can't be extracted,
         // then the title must be invalid and therefore can't correspond to a method.
         //
@@ -231,28 +231,28 @@ struct CompactMethod {
 }
 
 impl CompactMethod {
-    fn to_method(&self, stage: Stage) -> Result<Method, (&str, PnBlockParseError)> {
+    fn to_method(&self, stage: Stage) -> Result<Method, (String, PnBlockParseError)> {
         Ok(Method::new(
             self.title.to_owned(),
             self.name.to_owned(),
             self.full_class,
             PnBlock::parse(&self.place_notation, stage)
-                .map_err(|e| (self.place_notation.as_str(), e))?
+                .map_err(|e| (self.place_notation.clone(), e))?
                 .to_block_from_rounds(),
         ))
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum QueryError<'lib, T> {
+pub enum QueryError<T> {
     PnParseErr {
-        pn: &'lib str,
+        pn: String,
         error: PnBlockParseError,
     },
     NotFound(T),
 }
 
-impl<'lib, T> QueryError<'lib, T> {
+impl<T> QueryError<T> {
     /// Unwraps the `PnParseErr` part of a `QueryError`, expecting the Method's place notation to
     /// have parsed correctly and panicking if it didn't
     pub fn unwrap_parse_err(self) -> Result<Method, T> {
@@ -263,7 +263,7 @@ impl<'lib, T> QueryError<'lib, T> {
     }
 
     /// Passes the value contained in the `NotFound` part of `self` through an arbitrary function.
-    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> QueryError<'lib, U> {
+    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> QueryError<U> {
         match self {
             QueryError::PnParseErr { pn, error } => QueryError::PnParseErr { pn, error },
             QueryError::NotFound(v) => QueryError::NotFound(f(v)),
