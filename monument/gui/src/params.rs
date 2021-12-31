@@ -86,6 +86,9 @@ impl CourseHeadPreset {
 impl Params {
     /// Draw the parameter panel's GUI, returning `true` if the `Search!` button was clicked.
     pub fn draw_gui(&mut self, ui: &mut Ui, method_lib: &MethodLib) -> bool {
+        ui.heading("Parameters");
+        ui.add_space(5.0);
+
         let mut should_start_search = false;
         // Use bottom->top layout to make sure the 'Search' button is always at the bottom of the
         // screen
@@ -271,11 +274,15 @@ impl Default for Params {
 
 fn draw_section(ui: &mut Ui, is_first: bool, title: &str, draw: impl FnOnce(&mut Ui)) {
     if !is_first {
-        ui.add_space(20.0);
+        ui.add_space(5.0); // Add padding between sections
     }
-    ui.heading(title);
-    ui.add_space(6.0);
-    egui::Grid::new(title).spacing([10.0, 8.0]).show(ui, draw);
+    egui::CollapsingHeader::new(title)
+        .default_open(true)
+        .show(ui, |ui| {
+            ui.add_space(4.0);
+            egui::Grid::new(title).spacing([10.0, 8.0]).show(ui, draw);
+            ui.add_space(6.0);
+        });
 }
 
 /////////////////////////
