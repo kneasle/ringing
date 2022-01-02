@@ -15,6 +15,7 @@ use std::{
 };
 
 use bellframe::{
+    mask::RegexToMaskError,
     place_not::{self, PnBlockParseError},
     InvalidRowError,
 };
@@ -104,6 +105,7 @@ pub enum Error {
     NoMethods,
     CcLibNotFound,
     PartHeadParse(InvalidRowError),
+    ChMaskParse(String, RegexToMaskError),
     SpecFile(PathBuf, spec::TomlReadError),
     MusicFile(PathBuf, spec::TomlReadError),
     MethodNotFound { suggestions: Vec<String> },

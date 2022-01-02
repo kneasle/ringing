@@ -33,16 +33,12 @@ const METHOD_BALANCE_ALLOWANCE: f32 = 0.1; // By how much the method balance is 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Spec {
+    /* GENERAL */
     /// The range of lengths of composition which are allowed
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "get_30")]
     num_comps: usize,
-    /// Monument won't stop until it generates the `num_comps` best compositions
-    #[serde(default)]
-    splice_style: SpliceStyle,
-    /// A [`Row`](bellframe::Row) which generates the part heads of this composition
-    part_head: Option<String>,
     /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
     /// cases like cyclic comps where no course heads are preserved across parts.
     ///
@@ -50,17 +46,20 @@ pub struct Spec {
     /// affects the tenor
     leadwise: Option<bool>,
 
-    /// Set to `true` to allow comps to not start at the lead head.
+    /* METHODS */
+    /// The [`Method`] who's compositions we are after
+    method: Option<MethodSpec>,
     #[serde(default)]
-    snap_start: bool,
-    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed
-    #[serde(default = "default_start_indices")]
-    start_indices: Option<Vec<usize>>,
-    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed
-    end_indices: Option<Vec<usize>>,
+    /// A list of [`Method`] who are being spliced together
+    methods: Vec<MethodSpec>,
+    /// At which locations method splices are allowed
+    #[serde(default)]
+    splice_style: SpliceStyle,
+    /// Bounds on how many rows of each method is allowed
+    #[serde(default)]
+    method_count: OptRange,
 
+    /* CALLS */
     /// Which calls should be used by default
     #[serde(default)] // Default to near calls
     base_calls: BaseCalls,
@@ -72,6 +71,7 @@ pub struct Spec {
     /// The weight given to each single from `base_calls`
     single_weight: Option<f32>,
 
+    /* MUSIC */
     /// Path to a file containing a music definition, relative to **this** TOML file
     music_file: Option<PathBuf>,
     /// Specification of which classes of music Monument should consider
@@ -86,6 +86,9 @@ pub struct Spec {
     /// The most consecutive rows of duffer nodes.
     max_duffer_rows: Option<usize>,
 
+    /* COURSES */
+    /// A [`Row`](bellframe::Row) which generates the part heads of this composition
+    part_head: Option<String>,
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
     #[serde(default)]
@@ -93,14 +96,17 @@ pub struct Spec {
     /// Which course heads masks are allowed (overrides `split_tenors`)
     course_heads: Option<Vec<String>>,
 
-    /// The [`Method`] who's compositions we are after
-    method: Option<MethodSpec>,
+    /* STARTS/ENDS */
+    /// Set to `true` to allow comps to not start at the lead head.
     #[serde(default)]
-    /// A list of [`Method`] who are being spliced together
-    methods: Vec<MethodSpec>,
-    /// Bounds on how many rows of each method is allowed
-    #[serde(default)]
-    method_count: OptRange,
+    snap_start: bool,
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed
+    #[serde(default = "default_start_indices")]
+    start_indices: Option<Vec<usize>>,
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed
+    end_indices: Option<Vec<usize>>,
 }
 
 impl Spec {
@@ -137,7 +143,7 @@ impl Spec {
         let start_indices = start_indices.as_deref();
         let end_indices = end_indices.as_deref();
 
-        let course_head_masks = self.course_head_masks(stage);
+        let course_head_masks = self.course_head_masks(stage)?;
 
         let leadwise = self.leadwise.unwrap_or_else(|| {
             // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
@@ -224,15 +230,18 @@ impl Spec {
         Ok(call_specs)
     }
 
-    fn course_head_masks(&self, stage: Stage) -> Vec<(Mask, Bell)> {
+    fn course_head_masks(&self, stage: Stage) -> Result<Vec<(Mask, Bell)>, Error> {
         let tenor = Bell::tenor(stage);
-        if let Some(ch_mask_strings) = &self.course_heads {
+        Ok(if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
             ch_mask_strings
                 .iter()
-                .map(|s| (Mask::parse(s), tenor))
-                .collect_vec()
+                .map(|s| match Mask::parse_with_stage(s, stage) {
+                    Ok(mask) => Ok((mask, tenor)),
+                    Err(e) => Err(Error::ChMaskParse(s.to_owned(), e)),
+                })
+                .collect::<Result<Vec<_>, _>>()?
         } else if self.split_tenors {
             // If no masks were given but `split_tenors` was `true`, then only fix the tenor.
             // `Layout::from_methods` will add the treble if it's fixed
@@ -240,7 +249,7 @@ impl Spec {
         } else {
             // Default to tenors together, with the tenor as 'calling bell'
             vec![(tenors_together_mask(stage), tenor)]
-        }
+        })
     }
 
     fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<usize>>, Option<Vec<usize>>) {

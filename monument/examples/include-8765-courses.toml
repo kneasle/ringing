@@ -3,5 +3,5 @@ methods = [
     "Yorkshire Surprise Major",
     { title = "Lessness Surprise Major", shorthand = "E" },
 ]
-course_heads = ["1xxxxx78", "15678xxx"]
+course_heads = ["*78", "*7856"]
 music_file = "music-8.toml"

@@ -45,7 +45,7 @@ methods = [
     "Yorkshire Surprise Major",
     { title = "Lessness Surprise Major", shorthand = "E" },
 ]
-course_heads = ["1xxxxx78", "15678xxx"]
+course_heads = ["*78", "*7856"]
 
 [[music]]
 run_lengths = [4, 5, 6, 7, 8]

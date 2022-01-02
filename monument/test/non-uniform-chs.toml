@@ -4,5 +4,5 @@
 
 length = "QP"
 method = "Yorkshire Surprise Major"
-course_heads = ["1xxxxx78", "15678xxx"]
+course_heads = ["*78", "*7856"]
 music_file = "music-8.toml"
