@@ -143,7 +143,7 @@ impl Spec {
         let start_indices = start_indices.as_deref();
         let end_indices = end_indices.as_deref();
 
-        let course_head_masks = self.course_head_masks(stage);
+        let course_head_masks = self.course_head_masks(stage)?;
 
         let leadwise = self.leadwise.unwrap_or_else(|| {
             // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
@@ -230,15 +230,18 @@ impl Spec {
         Ok(call_specs)
     }
 
-    fn course_head_masks(&self, stage: Stage) -> Vec<(Mask, Bell)> {
+    fn course_head_masks(&self, stage: Stage) -> Result<Vec<(Mask, Bell)>, Error> {
         let tenor = Bell::tenor(stage);
-        if let Some(ch_mask_strings) = &self.course_heads {
+        Ok(if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
             ch_mask_strings
                 .iter()
-                .map(|s| (Mask::parse(s), tenor))
-                .collect_vec()
+                .map(|s| match Mask::parse_with_stage(s, stage) {
+                    Ok(mask) => Ok((mask, tenor)),
+                    Err(e) => Err(Error::ChMaskParse(s.to_owned(), e)),
+                })
+                .collect::<Result<Vec<_>, _>>()?
         } else if self.split_tenors {
             // If no masks were given but `split_tenors` was `true`, then only fix the tenor.
             // `Layout::from_methods` will add the treble if it's fixed
@@ -246,7 +249,7 @@ impl Spec {
         } else {
             // Default to tenors together, with the tenor as 'calling bell'
             vec![(tenors_together_mask(stage), tenor)]
-        }
+        })
     }
 
     fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<usize>>, Option<Vec<usize>>) {
