@@ -98,6 +98,11 @@ impl Stage {
         (0..self.num_bells()).map(Bell::from_index)
     }
 
+    /// Returns `true` if a given [`Bell`] is contained in this `Stage`.
+    pub fn contains(self, bell: Bell) -> bool {
+        bell.number() <= self.num_bells()
+    }
+
     /// Returns true if this `Stage` denotes an even number of [`Bell`]s
     #[inline(always)]
     pub fn is_even(self) -> bool {
