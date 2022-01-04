@@ -297,9 +297,12 @@ dependencies = [
 
 [[package]]
 name = "gcd"
-version = "2.0.2"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8763772808ee8fe3128f0fc424bed6d9942293fddbcfd595ecfa58a81fe00b"
+checksum = "f37978dab2ca789938a83b2f8bc1ef32db6633af9051a6cd409eff72cbaaa79a"
+dependencies = [
+ "paste",
+]
 
 [[package]]
 name = "getrandom"
@@ -700,6 +703,12 @@ dependencies = [
  "num-traits",
  "serde",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "percent-encoding"
