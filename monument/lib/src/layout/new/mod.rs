@@ -189,7 +189,7 @@ impl Call {
     /// `None` for any [`Stage`] smaller than [`Stage::MINIMUS`].
     pub fn near_calls(stage: Stage) -> Option<Vec<Self>> {
         let bob = Self::lead_end_bob(PlaceNot::parse("14", stage).ok()?);
-        let single = Self::lead_end_bob(PlaceNot::parse("1234", stage).ok()?);
+        let single = Self::lead_end_single(PlaceNot::parse("1234", stage).ok()?);
         Some(vec![bob, single])
     }
 

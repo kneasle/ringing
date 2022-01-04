@@ -10,7 +10,7 @@ use std::{
     num::ParseIntError,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
+    sync::{atomic::AtomicBool, Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -19,7 +19,7 @@ use bellframe::{
     InvalidRowError,
 };
 use log::{log, LogLevelFilter};
-use monument::{Comp, Config};
+use monument::{Comp, Config, Progress, Query, QueryUpdate};
 use spec::Spec;
 
 pub fn init_logging(log_level: LogLevelFilter) {
@@ -56,7 +56,7 @@ pub fn run(
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::info!("Generating `Layout`");
-    let query = Arc::new(spec.lower(input_file)?);
+    let query = spec.lower(input_file)?;
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
@@ -75,7 +75,41 @@ pub fn run(
         return Ok(None);
     }
 
-    let comps = monument::search(query.clone(), optimised_graphs, &mut config);
+    // Print comps as they are generated
+    let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
+    let comps_clone = comps.clone();
+    Query::search(
+        Arc::new(query),
+        optimised_graphs,
+        &config,
+        move |update| match update {
+            QueryUpdate::Comp(comp) => {
+                log::info!("{}", comp.long_string());
+                comps_clone.lock().unwrap().push(comp);
+            }
+            QueryUpdate::Progress(Progress {
+                iter_count,
+                queue_len,
+                avg_length,
+                max_length,
+            }) => {
+                // Log status updates to the console
+                log::info!(
+                    "{} iters, {} items in queue, avg/max len {:.0}/{}",
+                    iter_count,
+                    queue_len,
+                    avg_length,
+                    max_length
+                );
+            }
+            QueryUpdate::TruncatingQueue => log::info!("Truncating queue..."),
+        },
+        // User can abort with ctrl-C, so we don't need to use the abort flag
+        Arc::new(AtomicBool::new(false)),
+    );
+
+    let mut comps = comps.lock().unwrap().to_vec();
+    comps.sort_by_key(|comp| comp.avg_score);
     Ok(Some(QueryResult {
         comps,
         duration: Instant::now() - start_time,

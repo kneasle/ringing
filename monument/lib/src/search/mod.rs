@@ -1,4 +1,10 @@
-use std::{cmp::Ordering, collections::BinaryHeap, fmt::Debug, rc::Rc, sync::Arc};
+use std::{
+    cmp::Ordering,
+    collections::BinaryHeap,
+    fmt::Debug,
+    rc::Rc,
+    sync::{atomic::AtomicBool, mpsc::SyncSender, Arc},
+};
 
 use bit_vec::BitVec;
 use log::log;
@@ -7,7 +13,7 @@ use crate::{
     layout::{LinkIdx, StartIdx},
     music::Score,
     utils::{coprime_bitmap, Rotation, RowCounts},
-    Comp, Query,
+    Comp, CompInner, Progress, Query, QueryUpdate,
 };
 
 mod graph;
@@ -15,18 +21,23 @@ mod graph;
 pub use graph::Graph;
 use graph::NodeIdx;
 
-/// Searches a [`Graph`](m_gr::Graph) for composition, according to some extra [`Data`].  For each
-/// composition `c` found, `on_comp(c)` will be called.
-pub(crate) fn search<CompFn: FnMut(Comp)>(
-    graph: &crate::graph::Graph,
+const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
+const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
+
+/// Searches a [`Graph`](m_gr::Graph) for compositions
+pub(crate) fn search(
+    graph: &crate::Graph,
     query: Arc<Query>,
     queue_limit: usize,
-    mut comp_fn: CompFn,
+    update_channel: SyncSender<QueryUpdate>,
+    abort_flag: Arc<AtomicBool>,
 ) {
+    // Initialise values for the search
     let max_duffer_rows = query.max_duffer_rows.map_or(u32::MAX, |m| m as u32);
     let len_range = (query.len_range.start as u32)..(query.len_range.end as u32);
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
+
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
     let graph = self::graph::Graph::new(graph, &query);
 
@@ -82,18 +93,20 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
                 let comp = Comp {
                     query: query.clone(),
 
-                    start_idx,
-                    start_node_label,
-                    links,
-                    end,
+                    inner: CompInner {
+                        start_idx,
+                        start_node_label,
+                        links,
+                        end,
 
-                    rotation,
-                    length: length as usize,
-                    method_counts,
-                    score,
-                    avg_score,
+                        rotation,
+                        length: length as usize,
+                        method_counts,
+                        score,
+                        avg_score,
+                    },
                 };
-                comp_fn(comp);
+                update_channel.send(QueryUpdate::Comp(comp)).unwrap();
                 num_comps += 1;
 
                 if num_comps == query.num_comps {
@@ -153,27 +166,37 @@ pub(crate) fn search<CompFn: FnMut(Comp)>(
 
         // If the queue gets too long, then halve its size
         if frontier.len() >= queue_limit {
-            log::info!("Truncating queue");
+            update_channel.send(QueryUpdate::TruncatingQueue).unwrap();
             truncate_heap(&mut frontier, queue_limit / 2);
         }
 
-        // Print stats every so often
         iter_count += 1;
-        if iter_count % 1_000_000 == 0 {
+
+        // Check for abort every so often
+        if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0
+            && abort_flag.load(std::sync::atomic::Ordering::Relaxed)
+        {
+            log::info!("Aborting");
+            return;
+        }
+
+        // Send stats every so often
+        if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
             let mut total_len = 0;
-            let mut max_len = 0;
+            let mut max_length = 0;
             frontier.iter().for_each(|n| {
                 total_len += n.length as usize;
-                max_len = max_len.max(n.length);
+                max_length = max_length.max(n.length);
             });
 
-            log::info!(
-                "{} iters, {} items in queue, avg/max len {:.0}/{}",
-                iter_count,
-                frontier.len(),
-                total_len as f32 / frontier.len() as f32,
-                max_len
-            );
+            update_channel
+                .send(QueryUpdate::Progress(Progress {
+                    iter_count,
+                    queue_len: frontier.len(),
+                    avg_length: total_len as f32 / frontier.len() as f32,
+                    max_length,
+                }))
+                .unwrap();
         }
     }
 }

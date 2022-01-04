@@ -146,8 +146,6 @@ impl Spec {
         };
 
         let (start_indices, end_indices) = self.start_end_indices(&part_head);
-        let start_indices = start_indices.as_deref();
-        let end_indices = end_indices.as_deref();
 
         let ch_mask_preset = self.ch_mask_preset(stage)?;
         let calls = self.calls(stage)?;
@@ -159,8 +157,8 @@ impl Spec {
             ch_mask_preset,
             &part_head,
             self.leadwise,
-            start_indices,
-            end_indices,
+            start_indices.as_deref(),
+            end_indices.as_deref(),
         )
         .map_err(Error::LayoutGen)?;
 
