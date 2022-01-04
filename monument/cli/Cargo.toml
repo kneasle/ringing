@@ -3,6 +3,11 @@ name = "monument_cli"
 version = "0.1.0"
 edition = "2021"
 
+authors = ["Ben White-Horne <kneasle@gmail.com>"]
+description = "CLI interface to Monument, a fast and flexible composing engine."
+license = "MIT"
+repository = "https://github.com/kneasle/ringing-monorepo"
+
 [dependencies]
 bellframe = { version = "0.5.0", path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"

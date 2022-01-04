@@ -1,11 +1,12 @@
 [package]
 name = "bellframe"
 version = "0.5.0"
-authors = ["Ben White-Horne <kneasle@gmail.com>"]
 edition = "2021"
+
+authors = ["Ben White-Horne <kneasle@gmail.com>"]
 description = "Fast and idiomatic primitives for Change Ringing."
 license = "MIT"
-repository = "https://github.com/kneasle/bellframe"
+repository = "https://github.com/kneasle/ringing-monorepo"
 
 [package.metadata.workspaces]
 independent = true
