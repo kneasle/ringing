@@ -16,7 +16,7 @@ use monument::{
     Progress, Query,
 };
 
-use crate::{Search, Status};
+use crate::{utils, Search, Status};
 
 const MAX_LENGTH: usize = 1_000_000;
 const MAX_NUM_COMPS: usize = 10_000;
@@ -86,7 +86,7 @@ impl CourseHeadPreset {
 impl Params {
     /// Draw the parameter panel's GUI, returning `true` if the `Search!` button was clicked.
     pub fn draw_gui(&mut self, ui: &mut Ui, method_lib: &MethodLib) -> bool {
-        ui.heading("Parameters");
+        utils::centered_heading(ui, "Parameters");
         ui.add_space(5.0);
 
         let mut should_start_search = false;
@@ -98,7 +98,11 @@ impl Params {
                 // Add the compose button
                 bottom_up_ui.add_space(4.0);
                 should_start_search = bottom_up_ui
-                    .add(egui::Button::new("Search! ->").text_style(egui::TextStyle::Heading))
+                    .add(
+                        egui::Button::new("Search! ->")
+                            .text_style(egui::TextStyle::Heading)
+                            .text_color(bottom_up_ui.style().visuals.strong_text_color()),
+                    )
                     .clicked();
                 bottom_up_ui.separator();
                 // Add the rest of the GUI in a top->bottom layout

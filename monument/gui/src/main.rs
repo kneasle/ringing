@@ -1,7 +1,9 @@
 mod params;
+mod utils;
 
 use std::{
     collections::HashSet,
+    hash::Hash,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{sync_channel, Receiver, SyncSender},
@@ -12,7 +14,7 @@ use std::{
 
 use bellframe::MethodLib;
 use eframe::{
-    egui::{self, panel::Side, CtxRef},
+    egui::{self, CtxRef},
     epi,
 };
 use itertools::Itertools;
@@ -86,19 +88,60 @@ impl epi::App for MonumentApp {
     }
 
     fn update(&mut self, ctx: &CtxRef, frame: &mut epi::Frame<'_>) {
-        egui::SidePanel::new(Side::Left, "params_panel").show(ctx, |ui| {
+        let window_rect = ctx.available_rect();
+        // Fill background
+        ctx.layer_painter(egui::LayerId::background()).rect_filled(
+            window_rect,
+            0.0,
+            ctx.style().visuals.window_fill(),
+        );
+
+        fn add_panel(
+            ctx: &CtxRef,
+            left_factor: f32,
+            right_factor: f32,
+            id: impl Hash,
+            mut add: impl FnMut(&mut egui::Ui),
+        ) {
+            assert!(0.0 <= left_factor);
+            assert!(left_factor <= right_factor);
+            assert!(right_factor <= 1.0);
+
+            let window_rect = ctx.available_rect();
+            let mut panel_rect = window_rect;
+            panel_rect.set_left(egui::lerp(window_rect.x_range(), left_factor));
+            panel_rect.set_right(egui::lerp(window_rect.x_range(), right_factor));
+            panel_rect = panel_rect.shrink(4.0);
+            let mut ui = egui::Ui::new(
+                ctx.clone(),
+                egui::LayerId::background(),
+                egui::Id::new(id),
+                panel_rect,
+                panel_rect,
+            );
+            add(&mut ui);
+        }
+
+        add_panel(ctx, 0.0, 0.25, "params panel", |ui| {
             if self.params.draw_gui(ui, &self.cc_method_lib) {
                 self.on_search_button_click(frame.repaint_signal());
             }
         });
-        egui::SidePanel::new(Side::Right, "view_panel").show(ctx, |ui| {
-            ui.heading("Comp View");
-        });
-        egui::TopBottomPanel::bottom("queries_panel").show(ctx, |ui| {
+        add_panel(ctx, 0.25, 0.50, "queries panel", |ui| {
             self.draw_searches_panel(ui);
         });
-        egui::CentralPanel::default().show(ctx, |ui| {
+        add_panel(ctx, 0.50, 0.75, "comps panel", |ui| {
             self.draw_comps_panel(ui);
+        });
+        add_panel(ctx, 0.75, 1.00, "comp view panel", |ui| {
+            utils::centered_heading(ui, "Composition View");
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    for _ in 0..100 {
+                        ui.label("The quick brown fox jumped over the lazy dog.");
+                    }
+                });
         });
     }
 }
@@ -115,9 +158,9 @@ impl MonumentApp {
     }
 
     fn draw_searches_panel(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Searches");
+        utils::centered_heading(ui, "Searches");
         if self.searches.is_empty() {
-            ui.label("None yet");
+            ui.label("None yet; click 'Search!' to start a search");
             return;
         }
         for search in &self.searches {
@@ -201,7 +244,7 @@ impl MonumentApp {
         });
 
         // Draw GUI
-        ui.heading("Comps");
+        utils::centered_heading(ui, "Compositions");
         if comps.is_empty() {
             ui.label("No compositions yet");
         } else {
