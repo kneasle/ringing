@@ -317,6 +317,9 @@ pub enum RegexToMaskError {
     MismatchedLength(usize, Stage),
 }
 
+/// The different ways that [`Mask::parse_with_stage`] can fail
+pub type ParseError = RegexToMaskError;
+
 /* ===== FORMATTING ===== */
 
 impl Debug for Mask {
@@ -339,6 +342,21 @@ impl Display for Mask {
 
 /* ===== ARITHMETIC ===== */
 
+impl Mul<&RowBuf> for &Mask {
+    type Output = Mask;
+
+    /// Use a [`RowBuf`] to permute the required [`Bell`]s in a [`Mask`].  Mathematically, if `r`
+    /// is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `m * r`
+    /// matches `s * r`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
+    fn mul(self, rhs: &RowBuf) -> Self::Output {
+        self * rhs.as_row()
+    }
+}
+
 impl Mul<&Row> for &Mask {
     type Output = Mask;
 
@@ -354,6 +372,21 @@ impl Mul<&Row> for &Mask {
         Mask {
             bells: rhs.bell_iter().map(|b| self.bells[b.index()]).collect_vec(),
         }
+    }
+}
+
+impl Mul<&Mask> for &RowBuf {
+    type Output = Mask;
+
+    /// Use a [`RowBuf`] to transfigure the required [`Bell`]s in a [`Mask`].  Mathematically, if
+    /// `r` is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `r * m`
+    /// matches `r * s`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
+    fn mul(self, rhs: &Mask) -> Self::Output {
+        self.as_row() * rhs
     }
 }
 

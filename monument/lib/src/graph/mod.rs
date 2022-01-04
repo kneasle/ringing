@@ -9,7 +9,7 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
 };
 
-use bellframe::{Row, RowBuf, Stroke};
+use bellframe::{Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 use log::log;
 
@@ -395,6 +395,7 @@ impl Graph {
     pub fn from_layout(
         layout: &Layout,
         music_types: &[MusicType],
+        ch_weights: &[(Mask, f32)],
         max_length: usize,
         part_head: &Row,
         start_stroke: Stroke,
@@ -432,6 +433,7 @@ impl Graph {
                     *distance,
                     layout,
                     music_types,
+                    ch_weights,
                     &part_heads,
                     // We've asserted that all nodes have even length, so that all nodes must start
                     // at the same stroke.  Therefore, we can simply pass 'start_stroke' straight
@@ -639,6 +641,7 @@ fn build_node(
     distance: usize,
     layout: &Layout,
     music_types: &[MusicType],
+    ch_weights: &[(Mask, f32)],
     part_heads: &[RowBuf],
     start_stroke: Stroke,
 ) -> Node {
@@ -647,14 +650,22 @@ fn build_node(
     for ph in part_heads {
         if let Some(source_ch) = node_range.node_id.course_head() {
             let ch = ph * source_ch;
+            // Count weight from this part
             music += &Breakdown::from_rows(
                 node_range.untransposed_rows(layout),
                 &ch,
                 music_types,
                 start_stroke,
             );
+            // Count weight from CH masks
+            for (mask, weight) in ch_weights {
+                if mask.matches(&ch) {
+                    music.score += *weight * node_range.total_length.0 as f32; // Weight applies to each row
+                }
+            }
         }
     }
+
     // Determine if this node is (not) a duffer.  A node is a duffer it doesn't include any music
     // of types considered 'non-duffer'.
     //

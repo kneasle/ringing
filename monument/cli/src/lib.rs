@@ -15,7 +15,6 @@ use std::{
 };
 
 use bellframe::{
-    mask::RegexToMaskError,
     place_not::{self, PnBlockParseError},
     InvalidRowError,
 };
@@ -102,16 +101,21 @@ impl QueryResult {
 /// The possible ways that a run of Monument could fail
 #[derive(Debug)]
 pub enum Error {
-    NoMethods,
-    CcLibNotFound,
-    PartHeadParse(InvalidRowError),
-    ChMaskParse(String, RegexToMaskError),
     SpecFile(PathBuf, spec::TomlReadError),
     MusicFile(PathBuf, spec::TomlReadError),
+
+    PartHeadParse(InvalidRowError),
+    ChMaskParse(String, bellframe::mask::ParseError),
+    ChPatternParse(String, bellframe::mask::ParseError),
+
+    NoMethods,
+    CcLibNotFound,
     MethodNotFound { suggestions: Vec<String> },
-    CallPnParse(String, place_not::ParseError),
     MethodPnParse(PnBlockParseError),
+
+    CallPnParse(String, place_not::ParseError),
     LeadLocationIndex(String, ParseIntError),
+
     LayoutGen(monument::layout::new::Error),
 }
 

@@ -30,7 +30,7 @@ const METHOD_BALANCE_ALLOWANCE: f32 = 0.1; // By how much the method balance is 
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
 /// file.  Like ASTs, this specifies a superset of valid programs - so building a composition
 /// search can also fail (as can lowering an AST).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Spec {
     /* GENERAL */
@@ -87,7 +87,7 @@ pub struct Spec {
     max_duffer_rows: Option<usize>,
 
     /* COURSES */
-    /// A [`Row`](bellframe::Row) which generates the part heads of this composition
+    /// A [`Row`] which generates the part heads of this composition
     part_head: Option<String>,
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
@@ -95,6 +95,9 @@ pub struct Spec {
     split_tenors: bool,
     /// Which course heads masks are allowed (overrides `split_tenors`)
     course_heads: Option<Vec<String>>,
+    /// Weights applied to given CH patterns
+    #[serde(default)]
+    ch_weights: Vec<ChWeightPattern>,
 
     /* STARTS/ENDS */
     /// Set to `true` to allow comps to not start at the lead head.
@@ -189,6 +192,7 @@ impl Spec {
             start_stroke: self.start_stroke,
             method_count_range,
             max_duffer_rows: self.max_duffer_rows,
+            ch_weights: self.ch_weights(stage, &methods)?,
         })
     }
 
@@ -292,6 +296,41 @@ impl Spec {
 
         (start_indices, end_indices)
     }
+
+    fn ch_weights(
+        &self,
+        stage: Stage,
+        methods: &[(Method, String)],
+    ) -> Result<Vec<(Mask, f32)>, Error> {
+        // Get the set of lead heads, so we can expand each CH lead mask to every matching CH mask
+        // (i.e. compute each lead head within that course).  For example, CH lead mask `*34` would
+        // expand into:
+        // `[xxxxxx34, xxxxx4x3, xxx4x3xx, x4x3xxxx, x34xxxxx, xx3x4xxx, xxxx3x4x, xxxxx3x4]`
+        let lead_heads = methods
+            .iter()
+            .flat_map(|(m, _)| m.lead_head().closure())
+            .unique()
+            .collect_vec();
+
+        let mut weights = Vec::new();
+        for pattern in &self.ch_weights {
+            // Extract a (slice of patterns, weight)
+            use ChWeightPattern::*;
+            let (ch_masks, weight) = match pattern {
+                Pattern { pattern, weight } => (std::slice::from_ref(pattern), weight),
+                Patterns { patterns, weight } => (patterns.as_slice(), weight),
+            };
+            for mask_str in ch_masks {
+                let mask = Mask::parse_with_stage(mask_str, stage)
+                    .map_err(|e| Error::ChPatternParse(mask_str.to_owned(), e))?;
+                // Add a weight pattern for every CH which contains a lead which matches `mask`
+                for lh in &lead_heads {
+                    weights.push((&mask * lh, *weight));
+                }
+            }
+        }
+        Ok(weights)
+    }
 }
 
 /// Generate the course head mask representing the tenors together.  This corresponds to
@@ -341,6 +380,13 @@ pub fn read_toml<'de, T: Deserialize<'de>>(
 ///////////////
 // METHOD(S) //
 ///////////////
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum ChWeightPattern {
+    Pattern { pattern: String, weight: f32 },
+    Patterns { patterns: Vec<String>, weight: f32 },
+}
 
 /// The contents of the `[method]` header in the input TOML file
 #[derive(Debug, Clone, Deserialize)]
