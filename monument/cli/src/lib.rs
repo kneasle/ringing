@@ -33,7 +33,7 @@ pub fn init_logging(log_level: LogLevelFilter) {
 
 pub fn run(
     input_file: &Path,
-    debug_print: Option<DebugPrint>,
+    debug_print: Option<DebugOption>,
     queue_limit: usize,
 ) -> Result<Option<QueryResult>, Error> {
     let start_time = Instant::now();
@@ -42,7 +42,7 @@ pub fn run(
     /// corresponding value and exit.
     macro_rules! debug_print {
         ($variant: ident, $val: expr) => {
-            if debug_print == Some(DebugPrint::$variant) {
+            if debug_print == Some(DebugOption::$variant) {
                 dbg!($val);
                 return Ok(None);
             }
@@ -71,7 +71,7 @@ pub fn run(
     let graph = query.unoptimised_graph();
     debug_print!(Graph, graph);
     let optimised_graphs = query.optimise_graph(graph, &mut config);
-    if debug_print == Some(DebugPrint::StopBeforeSearch) {
+    if debug_print == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
 
@@ -121,7 +121,7 @@ pub enum Error {
 
 /// What item should be debug printed
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DebugPrint {
+pub enum DebugOption {
     Spec,
     Query,
     Layout,
@@ -131,7 +131,7 @@ pub enum DebugPrint {
     StopBeforeSearch,
 }
 
-impl FromStr for DebugPrint {
+impl FromStr for DebugOption {
     type Err = String;
 
     fn from_str(v: &str) -> Result<Self, String> {

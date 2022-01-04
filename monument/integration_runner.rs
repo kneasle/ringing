@@ -9,7 +9,7 @@ use std::{
 use colored::*;
 use difference::Changeset;
 use itertools::Itertools;
-use monument_cli::DebugPrint;
+use monument_cli::DebugOption;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
 use toml::Value;
@@ -216,7 +216,7 @@ fn run_and_print_test(
     expected_result: ExpectedResult,
     stop_before_search: bool,
 ) -> TestCase {
-    let debug_print = stop_before_search.then(|| DebugPrint::StopBeforeSearch);
+    let debug_print = stop_before_search.then(|| DebugOption::StopBeforeSearch);
 
     // Run the test
     let actual_result = run_test(&file_path, &expected_result, debug_print);
@@ -241,7 +241,7 @@ fn run_and_print_test(
 fn run_test(
     file_path: &Path,
     expected_result: &ExpectedResult,
-    debug_print: Option<DebugPrint>,
+    debug_print: Option<DebugOption>,
 ) -> TestResult {
     if expected_result == &ExpectedResult::Ignored {
         return Ok(TestOk::Ignored); // Don't run ignored tests

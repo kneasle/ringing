@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use log::LogLevelFilter as LevelFilter;
-use monument_cli::DebugPrint;
+use monument_cli::DebugOption;
 use structopt::StructOpt;
 
 /// Max number of comp prefixes stored in the queues of all threads
@@ -15,7 +15,7 @@ fn main() {
     monument_cli::init_logging(args.log_level());
     let maybe_result = monument_cli::run(
         &args.input_file,
-        args.debug_print,
+        args.debug,
         args.queue_limit.unwrap_or(DEFAULT_QUEUE_LIMIT),
     )
     .unwrap();
@@ -27,16 +27,17 @@ fn main() {
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
 /// parsing/help code for us.
 #[derive(Debug, Clone, StructOpt)]
-#[structopt(name = "Monument", about = "A music-oriented composing engine")]
+#[structopt(name = "Monument", about = "Fast and flexible composing engine")]
 pub struct CliArgs {
     /// The name of the specification file for Monument (`*.toml`)
     #[structopt(parse(from_os_str))]
     pub input_file: PathBuf,
 
-    /// The maximum number of threads that Monument will use
-    #[structopt(short = "T", long)]
+    /// The maximum number of threads that Monument will use.
+    // TODO: Uncomment this once multi-threading is possible
+    // #[structopt(short = "T", long)]
     pub num_threads: Option<usize>,
-    /// The maximum number of threads that Monument will use
+    /// The maximum number of prefixes that Monument will store at once.  Defaults to 10 million.
     #[structopt(short = "Q", long)]
     pub queue_limit: Option<usize>,
 
@@ -47,10 +48,10 @@ pub struct CliArgs {
     #[structopt(short, long = "quiet", parse(from_occurrences))]
     pub quietness: usize,
 
-    /// Debug print an internal data structure and terminate.  Options are `spec`, `query`,
-    /// `layout` and `graph`.
+    /// Debug options.  `spec`, `query`, `layout` and `graph` print the corresponding data
+    /// structures.  `search` will run as normal but stop just before starting the full search.
     #[structopt(short = "D", long)]
-    pub debug_print: Option<DebugPrint>,
+    pub debug: Option<DebugOption>,
 }
 
 impl CliArgs {
