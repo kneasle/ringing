@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bellframe = { path = "../../bellframe/", features = ["serde"] }
+bellframe = { version = "0.5.0", path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
 log = "0.3" # TODO: Bump this to 0.4
-monument.path = "../lib/"
+monument = { version = "0.1.0", path = "../lib/" }
 pretty_logger = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 structopt = "0.3"

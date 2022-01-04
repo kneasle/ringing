@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bellframe.path = "../../bellframe/"
+bellframe = { version = "0.5.0", path = "../../bellframe/" }
 bit-vec = "0.6"
 gcd = "2.0"
 index_vec = "0.1"
