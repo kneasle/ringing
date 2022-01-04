@@ -7,8 +7,12 @@ use serde_crate::{Deserialize, Serialize};
 
 /// Stroke of a row, i.e. handstroke (`Stroke::Hand`) or backstroke (`Stroke::Back`).
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize, Serialize)]
-#[serde(crate = "serde_crate", rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, Serialize),
+    serde(crate = "serde_crate", rename_all = "snake_case")
+)]
 pub enum Stroke {
     Hand = 0,
     Back = 1,
