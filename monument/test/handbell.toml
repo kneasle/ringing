@@ -1,0 +1,15 @@
+length = { min = 0, max = 600 }
+method = "Plain Bob Major"
+split_tenors = true
+
+bob_weight = -4
+single_weight = -7
+
+[[ch_weights]]
+patterns = [
+    "*78",
+    "*56", "*65",
+    "*34", "*43",
+    "*5678", "*6578",
+]
+weight = 0.1

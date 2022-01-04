@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bellframe::{RowBuf, Stroke};
+use bellframe::{Mask, RowBuf, Stroke};
 use graph::{optimise::Pass, Graph};
 use log::log;
 
@@ -38,6 +38,8 @@ pub struct Query {
     pub start_stroke: Stroke,
     pub method_count_range: Range<usize>,
     pub max_duffer_rows: Option<usize>,
+    /// The `f32` is the weight given to every row in a course
+    pub ch_weights: Vec<(Mask, f32)>,
 }
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
@@ -123,6 +125,7 @@ impl Query {
         graph::Graph::from_layout(
             &self.layout,
             &self.music_types,
+            &self.ch_weights,
             // `- 1` makes sure that the length limit is an **inclusive** bound
             self.len_range.end - 1,
             &self.part_head,
