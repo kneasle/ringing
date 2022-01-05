@@ -15,6 +15,7 @@ use music::Score;
 use utils::{Rotation, RowCounts};
 
 use std::{
+    fmt::Write,
     hash::Hash,
     ops::{Deref, Range},
     sync::{
@@ -46,6 +47,12 @@ pub struct Query {
     pub max_duffer_rows: Option<usize>,
     /// The `f32` is the weight given to every row in a course
     pub ch_weights: Vec<(Mask, f32)>,
+}
+
+impl Query {
+    pub fn is_multipart(&self) -> bool {
+        !self.part_head.is_rounds()
+    }
 }
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
@@ -116,15 +123,26 @@ impl Comp {
     }
 
     pub fn long_string(&self) -> String {
-        format!(
-            "len: {}, ms: {:>3?}, score: {:>6.2}, avg: {:.6}, rot: {}, str: {}",
-            self.length,
-            self.method_counts.counts(),
+        let mut s = format!("len: {}, ", self.length,);
+        // Method counts for spliced
+        if self.query.layout.is_spliced() {
+            write!(s, "ms: {:>3?}, ", self.method_counts.counts()).unwrap();
+        }
+        // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
+        // head)
+        let part_heads = self.query.part_head.closure();
+        if part_heads.len() > 2 {
+            write!(s, "PH: {}, ", &part_heads[self.rotation as usize]).unwrap();
+        }
+        write!(
+            s,
+            "score: {:>6.2}, avg: {:.6}, str: {}",
             self.score,
             self.avg_score,
-            self.rotation,
             self.display_string()
         )
+        .unwrap();
+        s
     }
 }
 
