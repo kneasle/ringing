@@ -23,7 +23,7 @@ method_lib_serde = ["serde_crate", "serde_json"]
 serde = ["serde_crate"]
 
 [dependencies]
-dirs = { version = "3.0", optional = true }
+dirs = { version = "4.0", optional = true }
 edit-distance = "2.1"
 factorial = "0.2"
 itertools = "0.10.0"
