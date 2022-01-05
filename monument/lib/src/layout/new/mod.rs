@@ -70,7 +70,7 @@ pub enum Error {
         calling_position_len: usize,
         stage: Stage,
     },
-    /// Some courses match two different [`CourseHeadMask`]s with **different** calling bells.
+    /// Some courses match two different CH masks which specify **different** calling bells.
     ConflictingCallingBell((Mask, Bell), (Mask, Bell)),
     AmbiguousCourseHeadPosition {
         /// The first possible course head for the ambiguous course

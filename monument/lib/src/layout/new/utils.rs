@@ -1,4 +1,4 @@
-//! Utility code for generating [`Layout`]s
+//! Utility code for generating [`Layout`](crate::layout::Layout)s
 
 use std::collections::HashSet;
 

@@ -64,7 +64,7 @@ pub fn coprime_bitmap(n: Rotation) -> u64 {
     mask
 }
 
-/// A container type which sorts its contents according to some given [`Distance`] metric
+/// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]
 pub struct FrontierItem<T> {
     pub item: T,
