@@ -11,7 +11,6 @@ use std::{
 
 use bellframe::{Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
-use log::log;
 
 use crate::{
     layout::{

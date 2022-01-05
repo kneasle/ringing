@@ -11,10 +11,10 @@ repository = "https://github.com/kneasle/ringing-monorepo"
 [dependencies]
 bellframe = { version = "0.5.0", path = "../../bellframe/", features = ["serde"] }
 itertools = "0.10"
-log = "0.3" # TODO: Bump this to 0.4
+log = "0.4"
 monument = { version = "0.2.0", path = "../lib/" }
-pretty_logger = "0.1"
 serde = { version = "1.0", features = ["derive"] }
+simple_logger = "1.16"
 structopt = "0.3"
 toml = "0.5"
 

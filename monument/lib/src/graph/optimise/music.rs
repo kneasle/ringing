@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
-use log::log;
 use ordered_float::OrderedFloat;
 
 use crate::{

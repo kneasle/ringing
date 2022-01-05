@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use log::LogLevelFilter as LevelFilter;
+use log::LevelFilter;
 use monument_cli::DebugOption;
 use structopt::StructOpt;
 

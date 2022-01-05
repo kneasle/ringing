@@ -7,7 +7,6 @@ use std::{
 };
 
 use bit_vec::BitVec;
-use log::log;
 
 use crate::{
     layout::{LinkIdx, StartIdx},

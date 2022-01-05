@@ -38,7 +38,7 @@ fn main() -> SuiteResult<()> {
         ),
     };
 
-    monument_cli::init_logging(log::LogLevelFilter::Warn);
+    monument_cli::init_logging(log::LevelFilter::Warn);
 
     // This always run in the directory of the `monument_cli` crate, i.e.
     // `$REPO_ROOT/monument/cli/`.  Hence, all paths start with `../` to return to the `monument/`

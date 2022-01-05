@@ -9,7 +9,6 @@ use bellframe::{
     Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
-use log::log;
 use monument::{
     layout::{
         new::{Call, CourseHeadMaskPreset, SpliceStyle},

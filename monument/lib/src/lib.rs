@@ -27,7 +27,6 @@ use std::{
 
 use bellframe::{Mask, RowBuf, Stroke};
 use graph::{optimise::Pass, Graph};
-use log::log;
 
 /// Information provided to Monument which specifies what compositions are generated.
 ///

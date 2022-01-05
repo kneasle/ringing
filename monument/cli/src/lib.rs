@@ -20,17 +20,18 @@ use bellframe::{
     place_not::{self, PnBlockParseError},
     InvalidRowError,
 };
-use log::{log, log_enabled, LogLevelFilter};
+use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
+use simple_logger::SimpleLogger;
 use spec::Spec;
 
-pub fn init_logging(log_level: LogLevelFilter) {
-    pretty_logger::init(
-        pretty_logger::Destination::Stderr,
-        log_level,
-        pretty_logger::Theme::default(),
-    )
-    .unwrap();
+pub fn init_logging(filter: LevelFilter) {
+    SimpleLogger::new()
+        .without_timestamps()
+        .with_colors(true)
+        .with_level(filter)
+        .init()
+        .unwrap();
 }
 
 pub fn run(
@@ -191,7 +192,7 @@ impl UpdateLogger {
 
     fn log(&mut self, update: QueryUpdate) -> Option<Comp> {
         // Early return if we can't log anything, making sure to still keep the composition
-        if !log_enabled!(log::LogLevel::Info) {
+        if !log_enabled!(log::Level::Info) {
             return match update {
                 QueryUpdate::Comp(c) => Some(c),
                 _ => None,
