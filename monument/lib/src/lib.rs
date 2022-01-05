@@ -175,7 +175,7 @@ impl Hash for Comp {
 impl Query {
     /// Creates an unoptimised [`Graph`] from which our compositions are generated
     pub fn unoptimised_graph(&self) -> Graph {
-        log::info!("Building `Graph`");
+        log::debug!("Building `Graph`");
         graph::Graph::from_layout(
             &self.layout,
             &self.music_types,
@@ -190,7 +190,7 @@ impl Query {
     /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
     /// generate the same overall set of compositions.
     pub fn optimise_graph(&self, graph: Graph, config: &mut Config) -> Vec<Graph> {
-        log::info!("Optimising graph(s)");
+        log::debug!("Optimising graph(s)");
         let mut graphs = if config.split_by_start_node {
             graph.split_by_start_node()
         } else {
@@ -198,7 +198,7 @@ impl Query {
         };
         for g in &mut graphs {
             g.optimise(&mut config.optimisation_passes, self);
-            log::info!(
+            log::debug!(
                 "Optimised graph has {} nodes, {} starts, {} ends",
                 g.node_map().len(),
                 g.start_nodes().len(),

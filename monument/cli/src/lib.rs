@@ -57,7 +57,7 @@ pub fn run(
     debug_print!(Spec, spec);
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
-    log::info!("Generating `Layout`");
+    log::debug!("Generating query");
     let query = spec.lower(input_file)?;
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
