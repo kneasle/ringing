@@ -170,7 +170,9 @@ impl Spec {
 
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
-        log::info!("Method count range: {:?}", method_count_range);
+        if methods.len() > 1 {
+            log::info!("Method count range: {:?}", method_count_range);
+        }
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
