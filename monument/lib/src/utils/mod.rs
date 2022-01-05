@@ -1,10 +1,47 @@
-use gcd::Gcd;
-use serde::Deserialize;
 use std::cmp::Ordering;
+
+use gcd::Gcd;
+use itertools::Itertools;
+use serde::Deserialize;
 
 mod row_counts;
 
 pub use row_counts::RowCounts;
+
+/// An inclusive range where each side is optionally bounded.  This is essentially a combination of
+/// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),
+/// [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and
+/// [`RangeFull`](std::ops::RangeFull) (`..`) in a format that can be easily parsed from TOML with
+/// Serde.
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OptRange {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+
+impl OptRange {
+    /// Returns `true` if at least one of `min` or `max` is set
+    pub fn is_set(&self) -> bool {
+        self.min.is_some() || self.max.is_some()
+    }
+}
+
+/// Given a set of method titles and possible shorthands, compute shorthands for the methods which
+/// don't already have defaults.
+pub fn default_shorthands<'s>(
+    ms: impl IntoIterator<Item = (&'s str, Option<&'s str>)>,
+) -> Vec<String> {
+    // For each method, choose a default shorthand using the first letter of the method's name
+    //
+    // TODO: Implement a smarter system that can resolve conflicts
+    ms.into_iter()
+        .map(|(title, shorthand)| {
+            shorthand.map_or_else(|| title.chars().next().unwrap().to_string(), str::to_owned)
+        })
+        .collect_vec()
+}
 
 /// Measure which determines which part head has been reached.  Each node link is given a
 /// `Rotation` which, when summed modulo [`Graph::num_parts`](crate::graph::Graph::num_parts), will
@@ -27,7 +64,7 @@ pub fn coprime_bitmap(n: Rotation) -> u64 {
     mask
 }
 
-/// A container type which sorts its contents according to some given [`Distance`] metric
+/// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]
 pub struct FrontierItem<T> {
     pub item: T,
@@ -57,24 +94,5 @@ impl<T> PartialOrd for FrontierItem<T> {
 impl<T> Ord for FrontierItem<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.distance.cmp(&other.distance)
-    }
-}
-
-/// An inclusive range where each side is optionally bounded.  This is essentially a combination of
-/// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),
-/// [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
-/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and
-/// [`RangeFull`](std::ops::RangeFull) (`..`).
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct OptRange {
-    pub min: Option<usize>,
-    pub max: Option<usize>,
-}
-
-impl OptRange {
-    /// Returns `true` if at least one of `min` or `max` is set
-    pub fn is_set(&self) -> bool {
-        self.min.is_some() || self.max.is_some()
     }
 }

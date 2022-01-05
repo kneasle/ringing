@@ -1,0 +1,193 @@
+//! Utility code for generating [`Layout`](crate::layout::Layout)s
+
+use std::collections::HashSet;
+
+use bellframe::{Bell, Mask, Stage};
+use itertools::Itertools;
+
+use crate::layout::Link;
+
+use super::Error;
+
+/// Label used when the comp starts part-way through a lead
+pub(super) const SNAP_START_LABEL: &str = "<";
+/// Label used when the comp finishes part-way through a lead
+pub(super) const SNAP_FINISH_LABEL: &str = ">";
+
+/// A way of labelling the calls in a set of courses.
+#[derive(Debug, Clone)]
+pub struct CourseHeadMask {
+    mask: Mask,
+    /// The bell who's position determines the names of the [`Call`]s in this course.
+    ///
+    /// **Invariant**: `mask` must specify a location for this [`Bell`].  This means that every
+    /// call at a given position through a course will be given the same name.
+    calling_bell: Bell,
+}
+
+impl CourseHeadMask {
+    /// Converts a [`Mask`] and a `calling_bell` into a set of [`CourseHeadMask`]s which, between
+    /// them, match the same rows as the source [`Mask`] but all **explicitly** specify a position
+    /// for the `calling_bell`.  This way, if two calls have the same position within a course,
+    /// they must be given the same calling position (this makes graph expansion much simpler).
+    ///
+    /// An example where this expansion is needed is if the tenor (the `8`) is used as a calling
+    /// bell for the course mask `12345xxx`.  This generates a situation where the same call is
+    /// given different names depending on the exact course head used (e.g. a call at `123458xx`
+    /// would be called a `M`, whereas a call at `12345xx8` would be called `H`).
+    pub(super) fn new(mask: Mask, calling_bell: Bell) -> Vec<Self> {
+        if mask.place_of(calling_bell).is_some() {
+            return vec![Self { mask, calling_bell }];
+        } else {
+            mask.unspecified_places()
+                .map(|pl| {
+                    let mut new_mask = mask.to_owned();
+                    // Unwrap is safe because the calling bell can't already be in the mask
+                    new_mask.set_bell(calling_bell, pl).unwrap();
+                    Self {
+                        mask: new_mask,
+                        calling_bell,
+                    }
+                })
+                .collect_vec()
+        }
+    }
+
+    pub fn mask(&self) -> &Mask {
+        &self.mask
+    }
+
+    pub fn calling_bell(&self) -> Bell {
+        self.calling_bell
+    }
+}
+
+/// Return an error if two methods share a shorthand
+pub(super) fn check_duplicate_shorthand(
+    methods: &[(bellframe::Method, String)],
+) -> super::Result<()> {
+    for (i1, (meth1, shorthand1)) in methods.iter().enumerate() {
+        for (meth2, shorthand2) in &methods[..i1] {
+            if shorthand1 == shorthand2 {
+                return Err(Error::DuplicateShorthand {
+                    shorthand: shorthand1.to_owned(),
+                    title1: meth1.title().to_owned(),
+                    title2: meth2.title().to_owned(),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Remove any [`Link`]s which are equal to another [`Link`] (ignoring names).
+///
+/// This is required because [`generate_all_links`] creates a large number of identical plain call
+/// links if there are multiple calls at the same position (which there almost always are).
+///
+/// This doesn't always actually lead to the generation of duplicate compositions (because there
+/// could be two identical calls with different but compatible course head masks), so the graph
+/// generation code has to perform de-duplication regardless.  However, de-duplication makes the
+/// code both more performant and, more importantly, makes the resulting [`Layout`]s easier to
+/// debug.
+pub(super) fn dedup_links(links: &mut Vec<Link>) {
+    // The indices of links which are special cases of some other link (or are identical to other
+    // links)
+    let mut redundant_link_idxs = Vec::<usize>::new();
+    for (i, link) in links.iter().enumerate() {
+        for (i2, link2) in links.iter().enumerate() {
+            // Links are always compatible with themselves, and there's no point 'de-duplicating' a
+            // link because it's redundant against itself
+            if i == i2 {
+                continue;
+            }
+
+            // This is 'true' if `link` and `link2` are equal apart from their course head masks.
+            // We don't check the names, since it's possible that the same link is given two
+            // different names (e.g. near near would generate `pI` and `pT` which should be
+            // considered identical).  If the links do have different names, then one of them is
+            // picked arbitrarily.
+            let are_links_otherwise_equal = link.eq_without_name_or_ch_mask(link2);
+
+            if are_links_otherwise_equal {
+                if link.ch_mask == link2.ch_mask {
+                    // If the links are identical, then we remove the one with the least index.
+                    // This way, exactly one link from a group of identical links (the one with the
+                    // highest index) will survive
+                    if i < i2 {
+                        redundant_link_idxs.push(i);
+                    }
+                } else if link.ch_mask.is_subset_of(&link2.ch_mask) {
+                    // If `link2`'s CH mask is more general than `link`'s, and `link` and `link2`
+                    // are otherwise equal, then `link` is a special case of `link2` and is
+                    // therefore redundant
+                    redundant_link_idxs.push(i);
+                }
+            }
+        }
+    }
+
+    // Now actually remove the unnecessary links, making sure to iterate backwards so that the
+    // indices keep pointing to the right elements
+    redundant_link_idxs.sort_unstable();
+    redundant_link_idxs.dedup();
+    for idx in redundant_link_idxs.into_iter().rev() {
+        links.remove(idx);
+    }
+}
+
+/// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
+/// bells in non-variable-hunt compositions).
+pub(super) fn fixed_bells(
+    methods: &[(bellframe::Method, String)],
+    calls_per_method: &[Vec<&super::Call>],
+    stage: Stage,
+) -> Vec<Bell> {
+    // Start off with all bells fixed
+    let mut all_fixed_bells = stage.bells().collect_vec();
+    for ((method, _shorthand), calls) in methods.iter().zip_eq(calls_per_method) {
+        // Start the set with the bells which are fixed by the plain lead of every method
+        let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
+        for call in calls {
+            // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
+            // Grandsire is unaffected by a plain lead, but affected by calls)
+            filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+        }
+        // Intersect the fixed bells of this method with the full list
+        all_fixed_bells.retain(|b| fixed_bells.contains(b));
+    }
+    all_fixed_bells
+}
+
+// For every position that this call could be placed, remove any bells which **aren't** preserved
+// by placing the call at this location.
+fn filter_bells_fixed_by_call(
+    method: &bellframe::Method,
+    call: &super::Call,
+    set: &mut HashSet<Bell>,
+) {
+    // Note that all calls are required to only substitute one piece of place notation.
+    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
+        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
+        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
+
+        // The row before a call in this location in the _first lead_
+        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
+        // The row after a plain call in this location in the _first lead_
+        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
+        // The row after a call in this location in the _first lead_
+        let mut row_after_call = row_before_call.to_owned();
+        call.place_not.permute(&mut row_after_call).unwrap();
+
+        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
+        // `row_after_no_call`.  These should be removed from the set, because they are no longer
+        // fixed.
+        for (bell_after_no_call, bell_after_call) in
+            row_after_no_call.bell_iter().zip(&row_after_call)
+        {
+            if bell_after_call != bell_after_no_call {
+                set.remove(&bell_after_call);
+            }
+        }
+    }
+}

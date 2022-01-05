@@ -11,7 +11,10 @@ use bellframe::{
 use itertools::Itertools;
 use log::log;
 use monument::{
-    layout::new::{coursewise, leadwise, Call, SpliceStyle},
+    layout::{
+        new::{Call, CourseHeadMaskPreset, SpliceStyle},
+        Layout,
+    },
     music::{MusicType, StrokeSet},
     OptRange, Query,
 };
@@ -119,7 +122,7 @@ impl Spec {
         read_toml(path, &mut toml_buf)
     }
 
-    /// 'Lower' this specification into the information required to build a composition.
+    /// 'Lower' this `Spec`ification into a [`Query`]
     pub fn lower(&self, toml_path: &Path) -> Result<Query, Error> {
         // Generate methods
         let mut methods: Vec<(Method, String)> = self
@@ -143,33 +146,20 @@ impl Spec {
         };
 
         let (start_indices, end_indices) = self.start_end_indices(&part_head);
-        let start_indices = start_indices.as_deref();
-        let end_indices = end_indices.as_deref();
 
-        let course_head_masks = self.course_head_masks(stage)?;
-
-        let leadwise = self.leadwise.unwrap_or_else(|| {
-            // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
-            // all fixed bells
-            !course_head_masks
-                .iter()
-                .all(|(_mask, calling_bell)| part_head.is_fixed(*calling_bell))
-        });
-
-        // Generate a `Layout` from the data about the method and calls
+        let ch_mask_preset = self.ch_mask_preset(stage)?;
         let calls = self.calls(stage)?;
-        let layout = if leadwise {
-            leadwise::leadwise(&methods, &calls, start_indices, end_indices)
-        } else {
-            coursewise::coursewise(
-                &methods,
-                &calls,
-                self.splice_style,
-                course_head_masks,
-                start_indices,
-                end_indices,
-            )
-        }
+
+        let layout = Layout::new(
+            &methods,
+            &calls,
+            self.splice_style,
+            ch_mask_preset,
+            &part_head,
+            self.leadwise,
+            start_indices.as_deref(),
+            end_indices.as_deref(),
+        )
         .map_err(Error::LayoutGen)?;
 
         let music_types = self.music_types(toml_path, stage)?;
@@ -180,7 +170,9 @@ impl Spec {
 
         let method_count_range =
             method_count_range(methods.len(), &self.length.range, self.method_count);
-        log::info!("Method count range: {:?}", method_count_range);
+        if methods.len() > 1 {
+            log::info!("Method count range: {:?}", method_count_range);
+        }
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
@@ -188,9 +180,10 @@ impl Spec {
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
 
+            method_count_range,
+
             music_types,
             start_stroke: self.start_stroke,
-            method_count_range,
             max_duffer_rows: self.max_duffer_rows,
             ch_weights: self.ch_weights(stage, &methods)?,
         })
@@ -234,25 +227,24 @@ impl Spec {
         Ok(call_specs)
     }
 
-    fn course_head_masks(&self, stage: Stage) -> Result<Vec<(Mask, Bell)>, Error> {
+    fn ch_mask_preset(&self, stage: Stage) -> Result<CourseHeadMaskPreset, Error> {
         let tenor = Bell::tenor(stage);
         Ok(if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
-            ch_mask_strings
-                .iter()
-                .map(|s| match Mask::parse_with_stage(s, stage) {
-                    Ok(mask) => Ok((mask, tenor)),
-                    Err(e) => Err(Error::ChMaskParse(s.to_owned(), e)),
-                })
-                .collect::<Result<Vec<_>, _>>()?
+            CourseHeadMaskPreset::Custom(
+                ch_mask_strings
+                    .iter()
+                    .map(|s| match Mask::parse_with_stage(s, stage) {
+                        Ok(mask) => Ok((mask, tenor)),
+                        Err(e) => Err(Error::ChMaskParse(s.to_owned(), e)),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            )
         } else if self.split_tenors {
-            // If no masks were given but `split_tenors` was `true`, then only fix the tenor.
-            // `Layout::from_methods` will add the treble if it's fixed
-            vec![(Mask::fix_bells(stage, vec![tenor]), tenor)]
+            CourseHeadMaskPreset::SplitTenors
         } else {
-            // Default to tenors together, with the tenor as 'calling bell'
-            vec![(tenors_together_mask(stage), tenor)]
+            CourseHeadMaskPreset::TenorsTogether // Default to tenors together
         })
     }
 
@@ -331,21 +323,6 @@ impl Spec {
         }
         Ok(weights)
     }
-}
-
-/// Generate the course head mask representing the tenors together.  This corresponds to
-/// `xxxxxx7890ET...` or just the tenor.
-fn tenors_together_mask(stage: Stage) -> Mask {
-    let mut fixed_bells = vec![];
-    if stage <= Stage::MINOR {
-        // On Minor or below, only fix the tenor
-        fixed_bells.push(stage.tenor());
-    } else {
-        // On stages above minor, fix 7-tenor.  Note that we're using 0-indexing here so bell #6 is
-        // actually the 7th
-        fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
-    }
-    Mask::fix_bells(stage, fixed_bells)
 }
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent

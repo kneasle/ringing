@@ -448,7 +448,7 @@ impl Graph {
             let extension = if count == 1 { "" } else { "s" };
             format!("{} {}{}", count, singular, extension)
         };
-        log::info!(
+        log::debug!(
             "Unoptimised graph has {}, with {} and {}.",
             plural(nodes.len(), "node"),
             plural(start_nodes.len(), "start"),

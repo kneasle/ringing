@@ -55,6 +55,10 @@ impl Layout {
         self.blocks.len()
     }
 
+    pub fn is_spliced(&self) -> bool {
+        self.num_methods() > 1
+    }
+
     //////////////////////
     // GRAPH GENERATION //
     //////////////////////
