@@ -15,6 +15,6 @@ gcd = "2.0"
 index_vec = "0.1"
 itertools = "0.10"
 log = "0.4"
-ordered-float = "2.8"
+ordered-float = "2.10"
 serde = { version = "1.0", features = ["derive"] }
 num_cpus = "1.13"
