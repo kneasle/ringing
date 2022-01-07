@@ -46,12 +46,6 @@ pub struct Spec {
     /// won't have internal rounds.
     #[serde(default)]
     allow_false: bool,
-    /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
-    /// cases like cyclic comps where no course heads are preserved across parts.
-    ///
-    /// If left unset, Monument will determine the best value - i.e. leadwise iff the part head
-    /// affects the tenor
-    leadwise: Option<bool>,
 
     /* METHODS */
     /// The method who's compositions we are after
@@ -70,13 +64,13 @@ pub struct Spec {
     /// Which calls should be used by default
     #[serde(default)] // Default to near calls
     base_calls: BaseCalls,
-    /// Which calls to use in the compositions
-    #[serde(default)]
-    calls: Vec<SpecificCall>,
     /// The weight given to each bob from `base_calls`
     bob_weight: Option<f32>,
     /// The weight given to each single from `base_calls`
     single_weight: Option<f32>,
+    /// Which calls to use in the compositions
+    #[serde(default)]
+    calls: Vec<SpecificCall>,
 
     /* MUSIC */
     /// Path to a file containing a music definition, relative to **this** TOML file
@@ -95,7 +89,8 @@ pub struct Spec {
 
     /* COURSES */
     /// A [`Row`] which generates the part heads of this composition
-    part_head: Option<String>,
+    #[serde(default)]
+    part_head: String,
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
     #[serde(default)]
@@ -105,6 +100,12 @@ pub struct Spec {
     /// Weights applied to given CH patterns
     #[serde(default)]
     ch_weights: Vec<ChWeightPattern>,
+    /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
+    /// cases like cyclic comps where no course heads are preserved across parts.
+    ///
+    /// If left unset, Monument will determine the best value - i.e. leadwise iff the part head
+    /// affects the tenor
+    leadwise: Option<bool>,
 
     /* STARTS/ENDS */
     /// Set to `true` to allow comps to not start at the lead head.
@@ -174,10 +175,8 @@ impl Spec {
         let ch_weights = self.ch_weights(stage, methods.iter().map(|m| m.method()))?;
 
         // Generate the `Layout`
-        let part_head = match &self.part_head {
-            Some(ph) => RowBuf::parse_with_stage(ph, stage).map_err(Error::PartHeadParse)?,
-            None => RowBuf::rounds(stage),
-        };
+        let part_head =
+            RowBuf::parse_with_stage(&self.part_head, stage).map_err(Error::PartHeadParse)?;
         let (start_indices, end_indices) = self.start_end_indices(&part_head);
         let layout = Layout::new(
             methods,
@@ -263,11 +262,13 @@ impl Spec {
     }
 
     fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<usize>>, Option<Vec<usize>>) {
-        let mut start_indices = if self.snap_start {
-            None
-        } else {
-            self.start_indices.clone()
-        };
+        let mut start_indices = self.start_indices.clone().or_else(|| {
+            if self.snap_start {
+                None // If just `snap_start`, then allow any start
+            } else {
+                Some(vec![0]) // If nothings specified, only search standard starts
+            }
+        });
         let mut end_indices = self.end_indices.clone();
 
         // If this is a multi-part, then we require that `start_indices` and `end_indices` must be
@@ -400,7 +401,6 @@ pub enum MethodSpec {
         common: MethodCommon,
     },
     Custom {
-        #[serde(default)]
         name: String,
         place_notation: String,
         stage: Stage,

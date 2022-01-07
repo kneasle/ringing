@@ -118,5 +118,5 @@ fn lead_end() -> String {
 }
 
 fn default_call_score() -> f32 {
-    -0.3
+    -3.0
 }
