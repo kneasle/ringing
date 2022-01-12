@@ -1,13 +1,13 @@
 //! Utility code for generating [`Layout`](crate::layout::Layout)s
 
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Mul};
 
-use bellframe::{Bell, Mask, Stage};
+use bellframe::{mask::BellAlreadySet, Bell, Mask, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::layout::Link;
 
-use super::Error;
+use super::{Error, Result};
 
 /// Label used when the comp starts part-way through a lead
 pub(super) const SNAP_START_LABEL: &str = "<";
@@ -62,17 +62,179 @@ impl CourseHeadMask {
     }
 }
 
+pub(super) fn preprocess_ch_masks(methods: &mut [super::Method], stage: Stage) -> Result<()> {
+    set_fixed_bells(methods, stage);
+    for m in methods {
+        m.ch_masks = super::utils::dedup_ch_masks(&m.ch_masks)?;
+    }
+    Ok(())
+}
+
+/// Detect fixed bells (a place bell which is preserved by all methods' calls and plain leads) and
+/// fix it in all the course heads of the methods.  In most cases, this will add the treble as a
+/// fixed bell (allowing the falseness detection to use it to reduce the size of the falseness
+/// table).
+fn set_fixed_bells(methods: &mut [super::Method], stage: Stage) {
+    let fixed_bells = fixed_bells(methods, stage);
+    for m in methods {
+        add_fixed_bells_to_method(m, &fixed_bells);
+    }
+}
+
+fn add_fixed_bells_to_method(method: &mut super::Method, fixed_bells: &[Bell]) {
+    let mut fixed_ch_masks = Vec::with_capacity(method.ch_masks.len());
+    'mask_loop: for mut ch_mask in method.ch_masks.iter().cloned() {
+        // Attempt to add the fixed bells to this mask
+        for &b in fixed_bells {
+            if let Err(BellAlreadySet) = ch_mask.mask.fix(b) {
+                // If a bell is known to be fixed in its home position but a mask requires it to be
+                // outside of its home position, then that mask will never be satisfied and can be
+                // removed.  For example, this would remove `x1xxx...` as a course head in Surprise
+                // with standard calls because we know that the treble cannot leave 1st place.
+                continue 'mask_loop;
+            }
+        }
+        // If all fixed bells could be set, then keep this mask
+        fixed_ch_masks.push(ch_mask)
+    }
+    method.ch_masks = fixed_ch_masks;
+}
+
+/// Returns the place bells which are always preserved by plain leads and all calls of all methods
+/// (e.g. hunt bells in non-variable-hunt compositions).
+pub(super) fn fixed_bells(methods: &[super::Method], stage: Stage) -> Vec<Bell> {
+    let mut all_bells = stage.bells().collect_vec();
+    for m in methods {
+        let f = fixed_bells_of_method(&m.method, &m.calls);
+        all_bells.retain(|b| f.contains(b));
+    }
+    all_bells
+}
+
+/// Returns the place bells which are always preserved by plain leads and all calls of a single
+/// method (e.g. hunt bells in non-variable-hunt compositions).
+fn fixed_bells_of_method(method: &bellframe::Method, calls: &[super::Call]) -> HashSet<Bell> {
+    // Start the set with the bells which are fixed by the plain lead of every method
+    let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
+    for call in calls {
+        // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
+        // Grandsire is unaffected by a plain lead, but affected by calls)
+        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+    }
+    fixed_bells
+}
+
+// For every position that this call could be placed, remove any bells which **aren't** preserved
+// by placing the call at this location.
+fn filter_bells_fixed_by_call(
+    method: &bellframe::Method,
+    call: &super::Call,
+    set: &mut HashSet<Bell>,
+) {
+    // Note that all calls are required to only substitute one piece of place notation.
+    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
+        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
+        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
+
+        // The row before a call in this location in the _first lead_
+        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
+        // The row after a plain call in this location in the _first lead_
+        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
+        // The row after a call in this location in the _first lead_
+        let mut row_after_call = row_before_call.to_owned();
+        call.place_not.permute(&mut row_after_call).unwrap();
+
+        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
+        // `row_after_no_call`.  These should be removed from the set, because they are no longer
+        // fixed.
+        for (bell_after_no_call, bell_after_call) in
+            row_after_no_call.bell_iter().zip(&row_after_call)
+        {
+            if bell_after_call != bell_after_no_call {
+                set.remove(&bell_after_call);
+            }
+        }
+    }
+}
+
+/// Remove course head masks which are an exact subset of another mask.  E.g. if `1xxx5678` and
+/// `1xxxxx78` are both defined, then `1xxx5678` can be removed (assuming they both specify the
+/// same calling bell).  It is an error if two masks are compatible but specify different calling
+/// bells.
+fn dedup_ch_masks(course_head_masks: &[CourseHeadMask]) -> Result<Vec<CourseHeadMask>> {
+    let mut deduped_ch_masks = Vec::with_capacity(course_head_masks.len());
+    'outer: for (i, ch_mask) in course_head_masks.iter().enumerate() {
+        // Look for another CH mask who's matched CHs are a superset of `mask`
+        for (other_i, other_ch_mask) in course_head_masks.iter().enumerate() {
+            if i == other_i {
+                continue; // Don't compare masks against themselves
+            }
+            if ch_mask.mask().is_subset_of(other_ch_mask.mask())
+                && ch_mask.calling_bell() == other_ch_mask.calling_bell()
+            {
+                continue 'outer; // Skip this `ch_mask` if it is implied by another mask
+            }
+        }
+        deduped_ch_masks.push(ch_mask.clone());
+    }
+    Ok(deduped_ch_masks)
+}
+
+/// Generate an error if any course could be given two course heads at **different** lead
+/// locations.
+///
+/// For example, in a method with Plain Bob lead heads, `1xx3xx78` and `1x56x8x7` would create an
+/// ambiguity because some courses could either be labelled `15x3x678` or `1356x8x7`.
+pub(super) fn check_for_ambiguous_courses(
+    course_head_masks: &[CourseHeadMask],
+    lead_heads: &[RowBuf],
+) -> Result<()> {
+    for (i, ch_mask) in course_head_masks.iter().enumerate() {
+        let mask = &ch_mask.mask;
+        for lead_head in lead_heads.iter() {
+            if lead_head.is_rounds() {
+                continue; // It's OK for two CH masks to label the same lead as a course head
+            }
+
+            // ... compute mask for this lead head at this location ...
+            let transposed_mask = mask.mul(lead_head);
+            // ... and check that it isn't compatible with any of the course head mask we've
+            // seen so far.  We only need to check each pair of CH masks once (since ambiguity
+            // is symmetric).
+            for other_ch_mask in &course_head_masks[..=i] {
+                let other_mask = &other_ch_mask.mask;
+                // If the lead-end is compatible with a course head mask, then derive which
+                // leads are ambiguous, and return an error
+                if let Some(course_head_2) = transposed_mask.combine(other_mask) {
+                    // Generate the second course head by transposing `mask2` at this lead
+                    // back to the course head satisfying `mask`
+                    let course_head_1 = other_mask.mul(&lead_head.inv()).combine(mask).unwrap();
+                    return Err(Error::AmbiguousCourseHeadPosition {
+                        mask1: course_head_1,
+                        input_mask1: mask.clone(),
+                        mask2: course_head_2,
+                        input_mask2: other_mask.clone(),
+                    });
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+//////////
+// MISC //
+//////////
+
 /// Return an error if two methods share a shorthand
-pub(super) fn check_duplicate_shorthand(
-    methods: &[(bellframe::Method, String)],
-) -> super::Result<()> {
-    for (i1, (meth1, shorthand1)) in methods.iter().enumerate() {
-        for (meth2, shorthand2) in &methods[..i1] {
-            if shorthand1 == shorthand2 {
+pub(super) fn check_duplicate_shorthands(methods: &[super::Method]) -> super::Result<()> {
+    for (i1, m1) in methods.iter().enumerate() {
+        for m2 in &methods[..i1] {
+            if m1.shorthand == m2.shorthand {
                 return Err(Error::DuplicateShorthand {
-                    shorthand: shorthand1.to_owned(),
-                    title1: meth1.title().to_owned(),
-                    title2: meth2.title().to_owned(),
+                    shorthand: m1.shorthand.to_owned(),
+                    title1: m1.method.title().to_owned(),
+                    title2: m2.method.title().to_owned(),
                 });
             }
         }
@@ -133,61 +295,5 @@ pub(super) fn dedup_links(links: &mut Vec<Link>) {
     redundant_link_idxs.dedup();
     for idx in redundant_link_idxs.into_iter().rev() {
         links.remove(idx);
-    }
-}
-
-/// Returns the place bells which are always preserved by plain leads and all calls (e.g. hunt
-/// bells in non-variable-hunt compositions).
-pub(super) fn fixed_bells(
-    methods: &[(bellframe::Method, String)],
-    calls_per_method: &[Vec<&super::Call>],
-    stage: Stage,
-) -> Vec<Bell> {
-    // Start off with all bells fixed
-    let mut all_fixed_bells = stage.bells().collect_vec();
-    for ((method, _shorthand), calls) in methods.iter().zip_eq(calls_per_method) {
-        // Start the set with the bells which are fixed by the plain lead of every method
-        let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-        for call in calls {
-            // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
-            // Grandsire is unaffected by a plain lead, but affected by calls)
-            filter_bells_fixed_by_call(method, call, &mut fixed_bells);
-        }
-        // Intersect the fixed bells of this method with the full list
-        all_fixed_bells.retain(|b| fixed_bells.contains(b));
-    }
-    all_fixed_bells
-}
-
-// For every position that this call could be placed, remove any bells which **aren't** preserved
-// by placing the call at this location.
-fn filter_bells_fixed_by_call(
-    method: &bellframe::Method,
-    call: &super::Call,
-    set: &mut HashSet<Bell>,
-) {
-    // Note that all calls are required to only substitute one piece of place notation.
-    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
-        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
-        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
-
-        // The row before a call in this location in the _first lead_
-        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
-        // The row after a plain call in this location in the _first lead_
-        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
-        // The row after a call in this location in the _first lead_
-        let mut row_after_call = row_before_call.to_owned();
-        call.place_not.permute(&mut row_after_call).unwrap();
-
-        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
-        // `row_after_no_call`.  These should be removed from the set, because they are no longer
-        // fixed.
-        for (bell_after_no_call, bell_after_call) in
-            row_after_no_call.bell_iter().zip(&row_after_call)
-        {
-            if bell_after_call != bell_after_no_call {
-                set.remove(&bell_after_call);
-            }
-        }
     }
 }

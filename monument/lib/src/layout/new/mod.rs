@@ -1,6 +1,6 @@
 //! Utility code for building [`Layout`]s in common scenarios.
 
-use bellframe::{Bell, Mask, PlaceNot, Row, Stage};
+use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -11,46 +11,27 @@ pub mod leadwise;
 mod utils;
 
 impl Layout {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        methods: &[(bellframe::Method, String)],
-        calls: &[self::Call],
+        methods: Vec<self::Method>,
         splice_style: SpliceStyle,
-
-        ch_preset: CourseHeadMaskPreset,
         part_head: &Row,
         leadwise: Option<bool>,
-
         start_indices: Option<&[usize]>,
         end_indices: Option<&[usize]>,
     ) -> Result<Self> {
-        let stage = methods
-            .iter()
-            .map(|(m, _)| m.stage())
-            .max()
-            .expect("Can't find stage of 0 methods");
-
-        let ch_masks = ch_preset.into_masks(stage);
-
         let leadwise = leadwise.unwrap_or_else(|| {
             // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
             // all calling bells
-            !ch_masks
+            !methods
                 .iter()
-                .all(|(_mask, calling_bell)| part_head.is_fixed(*calling_bell))
+                .flat_map(|m| &m.ch_masks)
+                .all(|ch_mask| part_head.is_fixed(ch_mask.calling_bell()))
         });
 
         if leadwise {
-            leadwise::leadwise(methods, calls, start_indices, end_indices)
+            leadwise::leadwise(&methods, start_indices, end_indices)
         } else {
-            coursewise::coursewise(
-                methods,
-                calls,
-                splice_style,
-                &ch_masks,
-                start_indices,
-                end_indices,
-            )
+            coursewise::coursewise(methods, splice_style, start_indices, end_indices)
         }
     }
 }
@@ -114,7 +95,7 @@ pub enum CourseHeadMaskPreset {
 }
 
 impl CourseHeadMaskPreset {
-    fn into_masks(self, stage: Stage) -> Vec<(Mask, Bell)> {
+    pub fn into_masks(self, stage: Stage) -> Vec<(Mask, Bell)> {
         let tenor = stage.tenor();
         match self {
             Self::TenorsTogether => vec![(tenors_together_mask(stage), tenor)],
@@ -133,11 +114,77 @@ fn tenors_together_mask(stage: Stage) -> Mask {
         // On Minor or below, only fix the tenor
         fixed_bells.push(stage.tenor());
     } else {
-        // On stages above minor, fix 7-tenor.  Note that we're using 0-indexing here so bell #6 is
-        // actually the 7th
+        // On stages above minor, fix 7 through tenor.  Note that we're using 0-indexing here so
+        // bell #6 is actually the 7th
         fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
     }
     Mask::fix_bells(stage, fixed_bells)
+}
+
+/////////////
+// METHODS //
+/////////////
+
+#[derive(Debug, Clone)]
+pub struct Method {
+    method: bellframe::Method,
+    calls: Vec<Call>,
+    /// The course head masks, along with which bell is 'calling bell' during that course. Allowing
+    /// different calling bells allows us to do things like keep using W,M,H during courses of e.g.
+    /// `1xxxxx0987`.
+    ch_masks: Vec<utils::CourseHeadMask>,
+    shorthand: String,
+
+    /// The plain course of this [`Method`], with sub-lead indices and labels
+    plain_course: AnnotBlock<Annot>,
+}
+
+impl Method {
+    pub fn new(
+        method: bellframe::Method,
+        calls: Vec<Call>,
+        ch_masks: Vec<(Mask, Bell)>,
+        shorthand: String,
+    ) -> Self {
+        Self {
+            plain_course: method.plain_course().map_annots(Annot::from),
+
+            method,
+            calls,
+            shorthand,
+            ch_masks: ch_masks
+                .into_iter()
+                .flat_map(|(mask, calling_bell)| utils::CourseHeadMask::new(mask, calling_bell))
+                .collect_vec(),
+        }
+    }
+
+    fn block(&self, is_spliced: bool) -> AnnotBlock<Option<String>> {
+        self.plain_course.clone().map_annots_with_index(|idx, _| {
+            let sub_lead_idx = idx % self.method.lead_len();
+            (sub_lead_idx == 0 && is_spliced).then(|| self.shorthand.clone())
+        })
+    }
+
+    pub fn method(&self) -> &bellframe::Method {
+        &self.method
+    }
+}
+
+/// The annotation given to each row in the plain course of a [`Method`]
+#[derive(Debug, Clone)]
+struct Annot {
+    sub_lead_idx: usize,
+    label: Option<String>,
+}
+
+impl From<RowAnnot<'_>> for Annot {
+    fn from(a: RowAnnot) -> Self {
+        Self {
+            sub_lead_idx: a.sub_lead_idx(),
+            label: a.label().map(str::to_owned),
+        }
+    }
 }
 
 ///////////
