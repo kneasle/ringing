@@ -1314,3 +1314,23 @@ string = "#P[t]P[t]PPPP[s]PP[t]P[-]P[-]PP[s]P[s]"
 avg_score = 0.06279435008764267
 length = 1274
 string = "#P[t]P[t]PPPP[s]PP[t]P[s]P[s]PP[s]P[s]"
+
+[[per-method-chs]]
+avg_score = -0.01796874962747097
+length = 256
+string = "B[sH]YYYYYYY[sH]"
+
+[[per-method-chs]]
+avg_score = -0.014137931168079376
+length = 290
+string = "BY[W]YYYYYYY[sW]Y>"
+
+[[per-method-chs]]
+avg_score = 0.0
+length = 224
+string = "BBBBBBB"
+
+[[per-method-chs]]
+avg_score = 0.0
+length = 224
+string = "YYYYYYY"

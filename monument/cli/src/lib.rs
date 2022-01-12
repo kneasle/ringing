@@ -3,6 +3,9 @@
 //! shared between the various integration test runners, making sure that the integration tests run
 //! in exactly the same way as Monument itself.
 
+#![deny(clippy::all)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
 pub mod calls;
 pub mod spec;
 

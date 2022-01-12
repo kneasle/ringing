@@ -3,209 +3,65 @@ use std::{
     ops::Mul,
 };
 
-use bellframe::{
-    mask::BellAlreadySet, method::RowAnnot, AnnotBlock, Bell, Mask, Method, Row, RowBuf, Stage,
-};
+use bellframe::{Mask, Row, RowBuf, Stage};
 use index_vec::IndexVec;
-use itertools::Itertools;
 
 use super::{utils::CourseHeadMask, Error, Result, SpliceStyle};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
-/// Helper function to generate a [`Layout`] from human-friendly inputs (i.e. what [`Method`]s,
-/// [`Call`](super::Call)s and course heads to use).
+/// Generate a [`Layout`] such that nodes will be labelled by their course-head, rather than by
+/// their lead-head.
 pub fn coursewise(
-    methods: &[(Method, String)],
-    calls: &[super::Call],
+    mut methods: Vec<super::Method>,
     splice_style: SpliceStyle,
-    // The course head masks, along with which bell is 'calling bell' during that course.
-    // Allowing different calling bells allows us to do things like keep using W,M,H during
-    // courses of e.g. `1xxxxx0987`.
-    ch_masks: &[(Mask, Bell)],
     // Which sub-lead indices are considered valid starting or finishing points for the
     // composition.  If these are `None`, then any location is allowed
     allowed_start_indices: Option<&[usize]>,
     allowed_end_indices: Option<&[usize]>,
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
-    super::utils::check_duplicate_shorthand(methods)?;
-    let (mut method_datas, stage) = gen_method_data(methods, calls, ch_masks)?;
-    let is_spliced = method_datas.len() > 1;
+    super::utils::check_duplicate_shorthands(&methods)?;
+    let is_spliced = methods.len() > 1;
+    let stage = methods
+        .iter()
+        .map(|m| m.method.stage())
+        .max()
+        .ok_or(Error::NoMethods)?;
+    assert!(methods.iter().all(|m| m.method.stage() == stage)); // TODO: Implement mixed stage splicing
 
-    // Pre-process & check CH masks:
-    for d in &mut method_datas {
-        // Remove redundant CH masks, and check that no courses can have two different calling
-        // bells.
-        d.ch_masks = dedup_ch_masks(&d.ch_masks)?;
-        // Check that two CH masks don't label the same course at two different leads.
-        check_for_ambiguous_courses(&d.ch_masks, &d.lead_heads)?;
+    // Pre-process CH masks
+    super::utils::preprocess_ch_masks(&mut methods, stage)?;
+    for m in &methods {
+        super::utils::check_for_ambiguous_courses(
+            &m.ch_masks,
+            &m.method.lead_head().closure_from_rounds(),
+        )?;
     }
 
     // Generate links
-    let links = generate_links(&method_datas, stage, is_spliced, splice_style)?.into();
+    let links = generate_links(&methods, stage, is_spliced, splice_style)?.into();
 
     Ok(Layout {
         links,
         starts: rounds_locations(
-            &method_datas,
+            &methods,
             stage,
             allowed_start_indices,
             super::utils::SNAP_START_LABEL,
         ),
         ends: rounds_locations(
-            &method_datas,
+            &methods,
             stage,
             allowed_end_indices,
             super::utils::SNAP_FINISH_LABEL,
         ),
         // Create a block for each method
-        blocks: method_datas
+        blocks: methods
             .into_iter()
-            .map(|d| d.into_block(is_spliced))
+            .map(|d| d.block(is_spliced))
             .collect::<BlockVec<_>>(),
         stage,
     })
-}
-
-///////////////////////////////
-// GENERATION OF METHOD DATA //
-///////////////////////////////
-
-/// Generate a [`MethodData`] struct for each source [`Method`].  This also adds fixed bells (e.g.
-/// the treble) to the course heads.
-fn gen_method_data<'a>(
-    methods: &'a [(Method, String)],
-    calls: &'a [super::Call],
-    ch_masks: &'a [(Mask, Bell)],
-) -> Result<(Vec<MethodData<'a>>, Stage)> {
-    let stage = methods
-        .iter()
-        .map(|(method, _shorthand)| method.stage())
-        .max()
-        .ok_or(Error::NoMethods)?;
-    assert!(methods.iter().all(|(m, _)| m.stage() == stage)); // TODO: Implement mixed stage splicing
-
-    let calls_per_method = methods
-        .iter()
-        .map(|_| calls.iter().collect_vec()) // TODO: Allow calls to be limited to some methods
-        .collect_vec();
-
-    // Add fixed bells (e.g. the treble) to the CH masks.  Skipping this would preserve the
-    // correctness of the graph but makes the falseness detection consume a completely unnecessary
-    // amount of time and memory.
-    //
-    // TODO: If we're mixing methods with different fixed bells (e.g. Stedman and treble-oriented
-    // methods), should this be done per-method - perhaps optionally?)
-    let ch_masks = add_fixed_bells(ch_masks, methods, &calls_per_method, stage);
-    // Convert the (Mask, Bell) pairs into (possibly many) `CourseHeadMask`s
-    let ch_masks = ch_masks
-        .into_iter()
-        .flat_map(|(mask, bell)| CourseHeadMask::new(mask, bell))
-        .collect_vec();
-
-    let method_datas = methods
-        .iter()
-        .map(|(m, shorthand)| MethodData::new(m, shorthand.to_owned(), calls, &ch_masks))
-        .collect_vec();
-    Ok((method_datas, stage))
-}
-
-/// Detect fixed bells (a place bell which is preserved by all methods' calls and plain leads) and
-/// fix it in all the course heads.  In most cases, this will add the treble as a fixed bell
-/// (allowing the falseness detection to use it to reduce the size of the falseness table).
-fn add_fixed_bells(
-    ch_masks: &[(Mask, Bell)],
-    methods: &[(Method, String)],
-    calls_per_method: &[Vec<&super::Call>],
-    stage: Stage,
-) -> Vec<(Mask, Bell)> {
-    let fixed_bells = super::utils::fixed_bells(methods, calls_per_method, stage);
-
-    let mut fixed_ch_masks = Vec::with_capacity(ch_masks.len());
-    'mask_loop: for (mut mask, calling_bell) in ch_masks.iter().cloned() {
-        // Attempt to add the fixed bells to this mask
-        for &b in &fixed_bells {
-            if let Err(BellAlreadySet) = mask.fix(b) {
-                // If a bell is known to be fixed in its home position but a mask requires it to be
-                // outside of its home position, then that mask will never be satisfied and can be
-                // removed.  For example, this would remove `x1xxx...` as a course head in Surprise
-                // with standard calls because we know that the treble cannot leave 1st place.
-                continue 'mask_loop;
-            }
-        }
-        // If all fixed bells could be set, then keep this mask
-        fixed_ch_masks.push((mask, calling_bell))
-    }
-    fixed_ch_masks
-}
-
-/////////////////////////////////
-// COURSE HEAD MASK PROCESSING //
-/////////////////////////////////
-
-/// Remove course head masks which are an exact subset of another mask.  E.g. if `1xxx5678` and
-/// `1xxxxx78` are both defined, then `1xxx5678` can be removed (assuming they both specify the
-/// same calling bell).  It is an error if two masks are compatible but specify different calling
-/// bells.
-fn dedup_ch_masks(course_head_masks: &[CourseHeadMask]) -> Result<Vec<CourseHeadMask>> {
-    let mut deduped_ch_masks = Vec::with_capacity(course_head_masks.len());
-    'outer: for (i, ch_mask) in course_head_masks.iter().enumerate() {
-        // Look for another CH mask who's matched CHs are a superset of `mask`
-        for (other_i, other_ch_mask) in course_head_masks.iter().enumerate() {
-            if i == other_i {
-                continue; // Don't compare masks against themselves
-            }
-            if ch_mask.mask().is_subset_of(other_ch_mask.mask())
-                && ch_mask.calling_bell() == other_ch_mask.calling_bell()
-            {
-                continue 'outer; // Skip this `ch_mask` if it is implied by another mask
-            }
-        }
-        deduped_ch_masks.push(ch_mask.clone());
-    }
-    Ok(deduped_ch_masks)
-}
-
-/// Generate an error if any course could be given two course heads at **different** lead
-/// locations.
-///
-/// For example, in a method with Plain Bob lead heads, `1xxxxx78` and `1x56x8x7` would create an
-/// ambiguity because some courses could either be labelled `15xxx678` or `1x56x8x7`.
-fn check_for_ambiguous_courses(
-    course_head_masks: &[CourseHeadMask],
-    lead_heads: &[RowBuf],
-) -> Result<()> {
-    for (i, ch_mask) in course_head_masks.iter().enumerate() {
-        let mask = ch_mask.mask();
-        for lead_head in lead_heads.iter() {
-            if lead_head.is_rounds() {
-                continue; // It's OK for two CH masks to label the same lead as a course head
-            }
-
-            // ... compute mask for this lead head at this location ...
-            let transposed_mask = mask.mul(lead_head);
-            // ... and check that it isn't compatible with any of the course head mask we've
-            // seen so far.  We only need to check each pair of CH masks once (since ambiguity
-            // is symmetric).
-            for other_ch_mask in &course_head_masks[..=i] {
-                let other_mask = other_ch_mask.mask();
-                // If the lead-end is compatible with a course head mask, then derive which
-                // leads are ambiguous, and return an error
-                if let Some(course_head_2) = transposed_mask.combine(other_ch_mask.mask()) {
-                    // Generate the second course head by transposing `mask2` at this lead
-                    // back to the course head satisfying `mask`
-                    let course_head_1 = other_mask.mul(&lead_head.inv()).combine(mask).unwrap();
-                    return Err(Error::AmbiguousCourseHeadPosition {
-                        mask1: course_head_1,
-                        input_mask1: mask.clone(),
-                        mask2: course_head_2,
-                        input_mask2: other_mask.clone(),
-                    });
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 /////////////////////
@@ -214,7 +70,7 @@ fn check_for_ambiguous_courses(
 
 /// Generates the set of [`Link`]s which are valid according to the `course_head_masks`
 fn generate_links(
-    method_datas: &[MethodData],
+    method_datas: &[super::Method],
     stage: Stage,
     is_spliced: bool,
     mut splice_style: SpliceStyle,
@@ -248,8 +104,8 @@ fn generate_links(
 
 /// For each lead label, list the positions in the course where calls at that label could start
 /// (Monument assumes that all courses always replace one piece of [`PlaceNot`]ation).
-fn call_starts_by_label<'m>(method_datas: &[MethodData<'m>]) -> HashMap<&'m str, Vec<RowIdx>> {
-    let mut label_indices = HashMap::<&'m str, Vec<RowIdx>>::new();
+fn call_starts_by_label(method_datas: &[super::Method]) -> HashMap<&str, Vec<RowIdx>> {
+    let mut label_indices = HashMap::<&str, Vec<RowIdx>>::new();
 
     // For every method (and the block it will generate) ...
     for (idx, d) in method_datas.iter().enumerate() {
@@ -258,7 +114,7 @@ fn call_starts_by_label<'m>(method_datas: &[MethodData<'m>]) -> HashMap<&'m str,
         // ... for every labelled row ...
         let course_len = d.plain_course.len();
         for (row_idx, annot) in d.plain_course.annots().enumerate() {
-            if let Some(label) = annot.label() {
+            if let Some(label) = &annot.label {
                 // ... mark that a similarly-labelled call could be called just before this label
                 let call_start_idx = (row_idx + course_len - 1) % course_len;
 
@@ -287,14 +143,14 @@ struct CallEnd {
     row_idx: usize,
 }
 
-fn call_ends(method_datas: &[MethodData]) -> Vec<CallEnd> {
+fn call_ends(method_datas: &[super::Method]) -> Vec<CallEnd> {
     let mut call_ends = Vec::new();
 
     // For every method ...
     for (method_idx, d) in method_datas.iter().enumerate() {
         // ... for every labelled row in the plain course ...
         for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {
-            if annot_row.annot().label().is_some() {
+            if annot_row.annot().label.is_some() {
                 let row_after_call = annot_row.row();
                 // ... for every course head mask ...
                 for (ch_mask_idx, ch_mask) in d.ch_masks.iter().enumerate() {
@@ -329,7 +185,7 @@ fn call_ends(method_datas: &[MethodData]) -> Vec<CallEnd> {
 /// Static data used when generating links.
 #[derive(Debug)]
 struct LinkGenData<'a> {
-    method_datas: &'a [MethodData<'a>],
+    method_datas: &'a [super::Method],
     call_starts_by_label: &'a HashMap<&'a str, Vec<RowIdx>>,
     call_ends: &'a [CallEnd],
     splice_style: SpliceStyle,
@@ -341,7 +197,7 @@ struct LinkGenData<'a> {
 /// This will produce every possible splice, and it's up to [`filter_plain_links`] to unwanted
 /// splices.
 fn generate_all_links(
-    method_datas: &[MethodData],
+    method_datas: &[super::Method],
     call_ends: &[CallEnd],
     call_starts_by_label: &HashMap<&str, Vec<RowIdx>>,
     stage: Stage,
@@ -389,7 +245,7 @@ fn generate_all_links(
 /// in which case plain splices are bulk-added separately).
 fn generate_call_links(
     method_idx: usize,
-    d: &MethodData,
+    m: &super::Method,
     from_ch_mask: &CourseHeadMask,
     link_gen_data: &LinkGenData,
     links: &mut Vec<Link>,
@@ -406,7 +262,7 @@ fn generate_call_links(
     };
 
     // ... test every call in every valid position in the course ...
-    for call in &d.calls {
+    for call in &m.calls {
         let lead_label = call.lead_location.as_str();
         let call_starts = link_gen_data
             .call_starts_by_label
@@ -420,7 +276,7 @@ fn generate_call_links(
             /* ADD CALL LINKS */
 
             // Link corresponding to placing this call
-            let row_before_call = d.plain_course.get_row(from_idx.row).unwrap();
+            let row_before_call = m.plain_course.get_row(from_idx.row).unwrap();
             let row_after_call = call.place_not.permute_new(row_before_call).unwrap();
             // Get the mask required by the row **after** this call.  This link can be
             // generated only if a `CallEnd` is compatible with this mask.
@@ -456,8 +312,8 @@ fn generate_call_links(
             // Plain links should be added whenever there's a call, or every lead for
             // `SpliceStyle::LeadLabels`
             if link_gen_data.splice_style != SpliceStyle::LeadLabels && is_call_possible {
-                let idx_after_plain = (from_idx.row + 1) % d.plain_course.len();
-                let row_after_plain = d.plain_course.get_row(idx_after_plain).unwrap();
+                let idx_after_plain = (from_idx.row + 1) % m.plain_course.len();
+                let row_after_plain = m.plain_course.get_row(idx_after_plain).unwrap();
                 add_links_for_call_position(
                     from_idx,
                     from_ch_mask.mask(),
@@ -480,13 +336,13 @@ fn generate_call_links(
 /// Generate plain links at every possible lead location (i.e. what's expected for
 /// [`SpliceStyle::LeadLabels`]).
 fn generate_plain_links(
-    method_datas: &[MethodData],
+    methods: &[super::Method],
     link_gen_data: &LinkGenData,
     links: &mut Vec<Link>,
 ) {
     for starts in link_gen_data.call_starts_by_label.values() {
         for &from_idx in starts {
-            let method_data = &method_datas[from_idx.block.index()];
+            let method_data = &methods[from_idx.block.index()];
             let row_after_plain = method_data.plain_course.get_row(from_idx.row + 1).unwrap();
             for ch_mask_from in &method_data.ch_masks {
                 add_links_for_call_position(
@@ -615,7 +471,7 @@ fn filter_plain_links(links: &mut Vec<Link>, splice_style: SpliceStyle) {
 /////////////////
 
 fn rounds_locations<I: index_vec::Idx>(
-    method_datas: &[MethodData],
+    methods: &[super::Method],
     stage: Stage,
     allowed_sub_lead_indices: Option<&[usize]>,
     snap_label: &str,
@@ -623,14 +479,14 @@ fn rounds_locations<I: index_vec::Idx>(
     let rounds = RowBuf::rounds(stage);
 
     let mut positions = IndexVec::new();
-    for (method_idx, d) in method_datas.iter().enumerate() {
+    for (method_idx, d) in methods.iter().enumerate() {
         for ch_mask in &d.ch_masks {
             for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {
                 let transposed_mask = ch_mask.mask().mul(annot_row.row());
                 // If rounds satisfies `transposed_mask`, then this location can contain rounds
                 if transposed_mask.matches(&rounds) {
                     // Decide whether this is snap start/finish
-                    let sub_lead_index = annot_row.annot().sub_lead_idx();
+                    let sub_lead_index = annot_row.annot().sub_lead_idx;
                     let is_snap = sub_lead_index != 0;
                     let course_head_containing_rounds = annot_row.row().inv();
 
@@ -648,45 +504,4 @@ fn rounds_locations<I: index_vec::Idx>(
     }
 
     positions
-}
-
-/// Cached data about each [`Method`] in the resulting [`Layout`]
-#[derive(Debug, Clone)]
-struct MethodData<'a> {
-    /// The string used to represent one lead of this method
-    shorthand: String,
-    /// The calls which can be applied to this [`Method`].
-    calls: Vec<&'a super::Call>,
-    /// The [`CourseHeadMask`]s which can be applied to this method
-    ch_masks: Vec<CourseHeadMask>,
-
-    /// The plain course of this [`Method`], with sub-lead indices and labels
-    plain_course: AnnotBlock<RowAnnot<'a>>,
-    /// The lead heads of the plain course of this [`Method`], in order from rounds
-    lead_heads: Vec<RowBuf>,
-}
-
-impl<'a> MethodData<'a> {
-    fn new(
-        method: &'a Method,
-        shorthand: String,
-        calls: &'a [super::Call],
-        ch_masks: &[CourseHeadMask],
-    ) -> Self {
-        Self {
-            shorthand,
-            calls: calls.iter().collect_vec(), // TODO: Allow calls to be assigned to specific methods
-            ch_masks: ch_masks.to_owned(), // TODO: Allow CH masks to be assigned to specific methods
-
-            plain_course: method.plain_course(),
-            lead_heads: method.lead_head().closure_from_rounds(),
-        }
-    }
-
-    fn into_block(self, is_spliced: bool) -> AnnotBlock<Option<String>> {
-        let shorthand = &self.shorthand;
-        self.plain_course.map_annots(|annot| {
-            (annot.sub_lead_idx() == 0 && is_spliced).then(|| shorthand.clone())
-        })
-    }
 }
