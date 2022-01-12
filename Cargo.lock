@@ -45,7 +45,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bellframe"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "dirs",
  "edit-distance",
@@ -563,7 +563,7 @@ dependencies = [
 
 [[package]]
 name = "monument"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bellframe",
  "bit-vec",
@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "monument_cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bellframe",
  "colored 2.0.0",
