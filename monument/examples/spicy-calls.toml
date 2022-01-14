@@ -6,6 +6,7 @@ music_file = "music-8.toml"
 
 
 [method]
+name = "Cornnroc"
 place_notation = "x5x4x5x1x4x5x4x5,4"
 stage = 8
 

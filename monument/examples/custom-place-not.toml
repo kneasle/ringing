@@ -1,4 +1,7 @@
 length = "QP"
 music_file = "music-8.toml"
-method.place_notation = "-58-1458-58-1238-14-1458-36-58,18"
-method.stage = 8
+
+[method]
+name = "Jadd's Method"
+place_notation = "-58-1458-58-1238-14-1458-36-58,18"
+stage = 8

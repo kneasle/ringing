@@ -1,0 +1,36 @@
+# General
+length = "QP"
+num_comps = 10
+
+# Methods
+methods = [
+    "Yorkshire Surprise Major",
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    { name = "Bastow", place_notation = "x2,1", stage = 8 },
+]
+splice_style = "calls"
+method_count = { min = 100, max = 600 } # relax method balance to allow for Bastow
+
+# Calls
+base_calls = "near" # optional, since this is the default
+bob_weight = -7
+single_weight = -10
+calls = [{ symbol = "b", place_notation = "1456", weight = -12 }]
+
+# Music
+music_file = "guide-music-8.toml" # Relative to this file, so expects `music-8.toml` in the same folder
+music = [
+    { patterns = ["5678*", "8765*"], weight = 2 }, # Boost music off the front
+    { pattern = "*87", weight = -1, stroke = "back" }, # Slightly penalise 87s at back
+]
+
+# Courses
+part_head = "124365"
+split_tenors = true
+# course_heads = ["*78", "*7856"] # uncomment to override `split_tenors`
+leadwise = false # optional: Monument would have determined this
+ch_weights = [{ pattern = "*78", weight = 0.05 }] # slight boost for tenors-together courses
+
+# Starts/Ends (commented because they currently play badly with multi-part spliced)
+# snap_start = true
+# end_indices = [0] # only allow non-snap finishes
