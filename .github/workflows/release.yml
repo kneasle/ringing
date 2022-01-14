@@ -119,7 +119,7 @@ jobs:
         staging="monument-${{ needs.create-release.outputs.monument_version }}-${{ matrix.build }}"
         mkdir -p "$staging"
 
-        cp {LICENSE,monument/README.md} "$staging/"
+        cp {LICENSE,monument/README.md,monument/cli/guide.md} "$staging/"
 
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
           cp "target/release/monument_cli.exe" "$staging/monument.exe"
