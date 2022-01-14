@@ -398,6 +398,7 @@ impl Graph {
         max_length: usize,
         part_head: &Row,
         start_stroke: Stroke,
+        allow_false: bool,
     ) -> Self {
         // Build the shape of the graph using Dijkstra's algorithm
         let (expanded_node_ranges, start_nodes, end_nodes, ch_equiv_map, part_heads) =
@@ -454,7 +455,9 @@ impl Graph {
             plural(end_nodes.len(), "end"),
         );
 
-        compute_falseness(&mut nodes, layout, &ch_equiv_map);
+        if !allow_false {
+            compute_falseness(&mut nodes, layout, &ch_equiv_map);
+        }
 
         // Add predecessor references (every node is a predecessor to all of its successors)
         log::debug!("Setting predecessor links");

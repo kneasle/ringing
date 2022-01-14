@@ -1,0 +1,4 @@
+length = "practice"
+methods = ["Bristol Surprise Major", "Yorkshire Surprise Major"]
+music_file = "music-8.toml"
+allow_false = true

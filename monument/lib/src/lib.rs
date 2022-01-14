@@ -35,17 +35,18 @@ use graph::{optimise::Pass, Graph};
 #[derive(Debug, Clone)]
 pub struct Query {
     pub layout: layout::Layout,
-    pub part_head: RowBuf,
     pub len_range: Range<usize>,
     pub num_comps: usize,
-
+    pub allow_false: bool,
     pub method_count_range: Range<usize>,
+
+    pub part_head: RowBuf,
+    /// The `f32` is the weight given to every row in any course matching the given [`Mask`]
+    pub ch_weights: Vec<(Mask, f32)>,
 
     pub music_types: Vec<music::MusicType>,
     pub start_stroke: Stroke,
     pub max_duffer_rows: Option<usize>,
-    /// The `f32` is the weight given to every row in a course
-    pub ch_weights: Vec<(Mask, f32)>,
 }
 
 impl Query {
@@ -183,6 +184,7 @@ impl Query {
             self.len_range.end - 1,
             &self.part_head,
             self.start_stroke,
+            self.allow_false,
         )
     }
 
