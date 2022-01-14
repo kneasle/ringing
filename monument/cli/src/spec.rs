@@ -42,6 +42,10 @@ pub struct Spec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "get_30")]
     num_comps: usize,
+    /// Allow Monument to ignore falseness and generate false compositions.  Compositions still
+    /// won't have internal rounds.
+    #[serde(default)]
+    allow_false: bool,
     /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
     /// cases like cyclic comps where no course heads are preserved across parts.
     ///
@@ -194,16 +198,17 @@ impl Spec {
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
-            part_head,
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
-
             method_count_range,
+            allow_false: self.allow_false,
+
+            part_head,
+            ch_weights,
 
             music_types,
             start_stroke: self.start_stroke,
             max_duffer_rows: self.max_duffer_rows,
-            ch_weights,
         })
     }
 
