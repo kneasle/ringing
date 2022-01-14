@@ -101,6 +101,13 @@ jobs:
     - name: Build release binary
       run: cargo build --verbose --release
 
+      # Run tests & clippy, just to make sure that we can't accidentally publish an obviously borked
+      # build. This **should** be stopped by PR checks, but it can't hurt to test it.
+    - name: Run tests
+      run: cargo test --release
+    - name: Run clippy
+      run: cargo clippy --no-deps
+
     - name: Strip release binary (linux and macos)
       if: matrix.build == 'linux' || matrix.build == 'macos'
       run: |
