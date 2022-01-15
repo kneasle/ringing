@@ -28,9 +28,9 @@ jobs:
   create-release:
     name: create-release
     runs-on: ubuntu-latest
+    # Set to force version number, e.g., when no tag exists.
     # env:
-      # Set to force version number, e.g., when no tag exists.
-      # MONUMENT_VERSION: TEST-0.0.0
+    #   MONUMENT_VERSION: TEST-0.0.1
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
       monument_version: ${{ env.MONUMENT_VERSION }}
@@ -102,7 +102,7 @@ jobs:
       run: cargo build --verbose --release
 
       # Run tests & clippy, just to make sure that we can't accidentally publish an obviously borked
-      # build. This **should** be stopped by PR checks, but it can't hurt to test it.
+      # build. This **should** be stopped by PR checks, but better safe than sorry.
     - name: Run tests
       run: cargo test --release
     - name: Run clippy
@@ -119,7 +119,11 @@ jobs:
         staging="monument-${{ needs.create-release.outputs.monument_version }}-${{ matrix.build }}"
         mkdir -p "$staging"
 
-        cp {LICENSE,monument/README.md,monument/cli/guide.md} "$staging/"
+        cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$staging/"
+        cp -r monument/examples "$staging/"
+        # `_results.toml` and `_ignore.toml` are only used for the testing framework
+        rm "$staging/examples/_results.toml"
+        rm "$staging/examples/_ignore.toml"
 
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
           cp "target/release/monument_cli.exe" "$staging/monument.exe"
