@@ -576,6 +576,20 @@ impl Row {
         unsafe { Arc::from_raw(ptr_to_row) }
     }
 
+    /// Gets the smallest non-zero number `n` such that `self.pow_u(n).is_rounds()`.
+    #[inline]
+    pub fn order(&self) -> usize {
+        let mut accum = RowAccumulator::new(self.to_owned());
+        let mut count = 1;
+        while !accum.total().is_rounds() {
+            // Safe, because `RowAccumulator` is initialised with `self` and its stage never
+            // changes (so `accum.stage() == self.stage()` for all loop iterations).
+            unsafe { accum.accumulate_unchecked(self) };
+            count += 1;
+        }
+        count
+    }
+
     /// Generate all the `Row`s formed by repeatedly permuting a given `Row`.  The first item
     /// returned will always be the input `Row`, and the last will always be `rounds`.
     ///
@@ -991,5 +1005,77 @@ pub struct DbgRow<'r>(pub &'r Row);
 impl Debug for DbgRow<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Deref;
+
+    use crate::{Row, RowBuf};
+
+    #[test]
+    fn is_group() {
+        #[track_caller]
+        fn check(rows: &[&str]) {
+            let rows: Vec<RowBuf> = rows.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
+            println!("Is {:?} a group?", rows);
+            assert!(Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
+        }
+
+        check(&["1234", "1342", "1423"]);
+        check(&["1"]);
+        check(&["1234", "1324"]);
+        check(&["1234", "1234", "1234", "1324"]);
+        check(&["1234", "4123", "3412", "2341"]);
+        check(&["123456", "134256", "142356", "132456", "124356", "143256"]);
+        #[rustfmt::skip]
+        check(&[
+            "123456", "134562", "145623", "156234", "162345",
+            "165432", "126543", "132654", "143265", "154326",
+        ]);
+        check(&["123456", "234561", "345612", "456123", "561234", "612345"]);
+        #[rustfmt::skip]
+        check(&[
+            "123456", "234561", "345612", "456123", "561234", "612345",
+            "654321", "165432", "216543", "321654", "432165", "543216",
+        ]);
+    }
+
+    #[test]
+    fn is_non_group() {
+        #[track_caller]
+        fn check(groups: &[&str]) {
+            let rows: Vec<RowBuf> = groups.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
+            println!("Is {:?} not a group?", groups);
+            assert!(!Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
+        }
+
+        check(&["21"]);
+        check(&["123456", "134256", "142356", "132456", "124356"]); // 143256 is missing
+        check(&[]); // The empty set doesn't contain an identity element
+        check(&[
+            "123456", "134256", "142356", "132456", "124356", "143256", "213456",
+        ]);
+    }
+
+    #[test]
+    fn order() {
+        #[track_caller]
+        fn check(row: &str, exp_order: usize) {
+            assert_eq!(RowBuf::parse(row).unwrap().order(), exp_order);
+        }
+
+        check("1", 1);
+        check("1234", 1);
+        check("123456789", 1);
+        check("21", 2);
+        check("2134", 2);
+        check("2143", 2);
+        check("23145", 3);
+        check("23451", 5);
+        check("23154", 6);
+        check("231564", 3);
+        check("1452367890", 2);
     }
 }
