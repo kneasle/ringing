@@ -34,12 +34,34 @@ impl RowAccumulator {
         Ok(())
     }
 
+    /// Performs `self = self * row`, without checking that the stages match.
+    ///
+    /// # Safety
+    ///
+    /// This is safe if `row.stage() == self.stage()`.
+    #[inline]
+    pub unsafe fn accumulate_unchecked(&mut self, row: &Row) {
+        self.total.mul_into_unchecked(row, &mut self.temp_row); // Multiply `total` into `temp_row`
+        std::mem::swap(&mut self.total, &mut self.temp_row); // Swap the result back into `total`
+    }
+
     /// Performs `self = row * self`
     #[inline]
     pub fn pre_accumulate(&mut self, row: &Row) -> Result<(), IncompatibleStages> {
         row.mul_into(&self.total, &mut self.temp_row)?; // Multiply `total` into `temp_row`
         std::mem::swap(&mut self.total, &mut self.temp_row); // Swap the result back into `total`
         Ok(())
+    }
+
+    /// Performs `self = row * self`, without checking that the stages match.
+    ///
+    /// # Safety
+    ///
+    /// This is safe if `row.stage() == self.stage()`.
+    #[inline]
+    pub unsafe fn pre_accumulate_unchecked(&mut self, row: &Row) {
+        row.mul_into_unchecked(&self.total, &mut self.temp_row); // Multiply `total` into `temp_row`
+        std::mem::swap(&mut self.total, &mut self.temp_row); // Swap the result back into `total`
     }
 
     /// Sets the accumulated value of `self`

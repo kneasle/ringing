@@ -451,6 +451,7 @@ struct Comp {
     length: usize,
     string: String,
     avg_score: OrderedFloat<f32>,
+    part_head: Option<String>, // Part head for multi-part compositions
 }
 
 impl Comp {
@@ -462,6 +463,9 @@ impl Comp {
         let mut comp_map = toml::map::Map::new();
         comp_map.insert("length".to_owned(), Value::Integer(self.length as i64));
         comp_map.insert("string".to_owned(), Value::String(self.string.clone()));
+        if let Some(ph) = self.part_head.clone() {
+            comp_map.insert("part_head".to_owned(), Value::String(ph));
+        }
         comp_map.insert(
             "avg_score".to_owned(),
             Value::Float(self.avg_score.0 as f64),
@@ -476,17 +480,22 @@ impl From<&monument::Comp> for Comp {
             length: source.length,
             string: source.display_string(),
             avg_score: source.avg_score,
+            // Only store part heads for multi-part strings
+            part_head: source
+                .query
+                .is_multipart()
+                .then(|| source.part_head().to_string()),
         }
     }
 }
 
 impl Display for Comp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:>4}/{:>7.5}: {}",
-            self.length, self.avg_score, self.string
-        )
+        write!(f, "{:>4}/{:>7.5}", self.length, self.avg_score,)?;
+        if let Some(p) = &self.part_head {
+            write!(f, "/{}", p)?;
+        }
+        write!(f, ": {}", self.string)
     }
 }
 

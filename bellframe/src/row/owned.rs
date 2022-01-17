@@ -580,49 +580,6 @@ mod tests {
         check("14567892", Stage::CATERS, '3');
     }
 
-    #[test]
-    fn is_group() {
-        fn check(rows: &[&str]) {
-            let rows: Vec<RowBuf> = rows.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
-            println!("Is {:?} a group?", rows);
-            assert!(Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
-        }
-
-        check(&["1234", "1342", "1423"]);
-        check(&["1"]);
-        check(&["1234", "1324"]);
-        check(&["1234", "1234", "1234", "1324"]);
-        check(&["1234", "4123", "3412", "2341"]);
-        check(&["123456", "134256", "142356", "132456", "124356", "143256"]);
-        #[rustfmt::skip]
-        check(&[
-            "123456", "134562", "145623", "156234", "162345",
-            "165432", "126543", "132654", "143265", "154326",
-        ]);
-        check(&["123456", "234561", "345612", "456123", "561234", "612345"]);
-        #[rustfmt::skip]
-        check(&[
-            "123456", "234561", "345612", "456123", "561234", "612345",
-            "654321", "165432", "216543", "321654", "432165", "543216",
-        ]);
-    }
-
-    #[test]
-    fn is_non_group() {
-        fn check(groups: &[&str]) {
-            let rows: Vec<RowBuf> = groups.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
-            println!("Is {:?} not a group?", groups);
-            assert!(!Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
-        }
-
-        check(&["21"]);
-        check(&["123456", "134256", "142356", "132456", "124356"]); // 143256 is missing
-        check(&[]); // The empty set doesn't contain an identity element
-        check(&[
-            "123456", "134256", "142356", "132456", "124356", "143256", "213456",
-        ]);
-    }
-
     #[quickcheck]
     fn parse_doesnt_panic(v: String) -> bool {
         let _ = v.parse::<RowBuf>();
