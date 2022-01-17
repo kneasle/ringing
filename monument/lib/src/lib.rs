@@ -53,6 +53,10 @@ impl Query {
     pub fn is_multipart(&self) -> bool {
         !self.part_head.is_rounds()
     }
+
+    pub fn num_parts(&self) -> usize {
+        self.part_head.order()
+    }
 }
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
@@ -122,6 +126,10 @@ impl Comp {
         s
     }
 
+    pub fn part_head(&self) -> RowBuf {
+        self.query.part_head.pow_u(self.rotation as usize)
+    }
+
     pub fn long_string(&self) -> String {
         let mut s = format!("len: {}, ", self.length,);
         // Method counts for spliced
@@ -130,9 +138,8 @@ impl Comp {
         }
         // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
         // head)
-        let part_heads = self.query.part_head.closure();
-        if part_heads.len() > 2 {
-            write!(s, "PH: {}, ", &part_heads[self.rotation as usize]).unwrap();
+        if self.query.num_parts() > 2 {
+            write!(s, "PH: {}, ", self.part_head()).unwrap();
         }
         write!(
             s,
