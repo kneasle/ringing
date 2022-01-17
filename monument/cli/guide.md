@@ -44,7 +44,7 @@ calls = [{ symbol = "b", place_notation = "1456", weight = -12 }]
 music_file = "guide-music-8.toml" # Relative to this file, so expects `music-8.toml` in the same folder
 music = [
     { patterns = ["5678*", "8765*"], weight = 2 }, # Boost music off the front
-    { pattern = "*87", weight = -1, strokes = "back" }, # Slightly penalise 87s at back
+    { pattern = "*87", weight = -1, stroke = "back" }, # Slightly penalise 87s at back
 ]
 
 # Courses
