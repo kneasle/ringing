@@ -1,9 +1,10 @@
-# Ringing Monorepo
+# Ringing
 
-A single workspace containing all my Rust projects related to
+A single repository containing all my Rust projects related to
 [change ringing](https://en.wikipedia.org/wiki/Change_ringing).  All are under the MIT license.
 
-Each project/library lives in its own directory and may correspond to multiple Rust crates:
+As far as cargo/rust is concerened, this repository is one single workspace consisting of many
+separate crates.  Each project/library lives in its own directory and may correspond to multiple Rust crates:
 - [`Monument`](monument/): A fast and flexible library & CLI app for generating compositions
 - [`Jigsaw`](https://github.com/kneasle/jigsaw) (yet to be moved here): A visual tool for
   experimenting with compositions
