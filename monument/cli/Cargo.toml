@@ -14,7 +14,7 @@ itertools = "0.10"
 log = "0.4"
 monument = { version = "0.2.1", path = "../lib/" }
 serde = { version = "1.0", features = ["derive"] }
-simple_logger = "2.0"
+simple_logger = "2.1"
 structopt = "0.3"
 toml = "0.5"
 
