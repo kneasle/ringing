@@ -113,17 +113,6 @@ dependencies = [
 
 [[package]]
 name = "colored"
-version = "1.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4ffc801dacf156c5854b9df4f425a626539c3a6ef7893cc0c5084a23f0b6c59"
-dependencies = [
- "atty",
- "lazy_static",
- "winapi",
-]
-
-[[package]]
-name = "colored"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3616f750b84d8f0de8a58bda93e08e2a81ad3f523089b05f1dffecab48c6cbd"
@@ -581,7 +570,7 @@ name = "monument_cli"
 version = "0.2.3"
 dependencies = [
  "bellframe",
- "colored 2.0.0",
+ "colored",
  "difference",
  "itertools",
  "log",
@@ -1008,12 +997,12 @@ checksum = "6ac4b749905cb3eaf8804e4d419186471f5a03789a8609c70b5d535839b85161"
 
 [[package]]
 name = "simple_logger"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a1fa7ae55ed9ef48e15cf034a83a99702309d9451b4608503dd6ec66aaa9d0e"
+checksum = "c75a9723083573ace81ad0cdfc50b858aa3c366c48636edb4109d73122a0c0ea"
 dependencies = [
  "atty",
- "colored 1.9.3",
+ "colored",
  "log",
  "time",
  "winapi",
