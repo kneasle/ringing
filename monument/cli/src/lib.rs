@@ -25,6 +25,7 @@ use bellframe::{
 };
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
+use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
 
@@ -118,7 +119,7 @@ impl QueryResult {
         for c in &self.comps {
             println!("{}", c.long_string());
         }
-        println!("Search completed in {:?}", self.duration);
+        println!("Search completed in {}", PrettyDuration(self.duration));
     }
 }
 
@@ -241,7 +242,10 @@ impl UpdateLogger {
         write!(
             buf,
             "    {} iters, {} items in queue, avg/max len {:.0}/{}",
-            p.iter_count, p.queue_len, p.avg_length, p.max_length
+            BigNumInt(p.iter_count),
+            BigNumInt(p.queue_len),
+            p.avg_length,
+            p.max_length
         )
         .unwrap();
         if self.is_truncating_queue {
