@@ -1,5 +1,7 @@
 [workspace]
-members = ["bellframe", "monument/lib", "monument/cli"]
+members = ["utils", "bellframe", "monument/lib", "monument/cli"]
 
+# Do some optimisation for debug builds.  -O2 is still fast enough, but makes things like file IO
+# much faster.
 [profile.dev]
 opt-level = 2
