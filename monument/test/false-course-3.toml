@@ -1,0 +1,9 @@
+# This attempts to break the optimisation passes by having a small number of very false nodes
+length = "practice"
+method = "Normandy Surprise Major"
+split_tenors = true
+
+base_calls = "none"
+[[calls]]
+symbol = "s"
+place_notation = "1234"

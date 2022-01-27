@@ -4,7 +4,8 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{AnnotBlock, IncompatibleStages, Mask, Row, RowBuf, Stage};
+use bellframe::{AnnotBlock, IncompatibleStages, Mask, Row, RowBuf, Stage, Truth};
+use itertools::Itertools;
 use node_range::PerPartLength;
 
 pub mod new;
@@ -77,17 +78,27 @@ impl Layout {
         })
     }
 
-    /// Return the [`Row`]s covered by a given range
-    pub fn untransposed_rows(
-        &self,
-        row_idx: RowIdx,
-        length: PerPartLength,
-    ) -> impl Iterator<Item = &'_ Row> {
-        self.blocks[row_idx.block]
+    /// Returns `true` if and only if no [`Row`]s are repeated within a given [`RowRange`].  This
+    /// is done naively with `O(l^2)` runtime where `l = range.length`.
+    pub fn self_truth(&self, range: RowRange) -> Truth {
+        let rows = self.untransposed_rows(range).collect_vec();
+        for (i, r1) in rows.iter().enumerate() {
+            for r2 in &rows[..i] {
+                if r1 == r2 {
+                    return Truth::False;
+                }
+            }
+        }
+        Truth::True // self-true iff range contains no matching rows
+    }
+
+    /// Return the [`Row`]s in the plain course that are covered by a given range
+    pub fn untransposed_rows(&self, range: RowRange) -> impl Iterator<Item = &'_ Row> {
+        self.blocks[range.start.block]
             .rows()
             .cycle()
-            .skip(row_idx.row)
-            .take(length.0)
+            .skip(range.start.row)
+            .take(range.len.0)
     }
 
     /////////////

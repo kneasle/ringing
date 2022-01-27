@@ -8,6 +8,8 @@ use crate::{
     utils::{Rotation, RowCounts},
 };
 
+use super::RowRange;
+
 /// The length of a `Node` **in one part**.  This and [`TotalLength`] allow the compiler to catch
 /// people mistaking the different length semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,11 +57,20 @@ impl NodeRange {
         &self,
         layout: &'l Layout,
     ) -> Box<dyn Iterator<Item = &'l Row> + 'l> {
+        match self.range() {
+            Some(range) => Box::new(layout.untransposed_rows(range)),
+            None => Box::new(std::iter::empty()),
+        }
+    }
+
+    /// Get the [`RowRange`] covered by this [`NodeRange`].  If this is a 0-length end node, `None`
+    /// is returned.
+    pub fn range(&self) -> Option<RowRange> {
         match self.node_id {
             NodeId::Standard(StandardNodeId { row_idx, .. }) => {
-                Box::new(layout.untransposed_rows(row_idx, self.per_part_length))
+                Some(RowRange::new(row_idx, self.per_part_length))
             }
-            NodeId::ZeroLengthEnd => Box::new(std::iter::empty()),
+            NodeId::ZeroLengthEnd => None,
         }
     }
 
