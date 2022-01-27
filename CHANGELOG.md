@@ -9,6 +9,8 @@
 - (#36) Remove self-false nodes even in single-parts.  This happens if a method is false within its
     own lead.  I can't see why anyone would ask Monument for such a thing, but if you do then
     Monument will now correctly declare it impossible.
+- (#37) Add extra integration tests for false method splices (i.e. a splice between mutually-false
+    leads) and half-lead calls.
 
 ### BellFrame
 
