@@ -1,0 +1,13 @@
+length = "practice"
+method.title = "Bristol Surprise Major"
+method.lead_locations = { 0 = "LE", 16 = "HL" }
+
+# music_file = "music-8.toml"
+
+[[calls]]
+place_notation = "58"
+symbol = ""
+debug_symbol = "-"
+lead_location = "HL"
+calling_positions = ["h", "w", "m", "v", "f", "b", "i", "_"]
+weight = -1
