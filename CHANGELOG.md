@@ -11,3 +11,4 @@
 
 - (#25) Add `Row::order`, along with `RowAccumulator::accumulate_unchecked` and
     `RowAccumulator::pre_accumulate_unchecked`.
+- (#36) Add `Truth`, as a `bool`-like for representing truth in a way that the compiler checks.
