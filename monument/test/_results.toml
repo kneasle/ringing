@@ -1,4 +1,6 @@
+false-course-1 = []
 multipart-self-false = []
+self-false-3 = []
 
 [[87s-at-back]]
 avg_score = -0.45625001192092896
@@ -451,6 +453,26 @@ string = "BYB"
 avg_score = 0.5375000238418579
 length = 64
 string = "B[sH]B[sH]"
+
+[[false-course-2]]
+avg_score = -0.04241379350423813
+length = 290
+string = "WsMBsWsMB>"
+
+[[false-course-2]]
+avg_score = -0.04241379350423813
+length = 290
+string = "sWsMBWsMB>"
+
+[[false-course-2]]
+avg_score = -0.03041236847639084
+length = 194
+string = "sWMB>"
+
+[[false-course-3]]
+avg_score = -0.09375
+length = 192
+string = "sTsWsMsBsVsH"
 
 [[handbell]]
 avg_score = 0.19642862677574158
@@ -1554,3 +1576,73 @@ string = "BBBBBBB"
 avg_score = 0.0
 length = 224
 string = "YYYYYYY"
+
+[[self-false-1]]
+avg_score = 0.11666667461395264
+length = 288
+string = "BB[M]BBB[B]BBB[W]B"
+
+[[self-false-1]]
+avg_score = 0.2589285671710968
+length = 224
+string = "BBBBBBB"
+
+[[self-false-1]]
+avg_score = 0.3447916507720947
+length = 192
+string = "B[H]B[H]B[sH]B[H]B[H]B[sH]"
+
+[[self-false-1]]
+avg_score = 0.3447916507720947
+length = 192
+string = "B[H]B[sH]B[H]B[H]B[sH]B[H]"
+
+[[self-false-1]]
+avg_score = 0.3447916507720947
+length = 192
+string = "B[sH]B[H]B[H]B[sH]B[H]B[H]"
+
+[[self-false-1]]
+avg_score = 0.3656250238418579
+length = 128
+string = "B[H]B[sH]B[H]B[sH]"
+
+[[self-false-1]]
+avg_score = 0.4020833671092987
+length = 96
+string = "B[H]B[H]B[H]"
+
+[[self-false-1]]
+avg_score = 0.4203125238418579
+length = 128
+string = "B[sH]B[H]B[sH]B[H]"
+
+[[self-false-1]]
+avg_score = 0.5375000238418579
+length = 64
+string = "B[sH]B[sH]"
+
+[[self-false-1]]
+avg_score = 5.5
+length = 2
+string = "U>"
+
+[[self-false-2]]
+avg_score = 0.3656250238418579
+length = 128
+string = "B[H]B[sH]B[H]B[sH]"
+
+[[self-false-2]]
+avg_score = 0.4020833671092987
+length = 96
+string = "B[H]B[H]B[H]"
+
+[[self-false-2]]
+avg_score = 0.4203125238418579
+length = 128
+string = "B[sH]B[H]B[sH]B[H]"
+
+[[self-false-2]]
+avg_score = 0.5375000238418579
+length = 64
+string = "B[sH]B[sH]"

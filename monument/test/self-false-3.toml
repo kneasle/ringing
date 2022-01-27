@@ -1,0 +1,7 @@
+# Normandy Surprise is false in its plain course, but not in each lead.  Therefore, any chunk of at
+# least 4 leads will be self-false.  In this case, all the W->H chunks are self-false so no
+# compositions are be possible with only W and H.
+
+length = { min = 0, max = 500 }
+method = "Normandy Surprise Major"
+course_heads = ["*678"] # Only allow W/H, thus forcing 4-lead sections from W to H

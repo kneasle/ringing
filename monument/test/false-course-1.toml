@@ -1,0 +1,7 @@
+length = "practice"
+method = "Normandy Surprise Major"
+
+base_calls = "none"
+[[calls]]
+symbol = "s"
+place_notation = "1234"

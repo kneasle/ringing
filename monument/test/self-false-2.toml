@@ -1,0 +1,8 @@
+# Same as `test/self-false.toml`, "Ummm" is self-false, but doesn't contain rounds in the first
+# lead.  Therefore, "Ummm" should never appear in the composition.
+length = "practice"
+methods = [
+    "Bristol Surprise Major",
+    { name = "Ummm", place_notation = "x1xxx4,8", stage = 8 }, # Each lead is false against itself
+]
+music_file = "music-8.toml"

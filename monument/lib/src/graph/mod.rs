@@ -9,7 +9,7 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
 };
 
-use bellframe::{Mask, Row, RowBuf, Stroke};
+use bellframe::{Mask, Row, RowBuf, Stroke, Truth};
 use itertools::Itertools;
 
 use crate::{
@@ -22,7 +22,10 @@ use crate::{
     Query,
 };
 
-use self::{falseness::FalsenessTable, optimise::Pass};
+use self::{
+    falseness::{FalsenessEntry, FalsenessTable},
+    optimise::Pass,
+};
 
 /// The number of rows required to get from a point in the graph to a start/end.
 type Distance = usize;
@@ -514,6 +517,7 @@ fn compute_falseness(
             ch_equiv_map,
             &node_ids_and_lengths,
         )
+        .is_true()
     });
 }
 
@@ -525,34 +529,46 @@ fn set_falseness_links(
     falseness_table: &FalsenessTable,
     ch_equiv_map: &HashMap<RowBuf, (RowBuf, Rotation)>,
     node_ids_and_lengths: &HashSet<(NodeId, PerPartLength)>,
-) -> bool {
-    // Only compute falseness for standard IDs (0-length nodes can't have any falseness)
-    if let NodeId::Standard(std_id) = id {
-        let range = RowRange {
-            start: std_id.row_idx,
-            len: node.per_part_length,
-        };
-        node.false_nodes.clear();
-        for (false_range, false_ch_transposition) in falseness_table.false_course_heads(range) {
-            let false_ch = std_id.course_head.as_ref() * false_ch_transposition;
-            if let Some((false_equiv_ch, rotation)) = ch_equiv_map.get(&false_ch) {
-                for is_start in [true, false] {
-                    let false_id =
-                        StandardNodeId::new(false_equiv_ch.clone(), false_range.start, is_start);
-                    let false_id_and_len = (NodeId::Standard(false_id.clone()), false_range.len);
-                    if &false_id == std_id && *rotation != 0 {
-                        return false; // Remove node if it's false against itself in another part
-                    }
-                    if node_ids_and_lengths.contains(&false_id_and_len) {
-                        // If the node at `false_id` is in the graph, then it's false against
-                        // `node`
-                        node.false_nodes.push(false_id);
-                    }
+) -> Truth {
+    // Early return for zero-length ends, which can't have any falseness (even against themselves)
+    let std_id = match id {
+        NodeId::ZeroLengthEnd => return Truth::True,
+        NodeId::Standard(std_id) => std_id,
+    };
+    // If the node's [`RowRange`] is self-false then return `Truth::False` without setting any
+    // falseness links
+    let entry = falseness_table.falseness_entry(RowRange {
+        start: std_id.row_idx,
+        len: node.per_part_length,
+    });
+    let fchs = match entry {
+        FalsenessEntry::SelfFalse => return Truth::False,
+        FalsenessEntry::FalseCourseHeads(fchs) => fchs,
+    };
+    // If the node has non-zero length and is self-true, then set the falseness pointers according
+    // to the FCHs given by the table
+    node.false_nodes.clear();
+    for (false_range, false_ch_transposition) in fchs {
+        let false_ch = std_id.course_head.as_ref() * false_ch_transposition;
+        if let Some((false_equiv_ch, rotation)) = ch_equiv_map.get(&false_ch) {
+            for is_start in [true, false] {
+                let false_id =
+                    StandardNodeId::new(false_equiv_ch.clone(), false_range.start, is_start);
+                let false_id_and_len = (NodeId::Standard(false_id.clone()), false_range.len);
+                if &false_id == std_id && *rotation != 0 {
+                    return Truth::False; // Remove node if it's false against itself in another part
+                }
+                if node_ids_and_lengths.contains(&false_id_and_len) {
+                    // If the node at `false_id` is in the graph, then it's false against
+                    // `node`
+                    node.false_nodes.push(false_id);
                 }
             }
         }
     }
-    true // If all FCHs were checked and `false` hasn't been returned, this node isn't self false
+    // If this node isn't false against itself in any part (including the first), then it must be
+    // self-true
+    Truth::True
 }
 
 /// Use Dijkstra's algorithm to determine the overall structure of the graph, without computing the

@@ -9,7 +9,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use bellframe::{Mask, Row, RowBuf};
+use bellframe::{Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
 use crate::layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange};
@@ -22,7 +22,20 @@ use crate::layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange}
 /// node is one [`HashMap`] lookup and some row transpositions.
 #[derive(Debug, Clone)]
 pub(super) struct FalsenessTable {
-    falseness: HashMap<RowRange, Vec<(RowRange, RowBuf)>>,
+    /// For each `RowRange`, list the false `RowRange`s and their CH transpositions.  If
+    /// `falseness[r1]` contains `(r2, ch)`, then `r2` of course `ch` is false against `r1` of the
+    /// plain course.
+    falseness: HashMap<RowRange, FalsenessEntry>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) enum FalsenessEntry {
+    /// Every instance of this [`RowRange`] is false against itself.  Any instance of this node
+    /// will be removed from the graph.
+    SelfFalse,
+    /// This [`RowRange`] isn't self-false, but this range of the plain course is false against
+    /// `r` of course `ch` for every `(r, ch)` in the [`Vec`].
+    FalseCourseHeads(Vec<(RowRange, RowBuf)>),
 }
 
 impl FalsenessTable {
@@ -35,67 +48,70 @@ impl FalsenessTable {
         // Extract (from the layout's links) which CH masks apply to each range start/end
         let (masks_by_range_start, masks_by_range_end) = ch_masks_from_links(layout);
 
-        // For each `RowRange`, which course heads are used
-        let mut chs_by_range = HashMap::<RowRange, Vec<&Row>>::new();
+        // For each non-self-false `RowRange`, determine which course heads are used.  We don't
+        // need to compute falseness for self-false `RowRange`s, because the resulting nodes will
+        // be removed from the node graph.
+        let mut range_self_truth: HashMap<RowRange, Truth> = HashMap::new(); // Memoise self-falseness
+        let mut chs_by_range: HashMap<RowRange, Vec<&Row>> = HashMap::new();
         for (id, length) in nodes {
             if let NodeId::Standard(id) = id {
-                chs_by_range
-                    .entry(RowRange::new(id.row_idx, *length))
-                    .or_insert_with(Vec::new)
-                    .push(&id.course_head);
+                let range = RowRange::new(id.row_idx, *length);
+                let self_truth = *range_self_truth
+                    .entry(range)
+                    .or_insert_with(|| layout.self_truth(range));
+                // If this node isn't self-false, then record that this CH has been used
+                if self_truth == Truth::True {
+                    chs_by_range
+                        .entry(range)
+                        .or_insert_with(Vec::new)
+                        .push(&id.course_head);
+                }
             }
         }
 
-        // Determine which masks/range pairs are actually needed (pre-filtering the number of masks
-        // is very worthwhile, because the overall time requirement for proving is at least
-        // quadratic in the length of `mask_ranges`).
-        let mut range_masks: Vec<(RowRange, Cow<Mask>)> = Vec::new();
-        for (range, chs) in chs_by_range {
-            range_masks.extend(
-                get_masks_for_range(
+        let grouped_rows: Vec<(RowRange, Vec<(Mask, Vec<&Row>)>)> = chs_by_range
+            .into_iter()
+            .map(|(range, chs)| {
+                // Determine which masks/range pairs are actually needed (pre-filtering the number
+                // of masks is very worthwhile, because the overall time requirement for proving is
+                // at least quadratic in the length of `mask_ranges`).
+                let masks = get_masks_for_range(
                     range,
                     &chs,
                     &masks_by_range_start,
                     &masks_by_range_end,
                     layout,
-                )
-                .into_iter()
-                .map(|mask| (range, mask)),
-            );
-        }
+                );
+                // For every `(RowRange, CH mask)` pair, group the rows by the locations of the
+                // bells in the CH mask.  For example, if the CH mask is `1xxxxx78` then the first
+                // few rows of Cornwall would end up something like:
+                // 1xxxxx78 -> 12345678
+                // x1xxxx87 -> 21436587
+                // 1xxxxx78 -> 12346578
+                // x1xxxx87 -> 21435687
+                //    ...         ...
+                //
+                // These would be grouped by the LHS into:
+                // 1xxxxx78 -> [12345678, 12346578]
+                // x1xxxx87 -> [21436587, 21435687]
+                //
+                // This is important because falseness can exist between two rows **only** if their
+                // 'group' masks are compatible.  For example, any rows of the form `xx1xx8x7`
+                // can't be false against a row of the form `x1xxx8x7` because the treble can't be
+                // in two places at once.
+                let mut row_groups = Vec::new();
+                for mask in masks {
+                    row_groups.extend(group_rows(layout.untransposed_rows(range), &mask));
+                }
 
-        // For every `(RowRange, CH mask)` pair, group the rows by the locations of the bells in
-        // the CH mask.  For example, if the CH mask is `1xxxxx78` then the first few rows of
-        // Cornwall would end up something like:
-        // 1xxxxx78 -> 12345678
-        // x1xxxx87 -> 21436587
-        // 1xxxxx78 -> 12346578
-        // x1xxxx87 -> 21435687
-        //    ...         ...
-        //
-        // These would be grouped by the LHS into:
-        // 1xxxxx78 -> [12345678, 12346578]
-        // x1xxxx87 -> [21436587, 21435687]
-        //
-        // This is important because falseness can exist between two rows **only** if their 'group'
-        // masks are compatible.  For example, any rows of the form `xx1xx8x7` can't be false
-        // against a row of the form `x1xxx8x7` because the treble would have to be in two
-        // different places.
-        let grouped_rows: Vec<(RowRange, HashMap<Mask, Vec<&Row>>)> = range_masks
-            .into_iter()
-            .map(|(range, mask)| {
-                (
-                    range,
-                    group_rows(layout.untransposed_rows(range.start, range.len), &mask),
-                )
+                (range, row_groups)
             })
             .collect_vec();
 
         // For the 'plain course' of every `RowRange`, which other `RowRange`s are false.  We use a
-        // `HashSet` rather than a `Vec` to prevent duplication of FCHs
-        let mut falseness = HashMap::<RowRange, HashSet<(RowRange, RowBuf)>>::new();
-
-        // For every pair of segments ...
+        // `HashSet` rather than a `Vec` to remove duplicate FCHs
+        let mut fchs = HashMap::<RowRange, HashSet<(RowRange, RowBuf)>>::new();
+        // For every pair of ranges ...
         for ((range1, groups1), (range2, groups2)) in
             grouped_rows.iter().cartesian_product(grouped_rows.iter())
         {
@@ -107,28 +123,37 @@ impl FalsenessTable {
                     // will generate a false course head between `i1` and `i2`
                     for (row1, row2) in rows1.iter().cartesian_product(rows2) {
                         let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
-                        falseness
-                            .entry(*range1)
+                        fchs.entry(*range1)
                             .or_insert_with(HashSet::new)
                             .insert((*range2, false_course_head));
                     }
                 }
             }
         }
-
-        Self {
-            // Convert `HashMap<RowRange, HashSet<(RowRange, RowBuf)>>`
-            //      to `HashMap<RowRange,     Vec<(RowRange, RowBuf)>>`
-            falseness: falseness
-                .into_iter()
-                .map(|(k, v)| (k, v.into_iter().collect_vec()))
-                .collect(),
-        }
+        // Convert `HashMap<RowRange,             HashSet          <(RowRange, RowBuf)>>`
+        //      to `HashMap<RowRange, FalsenessEntry containing Vec<(RowRange, RowBuf)>>`
+        let falseness = range_self_truth
+            .into_iter()
+            .map(|(range, self_truth)| {
+                let entry = match self_truth {
+                    Truth::True => {
+                        let fch_set = fchs.remove(&range).unwrap();
+                        FalsenessEntry::FalseCourseHeads(fch_set.into_iter().collect_vec())
+                    }
+                    Truth::False => FalsenessEntry::SelfFalse,
+                };
+                (range, entry)
+            })
+            .collect();
+        Self { falseness }
     }
 
-    /// For a given [`RowRange`], which course head transpositions are false
-    pub fn false_course_heads(&self, range: RowRange) -> &[(RowRange, RowBuf)] {
-        self.falseness.get(&range).map(Vec::as_slice).unwrap_or(&[])
+    /// Return the [`FalsenessEntry`] for a given [`RowRange`]
+    pub fn falseness_entry(&self, range: RowRange) -> &FalsenessEntry {
+        /// A [`FalsenessEntry`] for a self-true node which isn't false against anything else.
+        /// This has to be `static` to make sure that it always outlives `self`
+        static PERFECTLY_TRUE: FalsenessEntry = FalsenessEntry::FalseCourseHeads(Vec::new());
+        self.falseness.get(&range).unwrap_or(&PERFECTLY_TRUE) // TODO: Is this unreachable
     }
 }
 
@@ -197,7 +222,7 @@ fn get_masks_for_range<'a>(
     // Because the speed of the falseness generation is quadratic in the number of
     // `(range, mask)` groups, it is worth removing redundant CH masks.  Also, we want the
     // most specific set of CH masks (since that will constrain the falseness as much as
-    // possible).  Therefore, we remove any CH mask who's set of nodes be completely
+    // possible).  Therefore, we remove any CH mask who's set of CHs be completely
     // covered by a set of more specific masks.  For example, `1xxxxx78` may be removed if
     // `1xxx6578` and `1xxx5678` are also valid and satisfy all the CHs.
     //
