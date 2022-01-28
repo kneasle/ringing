@@ -1,4 +1,4 @@
-//! Utilities for computing falseness between graph nodes
+//! Utilities for computing falseness between graph chunks
 
 // This algorithm is fiddly, and I think that the somewhat verbose type hints are the best way to
 // show how the code works (both to the reader and the compiler)
@@ -12,14 +12,14 @@ use std::{
 use bellframe::{Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
-use crate::layout::{node_range::PerPartLength, Layout, NodeId, RowIdx, RowRange};
+use crate::layout::{chunk_range::PerPartLength, ChunkId, Layout, RowIdx, RowRange};
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).
 ///
-/// Naively iterating through every pair of nodes is far too slow, so this instead stores a set of
-/// false course heads between the different node types.  This way, computing the falseness of a
-/// node is one [`HashMap`] lookup and some row transpositions.
+/// Naively iterating through every pair of chunks is far too slow, so this instead stores a set of
+/// false course heads between the different chunk types.  This way, computing the falseness of a
+/// chunk is one [`HashMap`] lookup and some row transpositions.
 #[derive(Debug, Clone)]
 pub(super) struct FalsenessTable {
     /// For each `RowRange`, list the false `RowRange`s and their CH transpositions.  If
@@ -30,7 +30,7 @@ pub(super) struct FalsenessTable {
 
 #[derive(Debug, Clone)]
 pub(super) enum FalsenessEntry {
-    /// Every instance of this [`RowRange`] is false against itself.  Any instance of this node
+    /// Every instance of this [`RowRange`] is false against itself.  Any instance of this chunk
     /// will be removed from the graph.
     SelfFalse,
     /// This [`RowRange`] isn't self-false, but this range of the plain course is false against
@@ -40,26 +40,26 @@ pub(super) enum FalsenessEntry {
 
 impl FalsenessTable {
     /// Creates a `FalsenessTable` capable of efficiently generating falseness between a given set
-    /// of nodes.
+    /// of chunks.
     pub fn from_layout<'a>(
         layout: &Layout,
-        nodes: impl IntoIterator<Item = &'a (NodeId, PerPartLength)>,
+        chunks: impl IntoIterator<Item = &'a (ChunkId, PerPartLength)>,
     ) -> Self {
         // Extract (from the layout's links) which CH masks apply to each range start/end
         let (masks_by_range_start, masks_by_range_end) = ch_masks_from_links(layout);
 
         // For each non-self-false `RowRange`, determine which course heads are used.  We don't
-        // need to compute falseness for self-false `RowRange`s, because the resulting nodes will
-        // be removed from the node graph.
+        // need to compute falseness for self-false `RowRange`s, because the resulting chunks will
+        // be removed from the chunk graph.
         let mut range_self_truth: HashMap<RowRange, Truth> = HashMap::new(); // Memoise self-falseness
         let mut chs_by_range: HashMap<RowRange, Vec<&Row>> = HashMap::new();
-        for (id, length) in nodes {
-            if let NodeId::Standard(id) = id {
+        for (id, length) in chunks {
+            if let ChunkId::Standard(id) = id {
                 let range = RowRange::new(id.row_idx, *length);
                 let self_truth = *range_self_truth
                     .entry(range)
                     .or_insert_with(|| layout.self_truth(range));
-                // If this node isn't self-false, then record that this CH has been used
+                // If this chunk isn't self-false, then record that this CH has been used
                 if self_truth == Truth::True {
                     chs_by_range
                         .entry(range)
@@ -150,7 +150,7 @@ impl FalsenessTable {
 
     /// Return the [`FalsenessEntry`] for a given [`RowRange`]
     pub fn falseness_entry(&self, range: RowRange) -> &FalsenessEntry {
-        /// A [`FalsenessEntry`] for a self-true node which isn't false against anything else.
+        /// A [`FalsenessEntry`] for a self-true chunk which isn't false against anything else.
         /// This has to be `static` to make sure that it always outlives `self`
         static PERFECTLY_TRUE: FalsenessEntry = FalsenessEntry::FalseCourseHeads(Vec::new());
         self.falseness.get(&range).unwrap_or(&PERFECTLY_TRUE) // TODO: Is this unreachable
@@ -190,7 +190,7 @@ fn ch_masks_from_links(
 
 /// Figure out which row masks are actually needed to encode the falseness for a given
 /// [`RowRange`].  These correspond to a minimal set of [`Mask`]s which, between them, match the
-/// course heads of every [`NodeId`] in the graph.
+/// course heads of every [`ChunkId`] in the graph.
 fn get_masks_for_range<'a>(
     range: RowRange,
     chs: &[&Row],
@@ -213,7 +213,7 @@ fn get_masks_for_range<'a>(
         }
     }
     // If no masks are generated, then the `Layout` must have no links.  In this case, we simply
-    // take all the possible course heads as CH masks (we'll have as many CH masks as start nodes,
+    // take all the possible course heads as CH masks (we'll have as many CH masks as start chunks,
     // which is fine).
     if possible_masks.is_empty() {
         possible_masks.extend(chs.iter().cloned().map(Mask::full_row).map(Cow::Owned));
@@ -227,11 +227,11 @@ fn get_masks_for_range<'a>(
     // `1xxx6578` and `1xxx5678` are also valid and satisfy all the CHs.
     //
     // Note that this is also quadratic in the number of masks, but is performed only once per pair
-    // of node **classes** whereas the falseness test is called for every pair of nodes (~10,000
+    // of chunk **classes** whereas the falseness test is called for every pair of chunks (~10,000
     // times more calls).
     let mut unnecessary_masks = HashSet::<Cow<Mask>>::new();
     for m in &possible_masks {
-        // If this mask doesn't satisfy any of the course heads in the node graph, then
+        // If this mask doesn't satisfy any of the course heads in the chunk graph, then
         // there's no point determining its truth
         if !chs.iter().any(|ch| m.matches(ch)) {
             unnecessary_masks.insert(m.clone());

@@ -43,7 +43,7 @@ pub fn default_shorthands<'s>(
         .collect_vec()
 }
 
-/// Measure which determines which part head has been reached.  Each node link is given a
+/// Measure which determines which part head has been reached.  Each chunk link is given a
 /// `Rotation` which, when summed modulo [`Graph::num_parts`](crate::graph::Graph::num_parts), will
 /// determine which part head has been reached (and therefore whether the composition is valid).
 pub type Rotation = u16;

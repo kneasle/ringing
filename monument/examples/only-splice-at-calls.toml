@@ -1,6 +1,6 @@
 # Switching between Bristol and Triton immediately runs false, so there's no point doing lead
 # splicing of Bristol and Triton.  In fact, Monument would not search any slower if we didn't say
-# `splice_style = "calls"`: the node graph optimisation would combine all the separate leads
+# `splice_style = "calls"`: the chunk graph optimisation would combine all the separate leads
 # together once it proves that no splicing is possible.  TODO: Actually implement this optimisation :)
 
 length = "peal"

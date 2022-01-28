@@ -5,15 +5,15 @@ use std::{
 };
 
 use bellframe::{AnnotBlock, IncompatibleStages, Mask, Row, RowBuf, Stage, Truth};
+use chunk_range::PerPartLength;
 use itertools::Itertools;
-use node_range::PerPartLength;
 
+pub mod chunk_range;
 pub mod new;
-pub mod node_range;
 
 // Imports only used for doc comments
 #[allow(unused_imports)]
-use crate::graph::{Graph, Node};
+use crate::graph::{Chunk, Graph};
 
 /// A somewhat human-friendly representation of the course layout of a composition, meant to be
 /// easy to generate.  A `Layout` consists of a set of blocks of rows, which are usually the plain
@@ -25,12 +25,12 @@ use crate::graph::{Graph, Node};
 /// Every useful composition structure (that I can think of) can be represented like this, but it
 /// is not efficient to use `Layout`s directly in the composing loop.  Therefore, Monument
 /// compiles a `Layout` (along with extra info like desired composition length, music requirements,
-/// etc.) into a [`Graph`] of [`Node`]s.  This graph is then optimised, then usually compiled
-/// _again_ into an immutable copy which stores its nodes as a [`Vec`], rather than a
+/// etc.) into a [`Graph`] of [`Chunk`]s.  This graph is then optimised, then usually compiled
+/// _again_ into an immutable copy which stores its chunks as a [`Vec`], rather than a
 /// [`HashMap`](std::collections::HashMap).
 #[derive(Debug, Clone)]
 pub struct Layout {
-    /// The blocks that make up the composition.  [`Node`]s correspond to ranges of these `blocks`
+    /// The blocks that make up the composition.  [`Chunk`]s correspond to ranges of these `blocks`
     /// (pre-)transposed by some course head.
     pub blocks: BlockVec<AnnotBlock<Option<String>>>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
@@ -106,7 +106,7 @@ impl Layout {
     /////////////
 
     /// Returns the [`EndIdx`] of the end at a given position, if it exists.  Used for detecting
-    /// 0-length end nodes.
+    /// 0-length end chunks.
     fn idx_of_end(&self, ch: &Row, row_idx: RowIdx) -> Option<EndIdx> {
         self.ends
             .iter_enumerated()
@@ -188,21 +188,21 @@ impl StartOrEnd {
 // INTERNAL STRUCTS //
 //////////////////////
 
-/// The unique identifier for a single node (i.e. an instantiated course segment) in the
-/// composition.  This node is assumed to end at the closest [`Link`] where the course head matches
+/// The unique identifier for a single chunk (i.e. an instantiated course segment) in the
+/// composition.  This chunk is assumed to end at the closest [`Link`] where the course head matches
 /// one of the supplied [course head masks](Link::ch_mask).
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub enum NodeId {
-    /// The ID of any `Node` which comes round instantly.  All such nodes are considered
+pub enum ChunkId {
+    /// The ID of any [`Chunk`] which comes round instantly.  All such chunks are considered
     /// equivalent, regardless of what method is spliced to.  These are all given the empty string
     /// as a label.
     ZeroLengthEnd,
-    Standard(StandardNodeId),
+    Standard(StandardChunkId),
 }
 
-impl NodeId {
+impl ChunkId {
     pub fn new_standard(course_head: Arc<Row>, row_idx: RowIdx, is_start: bool) -> Self {
-        Self::Standard(StandardNodeId {
+        Self::Standard(StandardChunkId {
             course_head,
             row_idx,
             is_start,
@@ -213,21 +213,21 @@ impl NodeId {
         self.standard().is_some()
     }
 
-    pub fn standard(&self) -> Option<&StandardNodeId> {
+    pub fn standard(&self) -> Option<&StandardChunkId> {
         match self {
-            NodeId::Standard(s) => Some(s),
-            NodeId::ZeroLengthEnd => None,
+            ChunkId::Standard(s) => Some(s),
+            ChunkId::ZeroLengthEnd => None,
         }
     }
 
-    pub fn std_id(&self) -> Option<&StandardNodeId> {
+    pub fn std_id(&self) -> Option<&StandardChunkId> {
         match self {
             Self::ZeroLengthEnd => None,
             Self::Standard(std_id) => Some(std_id),
         }
     }
 
-    pub fn into_std_id(self) -> Option<StandardNodeId> {
+    pub fn into_std_id(self) -> Option<StandardChunkId> {
         match self {
             Self::ZeroLengthEnd => None,
             Self::Standard(std_id) => Some(std_id),
@@ -258,25 +258,25 @@ impl NodeId {
     }
 
     pub fn set_start(&mut self, new_start: bool) {
-        if let Self::Standard(StandardNodeId { is_start, .. }) = self {
+        if let Self::Standard(StandardChunkId { is_start, .. }) = self {
             *is_start = new_start;
         }
     }
 }
 
-/// The ID of a node which isn't a 0-length end
+/// The ID of a chunk which isn't a 0-length end
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct StandardNodeId {
+pub struct StandardChunkId {
     pub course_head: Arc<Row>, // `Arc` is used to make cloning cheaper
     pub row_idx: RowIdx,
-    // Start nodes have to be treated separately in the case where the rounds can appear as the
+    // Start chunks have to be treated separately in the case where the rounds can appear as the
     // first [`Row`] of a segment.  In this case, the start segment is full-length whereas any
     // non-start segments become 0-length end segments (because the composition comes round
     // instantly).
     pub is_start: bool,
 }
 
-impl StandardNodeId {
+impl StandardChunkId {
     pub fn new(course_head: RowBuf, row_idx: RowIdx, is_start: bool) -> Self {
         Self {
             course_head: course_head.to_arc(),
@@ -298,22 +298,22 @@ impl StandardNodeId {
     }
 }
 
-impl Debug for NodeId {
+impl Debug for ChunkId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ZeroLengthEnd => write!(f, "NodeId::ZeroLengthEnd"),
-            Self::Standard(std_id) => write!(f, "NodeId({})", std_id),
+            Self::ZeroLengthEnd => write!(f, "ChunkId::ZeroLengthEnd"),
+            Self::Standard(std_id) => write!(f, "ChunkId({})", std_id),
         }
     }
 }
 
-impl Debug for StandardNodeId {
+impl Debug for StandardChunkId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Std({})", self)
     }
 }
 
-impl Display for StandardNodeId {
+impl Display for StandardChunkId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -327,9 +327,9 @@ impl Display for StandardNodeId {
     }
 }
 
-impl From<StandardNodeId> for NodeId {
-    fn from(std_id: StandardNodeId) -> NodeId {
-        NodeId::Standard(std_id)
+impl From<StandardChunkId> for ChunkId {
+    fn from(std_id: StandardChunkId) -> ChunkId {
+        ChunkId::Standard(std_id)
     }
 }
 

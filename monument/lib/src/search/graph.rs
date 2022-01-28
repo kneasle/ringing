@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    layout::{node_range::End, LinkIdx, NodeId, StartIdx},
+    layout::{chunk_range::End, ChunkId, LinkIdx, StartIdx},
     music::Score,
     utils::{Rotation, RowCounts},
     Query,
@@ -13,12 +13,12 @@ use itertools::Itertools;
 /// lookups.
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub starts: Vec<(NodeIdx, StartIdx, Rotation)>,
-    pub nodes: NodeVec<Node>,
+    pub starts: Vec<(ChunkIdx, StartIdx, Rotation)>,
+    pub chunks: ChunkVec<Chunk>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Node {
+pub struct Chunk {
     pub score: Score,
     pub length: u32,
     pub method_counts: RowCounts,
@@ -31,28 +31,28 @@ pub struct Node {
 
     // Indices must be aligned with those from the source graph
     pub succs: Vec<Link>,
-    // If this node is added to a composition, these bits denote the set of nodes will be marked as
+    // If this chunk is added to a composition, these bits denote the set of chunks will be marked as
     // unreachable.  This includes `Self`
     pub falseness: BitVec,
 
     pub end: Option<End>,
 }
 
-/// A link between a node and its successor
+/// A link between a chunk and its successor
 #[derive(Debug, Clone)]
 pub struct Link {
     pub score: Score,
     pub source_idx: LinkIdx,
-    pub next_node: NodeIdx,
+    pub next_chunk: ChunkIdx,
     pub rot: Rotation,
 }
 
 impl Link {
-    pub fn new(score: f32, source_idx: LinkIdx, next_node: NodeIdx, rot: Rotation) -> Self {
+    pub fn new(score: f32, source_idx: LinkIdx, next_chunk: ChunkIdx, rot: Rotation) -> Self {
         Self {
             score: Score::from(score),
             source_idx,
-            next_node,
+            next_chunk,
             rot,
         }
     }
@@ -64,34 +64,34 @@ impl Link {
 
 impl Graph {
     pub fn new(source_graph: &crate::graph::Graph, query: &Query) -> Self {
-        let num_nodes = source_graph.node_map().len();
+        let num_chunks = source_graph.chunk_map().len();
 
-        // Assign each node ID to a unique `NodeIdx`, and vice versa.  This way, we can now label
-        // the set of nodes with numbers that can be used to index into a BitVec for falseness
+        // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
+        // the set of chunks with numbers that can be used to index into a BitVec for falseness
         // computation.
-        let mut index_to_id = NodeVec::<(NodeId, &crate::graph::Node)>::new();
-        let mut id_to_index = HashMap::<NodeId, NodeIdx>::new();
-        for (id, node) in source_graph.nodes() {
-            let index = index_to_id.push((id.to_owned(), node));
+        let mut index_to_id = ChunkVec::<(ChunkId, &crate::graph::Chunk)>::new();
+        let mut id_to_index = HashMap::<ChunkId, ChunkIdx>::new();
+        for (id, chunk) in source_graph.chunks() {
+            let index = index_to_id.push((id.to_owned(), chunk));
             id_to_index.insert(id.to_owned(), index);
         }
 
-        // Now convert nodes from `monument_graph::Node` to `self::Node`
-        let nodes: NodeVec<_> = (0..num_nodes)
+        // Now convert chunks from `monument_graph::Chunk` to `self::Chunk`
+        let chunks: ChunkVec<_> = (0..num_chunks)
             .map(|index| {
-                // Get the source node and its NodeId
-                let index = NodeIdx::new(index);
-                let (_id, source_node) = index_to_id[index].clone();
+                // Get the source chunk and its ChunkId
+                let index = ChunkIdx::new(index);
+                let (_id, source_chunk) = index_to_id[index].clone();
 
-                // Generate a BitVec with a 1 for every node which is false against this node
-                let mut falseness = BitVec::from_elem(num_nodes, false);
-                for false_std_id in source_node.false_nodes() {
-                    let false_id = NodeId::Standard(false_std_id.clone());
-                    let false_node_idx = id_to_index[&false_id];
-                    falseness.set(false_node_idx.index(), true);
+                // Generate a BitVec with a 1 for every chunk which is false against this chunk
+                let mut falseness = BitVec::from_elem(num_chunks, false);
+                for false_std_id in source_chunk.false_chunks() {
+                    let false_id = ChunkId::Standard(false_std_id.clone());
+                    let false_chunk_idx = id_to_index[&false_id];
+                    falseness.set(false_chunk_idx.index(), true);
                 }
 
-                let succs = source_node
+                let succs = source_chunk
                     .successors()
                     .iter()
                     .filter_map(|link| {
@@ -103,37 +103,37 @@ impl Graph {
                     })
                     .collect_vec();
 
-                Node {
-                    score: source_node.score(),
-                    length: source_node.length() as u32,
-                    method_counts: source_node.method_counts().clone(),
-                    dist_to_rounds: source_node.lb_distance_to_rounds as u32,
-                    label: source_node.label().to_owned(),
-                    end: source_node.end(),
-                    duffer: source_node.duffer(),
-                    dist_to_non_duffer: source_node.lb_distance_to_non_duffer as u32,
+                Chunk {
+                    score: source_chunk.score(),
+                    length: source_chunk.length() as u32,
+                    method_counts: source_chunk.method_counts().clone(),
+                    dist_to_rounds: source_chunk.lb_distance_to_rounds as u32,
+                    label: source_chunk.label().to_owned(),
+                    end: source_chunk.end(),
+                    duffer: source_chunk.duffer(),
+                    dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer as u32,
                     succs,
                     falseness,
                 }
             })
             .collect();
 
-        // Compute the list of start nodes and their labels
+        // Compute the list of start chunks and their labels
         let mut starts = Vec::new();
-        for (start_id, start_idx, rotation) in source_graph.start_nodes() {
-            if source_graph.get_node(start_id).is_some() {
-                let node_idx = id_to_index[start_id];
-                starts.push((node_idx, *start_idx, *rotation));
+        for (start_id, start_idx, rotation) in source_graph.start_chunks() {
+            if source_graph.get_chunk(start_id).is_some() {
+                let chunk_idx = id_to_index[start_id];
+                starts.push((chunk_idx, *start_idx, *rotation));
             }
         }
 
-        Graph { starts, nodes }
+        Graph { starts, chunks }
     }
 
-    pub fn node_label(&self, idx: NodeIdx) -> String {
-        self.nodes[idx].label.clone()
+    pub fn chunk_label(&self, idx: ChunkIdx) -> String {
+        self.chunks[idx].label.clone()
     }
 }
 
-index_vec::define_index_type! { pub struct NodeIdx = usize; }
-type NodeVec<T> = index_vec::IndexVec<NodeIdx, T>;
+index_vec::define_index_type! { pub struct ChunkIdx = usize; }
+type ChunkVec<T> = index_vec::IndexVec<ChunkIdx, T>;

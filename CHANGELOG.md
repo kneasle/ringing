@@ -11,6 +11,7 @@
     Monument will now correctly declare it impossible.
 - (#37) Add extra integration tests for false method splices (i.e. a splice between mutually-false
     leads) and half-lead calls.
+- (#38) Rename `Node` to `Chunk` for more clarity
 
 ### BellFrame
 

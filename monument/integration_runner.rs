@@ -14,7 +14,7 @@ use ordered_float::OrderedFloat;
 use serde::Deserialize;
 use toml::Value;
 
-/// The maximum number of nodes contained in the queue when generating comps
+/// The maximum number of chunks contained in the queue when generating comps
 const QUEUE_LIMIT: usize = 10_000_000;
 
 const IGNORE_FILE_NAME: &str = "_ignore.toml";

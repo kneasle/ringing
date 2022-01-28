@@ -9,7 +9,7 @@ use index_vec::IndexVec;
 use super::{utils::CourseHeadMask, Error, Result, SpliceStyle};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
-/// Generate a [`Layout`] such that nodes will be labelled by their course-head, rather than by
+/// Generate a [`Layout`] such that chunks will be labelled by their course-head, rather than by
 /// their lead-head.
 pub fn coursewise(
     mut methods: Vec<super::Method>,
@@ -217,7 +217,7 @@ fn generate_all_links(
     /*
     The general approach here is to attempt to place calls in every position, compute which row
     they would lead to, the try to find a `CallEnd` which corresponds to that row.  If such a
-    `CallEnd` exists, then this call is valid and should be included in the node graph.  We also
+    `CallEnd` exists, then this call is valid and should be included in the chunk graph.  We also
     try to place plain leads at every location, and likewise check for any valid `CallEnd`s.
     */
 

@@ -10,7 +10,7 @@ pub mod utils;
 pub use utils::OptRange;
 
 use itertools::Itertools;
-use layout::{node_range::End, LinkIdx, StartIdx};
+use layout::{chunk_range::End, LinkIdx, StartIdx};
 use music::Score;
 use utils::{Rotation, RowCounts};
 
@@ -66,7 +66,7 @@ pub struct Config {
     pub num_threads: Option<usize>,
     pub queue_limit: usize,
     pub optimisation_passes: Vec<Pass>,
-    pub split_by_start_node: bool,
+    pub split_by_start_chunk: bool,
 }
 
 impl Default for Config {
@@ -75,7 +75,7 @@ impl Default for Config {
             num_threads: None,
             queue_limit: 10_000_000,
             optimisation_passes: graph::optimise::passes::default(),
-            split_by_start_node: false,
+            split_by_start_chunk: false,
         }
     }
 }
@@ -95,7 +95,7 @@ pub struct Comp {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CompInner {
     pub start_idx: StartIdx,
-    pub start_node_label: String,
+    pub start_chunk_label: String,
     pub links: Vec<(LinkIdx, String)>,
     pub end: End,
 
@@ -115,8 +115,8 @@ impl Comp {
         let mut s = String::new();
         // Start
         s.push_str(&layout.starts[self.start_idx].label);
-        // Nodes & links
-        s.push_str(&self.start_node_label);
+        // Chunks & links
+        s.push_str(&self.start_chunk_label);
         for (link_idx, link_label) in &self.links {
             s.push_str(&layout.links[*link_idx].display_name);
             s.push_str(link_label);
@@ -199,18 +199,18 @@ impl Query {
     /// generate the same overall set of compositions.
     pub fn optimise_graph(&self, graph: Graph, config: &mut Config) -> Vec<Graph> {
         log::debug!("Optimising graph(s)");
-        let mut graphs = if config.split_by_start_node {
-            graph.split_by_start_node()
+        let mut graphs = if config.split_by_start_chunk {
+            graph.split_by_start_chunk()
         } else {
             vec![graph]
         };
         for g in &mut graphs {
             g.optimise(&mut config.optimisation_passes, self);
             log::debug!(
-                "Optimised graph has {} nodes, {} starts, {} ends",
-                g.node_map().len(),
-                g.start_nodes().len(),
-                g.end_nodes().len()
+                "Optimised graph has {} chunks, {} starts, {} ends",
+                g.chunk_map().len(),
+                g.start_chunks().len(),
+                g.end_chunks().len()
             );
         }
         graphs
@@ -283,7 +283,7 @@ pub enum QueryUpdate {
 
 #[derive(Debug)]
 pub struct Progress {
-    /// How many nodes have been expanded so far
+    /// How many chunks have been expanded so far
     pub iter_count: usize,
     /// The current length of the A* queue
     pub queue_len: usize,

@@ -1,4 +1,4 @@
-# This tests what happens when the part-head appears part-way through a node.
+# This tests what happens when the part-head appears part-way through a chunk.
 
 length = { min = 0, max = 2000 }
 base_calls = "far"
