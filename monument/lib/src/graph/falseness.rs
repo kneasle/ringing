@@ -19,7 +19,9 @@ use crate::layout::{chunk_range::PerPartLength, ChunkId, Layout, RowIdx, RowRang
 ///
 /// Naively iterating through every pair of chunks is far too slow, so this instead stores a set of
 /// false course heads between the different chunk types.  This way, computing the falseness of a
-/// chunk is one [`HashMap`] lookup and some row transpositions.
+/// chunk is one [`HashMap`] lookup and some row transpositions.  It's still worst-case quadratic
+/// in the graph size, but can't change that and the constant is small enough to be instantaneous
+/// for the graph sizes we use.
 #[derive(Debug, Clone)]
 pub(super) struct FalsenessTable {
     /// For each `RowRange`, list the false `RowRange`s and their CH transpositions.  If
