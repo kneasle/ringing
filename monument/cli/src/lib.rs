@@ -165,13 +165,12 @@ impl FromStr for DebugOption {
             "query" => Self::Query,
             "layout" => Self::Layout,
             "graph" => Self::Graph,
-            "search" => Self::StopBeforeSearch,
-            _ => {
-                return Err(format!(
-                    "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `search`.",
-                    v
-                ))
-            }
+            "no-search" => Self::StopBeforeSearch,
+            #[rustfmt::skip] // See https://github.com/rust-lang/rustfmt/issues/5204
+            _ => return Err(format!(
+                "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `no-search`.",
+                v
+            )),
         })
     }
 }
