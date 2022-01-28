@@ -150,10 +150,7 @@ impl FalsenessTable {
 
     /// Return the [`FalsenessEntry`] for a given [`RowRange`]
     pub fn falseness_entry(&self, range: RowRange) -> &FalsenessEntry {
-        /// A [`FalsenessEntry`] for a self-true chunk which isn't false against anything else.
-        /// This has to be `static` to make sure that it always outlives `self`
-        static PERFECTLY_TRUE: FalsenessEntry = FalsenessEntry::FalseCourseHeads(Vec::new());
-        self.falseness.get(&range).unwrap_or(&PERFECTLY_TRUE) // TODO: Is this unreachable
+        self.falseness.get(&range).unwrap()
     }
 }
 
