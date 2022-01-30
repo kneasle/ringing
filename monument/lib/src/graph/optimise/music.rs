@@ -4,13 +4,13 @@ use itertools::Itertools;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    graph::{Graph, Node},
-    layout::{NodeId, StandardNodeId},
+    graph::{Chunk, Graph},
+    layout::{ChunkId, StandardChunkId},
     music::Breakdown,
     Query,
 };
 
-/// How many nodes will be searched to determine which node patterns generate the required music
+/// How many chunks will be searched to determine which chunk patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
 
 pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
@@ -28,81 +28,83 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
         return; // If there are no music bounds, then there's nothing to do
     }
 
-    // The `(NodeId, Node)` pairs of nodes which contribute to the types of music that we care
+    // The `(ChunkId, Chunk)` pairs of chunks which contribute to the types of music that we care
     // about.
-    let (required_nodes, non_required_nodes) = graph
-        .nodes()
-        .filter(|(_id, node)| {
+    let (required_chunks, non_required_chunks) = graph
+        .chunks()
+        .filter(|(_id, chunk)| {
             min_music_counts
                 .iter()
-                .any(|(ty_idx, _)| node.music().counts[*ty_idx] > 0)
+                .any(|(ty_idx, _)| chunk.music().counts[*ty_idx] > 0)
         })
-        .map(|(id, node)| (id.standard().unwrap(), node))
-        .partition::<Vec<_>, _>(|(_id, node)| node.required);
+        .map(|(id, chunk)| (id.standard().unwrap(), chunk))
+        .partition::<Vec<_>, _>(|(_id, chunk)| chunk.required);
 
-    // Determine how much music is contributed by required nodes.
+    // Determine how much music is contributed by required chunks.
     let mut required_music_counts = vec![0; query.music_types.len()];
     for (idx, min) in &min_music_counts {
         required_music_counts[*idx] = *min;
     }
-    let mut counts_needed_from_non_required_nodes = Breakdown {
+    let mut counts_needed_from_non_required_chunks = Breakdown {
         score: OrderedFloat(0.0),
         counts: required_music_counts,
     };
-    for (_id, node) in required_nodes {
-        // Non-required nodes aren't required to get music which the required nodes can already
+    for (_id, chunk) in required_chunks {
+        // Non-required chunks aren't required to get music which the required chunks can already
         // achieve
-        counts_needed_from_non_required_nodes.saturating_sub_assign(node.music());
+        counts_needed_from_non_required_chunks.saturating_sub_assign(chunk.music());
     }
 
-    // Do tree search over the non-required interesting nodes, determining which combinations of
-    // the nodes satisfy the required music output.
-    let node_combinations =
-        search_node_combinations(&counts_needed_from_non_required_nodes, &non_required_nodes);
-    for vs in &node_combinations {
+    // Do tree search over the non-required interesting chunks, determining which combinations of
+    // the chunks satisfy the required music output.
+    let chunk_combinations = search_chunk_combinations(
+        &counts_needed_from_non_required_chunks,
+        &non_required_chunks,
+    );
+    for vs in &chunk_combinations {
         log::debug!("{:?}", vs.iter().sorted().collect_vec());
     }
 
-    // Any nodes which are in every possible combination are required for the composition to
+    // Any chunks which are in every possible combination are required for the composition to
     // generate the required music.
-    let new_required_nodes = non_required_nodes
+    let new_required_chunks = non_required_chunks
         .iter()
-        .filter(|(id, _node)| {
-            node_combinations
+        .filter(|(id, _chunk)| {
+            chunk_combinations
                 .iter()
                 .all(|combination| combination.contains(id))
         })
-        .map(|(id, _node)| (*id).clone())
+        .map(|(id, _chunk)| (*id).clone())
         .collect_vec();
-    let no_required_nodes = new_required_nodes.is_empty();
-    log::debug!("required: {:?}", new_required_nodes);
-    for required_id in new_required_nodes {
+    let no_required_chunks = new_required_chunks.is_empty();
+    log::debug!("required: {:?}", new_required_chunks);
+    for required_id in new_required_chunks {
         graph
-            .get_node_mut(&NodeId::Standard(required_id))
+            .get_chunk_mut(&ChunkId::Standard(required_id))
             .unwrap()
             .required = true;
     }
 
-    // If there aren't any nodes to mark as required, then we can pick a node to condition on and
-    // create two graphs to optimise: one where that node is required, and the other where that
-    // node is removed.
-    if no_required_nodes {
-        log::warn!("No required nodes made");
+    // If there aren't any chunks to mark as required, then we can pick a chunk to condition on and
+    // create two graphs to optimise: one where that chunk is required, and the other where that
+    // chunk is removed.
+    if no_required_chunks {
+        log::warn!("No required chunks made");
         todo!();
     }
 }
 
-/// Remove any node which exceeds the max count for any music type.  Usually this max count will be
-/// 0 (i.e. any nodes with that music should be removed).
-pub(crate) fn remove_nodes_exceeding_max_count(graph: &mut Graph, query: &Query) {
-    let mut counts_from_required_nodes = Breakdown::zero(query.music_types.len());
-    for node in graph.nodes.values() {
-        if node.required {
-            counts_from_required_nodes += &node.music;
+/// Remove any chunk which exceeds the max count for any music type.  Usually this max count will be
+/// 0 (i.e. any chunks with that music should be removed).
+pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query) {
+    let mut counts_from_required_chunks = Breakdown::zero(query.music_types.len());
+    for chunk in graph.chunks.values() {
+        if chunk.required {
+            counts_from_required_chunks += &chunk.music;
         }
     }
 
-    for (music_ty_idx, count_from_required) in counts_from_required_nodes
+    for (music_ty_idx, count_from_required) in counts_from_required_chunks
         .counts
         .iter()
         .copied()
@@ -110,48 +112,48 @@ pub(crate) fn remove_nodes_exceeding_max_count(graph: &mut Graph, query: &Query)
     {
         let music_type = &query.music_types[music_ty_idx];
         if let Some(count_limit) = music_type.count_range().max {
-            let max_count_left_per_node = count_limit.checked_sub(count_from_required).expect(
-                "Search can't be completed because the required nodes exceed a maximum music count.",
+            let max_count_left_per_chunk = count_limit.checked_sub(count_from_required).expect(
+                "Search can't be completed because the required chunks exceed a maximum music count.",
             );
-            // Remove any nodes which exceed the count on their own
+            // Remove any chunks which exceed the count on their own
             graph
-                .nodes
-                .retain(|_id, node| node.music.counts[music_ty_idx] <= max_count_left_per_node);
+                .chunks
+                .retain(|_id, chunk| chunk.music.counts[music_ty_idx] <= max_count_left_per_chunk);
         }
     }
 }
 
-/// Search every combination of the musical nodes, adding any working sets of nodes to
-/// `node_patterns`.
+/// Search every combination of the musical chunks, adding any working sets of chunks to
+/// `chunk_patterns`.
 // TODO: Why is this returning duplicates?
-fn search_node_combinations<'gr>(
-    counts_needed_from_non_required_nodes: &Breakdown,
-    non_required_nodes: &[(&'gr StandardNodeId, &'gr Node)],
-) -> Vec<HashSet<&'gr StandardNodeId>> {
-    let mut node_patterns = Vec::<HashSet<&StandardNodeId>>::new();
-    let mut nodes_used = HashSet::<&StandardNodeId>::new();
+fn search_chunk_combinations<'gr>(
+    counts_needed_from_non_required_chunks: &Breakdown,
+    non_required_chunks: &[(&'gr StandardChunkId, &'gr Chunk)],
+) -> Vec<HashSet<&'gr StandardChunkId>> {
+    let mut chunk_patterns = Vec::<HashSet<&StandardChunkId>>::new();
+    let mut chunks_used = HashSet::<&StandardChunkId>::new();
     let mut iter_count_down = ITERATION_LIMIT;
-    search_nodes(
-        non_required_nodes.iter(),
-        counts_needed_from_non_required_nodes,
-        non_required_nodes,
-        &mut nodes_used,
-        &mut node_patterns,
+    search_chunks(
+        non_required_chunks.iter(),
+        counts_needed_from_non_required_chunks,
+        non_required_chunks,
+        &mut chunks_used,
+        &mut chunk_patterns,
         &mut iter_count_down,
     );
-    node_patterns
+    chunk_patterns
 }
 
-/// Recursively attempt to add any subset of [`NodeId`]s taken from `nodes`, adding any working
-/// patterns to `node_patterns`.
-fn search_nodes<'a, 'gr: 'a>(
-    mut nodes: impl Iterator<Item = &'a (&'gr StandardNodeId, &'gr Node)> + Clone,
+/// Recursively attempt to add any subset of [`ChunkId`]s taken from `chunks`, adding any working
+/// patterns to `chunk_patterns`.
+fn search_chunks<'a, 'gr: 'a>(
+    mut chunks: impl Iterator<Item = &'a (&'gr StandardChunkId, &'gr Chunk)> + Clone,
 
     counts_needed: &Breakdown,
-    non_required_nodes: &[(&'gr StandardNodeId, &'gr Node)],
+    non_required_chunks: &[(&'gr StandardChunkId, &'gr Chunk)],
 
-    nodes_used: &mut HashSet<&'gr StandardNodeId>,
-    node_patterns: &mut Vec<HashSet<&'gr StandardNodeId>>,
+    chunks_used: &mut HashSet<&'gr StandardChunkId>,
+    chunk_patterns: &mut Vec<HashSet<&'gr StandardChunkId>>,
     // Counter which is **decremented** every time this function is called, and the search is
     // terminated when this reaches 0.
     iters_left: &mut usize,
@@ -161,45 +163,45 @@ fn search_nodes<'a, 'gr: 'a>(
         Some(v) => *iters_left = v,
         None => return,
     }
-    // If the required count is reached without this node, then don't bother exploring further
+    // If the required count is reached without this chunk, then don't bother exploring further
     if counts_needed.counts.iter().all(|cnt| *cnt == 0) {
-        node_patterns.push(nodes_used.clone());
+        chunk_patterns.push(chunks_used.clone());
         return;
     }
 
-    let (id, node) = match nodes.next() {
+    let (id, chunk) = match chunks.next() {
         Some(v) => v,
-        None => return, // No more nodes to test
+        None => return, // No more chunks to test
     };
 
-    // Test if other nodes can get the required score without including this one
-    search_nodes(
-        nodes.clone(),
+    // Test if other chunks can get the required score without including this one
+    search_chunks(
+        chunks.clone(),
         counts_needed,
-        non_required_nodes,
-        nodes_used,
-        node_patterns,
+        non_required_chunks,
+        chunks_used,
+        chunk_patterns,
         iters_left,
     );
 
-    for false_id in node.false_nodes() {
-        if nodes_used.contains(false_id) {
-            return; // Don't add this node if it's false
+    for false_id in chunk.false_chunks() {
+        if chunks_used.contains(false_id) {
+            return; // Don't add this chunk if it's false
         }
     }
 
-    // Add the node
-    nodes_used.insert(id);
-    let counts_needed_with_this_node = counts_needed.saturating_sub(node.music());
-    // Continue searching, assuming that this node is used
-    search_nodes(
-        nodes.clone(),
-        &counts_needed_with_this_node,
-        non_required_nodes,
-        nodes_used,
-        node_patterns,
+    // Add the chunk
+    chunks_used.insert(id);
+    let counts_needed_with_this_chunk = counts_needed.saturating_sub(chunk.music());
+    // Continue searching, assuming that this chunk is used
+    search_chunks(
+        chunks.clone(),
+        &counts_needed_with_this_chunk,
+        non_required_chunks,
+        chunks_used,
+        chunk_patterns,
         iters_left,
     );
-    // Remove this node before returning
-    assert!(nodes_used.remove(id));
+    // Remove this chunk before returning
+    assert!(chunks_used.remove(id));
 }

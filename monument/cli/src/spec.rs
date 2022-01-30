@@ -84,7 +84,7 @@ pub struct Spec {
     /// The value for `non_duffer` given to music types when none is explicitly given
     #[serde(default = "get_true")]
     default_non_duffer: bool,
-    /// The most consecutive rows of duffer nodes.
+    /// The most consecutive rows of duffer chunks.
     max_duffer_rows: Option<usize>,
 
     /* COURSES */
@@ -548,7 +548,7 @@ pub struct MusicCommon {
     /// Possibly unbounded range of counts which are allowed in this music type
     #[serde(rename = "count", default)]
     count_range: OptRange,
-    /// If `true`, then any nodes containing this music will be marked as 'non-duffer'
+    /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
     non_duffer: Option<bool>,
     /// Which strokes this music can apply to
     #[serde(rename = "stroke", default)]

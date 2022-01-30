@@ -17,8 +17,8 @@ use crate::{
 
 mod graph;
 
+use graph::ChunkIdx;
 pub use graph::Graph;
-use graph::NodeIdx;
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
@@ -40,20 +40,20 @@ pub(crate) fn search(
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
     let graph = self::graph::Graph::new(graph, &query);
 
-    // Initialise the frontier to just the start nodes
+    // Initialise the frontier to just the start chunks
     let mut frontier = BinaryHeap::new();
-    for (node_idx, start_idx, rotation) in graph.starts.iter() {
-        let node = &graph.nodes[*node_idx];
+    for (chunk_idx, start_idx, rotation) in graph.starts.iter() {
+        let chunk = &graph.chunks[*chunk_idx];
         frontier.push(CompPrefix::new(
             CompPath::Start(*start_idx),
-            *node_idx,
-            node.falseness.clone(),
+            *chunk_idx,
+            chunk.falseness.clone(),
             *rotation,
-            node.score,
-            node.length,
-            node.method_counts.clone(),
-            if node.duffer {
-                node.length // Rounds counts as a non-duffer
+            chunk.score,
+            chunk.length,
+            chunk.method_counts.clone(),
+            if chunk.duffer {
+                chunk.length // Rounds counts as a non-duffer
             } else {
                 0
             },
@@ -72,29 +72,29 @@ pub(crate) fn search(
         } = prefix;
         let PrefixInner {
             path,
-            node_idx,
-            unreachable_nodes,
+            chunk_idx,
+            unreachable_chunks,
             rotation,
             len_since_non_duffer,
 
             score,
             method_counts,
         } = *inner;
-        let node = &graph.nodes[node_idx];
+        let chunk = &graph.chunks[chunk_idx];
 
         // Check if the comp has come round
-        if let Some(end) = node.end {
+        if let Some(end) = chunk.end {
             if len_range.contains(&length)
                 && method_counts.is_feasible(0, query.method_count_range.clone())
                 && rotation_bitmap & (1 << rotation) != 0
             {
-                let (start_idx, start_node_label, links) = path.flatten(&graph, &query);
+                let (start_idx, start_chunk_label, links) = path.flatten(&graph, &query);
                 let comp = Comp {
                     query: query.clone(),
 
                     inner: CompInner {
                         start_idx,
-                        start_node_label,
+                        start_chunk_label,
                         links,
                         end,
 
@@ -115,30 +115,30 @@ pub(crate) fn search(
             continue; // Don't expand comps after they've come round
         }
 
-        // Expand this node
+        // Expand this chunk
         let path = Rc::new(path);
-        for link in &node.succs {
-            let next_idx = link.next_node;
-            let succ_node = &graph.nodes[next_idx];
+        for link in &chunk.succs {
+            let next_idx = link.next_chunk;
+            let succ_chunk = &graph.chunks[next_idx];
 
             let rotation = (rotation + link.rot) % num_parts;
-            let length = length + succ_node.length;
-            let score = score + succ_node.score + link.score;
-            let method_counts = &method_counts + &succ_node.method_counts;
-            let len_since_non_duffer = if succ_node.duffer {
-                len_since_non_duffer + succ_node.length
+            let length = length + succ_chunk.length;
+            let score = score + succ_chunk.score + link.score;
+            let method_counts = &method_counts + &succ_chunk.method_counts;
+            let len_since_non_duffer = if succ_chunk.duffer {
+                len_since_non_duffer + succ_chunk.length
             } else {
-                0 // Reset the counter whenever we encounter a non-duffer node
+                0 // Reset the counter whenever we encounter a non-duffer chunk
             };
 
-            if length + succ_node.dist_to_rounds >= len_range.end {
-                continue; // Node would make comp too long
+            if length + succ_chunk.dist_to_rounds >= len_range.end {
+                continue; // Chunk would make comp too long
             }
-            if len_since_non_duffer + succ_node.dist_to_non_duffer >= max_duffer_rows {
+            if len_since_non_duffer + succ_chunk.dist_to_non_duffer >= max_duffer_rows {
                 continue; // Can't get to a non-duffer fast enough
             }
-            if unreachable_nodes.get(next_idx.index()).unwrap() {
-                continue; // Node is false against something already in the comp
+            if unreachable_chunks.get(next_idx.index()).unwrap() {
+                continue; // Chunk is false against something already in the comp
             }
             if !method_counts.is_feasible(
                 (len_range.end - length) as usize,
@@ -147,14 +147,14 @@ pub(crate) fn search(
                 continue; // Can't recover the method balance before running out of rows
             }
 
-            // Compute which nodes are unreachable after this node has been added
-            let mut new_unreachable_nodes = unreachable_nodes.clone();
-            new_unreachable_nodes.or(&succ_node.falseness);
+            // Compute which chunks are unreachable after this chunk has been added
+            let mut new_unreachable_chunks = unreachable_chunks.clone();
+            new_unreachable_chunks.or(&succ_chunk.falseness);
 
             frontier.push(CompPrefix::new(
                 CompPath::Cons(path.clone(), link.source_idx, next_idx),
                 next_idx,
-                new_unreachable_nodes,
+                new_unreachable_chunks,
                 rotation,
                 score,
                 length,
@@ -202,12 +202,12 @@ pub(crate) fn search(
 
 fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
     let heap = std::mem::take(heap_ref);
-    let mut nodes = heap.into_vec();
-    nodes.sort_by(|a, b| b.cmp(a)); // Sort highest score first
-    if len < nodes.len() {
-        nodes.drain(len..);
+    let mut chunks = heap.into_vec();
+    chunks.sort_by(|a, b| b.cmp(a)); // Sort highest score first
+    if len < chunks.len() {
+        chunks.drain(len..);
     }
-    *heap_ref = BinaryHeap::from(nodes);
+    *heap_ref = BinaryHeap::from(chunks);
 }
 
 ///////////////////
@@ -223,7 +223,7 @@ struct CompPrefix {
     inner: Box<PrefixInner>,
     /// Score per row in the composition
     avg_score: Score,
-    /// Length refers to the **end** of the current node.  We use `u32` because [`Score`] is also
+    /// Length refers to the **end** of the current chunk.  We use `u32` because [`Score`] is also
     /// 32 bits long, making `CompPrefix` pack into 128 bits
     length: u32,
 }
@@ -231,11 +231,11 @@ struct CompPrefix {
 /// The prefix of a composition.  These are ordered by score.
 #[derive(Debug, Clone)]
 struct PrefixInner {
-    /// The path traced to this node
+    /// The path traced to this chunk
     path: CompPath,
 
-    node_idx: NodeIdx,
-    unreachable_nodes: BitVec,
+    chunk_idx: ChunkIdx,
+    unreachable_chunks: BitVec,
 
     len_since_non_duffer: u32,
 
@@ -243,9 +243,9 @@ struct PrefixInner {
     /// `0..graph.num_parts`
     rotation: Rotation,
 
-    /// Score refers to the **end** of the current node
+    /// Score refers to the **end** of the current chunk
     score: Score,
-    /// Method counts refers to the **end** of the current node
+    /// Method counts refers to the **end** of the current chunk
     method_counts: RowCounts,
 }
 
@@ -253,8 +253,8 @@ impl CompPrefix {
     #[allow(clippy::too_many_arguments)]
     fn new(
         path: CompPath,
-        node_idx: NodeIdx,
-        unreachable_nodes: BitVec,
+        chunk_idx: ChunkIdx,
+        unreachable_chunks: BitVec,
         rotation: Rotation,
         score: Score,
         length: u32,
@@ -264,8 +264,8 @@ impl CompPrefix {
         Self {
             inner: Box::new(PrefixInner {
                 path,
-                node_idx,
-                unreachable_nodes,
+                chunk_idx,
+                unreachable_chunks,
                 rotation,
                 score,
                 method_counts,
@@ -301,19 +301,19 @@ impl Ord for CompPrefix {
 /// multiple compositions with the same prefix to share the data for that prefix.
 #[derive(Debug, Clone)]
 enum CompPath {
-    /// The start of a composition, along with the index within `Graph::start_nodes` of this
+    /// The start of a composition, along with the index within `Graph::start_chunks` of this
     /// specific start
     Start(StartIdx),
     /// The composition follows the sequence in the [`Rc`], followed by taking the `n`th successor
-    /// to that node.
-    Cons(Rc<Self>, LinkIdx, NodeIdx),
+    /// to that chunk.
+    Cons(Rc<Self>, LinkIdx, ChunkIdx),
 }
 
 impl CompPath {
     fn flatten(&self, graph: &Graph, query: &Query) -> (StartIdx, String, Vec<(LinkIdx, String)>) {
         let mut links = Vec::new();
-        let (start_idx, start_node_label) = self.flatten_recursive(graph, query, &mut links);
-        (start_idx, start_node_label, links)
+        let (start_idx, start_chunk_label) = self.flatten_recursive(graph, query, &mut links);
+        (start_idx, start_chunk_label, links)
     }
 
     /// Recursively flatten `self`, returning the start idx
@@ -325,17 +325,17 @@ impl CompPath {
     ) -> (StartIdx, String) {
         match self {
             Self::Start(start_idx) => {
-                let (start_node_idx, _, _) = graph
+                let (start_chunk_idx, _, _) = graph
                     .starts
                     .iter()
                     .find(|(_, start_idx_2, _)| start_idx == start_idx_2)
                     .unwrap();
-                let label = graph.node_label(*start_node_idx);
+                let label = graph.chunk_label(*start_chunk_idx);
                 (*start_idx, label)
             }
-            Self::Cons(lhs, link, node_idx) => {
+            Self::Cons(lhs, link, chunk_idx) => {
                 let start = lhs.flatten_recursive(graph, query, out);
-                out.push((*link, graph.node_label(*node_idx)));
+                out.push((*link, graph.chunk_label(*chunk_idx)));
                 start
             }
         }

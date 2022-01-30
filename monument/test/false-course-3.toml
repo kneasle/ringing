@@ -1,4 +1,4 @@
-# This attempts to break the optimisation passes by having a small number of very false nodes
+# This attempts to break the optimisation passes by having a small number of very false chunks
 length = "practice"
 method = "Normandy Surprise Major"
 split_tenors = true

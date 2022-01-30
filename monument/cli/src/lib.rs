@@ -45,7 +45,7 @@ pub fn run(
 ) -> Result<Option<QueryResult>, Error> {
     let start_time = Instant::now();
 
-    /// If the user specifies a [`DebugPrint`] flag with e.g. `-d layout`, then debug print the
+    /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
         ($variant: ident, $val: expr) => {
@@ -85,7 +85,7 @@ pub fn run(
     // Print comps as they are generated
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
     let comps_for_closure = comps.clone();
-    let mut update_logger = UpdateLogger::new();
+    let mut update_logger = SingleLineProgressLogger::new();
     Query::search(
         Arc::new(query),
         optimised_graphs,
@@ -165,19 +165,23 @@ impl FromStr for DebugOption {
             "query" => Self::Query,
             "layout" => Self::Layout,
             "graph" => Self::Graph,
-            "search" => Self::StopBeforeSearch,
-            _ => {
-                return Err(format!(
-                    "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `search`.",
-                    v
-                ))
-            }
+            "no-search" => Self::StopBeforeSearch,
+            #[rustfmt::skip] // See https://github.com/rust-lang/rustfmt/issues/5204
+            _ => return Err(format!(
+                "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `no-search`.",
+                v
+            )),
         })
     }
 }
 
-/// Struct which stores the state required to maintain a nice logging interface
-struct UpdateLogger {
+/////////////////////////
+// SINGLE LINE LOGGING //
+/////////////////////////
+
+/// Struct which handles logging updates, keeping the updates to a single line which updates as the
+/// search progresses.
+struct SingleLineProgressLogger {
     last_progress: Progress,
     is_truncating_queue: bool,
     /// The number of characters in the last line we printed.  `UpdateLogger` will use this add
@@ -185,7 +189,7 @@ struct UpdateLogger {
     last_line_length: usize,
 }
 
-impl UpdateLogger {
+impl SingleLineProgressLogger {
     fn new() -> Self {
         Self {
             last_progress: Progress::START,

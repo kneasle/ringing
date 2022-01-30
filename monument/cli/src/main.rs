@@ -49,7 +49,7 @@ pub struct CliArgs {
     pub quietness: usize,
 
     /// Debug options.  `spec`, `query`, `layout` and `graph` print the corresponding data
-    /// structures.  `search` will run as normal but stop just before starting the full search.
+    /// structures.  `no-search` will run as normal but stop just before starting the full search.
     #[structopt(short = "D", long)]
     pub debug: Option<DebugOption>,
 }
