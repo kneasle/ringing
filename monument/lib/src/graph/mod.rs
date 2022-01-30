@@ -364,7 +364,7 @@ impl Chunk {
         self.end.is_some()
     }
 
-    // CROSS-NODE REFERENCES //
+    // CROSS-CHUNK REFERENCES //
 
     pub fn successors(&self) -> &[Link] {
         self.successors.as_slice()

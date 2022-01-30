@@ -115,9 +115,9 @@ impl End {
     }
 }
 
-////////////////////////
-// NODE RANGE FACTORY //
-////////////////////////
+/////////////////////////
+// CHUNK RANGE FACTORY //
+/////////////////////////
 
 /// A struct to generate [`ChunkRange`]s, given a [`Layout`] and a set of part heads.
 #[derive(Debug)]
@@ -125,9 +125,9 @@ pub struct RangeFactory<'a> {
     layout: &'a Layout,
     part_heads: Vec<RowBuf>,
     /// For every CH found so far, this maps it to an 'equivalent' CH (i.e. a CH that's generated
-    /// in a different part) along with the index of the part that would be generated (i.e. the
-    /// [`Rotation`]).  For example, if the part head is `13425678` (generating 3 parts:
-    /// `12345678`, `13425678`, `14235678`) then we would expect to see something like:
+    /// at the same point in a different part) along with the index of the part that would be
+    /// generated (i.e. the [`Rotation`]).  For example, if the part head is `13425678` (generating
+    /// 3 parts: `12345678`, `13425678`, `14235678`) then we would expect to see something like:
     /// ```text
     /// course_head_equiv = {
     ///     ...
