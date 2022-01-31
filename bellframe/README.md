@@ -1,27 +1,45 @@
 # BellFrame
 
-BellFrame is a library of human friendly data types for concepts which are ubiquitous in change
-ringing (e.g. `Bell`, `Row`, `Stage`, `Method`, etc.).  The aim is to provide a simple library for
-with fast and correct implementations of common operations, rather than providing utilities for
-every use case.
+BellFrame is a standard library for change ringing.
 
-All data types are written so that undefined behaviour is impossible without using `unsafe`.
-However, `unsafe` versions of most functions are provided for cases where the required invariants
-are upheld but can't be verified by the compiler.
+In other words, BellFrame aims to provide high-quality idiomatic implementations of basic things
+required for change ringing (e.g. borrowed/owned `Row` types, place notation parsing, method
+classification, access to the CC method library, etc.).  These can then be shared between projects
+to speed up development and reduce bugs.
 
-I am currently using this in several Rust projects, and the API is very nascent and may change
-radically between minor version numbers until 1.0 (e.g. `0.1.0` to `0.2.0` will likely be a breaking
-change).
+The two fundamental goals of BellFrame are **reliability** and **performance**, _in that order_.
+Reliability means that BellFrame's behaviour is always well defined and never causes Undefined
+Behaviour, even for pathological inputs.  Performance means, specifically, that BellFrame's code
+should never be the limiting factor in a project.  However, reliability is more important than
+unbeatable performance so I'm not going write complex optimised code until I at least know that
+operation is a bottleneck - it's just so much easier to know that simple code is correct.
 
-## Goals
+## Contents
 
-The goals of BellFrame are, in order of importance:
+#### Core Data-types:
+- `Truth`, `Parity`, `Stroke`: Type-safe versions of `bool`, using the type system to prevent them
+  from being mixed up.
+- `Stage`, `Bell`: Type-safe representations, again for avoiding common errors like calling the
+  treble `1` (useful for humans) or `0` (for indexing into arrays).
+- `Row`, `RowBuf`: Borrowed and owned rows (respectively).  Conceptually, `Row` is like `[Bell]`
+  and `RowBuf` is like `Vec<Bell>`, except they are both guaranteed to contain valid permutations.
 
-- Reliability: If the user never uses `unsafe` code, then undefined behaviour of any kind should not
-  be possible.  All errors should be handled nicely even for pathological inputs.
-- Generality: BellFrame should be able to handle anything the user might want to throw at it, within
-  the scope of the library (e.g. there is no upper stage limit, or assumptions about method
-  conventions).
-- Performance: BellFrame should not be unnecessarily slow or use unnecessary memory.  Performance
-  optimisations are fair game, provided they don't conflict with higher goals or explode the code
-  complexity (making reliability harder to maintain).
+#### Methods
+- `Method`, `Call`: Method processing, and classification code.  The classification algorithm is
+  100% compliant with the Framework (in implementing it, I discovered bugs in the CompLib's
+  classifier, which have now been fixed).
+- `MethodLib`: Access to method libraries, with `MethodLib::cc_lib()` loading an up-to-date copy of
+  the Central Council's library.  Searching the library is also supported, and also returns
+  suggested method names for unsuccessful searches.
+
+#### Block Manipulation:
+- `SameStageVec`, `Block`: Ways of storing sequences of `Row`s in a single contiguous chunk of
+  memory (thus allowing huge cache-efficiency and optimisation potential).  `SameStageVec` is
+  simply a sequence of `Row`s with the same `Stage`; `Block` allows its `Row`s to be given
+  annotations of any type.
+
+#### Other Useful Types:
+  - `Mask`: Like a `RowBuf`, except that bells can be missing (denoted by `x`).  For example,
+    `1xxx5678` is a `Mask`, where 2,3,4 can go in any order.
+  - `Regex`: Default way of representing music patterns - like a `Mask`, except that `*` matches any
+    number of bells.  For example, `*x7x8x*` is a `Regex`.

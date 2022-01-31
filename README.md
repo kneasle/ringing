@@ -1,14 +1,17 @@
 # Ringing
 
-A single repository containing all my Rust projects related to
-[change ringing](https://en.wikipedia.org/wiki/Change_ringing).
+A single repository containing all my Rust projects related to change ringing.  More info about
+change ringing can be found [here](https://en.wikipedia.org/wiki/Change_ringing), though if you're
+not into ringing this whole repo probably won't make much sense...
+
 ### Projects
 
-- [`Monument`](monument/): An extremely fast and flexible composing engine
+- [`Monument`](monument/): A fast, flexible and human-friendly composing engine
 - [`Jigsaw`](https://github.com/kneasle/jigsaw) **(yet to be moved here)**: A visual tool for
   experimenting with compositions
 
 ### Libraries
+
 - [`BellFrame`](bellframe/): A 'standard library' for change ringing, shared between all projects.
 - [`utils`](utils/): Small utilities which aren't specific to ringing.  Mostly extensions to the
   standard library, with few or no dependencies.  Also shared between projects.

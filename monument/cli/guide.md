@@ -1,15 +1,28 @@
 # Monument CLI Guide
 
-_**NOTE:** There is no guarantee of the stability of this format; it is, in theory, able to change at
+**NOTE:** There is no guarantee of the stability of this format; it is, in theory, able to change at
 any point without warning.  I'm working on a GUI for Monument which, unlike that of Wheatley in
 Ringing Room, will be fully featured and will become the intended way to use Monument (the core Rust
 library is still accessible to anyone who wants to do really complex things).  I won't make breaking
 changes to the TOML format for the fun of it, but it may change to reflect the GUI layout.  The GUI
 also won't obsolete the TOML-based format (I use it for testing purposes), but it's only really
-intended for my own use and I won't recommend it for users once the GUI exists._
+intended for my own use and I won't recommend it for users once the GUI exists.
 
-Monument's CLI reads files in the TOML data format, so if you're wondering then check out TOML's
-[helpful website](https://toml.io/en/) for more info.
+## Contents
+
+- [Installation](#installation)
+- [Example](#example)
+- [Quick List of Parameters](#quick-list-of-parameters)
+- [More Detail on Parameters](#more-details-on-parameters)
+
+---
+
+## Installation
+
+If you already have Rust installed, you can get the latest version of Monument with `cargo install
+monument_cli`.  If you don't already have Rust ~what are you doing with your life~ you can download
+a pre-built copy of the latest version from
+[here](https://github.com/kneasle/ringing/releases/latest).
 
 ---
 
@@ -17,7 +30,13 @@ Monument's CLI reads files in the TOML data format, so if you're wondering then 
 
 More examples can be found in [the `examples/` directory](examples/).  This exact example can also
 be found there (as [`examples/guide.toml`](example/guide.toml) and
-[`examples/guide-music-8.toml`](examples/guide-music-8.toml)).
+[`examples/guide-music-8.toml`](examples/guide-music-8.toml)).  Monument's CLI reads files are in
+the TOML data format, so if you're wondering then check out TOML's [helpful
+website](https://toml.io/en/) for more info.
+
+The following example is for quarter peal compositions of Yorkshire, Lessness and Bastow with
+changes of method only at calls, and a 2-part with `124365` as the part-head.  It's designed to
+cover as many areas of Monument's interface as possible, hence it's rather complex.
 
 ### File: `guide.toml`
 ```toml
