@@ -1,41 +1,72 @@
 # Monument
 
-A fast and flexible composing engine for
-[method ringing](https://en.wikipedia.org/wiki/Method_ringing).
+A fast, flexible and human-friendly composing engine.  Monument is currently in an alpha state of
+readiness (see the [known issues](#known-issues)).
 
-## CLI Guide
-
-Currently Monument has an command-line interface, much like that of
-[SMC](https://github.com/GACJ/smc), where Monument reads files in [TOML](toml.io/) format and prints
-results to the console.  A GUI is in progress and mostly obsolete the CLI version but nonetheless, a
-guide for the CLI's TOML format can be found [here](cli/guide.md).
+_A guide to Monument can be found [here](cli/guide.md)._
 
 ## Goals
 
-Goals are roughly ordered with most important first.
+The ultimate goal of Monument is to **get you compositions that you want to ring, as quickly and
+easily as possible**.  Monument should also be correct and performant, but this should be a goal of
+all software.
 
-- **Correct**: Monument should always produce compositions which satisfy your requirements, without
-  crashes or unexpected behaviour.
-- **Fast**: Monument should complete most searches in the order of seconds to minutes.  Monument persues this goal
-  at the cost of _optimality_: Monument can't guarantee that its compositions are the _best_
-  (according to your definition of 'good') but instead tries to generate very good compositions
-  as quickly as it can.
-- **General**: Monument's core search routines are completely generic and have no understanding of
-  exactly what they're optimising.  There are custom functions for doing common things easily (e.g.
-  generating graphs for spliced) but Monument is just a Rust library so searches can be constructed
-  programmatically if needed.
-- **Flexible**: Monument also allows a large amount of tuning to encourage it to generate only the
-  compositions you want.  It also provides parameters to tune the search algorithms to improve
-  performance.
-- **Human Friendly**: Common searches should have a simple, human-oriented user interface.
-  For more specific searches, writing code will probably be required.
+Note that this doesn't necessarily mean generating the perfect composition, or generating _every
+possible_ composition.  Monument guarantees neither of these but in return, Monument is _orders of
+magnitude faster_ than any other engine I'm aware of (if anyone knows of any faster
+generally-available engine, then please let me know!).
+
+### Who is Monument not for?
+
+If you do want to run exhaustive searches or want guaranteed optimal results, then Monument is not
+for you - [SMC](https://github.com/GACJ/smc) is extremely good at exhaustive searching to get
+optimal results.  If you want to exhaustively search spliced, I think you need to write your own
+engine.  I wish you the best of luck getting results before the eventual heat death of the universe.
+
+If you want an engine that doesn't change often, Monument is not for you (yet).
+
+## Features
+
+- **FAST**.  Like, really fast.  This specifically means fast at generating compositions _that you
+  might want to ring_.
+- Easy spliced: Generating spliced is as simple as adding multiple methods.  Various splicing styles
+  are supported, such as only changing method at calls.
+- Easy multi-parts.  E.g. `part_head = "134265"` will allow `134265` or `142365` (but not `123465`
+  or `134256`).
+- Short-hands for common things - e.g. `length = "peal"` or `length = "QP"`, or adding runs
+  front/back as music:
+  ```toml
+  [[music]]
+  run_lengths = [4, 5, 6, 7, 8]
+  ```
+- Lots of tuning parameters to make sure Monument understands what you're after:
+  - Call weighting to encourage sparse callings.  Give calls a negative score to generate sparse
+    callings even if it misses a little bit of music.
+  - Add weighting to every row in specific coursing patterns.  For example, encourage
+    tenors-together and/or handbell friendly courses.
+
+### Planned/WIP Features
+
+- A GUI to make composition review easier.
+- Duffer limits.  E.g. require no more than 3 leads between musical courses.
+- Add range requirements to music counts.  E.g. require all 24 5678/8765s.
+- Require specific courses/segments.  E.g. require all the `*6578` courses (but not necessarily all
+  the 6578s).
+- Variable score, to encourage certain types of music in certain places within the composition
+- More tuning parameters for e.g. method balance, changes of method, etc.
+
+## Known issues
+
+- Huge memory usage.  This happens due to the way Monument's current search algorithm works.  In
+  short, Monument continually keeps track of a big queue of composition prefixes, and repeatedly
+  replaces the best prefix with prefixes that are slightly longer.  Storing a large enough queue
+  takes a lot of memory, and I haven't implemented a true memory limit yet.  In the mean time,
+  adding `-Q <number>` to the end of a command will limit the queue length to `<number>` (the
+  default limit is 10,000,000).
 
 ## Composing is Hard
 
-Before describing Monument in more detail, it's worth pointing out that generating compositions is,
-in general, **really hard** (NP hard, in fact).  There will always be queries which are simply too
-hard for Monument (or any other engine) to complete, so any promise of speed is a best-effort not a
-guarantee.  Currently, Monument is very good at wide search spaces with little falseness and a large
-variety in music potential.  As an example, Monument will work better with e.g. Bristol, which has
-very little falseness and a big gap in music potential between courses, versus e.g. Lincolnshire,
-which has lots of falseness and all courses have roughly the same (bad) music output.
+Finally, it's worth pointing out that generating compositions is, in general, **really hard** ([NP
+hard](https://en.wikipedia.org/wiki/NP-hardness), in fact).  There will always be queries which are
+simply too hard for Monument (or any other engine) to complete, so any promise of speed is a
+best-effort not a guarantee.
