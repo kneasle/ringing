@@ -23,7 +23,7 @@ on:
     # branches:
     # - release-workflow
     tags:
-    - "v*"
+    - 'v*'
 jobs:
   create-release:
     name: create-release
