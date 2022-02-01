@@ -3,6 +3,11 @@ name = "kneasle_ringing_utils"
 version = "0.1.0"
 edition = "2021"
 
+authors = ["Ben White-Horne <kneasle@gmail.com>"]
+description = "'kitchen sink' utility library for my ringing projects"
+license = "MIT"
+repository = "https://github.com/kneasle/ringing"
+
 [package.metadata.workspaces]
 independent = true # This library won't change that often, so we want it to use its own versioning
 
