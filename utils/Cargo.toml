@@ -3,5 +3,8 @@ name = "kneasle_ringing_utils"
 version = "0.0.0"
 edition = "2021"
 
+[package.metadata.workspaces]
+independent = true # This library won't change that often, so we want it to use its own versioning
+
 [dependencies]
 number_prefix = "0.4"
