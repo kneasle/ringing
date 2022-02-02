@@ -41,10 +41,11 @@ fn main() -> SuiteResult<()> {
     monument_cli::init_logging(log::LevelFilter::Warn);
 
     // This always run in the directory of the `monument_cli` crate, i.e.
-    // `$REPO_ROOT/monument/cli/`.  Hence, all paths start with `../` to return to the `monument/`
-    // directory where the tests are stored.
+    // `$REPO_ROOT/monument/cli/`.  Hence, all paths must be relative to `monument_cli`'s
+    // `Cargo.toml` file, so all paths start with `../` to reach the `monument/` directory.  This
+    // file would be accessed as `../test/runner.rs`
     let suites = [
-        run_tests_in_directory("../test/", false)?,
+        run_tests_in_directory("../test/cases/", false)?,
         run_tests_in_directory("../examples/", true)?,
     ];
 

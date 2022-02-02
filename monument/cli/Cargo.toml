@@ -27,5 +27,5 @@ ordered-float = { version = "2.10", features = ["serde"] }
 
 [[test]]
 name = "integration"
-path = "../integration_runner.rs"
+path = "../test/runner.rs"
 harness = false
