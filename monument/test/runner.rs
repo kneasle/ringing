@@ -217,10 +217,10 @@ fn run_and_print_test(
     expected_result: ExpectedResult,
     stop_before_search: bool,
 ) -> TestCase {
-    let debug_print = stop_before_search.then(|| DebugOption::StopBeforeSearch);
+    let debug_option = stop_before_search.then(|| DebugOption::StopBeforeSearch);
 
     // Run the test
-    let actual_result = run_test(&file_path, &expected_result, debug_print);
+    let actual_result = run_test(&file_path, &expected_result, debug_option);
     // Determine what should be printed after the '...'
     let result_string = match &actual_result {
         Ok(TestOk::Ignored) => "ignored".color(Color::Yellow),
@@ -242,14 +242,14 @@ fn run_and_print_test(
 fn run_test(
     file_path: &Path,
     expected_result: &ExpectedResult,
-    debug_print: Option<DebugOption>,
+    debug_option: Option<DebugOption>,
 ) -> TestResult {
     if expected_result == &ExpectedResult::Ignored {
         return Ok(TestOk::Ignored); // Don't run ignored tests
     }
     // Run Monument and propagate the error if it occurs
     let run_result =
-        monument_cli::run(file_path, debug_print, QUEUE_LIMIT).map_err(TestErr::Error)?;
+        monument_cli::run(file_path, debug_option, QUEUE_LIMIT).map_err(TestErr::Error)?;
     let result = match run_result {
         None => return Ok(TestOk::Parsed), // Parsing tests don't generate comps to check
         Some(r) => r,
