@@ -1,9 +1,11 @@
 # Cargo's build files
-*/target
-*/Cargo.lock
+**/target
 
-# Where I store comps I'm working on that I don't want to be checked into Monument
+# Cached files from the test/benchmark runner
+monument/test/.last-results.json
+
+# Where I store comps I'm working on that I don't want to show to everyone
 */comps/
 
-# Ignore all callgrind files
+# All callgrind files
 **/callgrind*
