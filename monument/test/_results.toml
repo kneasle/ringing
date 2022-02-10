@@ -305,6 +305,356 @@ part_head = "18234567"
 string = "#DLSYSL"
 
 [[false]]
+avg_score = 0.27734375
+length = 256
+string = "BYYYBYBY"
+
+[[false]]
+avg_score = 0.27812501788139343
+length = 192
+string = "B[sH]BYYYY[sH]"
+
+[[false]]
+avg_score = 0.2785714268684387
+length = 224
+string = "B[sH]BYBBBY[sH]"
+
+[[false]]
+avg_score = 0.278682142496109
+length = 258
+string = "B[sH]BYYYY[H]BYY>"
+
+[[false]]
+avg_score = 0.2787500023841858
+length = 160
+string = "BBY[H]B[H]B[H]"
+
+[[false]]
+avg_score = 0.2789655029773712
+length = 290
+string = "BYYYBYYB[W]B[sW]Y>"
+
+[[false]]
+avg_score = 0.27916663885116577
+length = 288
+string = "BYYYBYBY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.27916663885116577
+length = 288
+string = "BYYYBY[sM]B[sM]YB"
+
+[[false]]
+avg_score = 0.27916666865348816
+length = 192
+string = "B[H]B[H]BYBB[H]"
+
+[[false]]
+avg_score = 0.2829897105693817
+length = 194
+string = "BY[W]B[sW]BBYY>"
+
+[[false]]
+avg_score = 0.2843749523162842
+length = 256
+string = "B[sH]BYYYY[H]B[sH]B[H]"
+
+[[false]]
+avg_score = 0.2847221791744232
+length = 288
+string = "B[sH]BYYYY[H]B[H]B[H]B[sH]"
+
+[[false]]
+avg_score = 0.2847222089767456
+length = 288
+string = "B[sH]B[H]B[H]B[H]BYYYY[sH]"
+
+[[false]]
+avg_score = 0.2853846251964569
+length = 130
+string = "BY[sW]B[W]B[W]Y>"
+
+[[false]]
+avg_score = 0.28541669249534607
+length = 192
+string = "B[sH]B[H]BY[W]B[sW]B"
+
+[[false]]
+avg_score = 0.28611108660697937
+length = 288
+string = "BYYYBYY[sW]B[sW]B"
+
+[[false]]
+avg_score = 0.28611111640930176
+length = 288
+string = "BY[sW]B[sW]YYBYYB"
+
+[[false]]
+avg_score = 0.28828126192092896
+length = 256
+string = "B[sH]B[H]BY[W]B[sW]YYY"
+
+[[false]]
+avg_score = 0.2888888418674469
+length = 288
+string = "BY[sW]B[sW]YYY[H]B[sH]B[H]B[sH]"
+
+[[false]]
+avg_score = 0.2888888716697693
+length = 288
+string = "B[sH]B[H]BY[W]B[sW]YYY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.2890625
+length = 256
+string = "BYYBYYBY"
+
+[[false]]
+avg_score = 0.2893103361129761
+length = 290
+string = "BYYBYYYB[W]B[sW]Y>"
+
+[[false]]
+avg_score = 0.28958332538604736
+length = 288
+string = "BYYBYYBY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.28958332538604736
+length = 288
+string = "BYYBYY[sM]B[sM]YB"
+
+[[false]]
+avg_score = 0.2900000214576721
+length = 160
+string = "BYB[sW]B[sW]B"
+
+[[false]]
+avg_score = 0.2902061939239502
+length = 194
+string = "B[sH]B[H]B[sH]B[sH]YBY>"
+
+[[false]]
+avg_score = 0.2906250059604645
+length = 192
+string = "BY[W]B[sW]BB[sH]B[H]"
+
+[[false]]
+avg_score = 0.2906250059604645
+length = 192
+string = "B[sH]B[H]B[sH]BBY[H]"
+
+[[false]]
+avg_score = 0.2915384769439697
+length = 130
+string = "B[sH]B[H]YBY>"
+
+[[false]]
+avg_score = 0.2919642925262451
+length = 224
+string = "BYB[sW]B[sW]YYY"
+
+[[false]]
+avg_score = 0.29218748211860657
+length = 256
+string = "BYB[sW]B[sW]YYY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.2929687201976776
+length = 256
+string = "BY[sW]B[sW]YYY[H]B[H]B[H]"
+
+[[false]]
+avg_score = 0.29329898953437805
+length = 194
+string = "B[sH]BBY[H]BYY>"
+
+[[false]]
+avg_score = 0.2958333492279053
+length = 192
+string = "B[sH]BY[sW]B[sW]BB[sH]"
+
+[[false]]
+avg_score = 0.2958333492279053
+length = 192
+string = "B[sH]B[H]BBY[sH]B[H]"
+
+[[false]]
+avg_score = 0.29620686173439026
+length = 290
+string = "B[sH]BYYYYB[H]BYY>"
+
+[[false]]
+avg_score = 0.2965277433395386
+length = 288
+string = "BYYBYYY[sW]B[sW]B"
+
+[[false]]
+avg_score = 0.29652777314186096
+length = 288
+string = "BY[sW]B[sW]YBYYYB"
+
+[[false]]
+avg_score = 0.2980619966983795
+length = 258
+string = "BYYYBYY[W]B[sW]Y>"
+
+[[false]]
+avg_score = 0.2980619966983795
+length = 258
+string = "BYYYY[sH]B[H]YBY>"
+
+[[false]]
+avg_score = 0.29814815521240234
+length = 162
+string = "B[sH]B[H]BY[sW]B[sW]Y>"
+
+[[false]]
+avg_score = 0.30000001192092896
+length = 128
+string = "B[sH]BBY[sH]"
+
+[[false]]
+avg_score = 0.30044248700141907
+length = 226
+string = "B[sH]B[H]BBYBYY>"
+
+[[false]]
+avg_score = 0.30089282989501953
+length = 224
+string = "B[sH]BYYYYB[sH]"
+
+[[false]]
+avg_score = 0.30103445053100586
+length = 290
+string = "BYYYY[sH]B[H]BY[sW]B[sW]Y>"
+
+[[false]]
+avg_score = 0.30104169249534607
+length = 192
+string = "B[sH]BBY[H]B[sH]B[H]"
+
+[[false]]
+avg_score = 0.30138885974884033
+length = 288
+string = "B[sH]BYYYYB[H]B[sH]B[H]"
+
+[[false]]
+avg_score = 0.3023437261581421
+length = 256
+string = "BYYYY[sH]BBY[sH]"
+
+[[false]]
+avg_score = 0.3036082684993744
+length = 194
+string = "BBY[sH]B[H]BYY>"
+
+[[false]]
+avg_score = 0.30793100595474243
+length = 290
+string = "BY[sW]B[sW]YYY[sH]B[H]BYY>"
+
+[[false]]
+avg_score = 0.3090277314186096
+length = 288
+string = "BYYYY[H]B[sH]B[sH]B[H]B[H]"
+
+[[false]]
+avg_score = 0.3096899092197418
+length = 258
+string = "BYYBYYY[W]B[sW]Y>"
+
+[[false]]
+avg_score = 0.31041663885116577
+length = 288
+string = "BYYBBYYY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.3114583492279053
+length = 192
+string = "BBY[sH]B[H]B[sH]B[H]"
+
+[[false]]
+avg_score = 0.3125
+length = 256
+string = "BYYBBYYY"
+
+[[false]]
+avg_score = 0.3125000298023224
+length = 160
+string = "B[H]B[sH]B[sH]B[H]B[H]"
+
+[[false]]
+avg_score = 0.3131943941116333
+length = 288
+string = "BY[sW]B[sW]YYY[sH]B[H]B[sH]B[H]"
+
+[[false]]
+avg_score = 0.3137167990207672
+length = 226
+string = "B[sH]BBYB[H]BYY>"
+
+[[false]]
+avg_score = 0.3137168288230896
+length = 226
+string = "B[sH]B[H]BYBBYY>"
+
+[[false]]
+avg_score = 0.314615398645401
+length = 130
+string = "BYB[W]B[sW]Y>"
+
+[[false]]
+avg_score = 0.31562501192092896
+length = 128
+string = "BBY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.31607142090797424
+length = 224
+string = "BY[sW]B[sW]YYY[sH]B[sH]"
+
+[[false]]
+avg_score = 0.31736108660697937
+length = 288
+string = "BYYYY[sH]BBYB[sH]"
+
+[[false]]
+avg_score = 0.31736111640930176
+length = 288
+string = "BY[sW]B[sW]YYBBYY"
+
+[[false]]
+avg_score = 0.3177083432674408
+length = 192
+string = "BYYBBB"
+
+[[false]]
+avg_score = 0.31979167461395264
+length = 192
+string = "BY[sW]B[sW]YYY"
+
+[[false]]
+avg_score = 0.3229166567325592
+length = 96
+string = "BBY"
+
+[[false]]
+avg_score = 0.32750001549720764
+length = 160
+string = "B[sH]BBYB[sH]"
+
+[[false]]
+avg_score = 0.32777777314186096
+length = 288
+string = "BY[sW]B[sW]YBYBYY"
+
+[[false]]
+avg_score = 0.3279310166835785
+length = 290
+string = "BYYYY[H]B[H]B[sH]BYY>"
+
+[[false]]
 avg_score = 0.33125001192092896
 length = 128
 string = "BY[sW]B[sW]B"
@@ -475,14 +825,314 @@ length = 192
 string = "sTsWsMsBsVsH"
 
 [[false-splice]]
+avg_score = 0.15416668355464935
+length = 288
+string = "B[sH]B[H]B[sH]L[sW]BB[H]L[sW]B[W]B"
+
+[[false-splice]]
+avg_score = 0.15416668355464935
+length = 288
+string = "B[sH]B[H]B[sH]L[sW]BB[sH]L[W]B[W]B"
+
+[[false-splice]]
+avg_score = 0.15555556118488312
+length = 288
+string = "B[sH]LLLLLL[sM]B[M]L[H]"
+
+[[false-splice]]
+avg_score = 0.1562500149011612
+length = 256
+string = "B[H]BB[sM]B[M]LL[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.15833336114883423
+length = 288
+string = "B[H]B[sH]B[H]BB[M]B[sM]B[M]B[M]L[H]"
+
+[[false-splice]]
+avg_score = 0.16041667759418488
+length = 192
+string = "B[H]L[W]BB[H]L[W]B"
+
+[[false-splice]]
+avg_score = 0.16111113131046295
+length = 288
+string = "BB[sM]B[M]L[sH]B[H]B[sH]L[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.16111113131046295
+length = 288
+string = "B[H]BB[sM]B[M]L[sH]B[sH]L[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.16111113131046295
+length = 288
+string = "B[H]L[W]B[sW]BB[H]L[sW]B[W]B[W]B"
+
+[[false-splice]]
+avg_score = 0.16180557012557983
+length = 288
+string = "LLLLLL[M]B[M]B[M]L"
+
+[[false-splice]]
+avg_score = 0.16250000894069672
+length = 288
+string = "B[sH]L[sW]B[sW]LLLLLL[sH]"
+
+[[false-splice]]
+avg_score = 0.16448277235031128
+length = 290
+string = "B[sH]L[sW]BBB[sM]B[M]LL[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.16527777910232544
+length = 288
+string = "B[H]B[H]LLLLLLL[H]"
+
+[[false-splice]]
+avg_score = 0.1668141782283783
+length = 226
+string = "B[sH]L[W]B[W]BB[sH]L[sW]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.16752579808235168
+length = 194
+string = "B[sH]L[sW]B[W]BB[sH]L[W]B>"
+
+[[false-splice]]
+avg_score = 0.16805557906627655
+length = 288
+string = "B[H]B[H]B[sH]L[W]BB[sH]B[H]L[W]B"
+
+[[false-splice]]
+avg_score = 0.16805557906627655
+length = 288
+string = "L[W]B[sW]BB[H]B[H]BB[sM]B[M]L[H]"
+
+[[false-splice]]
+avg_score = 0.16875001788139343
+length = 256
+string = "B[H]L[W]B[sW]BBB[sM]B[M]L[H]"
+
+[[false-splice]]
+avg_score = 0.16953127086162567
+length = 256
+string = "B[H]B[H]B[sH]L[W]B[W]B[sW]B[W]B"
+
+[[false-splice]]
+avg_score = 0.17053572833538055
+length = 224
+string = "B[H]B[H]BB[M]B[M]B[sM]L[sH]"
+
+[[false-splice]]
+avg_score = 0.1712389588356018
+length = 226
+string = "B[H]B[H]L[W]BB[H]B[H]L[sW]B>"
+
+[[false-splice]]
+avg_score = 0.17152780294418335
+length = 288
+string = "B[H]B[H]BB[sM]B[M]L[H]L[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.17265626788139343
+length = 256
+string = "BB[sM]B[M]L[H]B[H]L[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.17265626788139343
+length = 256
+string = "B[sH]B[H]BB[sM]L[sH]BB[sM]L[H]"
+
+[[false-splice]]
+avg_score = 0.17265626788139343
+length = 256
+string = "B[sH]B[H]L[sW]BB[sH]L[sW]BB[H]"
+
+[[false-splice]]
+avg_score = 0.17275863885879517
+length = 290
+string = "B[H]B[sH]B[H]L[W]B[W]BB[sH]L[sW]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.17403103411197662
+length = 258
+string = "B[H]B[sH]B[H]L[sW]B[W]BB[sH]L[W]B>"
+
+[[false-splice]]
+avg_score = 0.17569446563720703
+length = 288
+string = "B[sH]B[H]BB[M]B[sM]B[M]B[M]L[H]B[H]"
+
+[[false-splice]]
+avg_score = 0.17604167759418488
+length = 192
+string = "B[sH]L[sW]BB[H]L[W]B"
+
+[[false-splice]]
+avg_score = 0.17656251788139343
+length = 256
+string = "B[sH]BB[sM]B[M]L[sH]L[W]B[sW]B"
+
+[[false-splice]]
+avg_score = 0.17656251788139343
+length = 256
+string = "B[sH]B[H]L[W]BB[sH]B[H]L[W]B"
+
+[[false-splice]]
+avg_score = 0.17946431040763855
+length = 224
+string = "B[sH]B[H]L[W]B[W]B[sW]B[W]B"
+
+[[false-splice]]
+avg_score = 0.1822916865348816
+length = 192
+string = "B[sH]BB[M]B[M]B[sM]L[H]"
+
+[[false-splice]]
+avg_score = 0.18263891339302063
+length = 288
+string = "B[H]B[sH]B[H]B[H]L[W]B[W]B[sW]B[W]B"
+
+[[false-splice]]
+avg_score = 0.1829897165298462
+length = 194
+string = "B[H]L[W]B[W]BB[H]L[sW]B>"
+
+[[false-splice]]
+avg_score = 0.18451330065727234
+length = 226
+string = "B[H]L[W]BB[H]B[H]L[sW]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.18515625596046448
+length = 256
+string = "LLLLLL[sM]B[sM]L"
+
+[[false-splice]]
+avg_score = 0.18515627086162567
+length = 256
+string = "B[H]B[sH]B[H]BB[M]B[M]B[sM]L[H]"
+
+[[false-splice]]
+avg_score = 0.18645834922790527
+length = 192
+string = "B[H]L[W]BB[sH]L[sW]B"
+
+[[false-splice]]
+avg_score = 0.18906250596046448
+length = 256
+string = "B[sH]LLLLLLL[sH]"
+
+[[false-splice]]
+avg_score = 0.18953490257263184
+length = 258
+string = "B[H]B[H]L[W]B[W]BB[H]L[W]B[sW]B>"
+
+[[false-splice]]
+avg_score = 0.1900000274181366
+length = 290
+string = "B[sH]B[H]L[W]BB[sH]B[H]B[sH]L[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.19285716116428375
+length = 224
+string = "B[H]B[H]B[sH]L[sW]B[W]B[W]B"
+
+[[false-splice]]
+avg_score = 0.19285716116428375
+length = 224
+string = "B[sH]L[sW]B[W]B[W]BB[H]B[H]"
+
+[[false-splice]]
+avg_score = 0.19336284697055817
+length = 226
+string = "B[sH]L[sW]BB[H]B[sH]L[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.1934482902288437
+length = 290
+string = "B[sH]B[H]L[W]B[W]BB[sH]L[sW]B[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.1934482902288437
+length = 290
+string = "LLLLLL[M]L[sH]BB[M]L>"
+
+[[false-splice]]
+avg_score = 0.1934482902288437
+length = 290
+string = "LLLLLL[sM]L[H]BB[M]L>"
+
+[[false-splice]]
 avg_score = 0.19609376788139343
 length = 256
 string = "B[H]L[W]B[sW]BB[H]L[W]B[sW]B"
 
 [[false-splice]]
+avg_score = 0.19687502086162567
+length = 256
+string = "B[H]B[H]L[sW]B[W]B[W]BB[H]B[sH]"
+
+[[false-splice]]
+avg_score = 0.19689656794071198
+length = 290
+string = "B[H]L[W]B[W]BB[sH]L[sW]B[W]B[W]B[sW]B>"
+
+[[false-splice]]
+avg_score = 0.19689656794071198
+length = 290
+string = "B[sH]L[sW]BB[H]B[H]L[W]B[sW]B[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.19722223281860352
+length = 288
+string = "LLLLLL[sM]B[sM]L[sH]B[sH]"
+
+[[false-splice]]
+avg_score = 0.19778762757778168
+length = 226
+string = "B[sH]L[sW]BB[H]B[H]L[sW]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.1979166865348816
+length = 192
+string = "BB[sM]B[M]L[sH]B[H]B[H]"
+
+[[false-splice]]
+avg_score = 0.1979166865348816
+length = 192
+string = "B[H]BB[sM]B[M]L[sH]B[H]"
+
+[[false-splice]]
+avg_score = 0.1979166865348816
+length = 192
+string = "B[H]B[sH]L[W]B[sW]BB[H]"
+
+[[false-splice]]
 avg_score = 0.20000001788139343
 length = 256
 string = "B[H]B[sH]B[H]L[sW]BB[sH]L[sW]B"
+
+[[false-splice]]
+avg_score = 0.20000001788139343
+length = 288
+string = "B[sH]B[H]B[H]L[W]B[W]B[sW]B[W]BB[H]"
+
+[[false-splice]]
+avg_score = 0.20034484565258026
+length = 290
+string = "B[H]B[H]B[sH]L[sW]BB[H]B[H]L[W]B[sW]B>"
+
+[[false-splice]]
+avg_score = 0.20069445669651031
+length = 288
+string = "LLLLLL[sM]B[M]L[H]B[sH]"
+
+[[false-splice]]
+avg_score = 0.20116281509399414
+length = 258
+string = "B[H]L[W]BB[H]B[H]L[W]B[W]B[sW]B>"
 
 [[false-splice]]
 avg_score = 0.20208334922790527
@@ -512,12 +1162,37 @@ string = "B[sH]B[H]L[sW]B[W]B[W]B"
 [[false-splice]]
 avg_score = 0.20891475677490234
 length = 258
+string = "B[H]L[W]B[W]BB[H]L[W]B[sW]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.20891475677490234
+length = 258
 string = "B[sH]B[H]L[W]BB[H]B[H]L[W]B[W]B>"
+
+[[false-splice]]
+avg_score = 0.21071431040763855
+length = 224
+string = "B[H]BB[sM]B[M]L[H]B[H]B[sH]"
+
+[[false-splice]]
+avg_score = 0.21071431040763855
+length = 224
+string = "B[H]B[H]L[W]B[sW]BB[H]B[sH]"
 
 [[false-splice]]
 avg_score = 0.21250002086162567
 length = 256
 string = "B[sH]B[H]B[H]L[sW]B[W]B[W]BB[H]"
+
+[[false-splice]]
+avg_score = 0.21250002086162567
+length = 192
+string = "L[sW]BB[sH]L[sW]BB[sH]"
+
+[[false-splice]]
+avg_score = 0.2175000160932541
+length = 160
+string = "BB[sM]B[M]L[H]B[sH]"
 
 [[false-splice]]
 avg_score = 0.2187500149011612
@@ -530,6 +1205,11 @@ length = 224
 string = "B[H]B[sH]B[H]BB[sM]B[M]L[H]"
 
 [[false-splice]]
+avg_score = 0.21964287757873535
+length = 224
+string = "L[W]B[sW]BB[H]B[sH]B[H]B[H]"
+
+[[false-splice]]
 avg_score = 0.22777774930000305
 length = 288
 string = "LLLLLLL[H]B[H]B[H]"
@@ -540,14 +1220,34 @@ length = 160
 string = "B[sH]BB[sM]B[M]L[H]"
 
 [[false-splice]]
+avg_score = 0.23000001907348633
+length = 160
+string = "L[W]B[sW]BB[sH]B[H]"
+
+[[false-splice]]
 avg_score = 0.2321428507566452
 length = 224
 string = "LLLLLLL"
 
 [[false-splice]]
+avg_score = 0.23515626788139343
+length = 256
+string = "L[sW]BB[sH]L[sW]BB[H]B[sH]B[H]"
+
+[[false-splice]]
+avg_score = 0.239583358168602
+length = 192
+string = "L[W]B[sW]BB[H]B[H]B[sH]"
+
+[[false-splice]]
 avg_score = 0.23984375596046448
 length = 256
 string = "LLLLLLL[sH]B[sH]"
+
+[[false-splice]]
+avg_score = 0.24196431040763855
+length = 224
+string = "BB[sM]B[M]L[H]B[H]B[sH]B[H]"
 
 [[false-splice]]
 avg_score = 0.24196431040763855
@@ -625,6 +1325,271 @@ length = 64
 string = "B[sH]B[sH]"
 
 [[handbell]]
+avg_score = 0.18541672825813293
+length = 576
+string = "HBsWMHBBsWVFH"
+
+[[handbell]]
+avg_score = 0.18571434915065765
+length = 560
+string = "HHsBsTsWsWVFH"
+
+[[handbell]]
+avg_score = 0.18602946400642395
+length = 544
+string = "HBsVFBBsWVFH"
+
+[[handbell]]
+avg_score = 0.18602947890758514
+length = 544
+string = "HBVsFBBsWVFH"
+
+[[handbell]]
+avg_score = 0.18642854690551758
+length = 560
+string = "HHWsWHsH"
+
+[[handbell]]
+avg_score = 0.18642856180667877
+length = 560
+string = "HBsMBVFHsH"
+
+[[handbell]]
+avg_score = 0.18642857670783997
+length = 560
+string = "HsHBBVFHsH"
+
+[[handbell]]
+avg_score = 0.1868056058883667
+length = 576
+string = "HHBsMsMWMH"
+
+[[handbell]]
+avg_score = 0.1868056058883667
+length = 576
+string = "HsHBsMMWMH"
+
+[[handbell]]
+avg_score = 0.18819443881511688
+length = 576
+string = "HBWMsHHsH"
+
+[[handbell]]
+avg_score = 0.18819443881511688
+length = 576
+string = "HBWsMHHsH"
+
+[[handbell]]
+avg_score = 0.18819445371627808
+length = 576
+string = "HHsWMBHsH"
+
+[[handbell]]
+avg_score = 0.18819445371627808
+length = 576
+string = "HsHWMBHsH"
+
+[[handbell]]
+avg_score = 0.18839289247989655
+length = 448
+string = "HHsBsTVFH"
+
+[[handbell]]
+avg_score = 0.18857143819332123
+length = 560
+string = "HHsBsTsFsBH"
+
+[[handbell]]
+avg_score = 0.188571497797966
+length = 560
+string = "HBMBsWsWsVsFH"
+
+[[handbell]]
+avg_score = 0.1885715126991272
+length = 560
+string = "HHBBsWsWsVsFH"
+
+[[handbell]]
+avg_score = 0.18863636255264282
+length = 528
+string = "HBMBsTsVBH"
+
+[[handbell]]
+avg_score = 0.18928571045398712
+length = 560
+string = "HBVFsWBHsH"
+
+[[handbell]]
+avg_score = 0.18928571045398712
+length = 560
+string = "HBVFsWWBsH"
+
+[[handbell]]
+avg_score = 0.18928571045398712
+length = 560
+string = "HsHBVFWBsH"
+
+[[handbell]]
+avg_score = 0.18965518474578857
+length = 464
+string = "HHBWMH"
+
+[[handbell]]
+avg_score = 0.1900000423192978
+length = 560
+string = "HBMBBBVFVFH"
+
+[[handbell]]
+avg_score = 0.1900000423192978
+length = 560
+string = "HBMBMHMHVFH"
+
+[[handbell]]
+avg_score = 0.19000005722045898
+length = 560
+string = "HHBBBBVFVFH"
+
+[[handbell]]
+avg_score = 0.19000005722045898
+length = 560
+string = "HHBBMHMHVFH"
+
+[[handbell]]
+avg_score = 0.19000005722045898
+length = 560
+string = "HHBHWBMHVFH"
+
+[[handbell]]
+avg_score = 0.19062501192092896
+length = 512
+string = "HBWWBBBH"
+
+[[handbell]]
+avg_score = 0.19117647409439087
+length = 544
+string = "HBVWVVFH"
+
+[[handbell]]
+avg_score = 0.19121626019477844
+length = 592
+string = "HsMWWHsWBBH"
+
+[[handbell]]
+avg_score = 0.19142863154411316
+length = 560
+string = "HBMsMsVsFsWBH"
+
+[[handbell]]
+avg_score = 0.19166672229766846
+length = 576
+string = "HBWMHBBVFH"
+
+[[handbell]]
+avg_score = 0.19166672229766846
+length = 576
+string = "HHWMVFBBBH"
+
+[[handbell]]
+avg_score = 0.19166673719882965
+length = 576
+string = "HHWMBBBVFH"
+
+[[handbell]]
+avg_score = 0.191964253783226
+length = 448
+string = "HHsBsBH"
+
+[[handbell]]
+avg_score = 0.1919642686843872
+length = 448
+string = "HHsFsTH"
+
+[[handbell]]
+avg_score = 0.1919643133878708
+length = 448
+string = "HBMBsVsFH"
+
+[[handbell]]
+avg_score = 0.19196434319019318
+length = 448
+string = "HHBBsVsFH"
+
+[[handbell]]
+avg_score = 0.192307710647583
+length = 416
+string = "HBMBBBBH"
+
+[[handbell]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBVFVFsVsFH"
+
+[[handbell]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBVFsVsFVFH"
+
+[[handbell]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBsVsFVFVFH"
+
+[[handbell]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HsHBVFVsFVFH"
+
+[[handbell]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HsHBVFsVFVFH"
+
+[[handbell]]
+avg_score = 0.19264711439609528
+length = 544
+string = "HBsWWsWsVsFH"
+
+[[handbell]]
+avg_score = 0.19285719096660614
+length = 560
+string = "HBMVFBBBVFH"
+
+[[handbell]]
+avg_score = 0.19285719096660614
+length = 560
+string = "HBMVFVFBBBH"
+
+[[handbell]]
+avg_score = 0.19285719096660614
+length = 560
+string = "HBVFMHMHWBH"
+
+[[handbell]]
+avg_score = 0.19285719096660614
+length = 560
+string = "HBVFWVFBBBH"
+
+[[handbell]]
+avg_score = 0.19285720586776733
+length = 560
+string = "HBVFWBBBVFH"
+
+[[handbell]]
+avg_score = 0.19324329495429993
+length = 592
+string = "HHBBWMWMH"
+
+[[handbell]]
+avg_score = 0.19553574919700623
+length = 448
+string = "HBsVsFWBH"
+
+[[handbell]]
+avg_score = 0.19583338499069214
+length = 576
+string = "HsHBsHsWMsWH"
+
+[[handbell]]
 avg_score = 0.19642862677574158
 length = 560
 string = "HBMBsWWVsFH"
@@ -645,9 +1610,44 @@ length = 560
 string = "HHBBsWWsVFH"
 
 [[handbell]]
+avg_score = 0.19652779400348663
+length = 576
+string = "HsHBsWMWH"
+
+[[handbell]]
 avg_score = 0.19714288413524628
 length = 560
 string = "HHBFIH"
+
+[[handbell]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBWsVsFWBH"
+
+[[handbell]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBsWVsFWBH"
+
+[[handbell]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBsWsVFWBH"
+
+[[handbell]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBsMBWVFsWBH"
+
+[[handbell]]
+avg_score = 0.19791674613952637
+length = 576
+string = "HsHBBWVFsWBH"
+
+[[handbell]]
+avg_score = 0.19797301292419434
+length = 592
+string = "HBsWWBsMWH"
 
 [[handbell]]
 avg_score = 0.19864869117736816
@@ -668,6 +1668,26 @@ string = "HHBBsWsWVFH"
 avg_score = 0.20000001788139343
 length = 112
 string = ""
+
+[[handbell]]
+avg_score = 0.2006944715976715
+length = 576
+string = "HBMsMWMsHH"
+
+[[handbell]]
+avg_score = 0.2006944715976715
+length = 576
+string = "HBMsMWsMHH"
+
+[[handbell]]
+avg_score = 0.2006944715976715
+length = 576
+string = "HBsMsMWMHH"
+
+[[handbell]]
+avg_score = 0.2006945163011551
+length = 576
+string = "HHWMsWsWBH"
 
 [[handbell]]
 avg_score = 0.20073534548282623
@@ -702,7 +1722,22 @@ string = "HHBBsFsBH"
 [[handbell]]
 avg_score = 0.20214292407035828
 length = 560
+string = "HBMVFsWBsHH"
+
+[[handbell]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBMVFsWsWBH"
+
+[[handbell]]
+avg_score = 0.20214292407035828
+length = 560
 string = "HBMsMVFsWBH"
+
+[[handbell]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBsMsMVFWBH"
 
 [[handbell]]
 avg_score = 0.20214292407035828
@@ -750,6 +1785,16 @@ length = 576
 string = "HsHBHWMsWH"
 
 [[handbell]]
+avg_score = 0.20625007152557373
+length = 576
+string = "HsMWMHBsHH"
+
+[[handbell]]
+avg_score = 0.2068965882062912
+length = 464
+string = "HBWMHH"
+
+[[handbell]]
 avg_score = 0.2068966031074524
 length = 464
 string = "HHWMBH"
@@ -765,6 +1810,11 @@ length = 576
 string = "HBMBWVFWBH"
 
 [[handbell]]
+avg_score = 0.20892859995365143
+length = 448
+string = "HBMVFBH"
+
+[[handbell]]
 avg_score = 0.20892861485481262
 length = 448
 string = "HBVFWBH"
@@ -775,6 +1825,196 @@ length = 336
 string = "HHH"
 
 [[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "HHsHbHsHHbsHbsH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "HbsHHHsHbsHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "HbsHbsHHHsHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "HsHbHsHHbsHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "HsHbsHbHsHHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "bHsHHbsHHHsHbsH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "bsHHHsHbHsHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "bsHHHsHbsHbHsHH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "sHHbsHHHsHbsHbH"
+
+[[hl-calls]]
+avg_score = -0.07578124850988388
+length = 256
+string = "sHHbsHbsHHHsHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HHbHbsHbHHsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HHbsHbHbHHsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HbHbHsHHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HbHbsHbHHsHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HbHsHHbHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HbsHbHbHHsHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HsHHHbHbsHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "HsHHHbsHbHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHHsHHHbHbsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHHsHHHbsHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHbHHsHHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHbHsHHbHsHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHsHHbHbHsHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "bHsHHbHsHHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "sHHHbHbsHbHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "sHHHbsHbHbHH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "sHHbHbHsHHbH"
+
+[[hl-calls]]
+avg_score = -0.07410714775323868
+length = 224
+string = "sHHbHsHHbHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHbHHbsHHbsHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHbHHbsHsHbHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHbHsHbHHbsHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHbHsHbHsHbHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHsHbHbsHHHsHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HHsHbsHHHsHbHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHHHbHHbsHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHHHbHHbsHsHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHHHbHsHbHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHHHbHsHbHsHbH"
+
+[[hl-calls]]
 avg_score = -0.07361111044883728
 length = 288
 string = "HbHHbsHHbsHHbHH"
@@ -782,7 +2022,167 @@ string = "HbHHbsHHbsHHbHH"
 [[hl-calls]]
 avg_score = -0.07361111044883728
 length = 288
+string = "HbHHbsHsHbHHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHsHbHHbsHHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbHsHbHsHbHHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbsHHbHHHbHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbsHHbHHHbHsHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbsHHbsHHbHHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HbsHsHbHHbHHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HsHbHbsHHHsHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "HsHbsHHHsHbHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHHbHHbsHHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHHbHHbsHsHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHHbHsHbHHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHHbHsHbHsHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHbHHHbHHbsHsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHbHHHbHsHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHbsHHbHHHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHbsHHbsHHbHHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHHbsHsHbHHbHHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHsHbHHbHHHbHsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHsHbHHbsHHbHHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bHsHbHsHbHHbHHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHHHsHbHbsHHHsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHHHsHbsHHHsHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHHbHHHbHHbsHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHHbHHHbHsHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHHbsHHbHHHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "bsHsHbHHbHHHbHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "sHbHHbHHHbHHbsH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
 string = "sHbHHbHHHbHsHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "sHbHHbsHHbHHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "sHbHbsHHHsHbsHHH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "sHbHsHbHHbHHHbH"
+
+[[hl-calls]]
+avg_score = -0.07361111044883728
+length = 288
+string = "sHbsHHHsHbHbsHHH"
 
 [[hl-calls]]
 avg_score = -0.07187499850988388
@@ -923,6 +2323,426 @@ string = "bwm"
 avg_score = 0.0
 length = 224
 string = ""
+
+[[implicit-leadwise]]
+avg_score = 0.07693453133106232
+length = 1344
+part_head = "15678234"
+string = "#LLLLL[-]PL[-]LLP[-]LL[-]PLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07693453133106232
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]LLLL[-]LLP[-]LL[-]PLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07693453133106232
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLP[-]LLLLP[-]LL[-]LPL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07693453133106232
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLP[-]LL[-]LPP[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07693453878164291
+length = 1344
+part_head = "15678234"
+string = "#PLLLL[s]LPP[-]PLP[-]PLL[-]LL[s]LL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "13456782"
+string = "#PLLPL[s]L[s]LLP[-]PLLL[-]L[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LPL[-]LLLP[-]LPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LPL[-]LLPL[-]LPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LPL[-]LPLL[-]LPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LPL[-]PLLL[-]LPL[-]LPL[s]P[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07717391848564148
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LPL[-]PP[-]LLLLL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07723215222358704
+length = 1344
+part_head = "15678234"
+string = "#PL[-]LP[-]P[-]PL[-]LPLL[-]PLL[-]LLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.0773809626698494
+length = 1344
+part_head = "15678234"
+string = "#PLLLL[-]LLLLL[-]PLLP[s]LPP[-]P[s]"
+
+[[implicit-leadwise]]
+avg_score = 0.07748448103666306
+length = 1288
+part_head = "16782345"
+string = "#PL[-]LPL[-]LLPL[-]LPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+avg_score = 0.07748448103666306
+length = 1288
+part_head = "16782345"
+string = "#PL[-]LPL[-]PLLL[-]LPL[-]LP[-]L[-]L[-]P"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "18234567"
+string = "#PLLLL[-]PLL[-]PLLP[s]LLL[-]PP[s]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LLLLP[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPLLL[-]L[-]LPL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPP[-]L[-]LLLLL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPP[-]L[-]LLP[-]PLLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LLLLP[-]L[-]LLP[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPLLL[-]L[-]LPL[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPP[-]L[-]LLLLL[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07763975858688354
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPP[-]L[-]LPL[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07767857611179352
+length = 1344
+part_head = "15678234"
+string = "#LLLLL[-]PLP[-]PLP[-]LL[-]LPL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07767857611179352
+length = 1344
+part_head = "15678234"
+string = "#LLLLL[-]PL[-]LLP[-]LL[-]LPP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07767857611179352
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]LLLLP[-]PLP[-]LL[-]LPL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07767857611179352
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]LLLL[-]LLP[-]LL[-]LPP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07795032113790512
+length = 1288
+part_head = "14567823"
+string = "#PL[-]LLLLL[-]PP[-]LPL[-]LPL[-]P[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07795032113790512
+length = 1288
+part_head = "16782345"
+string = "#PL[-]LPLLL[s]LP[s]PPL[-]LPL[s]L[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07795032113790512
+length = 1288
+part_head = "16782345"
+string = "#PL[-]LPLLL[s]PL[s]PPL[-]LPL[s]L[s]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07797619700431824
+length = 1344
+part_head = "15678234"
+string = "#PL[-]LP[-]LLL[-]PL[-]LPLL[-]PLL[-]PL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07797619700431824
+length = 1344
+part_head = "15678234"
+string = "#PL[-]LP[-]P[-]PL[-]LPLL[-]LLLLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.0781250149011612
+length = 1344
+part_head = "15678234"
+string = "#LLLLLLL[-]PLL[-]PLLP[s]LPP[-]P[s]"
+
+[[implicit-leadwise]]
+avg_score = 0.0781250149011612
+length = 1344
+part_head = "15678234"
+string = "#PLLLL[-]PLL[-]PLLP[s]LPLLL[-]P[s]"
+
+[[implicit-leadwise]]
+avg_score = 0.0782608762383461
+length = 1288
+part_head = "15678234"
+string = "#PLLPL[-]L[-]LPP[-]LP[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.0782608762383461
+length = 1288
+part_head = "15678234"
+string = "#PLLPL[-]L[-]PLP[-]LP[s]LPL[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07841615378856659
+length = 1288
+part_head = "18234567"
+string = "#PLLLL[-]PLL[-]PLLP[s]P[-]LLLP[s]"
+
+[[implicit-leadwise]]
+avg_score = 0.07841615378856659
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPLLL[-]L[-]LLP[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07841615378856659
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPP[-]L[-]LLP[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07841615378856659
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LLPLL[-]L[-]LPL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07841615378856659
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]LLLPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLLLL[-]PLP[-]LL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLP[-]PLLLL[-]LL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLP[-]PLP[-]LL[-]PLL[-]LLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLLLL[-]LL[-]PLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLP[-]LL[-]PLLLL[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07842262834310532
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLP[-]LL[-]PLP[-]PLLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07901786267757416
+length = 1344
+part_head = "16782345"
+string = "#PPPPPP[s]LLLLLL[s]LLLLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07916667312383652
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLP[-]LLLLP[-]LL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07916667312383652
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PLP[-]PLP[-]LL[-]LLLLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07916667312383652
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLP[-]LL[-]LLLLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07916667312383652
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]PL[-]LLP[-]LL[-]PLP[-]LLLLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LLPLL[-]L[-]LLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LLLLP[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LLPLL[-]L[-]LLP[-]PPL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPLLL[-]L[-]LPL[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPP[-]L[-]LLLLL[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07919254899024963
+length = 1288
+part_head = "14567823"
+string = "#PLLPL[-]LPP[-]L[-]LLP[-]LPLLL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07981367409229279
+length = 1288
+part_head = "15678234"
+string = "#PLLPL[-]L[-]LPP[-]PL[s]LPL[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07981367409229279
+length = 1288
+part_head = "15678234"
+string = "#PLLPL[-]L[-]PPL[-]PL[s]LLP[s]L[-]L[-]L"
+
+[[implicit-leadwise]]
+avg_score = 0.07991071045398712
+length = 1344
+part_head = "15678234"
+string = "#PLLLL[s]PLP[-]PLP[-]PLL[-]LL[s]LL[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07991071790456772
+length = 1344
+part_head = "15678234"
+string = "#LLLLL[-]PLP[-]PLP[-]LL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07991071790456772
+length = 1344
+part_head = "15678234"
+string = "#LLLLL[-]PL[-]LLP[-]LL[-]PLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07991071790456772
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]LLLLP[-]PLP[-]LL[-]PLL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07991071790456772
+length = 1344
+part_head = "15678234"
+string = "#PLL[-]LLLL[-]LLP[-]LL[-]PLP[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.07996895164251328
+length = 1288
+part_head = "14567823"
+string = "#PLLLP[-]LPLLL[-]L[-]LLP[-]LPP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08020833879709244
+length = 1344
+part_head = "15678234"
+string = "#PL[-]LP[-]LLL[-]PL[-]LPLL[-]LPL[-]LP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08027950674295425
+length = 1288
+part_head = "13456782"
+string = "#PLLPL[s]L[s]LLP[-]PLLL[-]L[-]PLP[-]"
+
+[[implicit-leadwise]]
+avg_score = 0.08027950674295425
+length = 1288
+part_head = "16782345"
+string = "#PL[-]LPLL[-]LP[-]LPLL[-]LPL[-]P[-]L"
 
 [[implicit-leadwise]]
 avg_score = 0.08074534684419632
@@ -1110,6 +2930,171 @@ length = 224
 string = ""
 
 [[leadwise-no-calls]]
+avg_score = 0.1071428582072258
+length = 224
+string = "#SESYSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.1116071417927742
+length = 224
+string = "#YSESSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.125
+length = 192
+string = "#SESYSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.125
+length = 192
+string = "#SESYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1302083283662796
+length = 192
+string = "#YSESSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1302083283662796
+length = 192
+string = "#YSESYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1302083283662796
+length = 192
+string = "#YSYSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.1354166716337204
+length = 192
+string = "#SYYSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.13750000298023224
+length = 160
+string = "#SSSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.1383928507566452
+length = 224
+string = "#SESYYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1428571492433548
+length = 224
+string = "#YSESYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1428571492433548
+length = 224
+string = "#YYYYSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.1458333283662796
+length = 192
+string = "#YYSSES"
+
+[[leadwise-no-calls]]
+avg_score = 0.1473214328289032
+length = 224
+string = "#SESSESY"
+
+[[leadwise-no-calls]]
+avg_score = 0.15000000596046448
+length = 160
+string = "#SESSS"
+
+[[leadwise-no-calls]]
+avg_score = 0.15625
+length = 96
+string = "#EES"
+
+[[leadwise-no-calls]]
+avg_score = 0.15625
+length = 160
+string = "#YSYSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.15625
+length = 160
+string = "#YSYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1607142835855484
+length = 224
+string = "#EEEEEEE"
+
+[[leadwise-no-calls]]
+avg_score = 0.1614583283662796
+length = 192
+string = "#SESSYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.16249999403953552
+length = 160
+string = "#SYYSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.16249999403953552
+length = 160
+string = "#SYYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1651785671710968
+length = 224
+string = "#ESSESYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1666666716337204
+length = 192
+string = "#YSYYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1666666716337204
+length = 192
+string = "#YYYYSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1666666716337204
+length = 192
+string = "#YYYYYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.171875
+length = 128
+string = "#SSSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.171875
+length = 128
+string = "#SSYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.171875
+length = 192
+string = "#SYYYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "#YYYYYYY"
+
+[[leadwise-no-calls]]
+avg_score = 0.17499999701976776
+length = 160
+string = "#YYSSY"
+
+[[leadwise-no-calls]]
+avg_score = 0.17499999701976776
+length = 160
+string = "#YYSYS"
+
+[[leadwise-no-calls]]
+avg_score = 0.1770833283662796
+length = 192
+string = "#YSSESY"
+
+[[leadwise-no-calls]]
 avg_score = 0.18125000596046448
 length = 160
 string = "#SSYYY"
@@ -1223,6 +3208,16 @@ string = "#ESYSESS"
 avg_score = 0.234375
 length = 64
 string = "#EY"
+
+[[leadwise-no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "#SYYYYSE"
+
+[[leadwise-no-calls]]
+avg_score = 0.2395833283662796
+length = 192
+string = "#SYYSSE"
 
 [[leadwise-no-calls]]
 avg_score = 0.2455357164144516
@@ -1368,6 +3363,226 @@ length = 112
 string = ""
 
 [[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "CCCCYCC"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "CCCCYCY"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "CYCCYCC"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "CYCCYCY"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "YCCCYCC"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "YCCCYCY"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "YYCCYCC"
+
+[[no-calls]]
+avg_score = 0.1741071492433548
+length = 224
+string = "YYCCYCY"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "CYYCCYC"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "CYYCCYY"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "YCYCCYC"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "YCYCCYY"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "YYYCCYC"
+
+[[no-calls]]
+avg_score = 0.1964285671710968
+length = 224
+string = "YYYCCYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CCCCCYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CCCCCYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CYCCCYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CYCCCYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CYYCYYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "CYYCYYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YCCCCYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YCCCCYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YCYCYYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YCYCYYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YYCCCYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YYCCCYY"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YYYCYYC"
+
+[[no-calls]]
+avg_score = 0.2008928507566452
+length = 224
+string = "YYYCYYY"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "CCCCYYC"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "CCCCYYY"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "CYCCYYC"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "CYCCYYY"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "YCCCYYC"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "YCCCYYY"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "YYCCYYC"
+
+[[no-calls]]
+avg_score = 0.2053571492433548
+length = 224
+string = "YYCCYYY"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "CCYYCCC"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "CCYYCCY"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "CYYYCCC"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "CYYYCCY"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "YCYYCCC"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "YCYYCCY"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "YYYYCCC"
+
+[[no-calls]]
+avg_score = 0.2366071492433548
+length = 224
+string = "YYYYCCY"
+
+[[no-calls]]
 avg_score = 0.2410714328289032
 length = 224
 string = "CCCYCCC"
@@ -1376,6 +3591,36 @@ string = "CCCYCCC"
 avg_score = 0.2410714328289032
 length = 224
 string = "CCCYCCY"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CCYYYCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CCYYYCY"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CYCYCCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CYCYCCY"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CYYYYCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "CYYYYCY"
 
 [[no-calls]]
 avg_score = 0.2410714328289032
@@ -1390,12 +3635,32 @@ string = "YCCYCCY"
 [[no-calls]]
 avg_score = 0.2410714328289032
 length = 224
+string = "YCYYYCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "YCYYYCY"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
 string = "YYCYCCC"
 
 [[no-calls]]
 avg_score = 0.2410714328289032
 length = 224
 string = "YYCYCCY"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "YYYYYCC"
+
+[[no-calls]]
+avg_score = 0.2410714328289032
+length = 224
+string = "YYYYYCY"
 
 [[no-calls]]
 avg_score = 0.2455357164144516
@@ -1438,6 +3703,46 @@ length = 224
 string = "YYCYYCY"
 
 [[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "CCYYCYC"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "CCYYCYY"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "CYYYCYC"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "CYYYCYY"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "YCYYCYC"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "YCYYCYY"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "YYYYCYC"
+
+[[no-calls]]
+avg_score = 0.2678571343421936
+length = 224
+string = "YYYYCYY"
+
+[[no-calls]]
 avg_score = 0.2723214328289032
 length = 224
 string = "CCCYCYC"
@@ -1446,6 +3751,16 @@ string = "CCCYCYC"
 avg_score = 0.2723214328289032
 length = 224
 string = "CCCYCYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "CCYYYYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "CCYYYYY"
 
 [[no-calls]]
 avg_score = 0.2723214328289032
@@ -1460,6 +3775,16 @@ string = "CYCYCYY"
 [[no-calls]]
 avg_score = 0.2723214328289032
 length = 224
+string = "CYYYYYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "CYYYYYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
 string = "YCCYCYC"
 
 [[no-calls]]
@@ -1470,12 +3795,32 @@ string = "YCCYCYY"
 [[no-calls]]
 avg_score = 0.2723214328289032
 length = 224
+string = "YCYYYYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YCYYYYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
 string = "YYCYCYC"
 
 [[no-calls]]
 avg_score = 0.2723214328289032
 length = 224
 string = "YYCYCYY"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YYYYYYC"
+
+[[no-calls]]
+avg_score = 0.2723214328289032
+length = 224
+string = "YYYYYYY"
 
 [[no-calls]]
 avg_score = 0.2767857015132904
@@ -1528,6 +3873,256 @@ length = 224
 string = "YYYYYYY"
 
 [[non-uniform-chs]]
+avg_score = 0.08312497287988663
+length = 1280
+string = "sHsMsMsWBsHsMsHBHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312497287988663
+length = 1280
+string = "sHsMsMsWHBHBBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312497287988663
+length = 1280
+string = "sHsWHBHBsMsWsWHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312497287988663
+length = 1280
+string = "sHsWHBHsWBsHBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312497287988663
+length = 1280
+string = "sHsWHsMWBBsHBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312498033046722
+length = 1280
+string = "sHBsMBHWsHBsHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08312498033046722
+length = 1280
+string = "sHBsMBsHsWHBHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08318450301885605
+length = 1344
+string = "sHsMHHHsMsWsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08328123390674591
+length = 1280
+string = "sHsWBWBsWBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08348211646080017
+length = 1344
+string = "HWBsHVsMMFBHH"
+
+[[non-uniform-chs]]
+avg_score = 0.08348212391138077
+length = 1344
+string = "sHBVMMsFsTMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08359372615814209
+length = 1280
+string = "sHsWBsMsHBBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08359373360872269
+length = 1280
+string = "sHBsHsHsMBHBsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08363093435764313
+length = 1344
+string = "sHBsMVFHBHsMsWsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08363093435764313
+length = 1344
+string = "sHBsMWHsMsVMsMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08390621840953827
+length = 1280
+string = "HWHBHsMsMHBHBH"
+
+[[non-uniform-chs]]
+avg_score = 0.08390621840953827
+length = 1280
+string = "sHsWHBHsMsHBHsWBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08390621840953827
+length = 1280
+string = "sHsWHBHsWsWsHBHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08390621840953827
+length = 1280
+string = "sHsWHsMWBsWsHBHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08390622586011887
+length = 1280
+string = "sHBsMBHWHBHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.0840773731470108
+length = 1344
+string = "HBVMMMFBHH"
+
+[[non-uniform-chs]]
+avg_score = 0.08422616869211197
+length = 1344
+string = "sHBVMsFsTMMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08422616869211197
+length = 1344
+string = "sHBWHMsVMsMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497168779373
+length = 1344
+string = "sHsWHBHVsMsMFsWBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497913837433
+length = 1280
+string = "HWHBHHBBMH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497913837433
+length = 1280
+string = "sHBsMHBBsMsWsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497913837433
+length = 1280
+string = "sHBsMsHBsMBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497913837433
+length = 1280
+string = "sHBsMsHsHBBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08437497913837433
+length = 1280
+string = "sHsWBMHBBMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08453122526407242
+length = 1280
+string = "sHsWHsHBsHMBsHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08467258512973785
+length = 1344
+string = "sHsWHBHVsMMFsHsWHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08467259258031845
+length = 1344
+string = "sHBVsMMsFBHMsWsHMWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08468747138977051
+length = 1280
+string = "sHsMsMsWHBHHBsHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08468747138977051
+length = 1280
+string = "sHsWsHBsHsMsMHBsHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.0846874788403511
+length = 1280
+string = "sHBsMBHBHsMsHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.0846874788403511
+length = 1280
+string = "sHBsMsHBsMsWBsHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08497022092342377
+length = 1344
+string = "sHBVMsVsVMMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08497022092342377
+length = 1344
+string = "sHBsHsHVMMMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08515622466802597
+length = 1280
+string = "sHsWBsHsMBMsHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08515622466802597
+length = 1280
+string = "sHsWBsHsMBsMHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08515623211860657
+length = 1280
+string = "sHBsMBsMsWsWHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08531247824430466
+length = 1280
+string = "sHBsMBsHBsMsHMWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08546872437000275
+length = 1280
+string = "sHBsMBHBHMHMsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08571425825357437
+length = 1344
+string = "sHsWHHBBsVsFHsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08586306869983673
+length = 1344
+string = "sHsWsHBsHsMVsMsMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08586307615041733
+length = 1344
+string = "sHBVsMsMFsWHBHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08586307615041733
+length = 1344
+string = "sHBsMVsMsMFsHBsHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08593747764825821
+length = 1280
+string = "sHsWBMHHBsHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08593747764825821
+length = 1280
+string = "sHsWBsHsHsMBHBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.0859374850988388
+length = 1280
+string = "sHBsHMHHBBsMsH"
+
+[[non-uniform-chs]]
 avg_score = 0.08624996989965439
 length = 1280
 string = "HWHBHsMsMsHBsHBH"
@@ -1543,6 +4138,16 @@ length = 1344
 string = "sHBsMVsMsMFsWBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08645831048488617
+length = 1344
+string = "sHBsMVMMFsHBMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08660712093114853
+length = 1344
+string = "sHBsMVsMMFHBHMsH"
+
+[[non-uniform-chs]]
 avg_score = 0.08660712093114853
 length = 1344
 string = "sHBsMVsMMFsHsWHBsH"
@@ -1553,14 +4158,39 @@ length = 1280
 string = "HWHBHsHBBsMH"
 
 [[non-uniform-chs]]
+avg_score = 0.08671873062849045
+length = 1280
+string = "sHBsMsHBHsHBsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08687497675418854
+length = 1280
+string = "sHBsHBWHBHHsMsH"
+
+[[non-uniform-chs]]
 avg_score = 0.08703122287988663
 length = 1280
 string = "sHsWHBHBsWBsHMsWsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08703123033046722
+length = 1280
+string = "sHBsMsHsMWBHBHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08705355226993561
+length = 1344
+string = "sHsMsWsHWWHHsMsH"
+
+[[non-uniform-chs]]
 avg_score = 0.08720235526561737
 length = 1344
 string = "sHsWBsHVMMMFBsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08720236271619797
+length = 1344
+string = "sHBVMMMFsHBsMsH"
 
 [[non-uniform-chs]]
 avg_score = 0.0873437374830246
@@ -1575,12 +4205,22 @@ string = "sHBsMBsWHBWsH"
 [[non-uniform-chs]]
 avg_score = 0.08749998360872269
 length = 1280
+string = "sHBHBWBsHHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08749998360872269
+length = 1280
 string = "sHBsHsHsMBBMsWsH"
 
 [[non-uniform-chs]]
 avg_score = 0.08749998360872269
 length = 1280
 string = "sHBsMsHBBMsWsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08749998360872269
+length = 1280
+string = "sHBsMsHBsWBsHMsH"
 
 [[non-uniform-chs]]
 avg_score = 0.08781246840953827
@@ -1593,9 +4233,29 @@ length = 1280
 string = "sHsWsHBsHsMsMsHBHBsH"
 
 [[non-uniform-chs]]
+avg_score = 0.08781247586011887
+length = 1280
+string = "sHBsMsHBHsWHBHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08795729279518127
+length = 1312
+string = "sHBBsHBsTsVMHHsMsH"
+
+[[non-uniform-chs]]
 avg_score = 0.08828122913837433
 length = 1280
 string = "HWWHsTsVBMWH"
+
+[[non-uniform-chs]]
+avg_score = 0.08828122913837433
+length = 1280
+string = "sHBsHsMsHsHBBMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08828122913837433
+length = 1280
+string = "sHBsMBsMsWBsHMsH"
 
 [[non-uniform-chs]]
 avg_score = 0.08828122913837433
@@ -1605,7 +4265,37 @@ string = "sHsWBsMsHsHBHBsH"
 [[non-uniform-chs]]
 avg_score = 0.08839283883571625
 length = 1344
+string = "sHsMHsVsVHHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08839283883571625
+length = 1344
 string = "sHsWHHsTsFHsWsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08843748271465302
+length = 1280
+string = "sHBBsMWsHBsHHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08856705576181412
+length = 1312
+string = "sHBsMBBBHBHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08871948719024658
+length = 1312
+string = "sHBBsHBBHBHHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08874998986721039
+length = 1280
+string = "sHBsMBMBsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08874998986721039
+length = 1280
+string = "sHBsMBsMBMsH"
 
 [[non-uniform-chs]]
 avg_score = 0.08906247466802597
@@ -1616,6 +4306,11 @@ string = "sHsWHsHBMBHBsH"
 avg_score = 0.08906248211860657
 length = 1280
 string = "sHBBMWBsHHsMsH"
+
+[[non-uniform-chs]]
+avg_score = 0.08906248211860657
+length = 1280
+string = "sHBsHsHsMsHBBMsH"
 
 [[non-uniform-chs]]
 avg_score = 0.08906248211860657
@@ -1680,14 +4375,434 @@ string = "sHsWHBHsMsMsHBHBsH"
 [[pb-split-treble]]
 avg_score = 0.050235480070114136
 length = 1274
+part_head = "2345671"
+string = "#PPP[t]P[s]PP[-]PP[t]P[t]PP[-]PP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[s]P[-]P[t]PP[-]P[t]P[s]PP[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[s]P[-]P[t]PP[s]P[-]P[s]PP[t]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[s]P[s]P[t]PP[-]P[t]P[-]PP[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[s]P[s]P[t]PP[t]P[-]P[-]PP[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[s]P[s]P[t]PP[t]P[t]P[s]PP[t]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#PPP[t]P[t]P[s]PPP[t]P[s]PPP[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[-]P[s]P[-]PP[-]PP[t]P[t]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[-]P[s]P[s]PPPPP[s]PPPP[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[-]P[t]P[s]P[-]P[-]P[t]PPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[-]P[t]P[s]P[-]P[t]P[-]PPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[-]P[t]P[t]PP[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[-]P[t]P[t]PP[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[s]P[-]P[-]PP[-]PP[t]P[t]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[s]P[-]P[s]PPPPP[s]PPPP[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[t]P[-]P[s]P[-]P[-]P[t]PPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#PP[t]P[-]P[s]P[-]P[t]P[-]PPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[t]P[-]P[t]PP[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#PP[t]P[-]P[t]PP[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[s]P[-]P[-]P[-]PP[t]P[t]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[s]P[-]P[t]P[s]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[s]P[-]P[t]P[s]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#P[-]P[-]P[s]P[t]PP[s]PP[t]PPP[-]P[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#P[-]P[-]P[s]P[t]PP[s]PP[t]PPP[t]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[s]P[t]P[-]P[s]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[s]P[t]P[-]P[s]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[-]P[-]P[t]P[-]PP[-]PPPP[s]P[-]PP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[t]P[-]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[t]P[-]P[-]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[t]P[s]P[s]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[-]P[t]P[s]P[s]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#P[-]P[s]PP[-]PP[-]PPPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "4567123"
+string = "#P[-]P[s]PP[-]P[t]PP[-]PPP[t]P[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "4567123"
+string = "#P[-]P[s]PP[-]P[t]PP[-]PPP[t]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
 part_head = "6712345"
 string = "#P[-]P[s]P[-]P[t]PP[s]PP[t]PPP[s]P[-]P[-]"
 
 [[pb-split-treble]]
 avg_score = 0.050235480070114136
 length = 1274
+part_head = "6712345"
+string = "#P[-]P[s]P[-]P[t]PP[s]PP[t]PPP[t]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
 part_head = "2345671"
 string = "#P[-]P[t]P[-]P[-]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[-]P[-]P[-]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[-]P[s]P[s]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[-]P[s]P[s]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[s]P[-]P[s]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[s]P[-]P[s]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[s]P[s]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[-]P[t]P[s]P[s]P[-]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "7123456"
+string = "#P[s]P[-]PP[-]PP[-]PPPPP[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "4567123"
+string = "#P[s]P[-]PP[-]P[t]PP[-]PPP[t]P[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "4567123"
+string = "#P[s]P[-]PP[-]P[t]PP[-]PPP[t]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[s]P[s]P[-]P[s]P[s]PP[t]P[t]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[s]P[s]P[-]P[t]P[s]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[s]P[s]P[-]P[t]P[s]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[s]P[s]P[t]P[-]P[s]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[s]P[s]P[t]P[-]P[s]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[t]P[t]P[-]P[s]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[t]P[t]P[-]P[s]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[s]P[t]P[t]P[s]PP[-]PPPP[s]P[-]PP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[t]P[t]P[s]P[-]P[t]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[s]P[t]P[t]P[s]P[-]P[t]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[-]PPPP[-]PPP[-]P[s]PPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[t]P[-]PP[t]P[t]PP[-]P[-]P[s]P[-]P[-]PP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[t]P[-]P[s]P[-]P[t]P[-]PP[t]P[t]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[t]P[-]P[t]P[s]P[-]P[s]PP[-]P[s]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "2345671"
+string = "#P[t]P[-]P[t]P[s]P[-]P[s]PP[s]P[-]PPPP[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[-]P[t]P[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[-]P[t]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[t]P[-]P[s]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[t]P[-]P[t]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[t]P[s]P[-]P[s]P[t]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "3456712"
+string = "#P[t]P[t]PP[s]PP[t]PPP[t]P[t]P[-]P[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#P[t]P[t]PP[t]PP[-]PP[-]P[s]PPP[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "6712345"
+string = "#P[t]P[t]PP[t]PP[-]PP[s]P[-]PPP[-]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "5671234"
+string = "#P[t]P[t]P[-]P[s]PP[t]P[s]PP[-]PPP[s]P[-]"
+
+[[pb-split-treble]]
+avg_score = 0.050235480070114136
+length = 1274
+part_head = "5671234"
+string = "#P[t]P[t]P[t]P[t]PPP[t]PP[-]P[s]PP[t]P[t]"
 
 [[pb-split-treble]]
 avg_score = 0.0565149150788784
