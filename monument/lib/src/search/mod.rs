@@ -11,7 +11,7 @@ use bit_vec::BitVec;
 use crate::{
     layout::{LinkIdx, StartIdx},
     music::Score,
-    utils::{coprime_bitmap, Rotation, RowCounts},
+    utils::{coprime_bitmap, Counts, Rotation},
     Comp, CompInner, Progress, Query, QueryUpdate,
 };
 
@@ -246,7 +246,7 @@ struct PrefixInner {
     /// Score refers to the **end** of the current chunk
     score: Score,
     /// Method counts refers to the **end** of the current chunk
-    method_counts: RowCounts,
+    method_counts: Counts,
 }
 
 impl CompPrefix {
@@ -258,7 +258,7 @@ impl CompPrefix {
         rotation: Rotation,
         score: Score,
         length: u32,
-        method_counts: RowCounts,
+        method_counts: Counts,
         len_since_non_duffer: u32,
     ) -> Self {
         Self {

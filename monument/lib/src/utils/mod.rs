@@ -4,9 +4,9 @@ use gcd::Gcd;
 use itertools::Itertools;
 use serde::Deserialize;
 
-mod row_counts;
+mod counts;
 
-pub use row_counts::RowCounts;
+pub use counts::Counts;
 
 /// An inclusive range where each side is optionally bounded.  This is essentially a combination of
 /// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),

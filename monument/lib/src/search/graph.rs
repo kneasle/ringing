@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     layout::{chunk_range::End, ChunkId, LinkIdx, StartIdx},
     music::Score,
-    utils::{Rotation, RowCounts},
+    utils::{Counts, Rotation},
     Query,
 };
 use bit_vec::BitVec;
@@ -21,7 +21,7 @@ pub struct Graph {
 pub struct Chunk {
     pub score: Score,
     pub length: u32,
-    pub method_counts: RowCounts,
+    pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub dist_to_rounds: u32,
     pub label: String,

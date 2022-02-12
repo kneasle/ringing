@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use crate::{
     layout::{ChunkId, EndIdx, Layout, Link, LinkIdx, StandardChunkId, StartIdx},
-    utils::{Rotation, RowCounts},
+    utils::{Counts, Rotation},
 };
 
 use super::RowRange;
@@ -33,7 +33,7 @@ pub struct ChunkRange {
     /// The [`String`] which should be printed when this chunk is expanded.  This is usually a
     /// sequence of method shorthands (e.g. "YYY") when ringing spliced.
     pub label: String,
-    pub method_counts: RowCounts,
+    pub method_counts: Counts,
 
     /// How this chunk ends.  It either ends with a set of successor links, or it's an [`End`] and
     /// has no successors.
@@ -46,7 +46,7 @@ impl ChunkRange {
             chunk_id: ChunkId::ZeroLengthEnd,
             per_part_length: PerPartLength(0),
             total_length: TotalLength(0),
-            method_counts: RowCounts::zero(num_methods),
+            method_counts: Counts::zeros(num_methods),
             label: String::new(),
             range_end: RangeEnd::End(End::ZeroLength),
         }
@@ -351,7 +351,7 @@ impl<'a> RangeFactory<'a> {
         Some(ChunkRange {
             per_part_length: PerPartLength(per_part_length),
             total_length: TotalLength(total_length),
-            method_counts: RowCounts::single_count(
+            method_counts: Counts::single_count(
                 total_length,
                 id.row_idx.block.index(),
                 self.layout.num_methods(),
