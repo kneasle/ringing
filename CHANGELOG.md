@@ -1,7 +1,10 @@
 ## (Unreleased)
 
 ### Monument
+- (#41) Display score from music in CLI output, rather than the total scores.
 - (#40) Set default of `num_comps` to 100.
+
+---
 
 ## 1st Feb 2021
 

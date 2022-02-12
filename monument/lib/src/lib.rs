@@ -145,10 +145,16 @@ impl Comp {
         if self.query.num_parts() > 2 {
             write!(s, "PH: {}, ", self.part_head()).unwrap();
         }
+        let total_music = self
+            .music_counts
+            .iter()
+            .zip_eq(&self.query.music_types)
+            .map(|(count, music_type)| f32::from(music_type.weight()) * *count as f32)
+            .sum::<f32>();
         write!(
             s,
-            "score: {:>6.2}, avg: {:.6}, str: {}",
-            self.score,
+            "music: {:>6.2?}, avg score: {:.6}, str: {}",
+            total_music,
             self.avg_score,
             self.display_string()
         )
