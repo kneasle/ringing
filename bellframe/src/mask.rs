@@ -98,6 +98,10 @@ impl Mask {
     }
 
     /// Creates a `Mask` that fixes the given [`Bell`]s into their corresponding 'home' place.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any of the [`Bell`] are outside the [`Stage`] of this [`Mask`].
     pub fn fix_bells(stage: Stage, fixed_bells: impl IntoIterator<Item = Bell>) -> Self {
         let mut new_mask = Self::empty(stage);
         for b in fixed_bells {
@@ -116,6 +120,10 @@ impl Mask {
 
     /// Modifies `self` so that a [`Bell`] is fixed in its home position, without checking if that
     /// [`Bell`] is already fixed in a different location.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Bell`] is outside the [`Stage`] of this [`Mask`].
     ///
     /// # Safety
     ///
