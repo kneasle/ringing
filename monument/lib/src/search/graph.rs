@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     layout::{chunk_range::End, ChunkId, LinkIdx, StartIdx},
     music::Score,
-    utils::{Rotation, RowCounts},
+    utils::{Counts, Rotation},
     Query,
 };
 use bit_vec::BitVec;
@@ -20,8 +20,10 @@ pub struct Graph {
 #[derive(Debug, Clone)]
 pub struct Chunk {
     pub score: Score,
+    pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
+
     pub length: u32,
-    pub method_counts: RowCounts,
+    pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub dist_to_rounds: u32,
     pub label: String,
@@ -32,7 +34,8 @@ pub struct Chunk {
     // Indices must be aligned with those from the source graph
     pub succs: Vec<Link>,
     // If this chunk is added to a composition, these bits denote the set of chunks will be marked as
-    // unreachable.  This includes `Self`
+    // unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
+    // itself.
     pub falseness: BitVec,
 
     pub end: Option<End>,
@@ -105,13 +108,17 @@ impl Graph {
 
                 Chunk {
                     score: source_chunk.score(),
+                    music_counts: source_chunk.music().counts.clone(),
+
                     length: source_chunk.length() as u32,
                     method_counts: source_chunk.method_counts().clone(),
                     dist_to_rounds: source_chunk.lb_distance_to_rounds as u32,
                     label: source_chunk.label().to_owned(),
                     end: source_chunk.end(),
+
                     duffer: source_chunk.duffer(),
                     dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer as u32,
+
                     succs,
                     falseness,
                 }
@@ -128,10 +135,6 @@ impl Graph {
         }
 
         Graph { starts, chunks }
-    }
-
-    pub fn chunk_label(&self, idx: ChunkIdx) -> String {
-        self.chunks[idx].label.clone()
     }
 }
 

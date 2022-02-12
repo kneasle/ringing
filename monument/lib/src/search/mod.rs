@@ -11,7 +11,7 @@ use bit_vec::BitVec;
 use crate::{
     layout::{LinkIdx, StartIdx},
     music::Score,
-    utils::{coprime_bitmap, Rotation, RowCounts},
+    utils::{coprime_bitmap, Counts, Rotation},
     Comp, CompInner, Progress, Query, QueryUpdate,
 };
 
@@ -88,7 +88,8 @@ pub(crate) fn search(
                 && method_counts.is_feasible(0, query.method_count_range.clone())
                 && rotation_bitmap & (1 << rotation) != 0
             {
-                let (start_idx, start_chunk_label, links) = path.flatten(&graph, &query);
+                let (start_idx, start_chunk_label, links, music_counts) =
+                    path.flatten(&graph, &query);
                 let comp = Comp {
                     query: query.clone(),
 
@@ -101,7 +102,8 @@ pub(crate) fn search(
                         rotation,
                         length: length as usize,
                         method_counts,
-                        score,
+                        music_counts,
+                        total_score: score,
                         avg_score,
                     },
                 };
@@ -246,7 +248,7 @@ struct PrefixInner {
     /// Score refers to the **end** of the current chunk
     score: Score,
     /// Method counts refers to the **end** of the current chunk
-    method_counts: RowCounts,
+    method_counts: Counts,
 }
 
 impl CompPrefix {
@@ -258,7 +260,7 @@ impl CompPrefix {
         rotation: Rotation,
         score: Score,
         length: u32,
-        method_counts: RowCounts,
+        method_counts: Counts,
         len_since_non_duffer: u32,
     ) -> Self {
         Self {
@@ -310,18 +312,25 @@ enum CompPath {
 }
 
 impl CompPath {
-    fn flatten(&self, graph: &Graph, query: &Query) -> (StartIdx, String, Vec<(LinkIdx, String)>) {
+    fn flatten(
+        &self,
+        graph: &Graph,
+        query: &Query,
+    ) -> (StartIdx, String, Vec<(LinkIdx, String)>, Counts) {
         let mut links = Vec::new();
-        let (start_idx, start_chunk_label) = self.flatten_recursive(graph, query, &mut links);
-        (start_idx, start_chunk_label, links)
+        let mut music_counts = Counts::zeros(query.music_types.len());
+        let (start_idx, start_chunk_label) =
+            self.flatten_recursive(graph, query, &mut links, &mut music_counts);
+        (start_idx, start_chunk_label, links, music_counts)
     }
 
-    /// Recursively flatten `self`, returning the start idx
+    /// Recursively flatten `self`, returning the index and label of the start chunk
     fn flatten_recursive(
         &self,
         graph: &Graph,
         query: &Query,
-        out: &mut Vec<(LinkIdx, String)>,
+        link_vec: &mut Vec<(LinkIdx, String)>,
+        music_counts: &mut Counts,
     ) -> (StartIdx, String) {
         match self {
             Self::Start(start_idx) => {
@@ -330,12 +339,15 @@ impl CompPath {
                     .iter()
                     .find(|(_, start_idx_2, _)| start_idx == start_idx_2)
                     .unwrap();
-                let label = graph.chunk_label(*start_chunk_idx);
-                (*start_idx, label)
+                let start_chunk = &graph.chunks[*start_chunk_idx];
+                *music_counts += &start_chunk.music_counts;
+                (*start_idx, start_chunk.label.clone())
             }
             Self::Cons(lhs, link, chunk_idx) => {
-                let start = lhs.flatten_recursive(graph, query, out);
-                out.push((*link, graph.chunk_label(*chunk_idx)));
+                let start = lhs.flatten_recursive(graph, query, link_vec, music_counts);
+                let chunk = &graph.chunks[*chunk_idx];
+                *music_counts += &chunk.music_counts;
+                link_vec.push((*link, chunk.label.clone()));
                 start
             }
         }
