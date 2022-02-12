@@ -101,6 +101,7 @@ pub struct CompInner {
 
     pub rotation: Rotation,
     pub length: usize,
+    /// The number of rows generated of each method
     pub method_counts: Counts,
     /// The number of counts generated of each [`MusicType`](music::MusicType)
     pub music_counts: Counts,

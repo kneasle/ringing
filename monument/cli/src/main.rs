@@ -13,14 +13,14 @@ const DEFAULT_QUEUE_LIMIT: usize = 10_000_000;
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let maybe_result = monument_cli::run(
+    let maybe_results = monument_cli::run(
         &args.input_file,
         args.debug,
         args.queue_limit.unwrap_or(DEFAULT_QUEUE_LIMIT),
     )
     .unwrap();
-    if let Some(result) = maybe_result {
-        result.print();
+    if let Some(results) = maybe_results {
+        results.print();
     }
 }
 

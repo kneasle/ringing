@@ -146,14 +146,14 @@ fn search_chunk_combinations<'gr>(
 
 /// Recursively attempt to add any subset of [`ChunkId`]s taken from `chunks`, adding any working
 /// patterns to `chunk_patterns`.
-fn search_chunks<'a, 'gr: 'a>(
-    mut chunks: impl Iterator<Item = &'a (&'gr StandardChunkId, &'gr Chunk)> + Clone,
+fn search_chunks<'iter, 'graph: 'iter>(
+    mut chunks: impl Iterator<Item = &'iter (&'graph StandardChunkId, &'graph Chunk)> + Clone,
 
     counts_needed: &Breakdown,
-    non_required_chunks: &[(&'gr StandardChunkId, &'gr Chunk)],
+    non_required_chunks: &[(&'graph StandardChunkId, &'graph Chunk)],
 
-    chunks_used: &mut HashSet<&'gr StandardChunkId>,
-    chunk_patterns: &mut Vec<HashSet<&'gr StandardChunkId>>,
+    chunks_used: &mut HashSet<&'graph StandardChunkId>,
+    chunk_patterns: &mut Vec<HashSet<&'graph StandardChunkId>>,
     // Counter which is **decremented** every time this function is called, and the search is
     // terminated when this reaches 0.
     iters_left: &mut usize,

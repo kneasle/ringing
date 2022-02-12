@@ -34,7 +34,8 @@ pub struct Chunk {
     // Indices must be aligned with those from the source graph
     pub succs: Vec<Link>,
     // If this chunk is added to a composition, these bits denote the set of chunks will be marked as
-    // unreachable.  This includes `Self`
+    // unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
+    // itself.
     pub falseness: BitVec,
 
     pub end: Option<End>,
