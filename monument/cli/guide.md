@@ -178,6 +178,7 @@ take you to more in-depth docs about it.
 - [`course_heads`](#course_heads) (default set by `split_tenors`)
 - [`split_tenors = false`](#split_tenors)
 - [`ch_weights = []`](#ch_weights)
+- [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
 - [`leadwise`](#leadwise) (default set by Monument)
 
 **Starts/Ends:**
@@ -382,6 +383,24 @@ patterns = [
 ] # can also use e.g. `pattern = "*78"`
 weight = 0.05 # this is small because the weight is applied per row
 ```
+
+#### `handbell_coursing_weight`
+
+Generates `ch_weights` which apply the given weight to every row where a handbell pair coursing
+(this score gets multiplied for courses with multiple handbell pairs coursing).  Equivalent to
+something like this (truncated according to stage):
+```toml`
+[[ch_weights]]
+patterns = [
+    "*12", "*21",
+    "*34", "*43",
+    "*56", "*65",
+    "*78", "*87",
+    "*90", "*09",
+        ...
+]
+```
+Defaults to 0.
 
 #### `leadwise`
 

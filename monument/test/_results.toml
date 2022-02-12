@@ -1824,6 +1824,506 @@ avg_score = 0.2309523969888687
 length = 336
 string = "HHH"
 
+[[handbell-2]]
+avg_score = 0.19142864644527435
+length = 560
+string = "HHsFsVIIsHsBH"
+
+[[handbell-2]]
+avg_score = 0.19166672229766846
+length = 576
+string = "HBWMHBBVFH"
+
+[[handbell-2]]
+avg_score = 0.19166673719882965
+length = 576
+string = "HHWMBBBVFH"
+
+[[handbell-2]]
+avg_score = 0.1919643133878708
+length = 448
+string = "HBMBsVsFH"
+
+[[handbell-2]]
+avg_score = 0.19196434319019318
+length = 448
+string = "HHBBsVsFH"
+
+[[handbell-2]]
+avg_score = 0.19196434319019318
+length = 448
+string = "HHsBsTVFH"
+
+[[handbell-2]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBVFVFsVsFH"
+
+[[handbell-2]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBVFsVsFVFH"
+
+[[handbell-2]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HHBsVsFVFVFH"
+
+[[handbell-2]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HsHBVFVsFVFH"
+
+[[handbell-2]]
+avg_score = 0.1925676316022873
+length = 592
+string = "HsHBVFsVFVFH"
+
+[[handbell-2]]
+avg_score = 0.19264711439609528
+length = 544
+string = "HBsWWsWsVsFH"
+
+[[handbell-2]]
+avg_score = 0.19285719096660614
+length = 560
+string = "HBMVFBBBVFH"
+
+[[handbell-2]]
+avg_score = 0.19285720586776733
+length = 560
+string = "HBVFWBBBVFH"
+
+[[handbell-2]]
+avg_score = 0.19324329495429993
+length = 592
+string = "HHBBWMWMH"
+
+[[handbell-2]]
+avg_score = 0.19357143342494965
+length = 560
+string = "HHsBsFIIH"
+
+[[handbell-2]]
+avg_score = 0.19571428000926971
+length = 560
+string = "HsHsFsTHsH"
+
+[[handbell-2]]
+avg_score = 0.1957142949104309
+length = 560
+string = "HsHsBsBHsH"
+
+[[handbell-2]]
+avg_score = 0.19632355868816376
+length = 544
+string = "HBWWsFsBH"
+
+[[handbell-2]]
+avg_score = 0.19642862677574158
+length = 560
+string = "HBMBsWWVsFH"
+
+[[handbell-2]]
+avg_score = 0.19642862677574158
+length = 560
+string = "HBMBsWWsVFH"
+
+[[handbell-2]]
+avg_score = 0.19642864167690277
+length = 560
+string = "HHBBsWWVsFH"
+
+[[handbell-2]]
+avg_score = 0.19642864167690277
+length = 560
+string = "HHBBsWWsVFH"
+
+[[handbell-2]]
+avg_score = 0.19642864167690277
+length = 560
+string = "HHsFIIsTVFH"
+
+[[handbell-2]]
+avg_score = 0.19642864167690277
+length = 560
+string = "HHsFIsTBVFH"
+
+[[handbell-2]]
+avg_score = 0.19714288413524628
+length = 560
+string = "HHBFIH"
+
+[[handbell-2]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBWsVsFWBH"
+
+[[handbell-2]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBsWVsFWBH"
+
+[[handbell-2]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMBsWsVFWBH"
+
+[[handbell-2]]
+avg_score = 0.19791673123836517
+length = 576
+string = "HBMsBVFMVsTH"
+
+[[handbell-2]]
+avg_score = 0.19791674613952637
+length = 576
+string = "HHsFHIIIHsBH"
+
+[[handbell-2]]
+avg_score = 0.19791674613952637
+length = 576
+string = "HsHBBWVFsWBH"
+
+[[handbell-2]]
+avg_score = 0.19797304272651672
+length = 592
+string = "HBVFsFFMHsBH"
+
+[[handbell-2]]
+avg_score = 0.19864869117736816
+length = 592
+string = "HBWWMHWBH"
+
+[[handbell-2]]
+avg_score = 0.19928573071956635
+length = 560
+string = "HBsFIHsBH"
+
+[[handbell-2]]
+avg_score = 0.19928573071956635
+length = 560
+string = "HHsFsBBBH"
+
+[[handbell-2]]
+avg_score = 0.19928574562072754
+length = 560
+string = "HBMsFIsBH"
+
+[[handbell-2]]
+avg_score = 0.19928576052188873
+length = 560
+string = "HBMVFsBIsBH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HBMBsWsWVFH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HBVFWsBIsBH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HBVFsBIHsBH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HHsBWVWVsBH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HHsFFMIIsTH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HHsFFMIsTBH"
+
+[[handbell-2]]
+avg_score = 0.19928577542304993
+length = 560
+string = "HHsFFMsTBBH"
+
+[[handbell-2]]
+avg_score = 0.19928579032421112
+length = 560
+string = "HHBBsWsWVFH"
+
+[[handbell-2]]
+avg_score = 0.19928579032421112
+length = 560
+string = "HHsFsTBBVFH"
+
+[[handbell-2]]
+avg_score = 0.20000001788139343
+length = 112
+string = ""
+
+[[handbell-2]]
+avg_score = 0.2006945013999939
+length = 576
+string = "HBWMHsBsBH"
+
+[[handbell-2]]
+avg_score = 0.2006945163011551
+length = 576
+string = "HHWMBsBsBH"
+
+[[handbell-2]]
+avg_score = 0.20073534548282623
+length = 544
+string = "HBsWWWVsFH"
+
+[[handbell-2]]
+avg_score = 0.20073534548282623
+length = 544
+string = "HBsWWWsVFH"
+
+[[handbell-2]]
+avg_score = 0.20089282095432281
+length = 448
+string = "HsHHsH"
+
+[[handbell-2]]
+avg_score = 0.2016129493713379
+length = 496
+string = "HBMBMHWBH"
+
+[[handbell-2]]
+avg_score = 0.2021428793668747
+length = 560
+string = "HBsFsBWBH"
+
+[[handbell-2]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBMVFBsBsBH"
+
+[[handbell-2]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBMsMVFsWBH"
+
+[[handbell-2]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBsWWVsFWBH"
+
+[[handbell-2]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBsWWsVFWBH"
+
+[[handbell-2]]
+avg_score = 0.20214292407035828
+length = 560
+string = "HBsWsWVFWBH"
+
+[[handbell-2]]
+avg_score = 0.20214293897151947
+length = 560
+string = "HBVFWBsBsBH"
+
+[[handbell-2]]
+avg_score = 0.20214293897151947
+length = 560
+string = "HsHBsMVFWBH"
+
+[[handbell-2]]
+avg_score = 0.20270276069641113
+length = 592
+string = "HHBVFVFVFH"
+
+[[handbell-2]]
+avg_score = 0.20367653667926788
+length = 544
+string = "HBsWWsWVFH"
+
+[[handbell-2]]
+avg_score = 0.2041667401790619
+length = 576
+string = "HsHsFHIsTsHH"
+
+[[handbell-2]]
+avg_score = 0.2041667401790619
+length = 576
+string = "HsHsFHIsVsTH"
+
+[[handbell-2]]
+avg_score = 0.2041667401790619
+length = 576
+string = "HsHsFHsTBsHH"
+
+[[handbell-2]]
+avg_score = 0.2041667401790619
+length = 576
+string = "HsHsFHsTsWBH"
+
+[[handbell-2]]
+avg_score = 0.20416675508022308
+length = 576
+string = "HsHBsBVsBsHH"
+
+[[handbell-2]]
+avg_score = 0.20416675508022308
+length = 576
+string = "HsHBsBVsHsBH"
+
+[[handbell-2]]
+avg_score = 0.20416675508022308
+length = 576
+string = "HsHsBIVsBsHH"
+
+[[handbell-2]]
+avg_score = 0.20416675508022308
+length = 576
+string = "HsHsBIVsHsBH"
+
+[[handbell-2]]
+avg_score = 0.20535717904567719
+length = 448
+string = "HBMBVFH"
+
+[[handbell-2]]
+avg_score = 0.20535719394683838
+length = 448
+string = "HHBBVFH"
+
+[[handbell-2]]
+avg_score = 0.20625005662441254
+length = 576
+string = "HsHBHWMsWH"
+
+[[handbell-2]]
+avg_score = 0.2068965882062912
+length = 464
+string = "HBWMHH"
+
+[[handbell-2]]
+avg_score = 0.2068966031074524
+length = 464
+string = "HHWMBH"
+
+[[handbell-2]]
+avg_score = 0.20714285969734192
+length = 560
+string = "HBVMFBH"
+
+[[handbell-2]]
+avg_score = 0.20833340287208557
+length = 576
+string = "HBMBWVFWBH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HHsBsHsHsBH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HHsBsTsFsBH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HHsFsHsHsTH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HHsFsTsBsBH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HHsFsVsVsTH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HsHsBsHHsBH"
+
+[[handbell-2]]
+avg_score = 0.20857150852680206
+length = 560
+string = "HsHsFsVVsTH"
+
+[[handbell-2]]
+avg_score = 0.20892859995365143
+length = 448
+string = "HBMVFBH"
+
+[[handbell-2]]
+avg_score = 0.20892861485481262
+length = 448
+string = "HBVFWBH"
+
+[[handbell-2]]
+avg_score = 0.2145834118127823
+length = 576
+string = "HBMsBVHsBH"
+
+[[handbell-2]]
+avg_score = 0.2145834118127823
+length = 576
+string = "HBMsBVsBHH"
+
+[[handbell-2]]
+avg_score = 0.21458342671394348
+length = 576
+string = "HHBsBVHsBH"
+
+[[handbell-2]]
+avg_score = 0.21458342671394348
+length = 576
+string = "HHsBIVHsBH"
+
+[[handbell-2]]
+avg_score = 0.21458342671394348
+length = 576
+string = "HHsFHIVsTH"
+
+[[handbell-2]]
+avg_score = 0.21458342671394348
+length = 576
+string = "HHsFHsTWBH"
+
+[[handbell-2]]
+avg_score = 0.21642865240573883
+length = 560
+string = "HHsFIIsBH"
+
+[[handbell-2]]
+avg_score = 0.21696434915065765
+length = 448
+string = "HHsBsBH"
+
+[[handbell-2]]
+avg_score = 0.21696434915065765
+length = 448
+string = "HHsFsTH"
+
+[[handbell-2]]
+avg_score = 0.219285786151886
+length = 560
+string = "HBMBsFsBH"
+
+[[handbell-2]]
+avg_score = 0.21928580105304718
+length = 560
+string = "HHBBsFsBH"
+
+[[handbell-2]]
+avg_score = 0.2309523969888687
+length = 336
+string = "HHH"
+
 [[hl-calls]]
 avg_score = -0.07578124850988388
 length = 256

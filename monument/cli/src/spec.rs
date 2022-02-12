@@ -5,8 +5,10 @@ use std::{
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, method_lib::QueryError, music::Regex, Bell, Mask, MethodLib, Row,
-    RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END,
+    method_lib::QueryError,
+    music::{Regex, RegexElem},
+    Bell, Mask, MethodLib, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 use monument::{
@@ -97,9 +99,12 @@ pub struct Spec {
     split_tenors: bool,
     /// Which course heads masks are allowed (overrides `split_tenors`)
     course_heads: Option<Vec<String>>,
-    /// Weights applied to given CH patterns
+    /// Score applied to every row with a given CH patterns
     #[serde(default)]
     ch_weights: Vec<ChWeightPattern>,
+    /// Weight given to every row in a course, for every handbell pair that's coursing
+    #[serde(default)]
+    handbell_coursing_weight: f32,
     /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
     /// cases like cyclic comps where no course heads are preserved across parts.
     ///
@@ -318,8 +323,15 @@ impl Spec {
             .flat_map(|m| m.lead_head().closure())
             .unique()
             .collect_vec();
-
         let mut weights = Vec::new();
+        // Closure to a weight pattern for every CH which contains a lead which matches `mask`
+        let mut add_ch_pattern = |mask: &Mask, weight: f32| {
+            for lh in &lead_heads {
+                weights.push((mask * lh, weight));
+            }
+        };
+
+        // Add explicit patterns from the `ch_weights` parameter
         for pattern in &self.ch_weights {
             // Extract a (slice of patterns, weight)
             use ChWeightPattern::*;
@@ -327,12 +339,28 @@ impl Spec {
                 Pattern { pattern, weight } => (std::slice::from_ref(pattern), weight),
                 Patterns { patterns, weight } => (patterns.as_slice(), weight),
             };
+            // Add the patterns
             for mask_str in ch_masks {
                 let mask = Mask::parse_with_stage(mask_str, stage)
                     .map_err(|e| Error::ChPatternParse(mask_str.to_owned(), e))?;
-                // Add a weight pattern for every CH which contains a lead which matches `mask`
-                for lh in &lead_heads {
-                    weights.push((&mask * lh, *weight));
+                add_ch_pattern(&mask, *weight);
+            }
+        }
+        // Add patterns from `handbell_coursing_weight`
+        if self.handbell_coursing_weight != 0.0 {
+            for i in (0..stage.num_bells()).step_by(2) {
+                let right_bell = Bell::from_index(i);
+                let left_bell = Bell::from_index(i + 1);
+                // For every handbell pair, we need patterns for `*<left><right>` and `*<right><left>`
+                for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
+                    let regex = Regex::from_elems([
+                        RegexElem::Glob,
+                        RegexElem::Bell(b1),
+                        RegexElem::Bell(b2),
+                    ]);
+                    let mask = Mask::from_regex(&regex, stage)
+                        .expect("Handbell patterns should always be valid");
+                    add_ch_pattern(&mask, self.handbell_coursing_weight);
                 }
             }
         }
