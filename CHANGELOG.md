@@ -1,6 +1,6 @@
-## (Unreleased)
+## 12th Feb 2021
 
-### Monument
+### Monument v0.4.0
 - (#42) Add `handbell_coursing_weight` to easily add `ch_weights` for handbells in their coursing
     positions.
 - (#41) Display score from music in CLI output, rather than the total scores.
