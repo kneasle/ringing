@@ -20,6 +20,8 @@ pub struct Graph {
 #[derive(Debug, Clone)]
 pub struct Chunk {
     pub score: Score,
+    pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
+
     pub length: u32,
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
@@ -105,13 +107,17 @@ impl Graph {
 
                 Chunk {
                     score: source_chunk.score(),
+                    music_counts: source_chunk.music().counts.clone(),
+
                     length: source_chunk.length() as u32,
                     method_counts: source_chunk.method_counts().clone(),
                     dist_to_rounds: source_chunk.lb_distance_to_rounds as u32,
                     label: source_chunk.label().to_owned(),
                     end: source_chunk.end(),
+
                     duffer: source_chunk.duffer(),
                     dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer as u32,
+
                     succs,
                     falseness,
                 }
@@ -128,10 +134,6 @@ impl Graph {
         }
 
         Graph { starts, chunks }
-    }
-
-    pub fn chunk_label(&self, idx: ChunkIdx) -> String {
-        self.chunks[idx].label.clone()
     }
 }
 
