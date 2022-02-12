@@ -5,6 +5,7 @@ edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
 description = "CLI interface to Monument, a fast and flexible composing engine."
+readme = "../README.md"
 license = "MIT"
 repository = "https://github.com/kneasle/ringing-monorepo"
 
