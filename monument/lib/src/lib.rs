@@ -1,3 +1,5 @@
+//! Core library for Monument, a fast and flexible composing engine.
+
 #![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
