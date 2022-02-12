@@ -47,7 +47,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     }
     let mut counts_needed_from_non_required_chunks = Breakdown {
         score: OrderedFloat(0.0),
-        counts: required_music_counts,
+        counts: required_music_counts.into(),
     };
     for (_id, chunk) in required_chunks {
         // Non-required chunks aren't required to get music which the required chunks can already

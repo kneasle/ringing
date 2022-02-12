@@ -693,7 +693,7 @@ fn build_chunk(
     // TODO: Determine how close to the ends of this chunk the music is generated?
     let non_duffer = music_types
         .iter()
-        .zip_eq(&music.counts)
+        .zip_eq(music.counts.as_slice())
         .any(|(music_type, count)| music_type.non_duffer() && *count > 0);
 
     Chunk {

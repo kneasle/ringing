@@ -134,7 +134,7 @@ impl Comp {
         let mut s = format!("len: {}, ", self.length,);
         // Method counts for spliced
         if self.query.layout.is_spliced() {
-            write!(s, "ms: {:>3?}, ", self.method_counts.counts()).unwrap();
+            write!(s, "ms: {:>3?}, ", self.method_counts.as_slice()).unwrap();
         }
         // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
         // head)

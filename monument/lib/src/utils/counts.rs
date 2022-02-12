@@ -21,8 +21,28 @@ impl Counts {
     }
 
     /// Returns the underlying count of slices
-    pub fn counts(&self) -> &[usize] {
+    pub fn as_slice(&self) -> &[usize] {
         &self.0
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<usize> {
+        self.0.iter()
+    }
+
+    pub fn saturating_sub(&self, other: &Self) -> Self {
+        Self(
+            self.0
+                .iter()
+                .zip_eq(&other.0)
+                .map(|(a, b)| a.saturating_sub(*b))
+                .collect_vec(),
+        )
+    }
+
+    pub fn saturating_sub_assign(&mut self, other: &Self) {
+        for (v, dec) in self.0.iter_mut().zip_eq(other.0.iter()) {
+            *v -= *dec;
+        }
     }
 
     /// Determine the feasibility of getting every count within `target_range`, whilst distributing
@@ -83,5 +103,11 @@ impl Index<usize> for Counts {
 impl IndexMut<usize> for Counts {
     fn index_mut(&mut self, idx: usize) -> &mut usize {
         &mut self.0[idx]
+    }
+}
+
+impl From<Vec<usize>> for Counts {
+    fn from(vs: Vec<usize>) -> Self {
+        Counts(vs)
     }
 }
