@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#42) Add `handbell_coursing_weight` to easily add `ch_weights` for handbells in their coursing
+    positions.
 - (#41) Display score from music in CLI output, rather than the total scores.
 - (#40) Set default of `num_comps` to 100.
 
