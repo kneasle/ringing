@@ -40,7 +40,7 @@ pub struct Spec {
     /// The range of lengths of composition which are allowed
     length: Length,
     /// Monument won't stop until it generates the `num_comps` best compositions
-    #[serde(default = "get_30")]
+    #[serde(default = "default_num_comps")]
     num_comps: usize,
     /// Allow Monument to ignore falseness and generate false compositions.  Compositions still
     /// won't have internal rounds.
@@ -650,8 +650,8 @@ fn get_one() -> f32 {
     1.0
 }
 
-fn get_30() -> usize {
-    30
+fn default_num_comps() -> usize {
+    100
 }
 
 fn get_true() -> bool {

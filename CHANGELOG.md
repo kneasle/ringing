@@ -1,3 +1,8 @@
+## (Unreleased)
+
+### Monument
+- (#40) Set default of `num_comps` to 100.
+
 ## 1st Feb 2021
 
 ### Monument v0.3.0

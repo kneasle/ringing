@@ -153,7 +153,7 @@ take you to more in-depth docs about it.
 
 **General:**
 - [`length`](#length-required)
-- [`num_comps = 30`](#num_comps)
+- [`num_comps = 100`](#num_comps)
 - [`allow_false = false`](#allow_false)
 
 **Methods:**
@@ -209,7 +209,7 @@ length = "peal"      # equivalent to `{ min = 5000, max = 5200 }`
 
 #### `num_comps`
 
-The number of compositions you want.  Defaults to `30`
+The number of compositions you want.  Defaults to `100`
 
 #### `allow_false`
 
