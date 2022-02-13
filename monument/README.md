@@ -1,6 +1,6 @@
 # Monument
 
-A fast, flexible and human-friendly composing engine.  Monument is currently in an alpha state of
+A fast, flexible and human-friendly composing engine.  Monument is currently in an **alpha** state of
 readiness (see the [known issues](#known-issues)).
 
 _A guide to Monument can be found [here](cli/guide.md)._
@@ -16,14 +16,16 @@ possible_ composition.  Monument guarantees neither of these but in return, Monu
 magnitude faster_ than any other engine I'm aware of (if anyone knows of any faster
 generally-available engine, then please let me know!).
 
-### Who is Monument not for?
+### Who _isn't_ Monument for?
 
-If you do want to run exhaustive searches or want guaranteed optimal results, then Monument is not
+If you do want to run exhaustive searches or want guaranteed optimal results, then Monument isn't
 for you - [SMC](https://github.com/GACJ/smc) is extremely good at exhaustive searching to get
 optimal results.  If you want to exhaustively search spliced, I think you need to write your own
 engine.  I wish you the best of luck getting results before the eventual heat death of the universe.
 
-If you want an engine that doesn't change often, Monument is not for you (yet).
+If you want a GUI, Monument isn't for you (yet).
+
+If you want an engine that doesn't change often, Monument isn't for you (yet).
 
 ## Features
 
@@ -57,6 +59,9 @@ If you want an engine that doesn't change often, Monument is not for you (yet).
 
 ## Known issues
 
+- Triples methods like Grandsire and Stedman will produce very strange compositions.  Supporting
+  these is totally intended, but there are some questions that need answering before either of
+  them can fit nicely with Monument's model of ringing.
 - Huge memory usage.  This happens due to the way Monument's current search algorithm works.  In
   short, Monument continually keeps track of a big queue of composition prefixes, and repeatedly
   replaces the best prefix with prefixes that are slightly longer.  Storing a large enough queue
