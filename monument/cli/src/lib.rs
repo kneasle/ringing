@@ -40,7 +40,7 @@ pub fn init_logging(filter: LevelFilter) {
 
 pub fn run(
     input_file: &Path,
-    debug_print: Option<DebugOption>,
+    debug_option: Option<DebugOption>,
     queue_limit: usize,
 ) -> Result<Option<QueryResult>, Error> {
     let start_time = Instant::now();
@@ -49,7 +49,7 @@ pub fn run(
     /// corresponding value and exit.
     macro_rules! debug_print {
         ($variant: ident, $val: expr) => {
-            if debug_print == Some(DebugOption::$variant) {
+            if debug_option == Some(DebugOption::$variant) {
                 dbg!($val);
                 return Ok(None);
             }
@@ -78,7 +78,7 @@ pub fn run(
     let graph = query.unoptimised_graph();
     debug_print!(Graph, graph);
     let optimised_graphs = query.optimise_graph(graph, &mut config);
-    if debug_print == Some(DebugOption::StopBeforeSearch) {
+    if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
 

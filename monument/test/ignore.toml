@@ -1,0 +1,16 @@
+# Tells Monument's test runner which files to ignore.  In this case, we don't want to interpret
+# music specification files as integration tests because they'll obviously fail to parse.
+
+ignore = ["test/cases/no-duffers.toml"]
+music_files = [
+    "examples/music-6.toml",
+    "examples/music-8.toml",
+    "examples/music-10.toml",
+    "examples/music-12.toml",
+    "examples/guide-music-8.toml",
+
+    "test/cases/music-6.toml",
+    "test/cases/music-8.toml",
+    "test/cases/music-10.toml",
+    "test/cases/music-12.toml",
+]
