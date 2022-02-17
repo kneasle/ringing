@@ -1,6 +1,6 @@
 //! Utility code for building [`Layout`]s in common scenarios.
 
-use bellframe::{method::RowAnnot, AnnotBlock, Bell, Mask, PlaceNot, Row, Stage};
+use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
@@ -136,7 +136,7 @@ pub struct Method {
     shorthand: String,
 
     /// The plain course of this [`Method`], with sub-lead indices and labels
-    plain_course: AnnotBlock<Annot>,
+    plain_course: Block<Annot>,
 }
 
 impl Method {
@@ -159,7 +159,7 @@ impl Method {
         }
     }
 
-    fn block(&self, is_spliced: bool) -> AnnotBlock<Option<String>> {
+    fn block(&self, is_spliced: bool) -> Block<Option<String>> {
         self.plain_course.clone().map_annots_with_index(|idx, _| {
             let sub_lead_idx = idx % self.method.lead_len();
             (sub_lead_idx == 0 && is_spliced).then(|| self.shorthand.clone())

@@ -1,5 +1,8 @@
 ## (Unreleased)
 
+### BellFrame
+- (#47) Rename `AnnotBlock` to `Block` (removing the type-def `Block = AnnotBlock<()>`).
+
 ### Internal Improvements
 - (#44) Rewrite the test harness, which now doesn't depend on Python and also allows error messages
     to be tested.

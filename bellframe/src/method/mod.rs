@@ -1,10 +1,6 @@
 use itertools::Itertools;
 
-use crate::{place_not::PnBlockParseError, AnnotBlock, PnBlock, Row, RowBuf, Stage};
-
-// Imports used solely for doc comments
-#[allow(unused_imports)]
-use crate::Block;
+use crate::{place_not::PnBlockParseError, Block, PnBlock, Row, RowBuf, Stage};
 
 use self::class::FullClass;
 
@@ -23,7 +19,7 @@ pub struct Method {
     title: String,
     name: String,
     class: FullClass,
-    first_lead: AnnotBlock<Option<String>>,
+    first_lead: Block<Option<String>>,
 }
 
 impl Method {
@@ -36,7 +32,7 @@ impl Method {
         title: String,
         name: String,
         class: FullClass,
-        first_lead: AnnotBlock<Option<String>>,
+        first_lead: Block<Option<String>>,
     ) -> Self {
         Self {
             title,
@@ -47,7 +43,7 @@ impl Method {
     }
 
     /// Create and classify a new `Method`, given its name and first lead
-    pub fn with_name(name: String, first_lead: AnnotBlock<Option<String>>) -> Self {
+    pub fn with_name(name: String, first_lead: Block<Option<String>>) -> Self {
         let class = FullClass::classify(&first_lead);
         Self {
             title: generate_title(&name, class, first_lead.stage()),
@@ -72,7 +68,7 @@ impl Method {
 
     /// Creates a new `Method` from some place notation, adding a lead end annotation.
     pub fn with_lead_end(name: String, block: &PnBlock) -> Self {
-        let mut first_lead: AnnotBlock<Option<String>> = block.to_block_from_rounds();
+        let mut first_lead: Block<Option<String>> = block.to_block_from_rounds();
         *first_lead.get_annot_mut(first_lead.len() - 1).unwrap() = Some(LABEL_LEAD_END.to_owned());
         Self::with_name(name, first_lead)
     }
@@ -81,17 +77,17 @@ impl Method {
     // GETTERS //
     /////////////
 
-    /// Returns an `AnnotBlock` of the first lead of this `Method`
+    /// Returns an `Block` of the first lead of this `Method`
     #[deprecated(note = "Use `Method::first_lead` instead`")]
     #[inline]
-    pub fn lead(&self) -> &AnnotBlock<Option<String>> {
+    pub fn lead(&self) -> &Block<Option<String>> {
         &self.first_lead
     }
 
-    /// Returns an [`AnnotBlock`] of the first lead of this [`Method`], along with the lead
+    /// Returns an [`Block`] of the first lead of this [`Method`], along with the lead
     /// location labels.
     #[inline]
-    pub fn first_lead(&self) -> &AnnotBlock<Option<String>> {
+    pub fn first_lead(&self) -> &Block<Option<String>> {
         &self.first_lead
     }
 
@@ -151,8 +147,8 @@ impl Method {
         lead_head.as_row() * row_within_lead
     }
 
-    /// Returns an [`AnnotBlock`] representing the plain course of this method
-    pub fn plain_course(&self) -> AnnotBlock<RowAnnot> {
+    /// Returns an [`Block`] representing the plain course of this method
+    pub fn plain_course(&self) -> Block<RowAnnot> {
         // Create a copy of `self.first_lead` where each row is also annotated by its index within
         // this lead
         let first_lead_with_indices = self
