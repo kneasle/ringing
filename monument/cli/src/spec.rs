@@ -348,9 +348,8 @@ impl Spec {
         }
         // Add patterns from `handbell_coursing_weight`
         if self.handbell_coursing_weight != 0.0 {
-            for i in (0..stage.num_bells()).step_by(2) {
-                let right_bell = Bell::from_index(i);
-                let left_bell = Bell::from_index(i + 1);
+            for right_bell in stage.bells().step_by(2) {
+                let left_bell = right_bell + 1;
                 // For every handbell pair, we need patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
                     let regex = Regex::from_elems([
@@ -536,7 +535,7 @@ pub struct MusicFile {
 pub enum MusicSpec {
     RunLength {
         #[serde(rename = "run_length")]
-        length: usize,
+        length: u8,
         #[serde(default)]
         internal: bool,
         #[serde(flatten)]
@@ -544,7 +543,7 @@ pub enum MusicSpec {
     },
     RunLengths {
         #[serde(rename = "run_lengths")]
-        lengths: Vec<usize>,
+        lengths: Vec<u8>,
         #[serde(default)]
         internal: bool,
         #[serde(flatten)]
@@ -588,7 +587,7 @@ impl MusicSpec {
     pub fn to_music_types(&self, stage: Stage, default_non_duffer: bool) -> Vec<MusicType> {
         enum LoweredType<'_self> {
             /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
-            Runs(&'_self [usize], &'_self bool),
+            Runs(&'_self [u8], &'_self bool),
             /// Equivalent to [`Self::Pattern`] or [`Self::Pattern`]
             Patterns(&'_self [String], &'_self OptRange),
         }

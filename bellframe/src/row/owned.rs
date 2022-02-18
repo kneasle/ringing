@@ -102,7 +102,7 @@ impl RowBuf {
     /// ```
     pub fn rounds(stage: Stage) -> Self {
         // This unsafety is OK, because rounds is always a valid `Row`
-        unsafe { Self::from_bell_iter_unchecked((0..stage.num_bells()).map(Bell::from_index)) }
+        unsafe { Self::from_bell_iter_unchecked(stage.bells()) }
     }
 
     /// Creates backrounds on a given [`Stage`].
@@ -116,9 +116,7 @@ impl RowBuf {
     /// ```
     pub fn backrounds(stage: Stage) -> Self {
         // This unsafety is OK, because backrounds is always a valid `Row`
-        unsafe {
-            Self::from_bell_iter_unchecked((0..stage.num_bells()).rev().map(Bell::from_index))
-        }
+        unsafe { Self::from_bell_iter_unchecked(stage.bells().rev()) }
     }
 
     /// Creates Queens on a given [`Stage`].
@@ -131,15 +129,10 @@ impl RowBuf {
     /// assert_eq!(RowBuf::queens(Stage::CATERS).to_string(), "135792468");
     /// ```
     pub fn queens(stage: Stage) -> Self {
+        let odds = stage.bells().step_by(2);
+        let evens = stage.bells().skip(1).step_by(2);
         // This unsafety is OK, because Queens is always a valid `Row`
-        unsafe {
-            Self::from_bell_iter_unchecked(
-                (0..stage.num_bells())
-                    .step_by(2)
-                    .chain((1..stage.num_bells()).step_by(2))
-                    .map(Bell::from_index),
-            )
-        }
+        unsafe { Self::from_bell_iter_unchecked(odds.chain(evens)) }
     }
 
     /* UTILITY CONSTRUCTORS */
@@ -174,9 +167,9 @@ impl RowBuf {
     /// # Ok::<(), InvalidRowError>(())
     /// ```
     pub fn from_vec(bells: Vec<Bell>) -> Result<RowBuf, InvalidRowError> {
-        let stage = Stage::try_from(bells.len())?;
+        let stage = Stage::try_from(bells.len() as u8)?;
         // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
-        // each bell as we go.
+        // each bell as we go.  PERF: use a bitmap here
         let mut checklist = vec![false; bells.len()];
         // Loop over all the bells to check them off in the checklist.  We do not need to check for
         // empty spaces in the checklist once we've done because (by the Pigeon Hole Principle),
@@ -344,18 +337,22 @@ impl RowBuf {
             .enumerate()
             .find(|&(_i, x)| !*x)
         {
-            return Err(InvalidRowError::MissingBell(Bell::from_index(index)));
+            return Err(InvalidRowError::MissingBell(Bell::from_index(index as u8)));
         }
 
         // If no errors were generated so far, then `bells` must represent a [`Row`] (or be empty)
-        // so we should extend it with 'cover' bells up to the stage
+        // so we should extend it with 'cover' bells up to the stage.  We can't just create a `Row`
+        // immediately then call `Row::extend_to_stage` because parsing `""` would temporarily
+        // create a 0-length `Row`
         assert!(bells.len() <= stage.num_bells());
-        let cover_bells = (bells.len()..stage.num_bells()).map(Bell::from_index);
+        let cover_bells = stage.bells().skip(bells.len());
         bells.extend(cover_bells);
 
         // This unsafety is OK because we have verified that `bells` corresponds to a `Row`, while
         // the no-zero-stage invariant makes sure that `bells` is non-empty
-        Ok(unsafe { Self::from_vec_unchecked(bells) })
+        let mut row = unsafe { Self::from_vec_unchecked(bells) };
+        row.extend_to_stage(stage);
+        Ok(row)
     }
 
     /// Consumes this `RowBuf` and returns the underlying [`Vec`] of [`Bell`]s
@@ -388,7 +385,7 @@ impl RowBuf {
     pub fn extend_to_stage(&mut self, stage: Stage) {
         assert!(self.stage() <= stage);
         self.bell_vec
-            .extend((self.bell_vec.len()..stage.num_bells()).map(Bell::from_index));
+            .extend(stage.bells().skip(self.bell_vec.len()));
     }
 
     /// Overwrites this with the contents of a [`Row`], thus reusing the allocation.
@@ -565,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_with_stage_err() {
+    fn parse_with_stage_missing_bell() {
         fn check(inp_str: &str, stage: Stage, missing_bell: char) {
             assert_eq!(
                 RowBuf::parse_with_stage(inp_str, stage),

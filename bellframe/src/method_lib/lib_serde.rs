@@ -65,7 +65,7 @@ impl From<&MethodLib> for MethodLibSerde {
                         .collect_vec();
 
                     MethodGroup {
-                        stage: stage.num_bells(),
+                        stage: stage.num_bells_u8(),
                         is_jump: full_class.is_jump(),
                         is_little: full_class.is_little(),
                         is_differential: full_class.is_differential(),
@@ -131,7 +131,7 @@ impl From<MethodLibSerde> for MethodLib {
 #[serde(crate = "serde_crate")]
 struct MethodGroup {
     #[serde(rename = "s")]
-    stage: usize,
+    stage: u8,
 
     // Classification
     #[serde(default, skip_serializing_if = "is_false", rename = "j")]

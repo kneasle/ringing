@@ -2,6 +2,7 @@
 
 ### BellFrame
 - (#47) Rename `AnnotBlock` to `Block` (removing the type-def `Block = AnnotBlock<()>`).
+- (#47) Use `u8` instead of `usize` as the underlying representation for `Bell`, `Stage` and places.
 
 ### Internal Improvements
 - (#44) Rewrite the test harness, which now doesn't depend on Python and also allows error messages

@@ -114,9 +114,8 @@ fn tenors_together_mask(stage: Stage) -> Mask {
         // On Minor or below, only fix the tenor
         fixed_bells.push(stage.tenor());
     } else {
-        // On stages above minor, fix 7 through tenor.  Note that we're using 0-indexing here so
-        // bell #6 is actually the 7th
-        fixed_bells.extend((6..stage.num_bells()).map(Bell::from_index));
+        // On Triples and above, fix >=7 (i.e. skip the first 6 bells)
+        fixed_bells.extend(stage.bells().skip(6));
     }
     Mask::fix_bells(stage, fixed_bells)
 }
@@ -247,7 +246,7 @@ impl Call {
             return None;
         }
 
-        let n = stage.num_bells();
+        let n = stage.num_bells_u8();
         // Unsafety and unwrapping is OK because, in both cases, the places are sorted and within
         // the stage (because we early return when `n < 4`).
         let bob_notation = unsafe { PlaceNot::from_sorted_slice(&[1, n - 2], stage).unwrap() };

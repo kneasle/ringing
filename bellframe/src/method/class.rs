@@ -498,7 +498,7 @@ fn is_palindromic(path: &[usize]) -> bool {
 #[derive(Debug, Clone)]
 struct Cycle {
     place_bells: Vec<Bell>,
-    full_path: Vec<usize>,
+    full_path: Vec<usize>, // TODO: Make these Vec<u8>, because places >255 are impossible
 }
 
 impl Cycle {
@@ -512,7 +512,7 @@ impl Cycle {
 
         // Repeatedly follow cycles until every bell is in a cycle that we've already explored
         while let Some(starting_bell_idx) = bells_left.iter().position(|v| *v) {
-            let starting_bell = Bell::from_index(starting_bell_idx);
+            let starting_bell = Bell::from_index(starting_bell_idx as u8);
             let mut place_bells_in_cycle = Vec::new();
             let mut full_path = Vec::new();
             // Follow the cycle which contains `starting_bell_idx`, marking those bells as
@@ -527,7 +527,7 @@ impl Cycle {
                 place_bells_in_cycle.push(place_bell);
                 full_path.extend(path);
                 // Move to the next place bell, and
-                place_bell = Bell::from_index(next_place_bell);
+                place_bell = Bell::from_index(next_place_bell as u8);
                 if place_bell == starting_bell {
                     break;
                 }

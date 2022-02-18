@@ -19,13 +19,18 @@ use crate::Stage;
 const BELL_NAMES: &str = "1234567890ETABCDFGHJKLMNPQRSUVWYZ";
 
 /// A type-safe representation of a 'bell', which adds things like conversions to and from
-/// commonly-used bell names.
+/// commonly-used bell names.  Each `Bell` takes a single byte in memory.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)] // Needed to force memory layout
 pub struct Bell {
     /// A zero-indexed number representing the `Bell`.  I.e the treble is always
     /// `Bell { index: 0 }`, and the 12th is `Bell { index: 11 }` but would be
     /// [`Display`](std::fmt::Display)ed as `T`.
-    index: usize,
+    ///
+    /// `index` cannot take the value 255, since this would imply a [`Stage`] of 256 which is
+    /// unrepresentable.  We can use this as a 'null' value for e.g. [`Mask`](crate::Mask) to take up exactly
+    /// one byte per place.
+    index: u8,
 }
 
 impl Bell {
@@ -58,10 +63,16 @@ impl Bell {
         BELL_NAMES
             .chars()
             .position(|x| x == c)
+            .map(|v| v as u8)
             .map(Bell::from_index)
     }
 
     /// Creates a `Bell` from a 0-indexed integer.
+    ///
+    /// # Panics
+    ///
+    /// Panics if 255 is passed (a `Bell` with index 255 would imply a [`Stage`] of 256, which
+    /// cannot be created).
     ///
     /// # Example
     /// ```
@@ -73,7 +84,8 @@ impl Bell {
     /// assert_eq!(Bell::from_index(11).name(), "T");
     /// ```
     #[inline]
-    pub fn from_index(index: usize) -> Bell {
+    pub fn from_index(index: u8) -> Bell {
+        assert_ne!(index, 255, "`Bell`s with index 255 can't be created.");
         Bell { index }
     }
 
@@ -93,7 +105,7 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
-    pub fn from_number(number: usize) -> Option<Bell> {
+    pub fn from_number(number: u8) -> Option<Bell> {
         number.checked_sub(1).map(Bell::from_index)
     }
 
@@ -115,7 +127,7 @@ impl Bell {
     /// ```
     pub fn tenor(stage: Stage) -> Bell {
         // Unwrapping here is safe because `Stage.num_bells()` can never be zero
-        Self::from_number(stage.num_bells()).unwrap()
+        Self::from_number(stage.num_bells_u8()).unwrap()
     }
 
     /// A [`Bell`] representing the 'treble' on any stage.  Equivalent to
@@ -155,7 +167,7 @@ impl Bell {
     /// # fn main() { test().unwrap() }
     /// ```
     pub fn to_char(self) -> Option<char> {
-        BELL_NAMES.as_bytes().get(self.index).map(|x| *x as char)
+        BELL_NAMES.as_bytes().get(self.index()).map(|x| *x as char)
     }
 
     /// Returns the 0-indexed representation of this `Bell`.
@@ -178,6 +190,29 @@ impl Bell {
     /// ```
     #[inline]
     pub fn index(self) -> usize {
+        self.index as usize
+    }
+
+    /// Returns the 0-indexed representation of this `Bell`, as a [`u8`].
+    ///
+    /// # Example
+    /// ```
+    /// # fn test() -> Option<()> {
+    /// use bellframe::Bell;
+    ///
+    /// // Creating a `Bell` with `from_index` should return the same index passed to it
+    /// assert_eq!(Bell::from_index(0).index_u8(), 0);
+    /// assert_eq!(Bell::from_index(12).index_u8(), 12);
+    ///
+    /// assert_eq!(Bell::from_name('8')?.index_u8(), 7);
+    /// assert_eq!(Bell::from_name('0')?.index_u8(), 9);
+    /// assert_eq!(Bell::from_name('T')?.index_u8(), 11);
+    /// # Some(())
+    /// # }
+    /// # fn main() { test().unwrap() }
+    /// ```
+    #[inline]
+    pub fn index_u8(self) -> u8 {
         self.index
     }
 
@@ -198,8 +233,8 @@ impl Bell {
     /// # fn main() { test().unwrap() }
     /// ```
     #[inline]
-    pub fn number(self) -> usize {
-        self.index + 1
+    pub fn number(self) -> u8 {
+        self.index + 1 // Can't overflow because `index` cannot be 255
     }
 
     /// Converts this `Bell` into a [`String`] that it should be displayed as.  Unlike
@@ -246,34 +281,34 @@ impl Display for Bell {
     }
 }
 
-impl std::ops::Add<usize> for Bell {
+impl std::ops::Add<u8> for Bell {
     type Output = Bell;
 
-    fn add(self, rhs: usize) -> Self::Output {
+    fn add(self, rhs: u8) -> Self::Output {
         Self {
             index: self.index + rhs,
         }
     }
 }
 
-impl std::ops::AddAssign<usize> for Bell {
-    fn add_assign(&mut self, rhs: usize) {
+impl std::ops::AddAssign<u8> for Bell {
+    fn add_assign(&mut self, rhs: u8) {
         self.index += rhs;
     }
 }
 
-impl std::ops::Sub<usize> for Bell {
+impl std::ops::Sub<u8> for Bell {
     type Output = Bell;
 
-    fn sub(self, rhs: usize) -> Self::Output {
+    fn sub(self, rhs: u8) -> Self::Output {
         Self {
             index: self.index - rhs,
         }
     }
 }
 
-impl std::ops::SubAssign<usize> for Bell {
-    fn sub_assign(&mut self, rhs: usize) {
+impl std::ops::SubAssign<u8> for Bell {
+    fn sub_assign(&mut self, rhs: u8) {
         self.index -= rhs;
     }
 }
@@ -293,60 +328,16 @@ impl<'de> Visitor<'de> for BellVisitor {
         formatter.write_str("a non-negative integer, or a bell name")
     }
 
-    fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
+    fn visit_u8<E>(self, val: u8) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_u32<E>(self, v: u32) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v as i64)
-    }
-
-    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_bell(v)
-    }
-
-    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Bell::from_number(v as usize).ok_or_else(|| E::custom("can't have Bell #0"))
+        if val > 0 {
+            // Unwrapping here is safe, because we checked in the `if` statement that `val` is not 0.
+            Ok(Bell::from_number(val).unwrap())
+        } else {
+            Err(E::custom(format!("invalid Bell number: {}", val)))
+        }
     }
 
     fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
@@ -371,18 +362,6 @@ impl<'de> Visitor<'de> for BellVisitor {
     }
 }
 
-/// Helper function to attempt to parse a [`Bell`] from a [`i64`]
-#[cfg(feature = "serde")]
-#[inline(always)]
-fn try_parse_bell<E: Error>(val: i64) -> Result<Bell, E> {
-    if val > 0 {
-        // Unwrapping here is safe, because we checked in the `if` statement that `val` is not 0.
-        Ok(Bell::from_number(val as usize).unwrap())
-    } else {
-        Err(E::custom(format!("invalid Bell number: {}", val)))
-    }
-}
-
 #[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for Bell {
     fn deserialize<D>(deserializer: D) -> Result<Bell, D::Error>
@@ -401,5 +380,16 @@ impl Serialize for Bell {
         S: Serializer,
     {
         serializer.serialize_u64(self.index as u64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Bell;
+
+    #[test]
+    #[should_panic]
+    fn from_index_panic() {
+        Bell::from_index(255);
     }
 }
