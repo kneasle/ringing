@@ -16,8 +16,6 @@ impl Layout {
         splice_style: SpliceStyle,
         part_head: &Row,
         leadwise: Option<bool>,
-        start_indices: Option<&[usize]>,
-        end_indices: Option<&[usize]>,
     ) -> Result<Self> {
         let leadwise = leadwise.unwrap_or_else(|| {
             // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
@@ -29,9 +27,9 @@ impl Layout {
         });
 
         if leadwise {
-            leadwise::leadwise(&methods, start_indices, end_indices)
+            leadwise::leadwise(&methods)
         } else {
-            coursewise::coursewise(methods, splice_style, start_indices, end_indices)
+            coursewise::coursewise(methods, splice_style)
         }
     }
 }
@@ -126,15 +124,27 @@ fn tenors_together_mask(stage: Stage) -> Mask {
 
 #[derive(Debug, Clone)]
 pub struct Method {
-    method: bellframe::Method,
+    inner: bellframe::Method,
+    shorthand: String,
+
+    /// Which [`Call`]s can be used within leads of this `Method`
     calls: Vec<Call>,
+    /// The indices in which we can start a composition during this `Method`.  `None` means any
+    /// index is allowed (provided the CH masks are satisfied).
+    ///
+    /// **Invariant:** These must be in `0..method.lead_len()`
+    start_indices: Option<Vec<usize>>,
+    /// The indices in which we can end a composition during this `Method`.  `None` means any index
+    /// is allowed (provided the CH masks are satisfied).
+    ///
+    /// **Invariant:** These must be in `0..method.lead_len()`
+    end_indices: Option<Vec<usize>>,
     /// The course head masks, along with which bell is 'calling bell' during that course. Allowing
     /// different calling bells allows us to do things like keep using W,M,H during courses of e.g.
     /// `1xxxxx0987`.
     ch_masks: Vec<utils::CourseHeadMask>,
-    shorthand: String,
 
-    /// The plain course of this [`Method`], with sub-lead indices and labels
+    /// The plain course of this [`Method`], annotated with sub-lead indices and labels
     plain_course: Block<Annot>,
 }
 
@@ -144,13 +154,25 @@ impl Method {
         calls: Vec<Call>,
         ch_masks: Vec<(Mask, Bell)>,
         shorthand: String,
+        start_indices: Option<&[isize]>,
+        end_indices: Option<&[isize]>,
     ) -> Self {
+        let convert_indices = |idxs: &[isize]| -> Vec<usize> {
+            let l = method.lead_len() as isize;
+            idxs.iter()
+                .map(|&idx| (((idx % l) + l) % l) as usize)
+                .collect_vec()
+        };
+
         Self {
             plain_course: method.plain_course().map_annots(Annot::from),
+            start_indices: start_indices.map(convert_indices),
+            end_indices: end_indices.map(convert_indices),
 
-            method,
-            calls,
+            inner: method,
             shorthand,
+
+            calls,
             ch_masks: ch_masks
                 .into_iter()
                 .flat_map(|(mask, calling_bell)| utils::CourseHeadMask::new(mask, calling_bell))
@@ -158,15 +180,26 @@ impl Method {
         }
     }
 
+    fn allowed_indices(&self, boundary: Boundary) -> Option<&[usize]> {
+        match boundary {
+            Boundary::Start => self.start_indices.as_deref(),
+            Boundary::End => self.end_indices.as_deref(),
+        }
+    }
+
     fn block(&self, is_spliced: bool) -> Block<Option<String>> {
         self.plain_course.clone().map_annots_with_index(|idx, _| {
-            let sub_lead_idx = idx % self.method.lead_len();
+            let sub_lead_idx = idx % self.lead_len();
             (sub_lead_idx == 0 && is_spliced).then(|| self.shorthand.clone())
         })
     }
+}
 
-    pub fn method(&self) -> &bellframe::Method {
-        &self.method
+impl std::ops::Deref for Method {
+    type Target = bellframe::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
@@ -345,6 +378,29 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     }
 
     positions
+}
+
+///////////
+// UTILS //
+///////////
+
+#[derive(Debug, Clone, Copy)]
+enum Boundary {
+    Start,
+    End,
+}
+
+impl Boundary {
+    fn is_start(self) -> bool {
+        matches!(self, Self::Start)
+    }
+
+    fn snap_label(self) -> &'static str {
+        match self {
+            Self::Start => utils::SNAP_START_LABEL,
+            Self::End => utils::SNAP_FINISH_LABEL,
+        }
+    }
 }
 
 #[cfg(test)]

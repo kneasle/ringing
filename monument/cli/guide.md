@@ -232,7 +232,10 @@ method = "Bristol Surprise Major"
 title = "Lincolnshire Surprise Major"
 shorthand = "N" # (optional; defaults to the first letter of the title)
 lead_locations = { 0: "LE", 16: "HL" } # (optional; defaults to `{0:"LE"}`)
-course_heads = ["*78"] # (optional; defaults to global `course_heads`)
+# Overrides for global values (all optional):
+course_heads = ["*78"]
+start_indices = [2]
+end_indices = [2]
 
 # or
 
@@ -242,7 +245,10 @@ place_notation = "x4x36x5x8,8"
 stage = 8
 shorthand = "N" # (optional; defaults to the first letter of the title)
 lead_locations = { 0: "LE", 8: "HL" } # (optional; defaults to `{0:"LE"}`)
-course_heads = ["*78"] # (optional; defaults to global `course_heads`)
+# Overrides for global values (all optional):
+course_heads = ["*78"]
+start_indices = [2]
+end_indices = [2]
 ```
 
 #### `methods`
@@ -423,7 +429,8 @@ Defaults to `false` (i.e. just lead end starts).
 
 Sets the indices within the lead where the composition can start/end.  The default value of
 `start_indices` is determined by `snap_start`, whereas the `end_indices` defaults to allowing any
-value.
+value. These indices are taken modulo the lead length and can be negative, so for example 2, -30 and
+34 would all refer to the backstroke snap in treble dodging Major.
 
 ---
 

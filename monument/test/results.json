@@ -3923,6 +3923,134 @@
       }
     ]
   },
+  "test/cases/negative-start-index-2.toml": {
+    "comps": [
+      {
+        "length": 388,
+        "string": "<tMBsWHMsWH",
+        "avg_score": -0.06185567
+      },
+      {
+        "length": 356,
+        "string": "<tMBsMBsWH",
+        "avg_score": -0.058988765
+      },
+      {
+        "length": 356,
+        "string": "<tMBBsWsH",
+        "avg_score": -0.039325844
+      },
+      {
+        "length": 388,
+        "string": "<tMWHsMBsW",
+        "avg_score": -0.038659792
+      },
+      {
+        "length": 388,
+        "string": "<tMBWHsMsH",
+        "avg_score": -0.025773196
+      },
+      {
+        "length": 356,
+        "string": "<tMBsWBsW",
+        "avg_score": -0.025280898
+      },
+      {
+        "length": 388,
+        "string": "<tMWsHsMB",
+        "avg_score": -0.0154639175
+      },
+      {
+        "length": 388,
+        "string": "<tMBWHMH",
+        "avg_score": -0.0025773195
+      },
+      {
+        "length": 390,
+        "string": "<tMsHM>",
+        "avg_score": 0.020512821
+      },
+      {
+        "length": 356,
+        "string": "<tMBWBW",
+        "avg_score": 0.042134833
+      },
+      {
+        "length": 420,
+        "string": "<tMM",
+        "avg_score": 0.0952381
+      }
+    ]
+  },
+  "test/cases/negative-start-index.toml": {
+    "comps": [
+      {
+        "length": 388,
+        "string": "<tMBsWHMsWH",
+        "avg_score": -0.06185567
+      },
+      {
+        "length": 356,
+        "string": "<tMBsMBsWH",
+        "avg_score": -0.058988765
+      },
+      {
+        "length": 356,
+        "string": "<tMBBsWsH",
+        "avg_score": -0.039325844
+      },
+      {
+        "length": 388,
+        "string": "<tMWHsMBsW",
+        "avg_score": -0.038659792
+      },
+      {
+        "length": 388,
+        "string": "<tMBWHsMsH",
+        "avg_score": -0.025773196
+      },
+      {
+        "length": 356,
+        "string": "<tMBsWBsW",
+        "avg_score": -0.025280898
+      },
+      {
+        "length": 388,
+        "string": "<tMWsHsMB",
+        "avg_score": -0.0154639175
+      },
+      {
+        "length": 388,
+        "string": "<tMBWHMH",
+        "avg_score": -0.0025773195
+      },
+      {
+        "length": 390,
+        "string": "<tMsHM>",
+        "avg_score": 0.020512821
+      },
+      {
+        "length": 356,
+        "string": "<tMBWBW",
+        "avg_score": 0.042134833
+      },
+      {
+        "length": 448,
+        "string": "<tMtM>",
+        "avg_score": 0.07589286
+      },
+      {
+        "length": 420,
+        "string": "<tMM",
+        "avg_score": 0.0952381
+      },
+      {
+        "length": 224,
+        "string": "<>",
+        "avg_score": 0.17857143
+      }
+    ]
+  },
   "test/cases/no-87s-at-back.toml": {
     "comps": [
       {
@@ -5574,6 +5702,288 @@
         "length": 290,
         "string": "BY[W]YYYYYYY[sW]Y>",
         "avg_score": -0.014137931
+      },
+      {
+        "length": 224,
+        "string": "BBBBBBB",
+        "avg_score": 0.0
+      },
+      {
+        "length": 224,
+        "string": "YYYYYYY",
+        "avg_score": 0.0
+      }
+    ]
+  },
+  "test/cases/per-method-start-ends-2.toml": {
+    "comps": [
+      {
+        "length": 64,
+        "string": "B[sH]B[sH]",
+        "avg_score": -0.071875
+      },
+      {
+        "length": 128,
+        "string": "B[H]B[sH]B[H]B[sH]",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 128,
+        "string": "B[sH]B[H]B[sH]B[H]",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 192,
+        "string": "B[H]B[H]B[sH]B[H]B[H]B[sH]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "B[H]B[sH]B[H]B[H]B[sH]B[H]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "B[sH]B[H]B[H]B[sH]B[H]B[H]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 96,
+        "string": "B[H]B[H]B[H]",
+        "avg_score": -0.056249995
+      },
+      {
+        "length": 194,
+        "string": "B[H]B[sH]B[H]B[H]BYY>",
+        "avg_score": -0.03969072
+      },
+      {
+        "length": 162,
+        "string": "B[H]B[H]B[sH]BYY>",
+        "avg_score": -0.03641975
+      },
+      {
+        "length": 130,
+        "string": "B[sH]B[H]BYY>",
+        "avg_score": -0.03153846
+      },
+      {
+        "length": 194,
+        "string": "B[sH]B[H]YYYYY>",
+        "avg_score": -0.02113402
+      },
+      {
+        "length": 290,
+        "string": "B[H]B[H]B[sH]BBBBBBY>",
+        "avg_score": -0.020344825
+      },
+      {
+        "length": 288,
+        "string": "B[H]B[H]YYYYYYY[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "B[H]YYYYYYY[H]B[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "YYYYYYY[H]B[H]B[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 256,
+        "string": "B[sH]YYYYYYY[sH]",
+        "avg_score": -0.01796875
+      },
+      {
+        "length": 256,
+        "string": "YYYYYYY[sH]B[sH]",
+        "avg_score": -0.01796875
+      },
+      {
+        "length": 258,
+        "string": "B[sH]B[H]BBBBBBY>",
+        "avg_score": -0.015891472
+      },
+      {
+        "length": 224,
+        "string": "BBBBBBB",
+        "avg_score": 0.0
+      },
+      {
+        "length": 224,
+        "string": "YYYYYYY",
+        "avg_score": 0.0
+      }
+    ]
+  },
+  "test/cases/per-method-start-ends-3.toml": {
+    "comps": [
+      {
+        "length": 64,
+        "string": "<[sW]B[sW]B>",
+        "avg_score": -0.071875
+      },
+      {
+        "length": 64,
+        "string": "B[sH]B[sH]",
+        "avg_score": -0.071875
+      },
+      {
+        "length": 128,
+        "string": "<[W]B[sW]B[W]B[sW]B>",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 128,
+        "string": "<[sW]B[W]B[sW]B[W]B>",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 128,
+        "string": "B[H]B[sH]B[H]B[sH]",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 128,
+        "string": "B[sH]B[H]B[sH]B[H]",
+        "avg_score": -0.0640625
+      },
+      {
+        "length": 192,
+        "string": "<[W]B[W]B[sW]B[W]B[W]B[sW]B>",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "<[W]B[sW]B[W]B[W]B[sW]B[W]B>",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "<[sW]B[W]B[W]B[sW]B[W]B[W]B>",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "B[H]B[H]B[sH]B[H]B[H]B[sH]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "B[H]B[sH]B[H]B[H]B[sH]B[H]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 192,
+        "string": "B[sH]B[H]B[H]B[sH]B[H]B[H]",
+        "avg_score": -0.061458334
+      },
+      {
+        "length": 96,
+        "string": "<[W]B[W]B[W]B>",
+        "avg_score": -0.056249995
+      },
+      {
+        "length": 96,
+        "string": "B[H]B[H]B[H]",
+        "avg_score": -0.056249995
+      },
+      {
+        "length": 194,
+        "string": "B[H]B[sH]B[H]B[H]BYY>",
+        "avg_score": -0.03969072
+      },
+      {
+        "length": 162,
+        "string": "B[H]B[H]B[sH]BYY>",
+        "avg_score": -0.03641975
+      },
+      {
+        "length": 130,
+        "string": "B[sH]B[H]BYY>",
+        "avg_score": -0.03153846
+      },
+      {
+        "length": 194,
+        "string": "B[sH]B[H]YYYYY>",
+        "avg_score": -0.02113402
+      },
+      {
+        "length": 290,
+        "string": "B[H]B[H]B[sH]BBBBBBY>",
+        "avg_score": -0.020344825
+      },
+      {
+        "length": 288,
+        "string": "<[W]B[W]YYYYYYY[W]B>",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "<[W]YYYYYYY[W]B[W]B>",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "B[H]B[H]YYYYYYY[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "B[H]YYYYYYY[H]B[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 288,
+        "string": "YYYYYYY[H]B[H]B[H]",
+        "avg_score": -0.018749999
+      },
+      {
+        "length": 256,
+        "string": "<[sW]YYYYYYY[sW]B>",
+        "avg_score": -0.01796875
+      },
+      {
+        "length": 256,
+        "string": "B[sH]YYYYYYY[sH]",
+        "avg_score": -0.01796875
+      },
+      {
+        "length": 256,
+        "string": "YYYYYYY[sH]B[sH]",
+        "avg_score": -0.01796875
+      },
+      {
+        "length": 258,
+        "string": "B[sH]B[H]BBBBBBY>",
+        "avg_score": -0.015891472
+      },
+      {
+        "length": 224,
+        "string": "<BBBBBBB>",
+        "avg_score": 0.0
+      },
+      {
+        "length": 224,
+        "string": "BBBBBBB",
+        "avg_score": 0.0
+      },
+      {
+        "length": 224,
+        "string": "YYYYYYY",
+        "avg_score": 0.0
+      }
+    ]
+  },
+  "test/cases/per-method-start-ends.toml": {
+    "comps": [
+      {
+        "length": 224,
+        "string": "<BBBBBBB>",
+        "avg_score": 0.0
       },
       {
         "length": 224,

@@ -1,0 +1,8 @@
+# Only allow snap starts in Bristol
+length = "practice"
+base_calls = "none"
+methods = [
+    "Yorkshire Surprise Major",
+    { title = "Bristol Surprise Major", start_indices = [0, 2], end_indices = [0, 2] }
+]
+method_count = { min = 0, max = 400 }

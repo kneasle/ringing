@@ -6,35 +6,28 @@ use std::{
 use bellframe::{Mask, Row, RowBuf, Stage};
 use index_vec::IndexVec;
 
-use super::{utils::CourseHeadMask, Error, Result, SpliceStyle};
+use super::{utils::CourseHeadMask, Boundary, Error, Result, SpliceStyle};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd};
 
 /// Generate a [`Layout`] such that chunks will be labelled by their course-head, rather than by
 /// their lead-head.
-pub fn coursewise(
-    mut methods: Vec<super::Method>,
-    splice_style: SpliceStyle,
-    // Which sub-lead indices are considered valid starting or finishing points for the
-    // composition.  If these are `None`, then any location is allowed
-    allowed_start_indices: Option<&[usize]>,
-    allowed_end_indices: Option<&[usize]>,
-) -> Result<Layout> {
+pub fn coursewise(mut methods: Vec<super::Method>, splice_style: SpliceStyle) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
     super::utils::check_duplicate_shorthands(&methods)?;
     let is_spliced = methods.len() > 1;
     let stage = methods
         .iter()
-        .map(|m| m.method.stage())
+        .map(|m| m.stage())
         .max()
         .ok_or(Error::NoMethods)?;
-    assert!(methods.iter().all(|m| m.method.stage() == stage)); // TODO: Implement mixed stage splicing
+    assert!(methods.iter().all(|m| m.stage() == stage)); // TODO: Implement mixed stage splicing
 
     // Pre-process CH masks
     super::utils::preprocess_ch_masks(&mut methods, stage)?;
     for m in &methods {
         super::utils::check_for_ambiguous_courses(
             &m.ch_masks,
-            &m.method.lead_head().closure_from_rounds(),
+            &m.lead_head().closure_from_rounds(),
         )?;
     }
 
@@ -43,18 +36,8 @@ pub fn coursewise(
 
     Ok(Layout {
         links,
-        starts: rounds_locations(
-            &methods,
-            stage,
-            allowed_start_indices,
-            super::utils::SNAP_START_LABEL,
-        ),
-        ends: rounds_locations(
-            &methods,
-            stage,
-            allowed_end_indices,
-            super::utils::SNAP_FINISH_LABEL,
-        ),
+        starts: rounds_locations(&methods, stage, Boundary::Start),
+        ends: rounds_locations(&methods, stage, Boundary::End),
         // Create a block for each method
         blocks: methods
             .into_iter()
@@ -473,15 +456,14 @@ fn filter_plain_links(links: &mut Vec<Link>, splice_style: SpliceStyle) {
 fn rounds_locations<I: index_vec::Idx>(
     methods: &[super::Method],
     stage: Stage,
-    allowed_sub_lead_indices: Option<&[usize]>,
-    snap_label: &str,
+    boundary: Boundary,
 ) -> IndexVec<I, StartOrEnd> {
     let rounds = RowBuf::rounds(stage);
 
     let mut positions = IndexVec::new();
-    for (method_idx, d) in methods.iter().enumerate() {
-        for ch_mask in &d.ch_masks {
-            for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {
+    for (method_idx, method) in methods.iter().enumerate() {
+        for ch_mask in &method.ch_masks {
+            for (row_idx, annot_row) in method.plain_course.annot_rows().enumerate() {
                 let transposed_mask = ch_mask.mask().mul(annot_row.row());
                 // If rounds satisfies `transposed_mask`, then this location can contain rounds
                 if transposed_mask.matches(&rounds) {
@@ -490,12 +472,14 @@ fn rounds_locations<I: index_vec::Idx>(
                     let is_snap = sub_lead_index != 0;
                     let course_head_containing_rounds = annot_row.row().inv();
 
-                    if allowed_sub_lead_indices.map_or(true, |idxs| idxs.contains(&sub_lead_index))
+                    if method
+                        .allowed_indices(boundary)
+                        .map_or(true, |idxs| idxs.contains(&sub_lead_index))
                     {
                         positions.push(StartOrEnd {
                             course_head: course_head_containing_rounds.clone(),
                             row_idx: RowIdx::new(BlockIdx::new(method_idx), row_idx),
-                            label: (if is_snap { snap_label } else { "" }).to_owned(),
+                            label: (if is_snap { boundary.snap_label() } else { "" }).to_owned(),
                         });
                     }
                 }

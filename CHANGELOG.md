@@ -1,5 +1,10 @@
 ## (Unreleased)
 
+### Monument
+- (#48) Allow `start_indices`/`end_indices` to be overridden for each method
+- (#48) Allow negative values for `start_indices`/`end_indices` (still relative to 0 as a standard
+    start)
+
 ### BellFrame
 - (#47) Rename `AnnotBlock` to `Block` (removing the type-def `Block = AnnotBlock<()>`).
 - (#47) Use `u8` instead of `usize` as the underlying representation for `Bell`, `Stage` and places.

@@ -1,35 +1,27 @@
 use std::collections::HashMap;
 
-use bellframe::{Block, Mask, Row, RowBuf};
+use bellframe::{Mask, Row, RowBuf};
 use index_vec::IndexVec;
 
-use super::{
-    utils::{SNAP_FINISH_LABEL, SNAP_START_LABEL},
-    Result,
-};
+use super::{Boundary, Result};
 use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
 
 /// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
 const LEADWISE_PREFIX: &str = "#";
 
 /// Creates a `Layout` where every course is exactly one lead long.
-pub fn leadwise(
-    methods: &[super::Method],
-    start_indices: Option<&[usize]>,
-    end_indices: Option<&[usize]>,
-) -> Result<Layout> {
+pub fn leadwise(methods: &[super::Method]) -> Result<Layout> {
     super::utils::check_duplicate_shorthands(methods)?;
 
     let stage = methods
         .iter()
-        .map(|m| m.method.stage())
+        .map(|m| m.stage())
         .max()
         .expect("Can't compute stage of 0 methods");
     let blocks = methods
         .iter()
         .map(|m| {
-            m.method
-                .first_lead()
+            m.first_lead()
                 .clone_map_annots_with_index(|i, _| (i == 0).then(|| m.shorthand.clone()))
         })
         .collect::<BlockVec<_>>();
@@ -37,16 +29,9 @@ pub fn leadwise(
     let fixed_bells = super::utils::fixed_bells(methods, stage);
     let lead_head_mask = Mask::fix_bells(stage, fixed_bells);
 
-    let blks = blocks.as_raw_slice();
     Ok(Layout {
-        starts: start_or_ends(
-            start_indices,
-            LEADWISE_PREFIX,
-            SNAP_START_LABEL,
-            &lead_head_mask,
-            blks,
-        ),
-        ends: start_or_ends(end_indices, "", SNAP_FINISH_LABEL, &lead_head_mask, blks),
+        starts: start_or_ends(&lead_head_mask, methods, Boundary::Start),
+        ends: start_or_ends(&lead_head_mask, methods, Boundary::End),
         links: links(methods, &lead_head_mask),
         blocks,
         stage,
@@ -54,40 +39,42 @@ pub fn leadwise(
 }
 
 fn start_or_ends<I: index_vec::Idx>(
-    allowed_indices: Option<&[usize]>,
-    label_prefix: &str,
-    snap_label: &str,
     lead_head_mask: &Mask,
-    blocks: &[Block<Option<String>>],
+    methods: &[super::Method],
+    boundary: Boundary,
 ) -> IndexVec<I, StartOrEnd> {
     let mut locs = IndexVec::new();
-    for (meth_idx, first_lead) in blocks.iter().enumerate() {
+    for (meth_idx, method) in methods.iter().enumerate() {
         // Closure to construct a `StartOrEnd` at a given row
-        let block_idx = BlockIdx::new(meth_idx);
         let new_start_or_end = |(row_idx, row): (usize, &Row)| {
-            let mut label = label_prefix.to_owned();
+            assert!(row_idx < method.lead_len());
+            let mut label = String::new();
+            if boundary.is_start() {
+                label.push_str(LEADWISE_PREFIX); // Start all leadwise comps with a `#`
+            }
             if row_idx != 0 {
-                label.push_str(snap_label);
+                label.push_str(boundary.snap_label());
             }
             StartOrEnd {
                 course_head: !row,
-                row_idx: RowIdx::new(block_idx, row_idx),
+                row_idx: RowIdx::new(BlockIdx::new(meth_idx), row_idx),
                 label,
             }
         };
 
-        match allowed_indices {
+        match method.allowed_indices(boundary) {
             // If the user has specified required indices then we add exactly them, panicking
             // if they are longer than the lead length.
-            Some(idxs) => locs.extend(idxs.iter().map(|&idx| {
-                assert!(idx < first_lead.len());
-                new_start_or_end((idx, &first_lead.row_vec()[idx]))
-            })),
+            Some(idxs) => locs.extend(
+                idxs.iter()
+                    .map(|&idx| new_start_or_end((idx, &method.first_lead().row_vec()[idx]))),
+            ),
             // If no indices are specified, then we allow any index which satisfies the
             // lead_head_mask (i.e. any lead index where the fixed bells are at their home
             // positions).
             None => locs.extend(
-                first_lead
+                method
+                    .first_lead()
                     .rows()
                     .enumerate()
                     .filter(|(_, r)| lead_head_mask.matches(r))
@@ -103,7 +90,7 @@ fn links(methods: &[super::Method], lead_head_mask: &Mask) -> LinkVec<Link> {
     // Maps each lead label to where calls of that label can **end**
     let mut call_ends: HashMap<&str, Vec<CallEnd>> = HashMap::new();
     for (block_idx, m) in methods.iter().enumerate() {
-        let lead = m.method.first_lead();
+        let lead = m.first_lead();
         let mut call_starts_for_this_method = HashMap::new();
         for (row_idx_after, annot_row_after) in lead.annot_rows().enumerate() {
             if let Some(label) = annot_row_after.annot() {
@@ -176,14 +163,14 @@ fn links(methods: &[super::Method], lead_head_mask: &Mask) -> LinkVec<Link> {
                 RowIdx {
                     block: method_idx_from.into(),
                     // - 1 to refer to the lead **end** not the lead **head**
-                    row: method_from.method.lead_len() - 1,
+                    row: method_from.lead_len() - 1,
                 },
                 RowIdx {
                     block: method_idx_to.into(),
                     row: 0,
                 },
                 lead_head_mask,
-                method_from.method.lead_head().to_owned(),
+                method_from.lead_head().to_owned(),
             ));
         }
     }
