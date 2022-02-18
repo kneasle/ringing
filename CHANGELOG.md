@@ -10,6 +10,7 @@
 - (#47) Use `u8` instead of `usize` as the underlying representation for `Bell`, `Stage` and places.
 
 ### Internal Improvements
+- (#48) Make integration tests error on unspecified/new test cases
 - (#44) Rewrite the test harness, which now doesn't depend on Python and also allows error messages
     to be tested.
 - (#43) Add READMEs on Monument's pages [on crates.io](https://crates.io/crates/monument).
