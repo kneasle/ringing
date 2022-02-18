@@ -721,7 +721,7 @@ impl From<&monument::Comp> for Comp {
     fn from(source: &monument::Comp) -> Self {
         Self {
             length: source.length,
-            string: source.display_string(),
+            string: source.call_string(),
             avg_score: source.avg_score,
             // Only store part heads for multi-part strings
             part_head: source
