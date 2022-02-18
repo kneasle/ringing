@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bellframe::{AnnotBlock, Mask, Row, RowBuf};
+use bellframe::{Block, Mask, Row, RowBuf};
 use index_vec::IndexVec;
 
 use super::{
@@ -58,7 +58,7 @@ fn start_or_ends<I: index_vec::Idx>(
     label_prefix: &str,
     snap_label: &str,
     lead_head_mask: &Mask,
-    blocks: &[AnnotBlock<Option<String>>],
+    blocks: &[Block<Option<String>>],
 ) -> IndexVec<I, StartOrEnd> {
     let mut locs = IndexVec::new();
     for (meth_idx, first_lead) in blocks.iter().enumerate() {

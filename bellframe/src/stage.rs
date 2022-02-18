@@ -15,11 +15,11 @@ use serde_crate::{
 #[allow(unused_imports)]
 use crate::{Bell, Method, Row};
 
-/// A newtype over [`usize`] that represents a stage.  All `Stage`s must contain at least one
+/// A newtype over [`u8`] that represents a stage.  All `Stage`s must contain at least one
 /// [`Bell`]; zero-bell `Stage`s cannot be created without `unsafe` code.
 ///
-/// To create a new `Stage`, you can either create it directly with `Stage::try_from(usize)` (which
-/// returns a [`Result`]) or with `Stage::new(usize)` (which panics if given `0`).
+/// To create a new `Stage`, you can either create it directly with [`Stage::try_from`] (which
+/// returns a [`Result`]) or with [`Stage::new`] (which panics if passed `0`).
 ///
 /// If you want a specific small `Stage`, then you can use the constants for the human name for
 /// each `Stage`:
@@ -46,7 +46,7 @@ use crate::{Bell, Method, Row};
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
-pub struct Stage(usize);
+pub struct Stage(u8);
 
 impl Stage {
     /// Creates a new `Stage` representing a given number of [`Bell`]s.
@@ -55,26 +55,11 @@ impl Stage {
     ///
     /// Panics if `num_bells` is zero.
     #[track_caller]
-    pub fn new(num_bells: usize) -> Stage {
+    pub fn new(num_bells: u8) -> Stage {
         Self::try_from(num_bells).expect("Can't create a `Stage` of zero bells")
     }
 
-    /// Returns this `Stage` as a [`usize`].
-    ///
-    /// # Example
-    /// ```
-    /// use bellframe::Stage;
-    ///
-    /// assert_eq!(Stage::DOUBLES.as_usize(), 5);
-    /// assert_eq!(Stage::MAXIMUS.as_usize(), 12);
-    /// ```
-    #[inline(always)]
-    #[deprecated(note = "use `Stage::num_bells` instead")]
-    pub fn as_usize(self) -> usize {
-        self.0
-    }
-
-    /// The number of [`Bell`]s in this [`Stage`].  This is guaranteed not to be zero.
+    /// The number of [`Bell`]s in this [`Stage`].  This is guaranteed to be non-zero.
     ///
     /// # Example
     /// ```
@@ -85,6 +70,20 @@ impl Stage {
     /// ```
     #[inline(always)]
     pub fn num_bells(self) -> usize {
+        self.0 as usize
+    }
+
+    /// The number of [`Bell`]s in this [`Stage`] as a [`u8`].  This is guaranteed to be non-zero.
+    ///
+    /// # Example
+    /// ```
+    /// use bellframe::Stage;
+    ///
+    /// assert_eq!(Stage::DOUBLES.num_bells(), 5);
+    /// assert_eq!(Stage::MAXIMUS.num_bells(), 12);
+    /// ```
+    #[inline(always)]
+    pub fn num_bells_u8(self) -> u8 {
         self.0
     }
 
@@ -94,13 +93,13 @@ impl Stage {
     }
 
     /// Gets an [`Iterator`] over the [`Bell`]s contained within this `Stage`, in increasing order.
-    pub fn bells(self) -> impl Iterator<Item = Bell> {
-        (0..self.num_bells()).map(Bell::from_index)
+    pub fn bells(self) -> impl DoubleEndedIterator<Item = Bell> {
+        (0..self.num_bells_u8()).map(Bell::from_index)
     }
 
     /// Returns `true` if a given [`Bell`] is contained in this `Stage`.
     pub fn contains(self, bell: Bell) -> bool {
-        bell.number() <= self.num_bells()
+        bell.number() <= self.num_bells_u8()
     }
 
     /// Returns true if this `Stage` denotes an even number of [`Bell`]s
@@ -279,10 +278,10 @@ impl Display for Stage {
     }
 }
 
-impl TryFrom<usize> for Stage {
+impl TryFrom<u8> for Stage {
     type Error = ZeroStageError;
 
-    fn try_from(num_bells: usize) -> Result<Self, Self::Error> {
+    fn try_from(num_bells: u8) -> Result<Self, Self::Error> {
         match num_bells {
             0 => Err(ZeroStageError),
             _ => Ok(Stage(num_bells)),
@@ -377,18 +376,11 @@ impl<'de> Visitor<'de> for StageVisitor {
         formatter.write_str("a non-negative integer, or a stage name")
     }
 
-    fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        try_parse_stage(v as i64)
-    }
-
     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
     where
         E: Error,
     {
-        Ok(Stage::new(v as usize))
+        try_parse_stage_u(v as u64)
     }
 
     fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
@@ -402,7 +394,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::new(v as usize))
+        try_parse_stage_u(v as u64)
     }
 
     fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
@@ -416,7 +408,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::new(v as usize))
+        try_parse_stage_u(v as u64)
     }
 
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -430,7 +422,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        Ok(Stage::new(v as usize))
+        try_parse_stage_u(v)
     }
 
     /// Attempt to parse a [`Stage`] from a string.  This matches standard [`Stage`] names on up to
@@ -445,15 +437,24 @@ impl<'de> Visitor<'de> for StageVisitor {
     }
 }
 
-/// Helper function to attempt to parse a [`Stage`] from a [`i64`]
+/// Helper function to attempt to parse a [`Stage`] from a [`u64`]
+#[cfg(feature = "serde")]
+#[inline(always)]
+fn try_parse_stage_u<E: Error>(val: u64) -> Result<Stage, E> {
+    let val_u8: u8 = val
+        .try_into()
+        .map_err(|_| E::custom(format!("stage is too large: {}", val)))?;
+    Stage::try_from(val_u8).map_err(|_| E::custom("Can't have a Stage of zero bells"))
+}
+
+/// Helper function to attempt to parse a [`Stage`] from an [`i64`]
 #[cfg(feature = "serde")]
 #[inline(always)]
 fn try_parse_stage<E: Error>(val: i64) -> Result<Stage, E> {
-    if val >= 0 {
-        Ok(Stage::new(val as usize))
-    } else {
-        Err(E::custom(format!("negative Stage: {}", val)))
-    }
+    try_parse_stage_u(
+        val.try_into()
+            .map_err(|_| E::custom(format!("negative stage: {}", val)))?,
+    )
 }
 
 #[cfg(feature = "serde")]
@@ -482,6 +483,6 @@ impl Arbitrary for Stage {
         // I think this is fine - the point here is not to be fair, but rather to generate useful
         // test cases.
         let num_bells = num_bells.max(1);
-        Self::new(num_bells as usize)
+        Self::new(num_bells)
     }
 }

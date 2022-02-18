@@ -150,13 +150,13 @@ impl Regex {
 
     /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn runs_front(stage: Stage, len: usize) -> Vec<Self> {
-        let num_bells = stage.num_bells();
+    pub fn runs_front(stage: Stage, len: u8) -> Vec<Self> {
+        let num_bells = stage.num_bells_u8();
         if num_bells < len {
             return vec![];
         }
 
-        let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
+        let mut runs = Vec::with_capacity((num_bells as usize).saturating_sub(3) * 2);
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
@@ -182,13 +182,13 @@ impl Regex {
 
     /// Creates a set of `Regex`es which match runs of a given length off the **back** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn runs_back(stage: Stage, len: usize) -> Vec<Self> {
-        let num_bells = stage.num_bells();
+    pub fn runs_back(stage: Stage, len: u8) -> Vec<Self> {
+        let num_bells = stage.num_bells_u8();
         if num_bells < len {
             return vec![];
         }
 
-        let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
+        let mut runs = Vec::with_capacity((num_bells as usize).saturating_sub(3) * 2);
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
@@ -214,13 +214,13 @@ impl Regex {
 
     /// Creates a set of `Regex`es which match runs of a given length anywhere in a [`Row`].  If
     /// the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn all_runs(stage: Stage, len: usize) -> Vec<Self> {
-        let num_bells = stage.num_bells();
+    pub fn all_runs(stage: Stage, len: u8) -> Vec<Self> {
+        let num_bells = stage.num_bells_u8();
         if num_bells < len {
             return vec![];
         }
 
-        let mut runs = Vec::with_capacity(num_bells.saturating_sub(3) * 2);
+        let mut runs = Vec::with_capacity((num_bells as usize).saturating_sub(3) * 2);
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
@@ -253,7 +253,7 @@ impl Regex {
 
     /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn runs_front_or_back(stage: Stage, len: usize) -> Vec<Self> {
+    pub fn runs_front_or_back(stage: Stage, len: u8) -> Vec<Self> {
         let mut runs = Vec::new();
         runs.extend(Self::runs_front(stage, len));
         runs.extend(Self::runs_back(stage, len));
@@ -262,7 +262,7 @@ impl Regex {
 
     /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
-    pub fn runs(stage: Stage, len: usize, internal: bool) -> Vec<Self> {
+    pub fn runs(stage: Stage, len: u8, internal: bool) -> Vec<Self> {
         if internal {
             Self::all_runs(stage, len)
         } else {

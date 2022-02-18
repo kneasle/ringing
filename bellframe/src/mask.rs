@@ -146,7 +146,7 @@ impl Mask {
     /// Returns the [`Stage`] of [`Row`] that this `Mask` matches
     #[inline(always)]
     pub fn stage(&self) -> Stage {
-        Stage::new(self.bells.len())
+        Stage::new(self.bells.len() as u8)
     }
 
     /// Tests whether or not a [`Row`] satisfies this `Mask`.
@@ -439,14 +439,14 @@ mod tests {
     #[test]
     fn from_regex() {
         #[track_caller]
-        fn check_ok(regex: &str, num_bells: usize, mask: &str) {
+        fn check_ok(regex: &str, num_bells: u8, mask: &str) {
             assert_eq!(
                 Mask::from_regex(&Regex::parse(regex), Stage::new(num_bells)),
                 Ok(Mask::parse(mask))
             );
         }
         #[track_caller]
-        fn check_err_exceeds_stage(regex: &str, num_bells: usize, bell: char) {
+        fn check_err_exceeds_stage(regex: &str, num_bells: u8, bell: char) {
             let stage = Stage::new(num_bells);
             assert_eq!(
                 Mask::from_regex(&Regex::parse(regex), stage),
@@ -457,7 +457,7 @@ mod tests {
             );
         }
         #[track_caller]
-        fn check_err_multiple_globs(regex: &str, num_bells: usize) {
+        fn check_err_multiple_globs(regex: &str, num_bells: u8) {
             let stage = Stage::new(num_bells);
             assert_eq!(
                 Mask::from_regex(&Regex::parse(regex), stage),
@@ -465,7 +465,7 @@ mod tests {
             );
         }
         #[track_caller]
-        fn check_err_mismatched_length(regex: &str, num_bells: usize, length: usize) {
+        fn check_err_mismatched_length(regex: &str, num_bells: u8, length: usize) {
             let stage = Stage::new(num_bells);
             assert_eq!(
                 Mask::from_regex(&Regex::parse(regex), stage),

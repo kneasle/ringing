@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use bellframe::{AnnotBlock, IncompatibleStages, Mask, Row, RowBuf, Stage, Truth};
+use bellframe::{Block, IncompatibleStages, Mask, Row, RowBuf, Stage, Truth};
 use chunk_range::PerPartLength;
 use itertools::Itertools;
 
@@ -32,7 +32,7 @@ use crate::graph::{Chunk, Graph};
 pub struct Layout {
     /// The blocks that make up the composition.  [`Chunk`]s correspond to ranges of these `blocks`
     /// (pre-)transposed by some course head.
-    pub blocks: BlockVec<AnnotBlock<Option<String>>>,
+    pub blocks: BlockVec<Block<Option<String>>>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
     /// but can also be the _absence_ of a call - note here that Monument will not implicitly add
     /// 'plain' links; they have to be explicitly added (and potentially named).

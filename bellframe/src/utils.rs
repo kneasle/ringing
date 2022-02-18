@@ -12,7 +12,8 @@ pub fn run_len(iter: impl IntoIterator<Item = Bell>) -> usize {
     iter.into_iter()
         .map(|b| b.index())
         .tuple_windows::<(usize, usize)>()
-        .take_while(|&(i1, i2)| (i1 as isize - i2 as isize).abs() == 1)
+        // Subtraction can't over-/under-flow because i1 and i2 are both +ve
+        .take_while(|&(i1, i2)| (i1 as i8 - i2 as i8).abs() == 1)
         .count()
         + 1
 }

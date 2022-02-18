@@ -81,7 +81,7 @@ impl Row {
     /// ```
     #[inline]
     pub fn stage(&self) -> Stage {
-        Stage::new(self.bell_slice.len())
+        Stage::new(self.bell_slice.len() as u8)
     }
 
     /// Returns an iterator over the [`Bell`]s in this `Row`.
@@ -147,7 +147,7 @@ impl Row {
         let mut first_non_rounds_bell = 0;
         while first_non_rounds_bell < self.stage().num_bells() {
             let cur_bell = self.bell_slice[first_non_rounds_bell];
-            if cur_bell == Bell::from_index(first_non_rounds_bell) {
+            if cur_bell == Bell::from_index(first_non_rounds_bell as u8) {
                 // Check if the current bell is sorted, then just move on to the next one
                 first_non_rounds_bell += 1;
             } else {
@@ -220,7 +220,7 @@ impl Row {
         for (i, b) in self.bell_slice.iter().enumerate().rev() {
             if b.index() != i {
                 // The `+ 1` is needed because `i` is 0-indexed
-                return Stage::new(i + 1);
+                return Stage::new(i as u8 + 1);
             }
         }
         // If the loop reached the front of the row, then the effective stage is 1
@@ -387,7 +387,7 @@ impl Row {
     pub fn inv(&self) -> RowBuf {
         let mut inv_bells = vec![Bell::TREBLE; self.stage().num_bells()];
         for (i, b) in self.bell_slice.iter().enumerate() {
-            inv_bells[b.index()] = Bell::from_index(i);
+            inv_bells[b.index()] = Bell::from_index(i as u8);
         }
         // This unsafety is OK because Rows form a group and by the closure of groups under
         // inversion, if `self` is in the group of permutations, then so is `!self`.
@@ -425,7 +425,7 @@ impl Row {
         for (i, b) in self.bell_iter().enumerate() {
             // PERF: If this ever becomes a bottleneck, this is a good place to remove the bounds
             // checks
-            out.bell_slice[b.index()] = Bell::from_index(i);
+            out.bell_slice[b.index()] = Bell::from_index(i as u8);
         }
         Ok(())
     }
@@ -469,7 +469,7 @@ impl Row {
         debug_assert_eq!(out.stage(), self.stage());
         // Now perform the inversion
         for (i, b) in self.bell_iter().enumerate() {
-            out.bell_vec[b.index()] = Bell::from_index(i);
+            out.bell_vec[b.index()] = Bell::from_index(i as u8);
         }
     }
 

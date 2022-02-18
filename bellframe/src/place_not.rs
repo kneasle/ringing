@@ -1,21 +1,17 @@
 //! Module for parsing and handling place notation
 
-use crate::{AnnotBlock, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage};
+use crate::{Bell, Block, IncompatibleStages, Row, RowBuf, SameStageVec, Stage};
 use itertools::Itertools;
 use std::{
     fmt::{Debug, Display, Formatter},
     ops::Range,
 };
 
-// Imports used solely for doc comments
-#[allow(unused_imports)]
-use crate::Block;
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ParseError {
-    PlaceOutOfStage { place: usize, stage: Stage },
-    AmbiguousPlacesBetween { p: usize, q: usize },
-    DuplicatePlace(usize),
+    PlaceOutOfStage { place: u8, stage: Stage },
+    AmbiguousPlacesBetween { p: u8, q: u8 },
+    DuplicatePlace(u8),
     OddStageCross(Stage),
     NoPlacesGiven,
 }
@@ -69,7 +65,7 @@ pub struct PlaceNot {
     ///
     /// Enforcing these invariants improves the speed of permutation and equality tests at the cost
     /// of (slightly) slower parsing.
-    places: Vec<usize>,
+    places: Vec<u8>,
     /// The [`Stage`] that this `PlaceNot` is intended to be used for.
     stage: Stage,
 }
@@ -110,10 +106,10 @@ impl PlaceNot {
             return Self::cross(stage).ok_or(ParseError::OddStageCross(stage));
         }
         // Parse the string into bell indices, ignoring any invalid characters
-        let mut parsed_places: Vec<usize> = s
+        let mut parsed_places: Vec<u8> = s
             .chars()
             .filter_map(Bell::from_name)
-            .map(Bell::index)
+            .map(Bell::index_u8)
             .collect();
         // Sort the places into ascending order (unstable sort doesn't matter for usizes)
         parsed_places.sort_unstable();
@@ -129,14 +125,15 @@ impl PlaceNot {
     ///
     /// This function is safe if `parsed_places` is sorted into increasing order
     pub unsafe fn from_sorted_slice(
-        parsed_places: &[usize],
+        parsed_places: &[u8],
         stage: Stage,
     ) -> Result<Self, ParseError> {
         // Check if we were given no places (I'm making this an error because '-' should be used
         // instead)
         parsed_places.last().ok_or(ParseError::NoPlacesGiven)?;
         // Check if any of the bells are out of range
-        if let Some(out_of_range_place) = parsed_places.last().filter(|p| **p >= stage.num_bells())
+        if let Some(out_of_range_place) =
+            parsed_places.last().filter(|p| **p >= stage.num_bells_u8())
         {
             return Err(ParseError::PlaceOutOfStage {
                 place: *out_of_range_place,
@@ -176,10 +173,10 @@ impl PlaceNot {
         // Add implicit place at the back if necessary
         if parsed_places
             .last()
-            .filter(|p| (stage.num_bells() - *p) % 2 == 0)
+            .filter(|p| (stage.num_bells_u8() - *p) % 2 == 0)
             .is_some()
         {
-            places.push(stage.num_bells() - 1)
+            places.push(stage.num_bells_u8() - 1)
         }
         // Create struct and return.  We don't need to sort `places`, because we only pushed to it
         // in ascending order.
@@ -232,7 +229,7 @@ impl PlaceNot {
 
     /// Checks whether a given `place` is made in this `PlaceNot`.
     #[inline(always)]
-    pub fn contains(&self, place: usize) -> bool {
+    pub fn contains(&self, place: u8) -> bool {
         self.places.contains(&place)
     }
 
@@ -240,7 +237,7 @@ impl PlaceNot {
     #[inline(always)]
     pub fn has_internal_places(&self) -> bool {
         let has_lead = self.places.first() == Some(&0);
-        let has_lie = self.places.last() == Some(&(self.stage.num_bells() - 1));
+        let has_lie = self.places.last() == Some(&(self.stage.num_bells_u8() - 1));
         let num_external_places = if has_lead { 1 } else { 0 } + if has_lie { 1 } else { 0 };
         self.places.len() > num_external_places
     }
@@ -258,12 +255,12 @@ impl PlaceNot {
             return None;
         }
 
-        let mut places = Vec::<usize>::new();
+        let mut places = Vec::<u8>::new();
         let mut bell_pair_iter = r1.bell_iter().zip_eq(r2.bell_iter()).enumerate();
         while let Some((place, (b1, b2))) = bell_pair_iter.next() {
             // If b1 and b2 are the same, then a place must be made
             if b1 == b2 {
-                places.push(place);
+                places.push(place as u8);
             } else {
                 // Otherwise, we expect b1 and b2 to swap round in the next place:
                 // ... b1  b2 ...
@@ -309,7 +306,7 @@ impl PlaceNot {
     pub unsafe fn permute_unchecked(&self, row: &mut Row) {
         let mut places = self.places.iter().copied().peekable();
         let mut i = 0;
-        while i < self.stage.num_bells() {
+        while i < self.stage.num_bells_u8() {
             if places.peek() == Some(&i) {
                 // If this PN contains a place at this index, then the bell in this place stays
                 // where it is, so no change is required.
@@ -318,7 +315,7 @@ impl PlaceNot {
             } else {
                 // If this isn't a place, then we know by invariant that i + 1 is also not a place
                 // (or out of range), so we perform a swap and move on by two bells
-                row.swap(i, i + 1);
+                row.swap(i as usize, i as usize + 1);
                 i += 2;
             }
         }
@@ -511,7 +508,7 @@ impl PnBlock {
         }
 
         // A buffer used to accumulate the block of places that are currently being parsed
-        let mut places: Vec<usize> = Vec::new();
+        let mut places: Vec<u8> = Vec::new();
         // Tracks the index of the first byte in the chunk of PN currently being read.  This is
         // used so that we can return a byte range in the case of an error
         let mut current_pn_start_index = 0;
@@ -525,7 +522,7 @@ impl PnBlock {
                         // the start of this pn block
                         current_pn_start_index = index;
                     }
-                    places.push(b.index());
+                    places.push(b.index_u8());
                 }
                 // If it's a cross notation or a delimiter, then we create a new PlaceNot out of
                 // the places we've collected so far and push it to `buf`
@@ -644,19 +641,19 @@ impl PnBlock {
         Ok(rows)
     }
 
-    /// Generates the [`AnnotBlock`] of this `PnBlock`, starting at some `start_row`.  All the
+    /// Generates the [`Block`] of this `PnBlock`, starting at some `start_row`.  All the
     /// annotations are generated by `A::default()`.
-    pub fn to_block<A>(&self, start_row: RowBuf) -> Result<AnnotBlock<A>, IncompatibleStages>
+    pub fn to_block<A>(&self, start_row: RowBuf) -> Result<Block<A>, IncompatibleStages>
     where
         A: Default,
     {
         let rows = self.to_rows(start_row)?;
-        Ok(AnnotBlock::with_default_annots(rows))
+        Ok(Block::with_default_annots(rows))
     }
 
-    /// Generates the [`AnnotBlock`] of this `PnBlock`, starting at [rounds](RowBuf::rounds).  All
+    /// Generates the [`Block`] of this `PnBlock`, starting at [rounds](RowBuf::rounds).  All
     /// the annotations are generated by `A::default()`.
-    pub fn to_block_from_rounds<A>(&self) -> AnnotBlock<A>
+    pub fn to_block_from_rounds<A>(&self) -> Block<A>
     where
         A: Default,
     {
@@ -878,7 +875,7 @@ mod tests {
         for &(stage, pn, block_str) in &equal_blocks {
             println!("Parsing {}", pn);
             let expected_block = Block::parse(block_str).unwrap();
-            let b1: Block = PnBlock::parse(pn, stage)
+            let b1: Block<()> = PnBlock::parse(pn, stage)
                 .unwrap()
                 .to_block(expected_block.first_annot_row().unwrap().row().to_owned())
                 .unwrap();

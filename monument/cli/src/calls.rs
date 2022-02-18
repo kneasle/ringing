@@ -19,11 +19,10 @@ impl BaseCalls {
         bob_weight: Option<f32>,
         single_weight: Option<f32>,
     ) -> Vec<Call> {
-        let num_bells = stage.num_bells();
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
         // generate comps on fewer than 8 bells, but we should still check because the alternative
         // is UB
-        assert!(num_bells >= 4);
+        assert!(stage >= Stage::MINIMUS);
 
         let (mut bob, mut single) = match self {
             BaseCalls::None => return vec![],
@@ -32,20 +31,17 @@ impl BaseCalls {
                 Call::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
             ),
             BaseCalls::Far => {
+                let n = stage.num_bells_u8();
                 (
                     // The unsafety here is OK, because the slice is always sorted (unless stage <
                     // MINIMUS, in which case the assert trips)
                     Call::lead_end_bob(unsafe {
-                        PlaceNot::from_sorted_slice(&[0, num_bells - 3], stage).unwrap()
+                        PlaceNot::from_sorted_slice(&[0, n - 3], stage).unwrap()
                     }),
                     // The unsafety here is OK, because the slice is always sorted (unless stage <
                     // MINIMUS, in which case the assert trips)
                     Call::lead_end_single(unsafe {
-                        PlaceNot::from_sorted_slice(
-                            &[0, num_bells - 3, num_bells - 2, num_bells - 1],
-                            stage,
-                        )
-                        .unwrap()
+                        PlaceNot::from_sorted_slice(&[0, n - 3, n - 2, n - 1], stage).unwrap()
                     }),
                 )
             }
