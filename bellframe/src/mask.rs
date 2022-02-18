@@ -492,6 +492,7 @@ mod tests {
         check_err_mismatched_length("xx3", 4, 3);
         check_err_mismatched_length("xxxx3x", 4, 6);
         check_err_mismatched_length("xxxx3*", 4, 5);
+        check_err_mismatched_length("3421", 8, 4);
     }
 
     #[test]

@@ -538,7 +538,7 @@ fn print_summary_string(completed_tests: &[RunTestCase]) -> Outcome {
         completed_tests.len()
     ); // All tests should be counted in some way
 
-    let outcome = if num_failures == 0 {
+    let outcome = if num_failures == 0 && num_unspecified == 0 {
         Outcome::Pass
     } else {
         Outcome::Fail

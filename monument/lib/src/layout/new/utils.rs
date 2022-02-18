@@ -105,7 +105,7 @@ fn add_fixed_bells_to_method(method: &mut super::Method, fixed_bells: &[Bell]) {
 pub(super) fn fixed_bells(methods: &[super::Method], stage: Stage) -> Vec<Bell> {
     let mut all_bells = stage.bells().collect_vec();
     for m in methods {
-        let f = fixed_bells_of_method(&m.method, &m.calls);
+        let f = fixed_bells_of_method(&m.inner, &m.calls);
         all_bells.retain(|b| f.contains(b));
     }
     all_bells
@@ -233,8 +233,8 @@ pub(super) fn check_duplicate_shorthands(methods: &[super::Method]) -> super::Re
             if m1.shorthand == m2.shorthand {
                 return Err(Error::DuplicateShorthand {
                     shorthand: m1.shorthand.to_owned(),
-                    title1: m1.method.title().to_owned(),
-                    title2: m2.method.title().to_owned(),
+                    title1: m1.title().to_owned(),
+                    title2: m2.title().to_owned(),
                 });
             }
         }

@@ -1,0 +1,13 @@
+length = { min = 0, max = 500 }
+method = "Birthday Delight Major"
+music_file = "music-8.toml"
+start_indices = [-4]
+end_indices = [0, 2]
+course_heads = ["24315678", "1*78"]
+
+bob_weight = -6
+single_weight = -10
+
+[[calls]]
+symbol = "t"
+place_notation = "34"

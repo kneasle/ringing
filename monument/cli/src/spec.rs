@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    ops::Range,
+    ops::{Deref, Range},
     path::{Path, PathBuf},
 };
 
@@ -117,12 +117,14 @@ pub struct Spec {
     #[serde(default)]
     snap_start: bool,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed
+    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
+    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
     #[serde(default = "default_start_indices")]
-    start_indices: Option<Vec<usize>>,
+    start_indices: Option<Vec<isize>>,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed
-    end_indices: Option<Vec<usize>>,
+    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
+    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
+    end_indices: Option<Vec<isize>>,
 }
 
 impl Spec {
@@ -153,6 +155,9 @@ impl Spec {
         // `layout::new::Method`s
         let ch_masks = self.ch_mask_preset(stage)?.into_masks(stage);
         let calls = self.calls(stage)?;
+        let part_head =
+            RowBuf::parse_with_stage(&self.part_head, stage).map_err(Error::PartHeadParse)?;
+        let (start_indices, end_indices) = self.start_end_indices(&part_head);
         let shorthands = monument::utils::default_shorthands(
             loaded_methods
                 .iter()
@@ -164,11 +169,17 @@ impl Spec {
                 .course_heads
                 .map(|chs| parse_ch_masks(&chs, stage))
                 .transpose()?;
+            #[allow(clippy::or_fun_call)] // `start_indices.as_deref()` is a really cheap operation
+            let start_indices = common.start_indices.as_deref().or(start_indices.as_deref());
+            #[allow(clippy::or_fun_call)]
+            let end_indices = common.end_indices.as_deref().or(end_indices.as_deref());
             methods.push(layout::new::Method::new(
                 method,
                 calls.clone(),
                 override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
+                start_indices,
+                end_indices,
             ));
         }
 
@@ -177,21 +188,11 @@ impl Spec {
         if methods.len() > 1 {
             log::info!("Method count range: {:?}", method_count_range);
         }
-        let ch_weights = self.ch_weights(stage, methods.iter().map(|m| m.method()))?;
+        let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
 
         // Generate the `Layout`
-        let part_head =
-            RowBuf::parse_with_stage(&self.part_head, stage).map_err(Error::PartHeadParse)?;
-        let (start_indices, end_indices) = self.start_end_indices(&part_head);
-        let layout = Layout::new(
-            methods,
-            self.splice_style,
-            &part_head,
-            self.leadwise,
-            start_indices.as_deref(),
-            end_indices.as_deref(),
-        )
-        .map_err(Error::LayoutGen)?;
+        let layout = Layout::new(methods, self.splice_style, &part_head, self.leadwise)
+            .map_err(Error::LayoutGen)?;
 
         let music_types = self.music_types(toml_path, stage)?;
         if music_types.is_empty() {
@@ -266,7 +267,7 @@ impl Spec {
         })
     }
 
-    fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<usize>>, Option<Vec<usize>>) {
+    fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<isize>>, Option<Vec<isize>>) {
         let mut start_indices = self.start_indices.clone().or_else(|| {
             if self.snap_start {
                 None // If just `snap_start`, then allow any start
@@ -436,7 +437,7 @@ pub enum MethodSpec {
     },
 }
 
-/// Common values for methods
+/// Common values for all method variants
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MethodCommon {
@@ -446,6 +447,8 @@ pub struct MethodCommon {
     lead_locations: Option<HashMap<String, String>>,
     /// Custom set of course head masks for this method
     course_heads: Option<Vec<String>>,
+    start_indices: Option<Vec<isize>>,
+    end_indices: Option<Vec<isize>>,
 }
 
 impl MethodSpec {
@@ -697,7 +700,7 @@ fn default_lead_labels() -> HashMap<String, String> {
     labels
 }
 
-fn default_start_indices() -> Option<Vec<usize>> {
+fn default_start_indices() -> Option<Vec<isize>> {
     Some(vec![0]) // Just normal starts
 }
 

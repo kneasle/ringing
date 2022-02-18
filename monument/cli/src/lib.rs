@@ -130,6 +130,7 @@ pub enum Error {
     MusicFile(PathBuf, spec::TomlReadError),
 
     PartHeadParse(InvalidRowError),
+    // TODO: For too short inputs, suggest expanding with either bells or a `*`
     ChMaskParse(String, bellframe::mask::ParseError),
     ChPatternParse(String, bellframe::mask::ParseError),
 
