@@ -121,9 +121,6 @@ jobs:
 
         cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$staging/"
         cp -r monument/examples "$staging/"
-        # `_results.toml` and `_ignore.toml` are only used for the testing framework
-        rm "$staging/examples/_results.toml"
-        rm "$staging/examples/_ignore.toml"
 
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
           cp "target/release/monument_cli.exe" "$staging/monument.exe"
