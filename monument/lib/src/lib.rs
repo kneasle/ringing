@@ -17,7 +17,6 @@ use music::Score;
 use utils::{Counts, Rotation};
 
 use std::{
-    fmt::Write,
     hash::Hash,
     ops::{Deref, Range},
     sync::{
@@ -116,7 +115,7 @@ pub struct CompInner {
 }
 
 impl Comp {
-    pub fn display_string(&self) -> String {
+    pub fn call_string(&self) -> String {
         let layout = &self.query.layout;
 
         let mut s = String::new();
@@ -137,32 +136,34 @@ impl Comp {
         self.query.part_head.pow_u(self.rotation as usize)
     }
 
-    pub fn long_string(&self) -> String {
-        let mut s = format!("len: {}, ", self.length,);
+    pub fn music_score(&self) -> f32 {
+        self.music_counts
+            .iter()
+            .zip_eq(&self.query.music_types)
+            .map(|(count, music_type)| f32::from(music_type.weight()) * *count as f32)
+            .sum::<f32>()
+    }
+}
+
+impl std::fmt::Display for Comp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "len: {}, ", self.length)?;
         // Method counts for spliced
         if self.query.layout.is_spliced() {
-            write!(s, "ms: {:>3?}, ", self.method_counts.as_slice()).unwrap();
+            write!(f, "ms: {:>3?}, ", self.method_counts.as_slice())?;
         }
         // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
         // head)
         if self.query.num_parts() > 2 {
-            write!(s, "PH: {}, ", self.part_head()).unwrap();
+            write!(f, "PH: {}, ", self.part_head())?;
         }
-        let total_music = self
-            .music_counts
-            .iter()
-            .zip_eq(&self.query.music_types)
-            .map(|(count, music_type)| f32::from(music_type.weight()) * *count as f32)
-            .sum::<f32>();
         write!(
-            s,
+            f,
             "music: {:>6.2?}, avg score: {:.6}, str: {}",
-            total_music,
+            self.music_score(),
             self.avg_score,
-            self.display_string()
+            self.call_string()
         )
-        .unwrap();
-        s
     }
 }
 

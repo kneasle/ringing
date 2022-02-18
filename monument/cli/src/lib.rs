@@ -25,6 +25,7 @@ use bellframe::{
 };
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
+use ordered_float::OrderedFloat;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -100,7 +101,7 @@ pub fn run(
     );
 
     let mut comps = comps.lock().unwrap().to_vec();
-    comps.sort_by_key(|comp| comp.avg_score);
+    comps.sort_by_key(|comp| OrderedFloat(comp.music_score()));
     Ok(Some(QueryResult {
         comps,
         duration: Instant::now() - start_time,
@@ -117,7 +118,7 @@ impl QueryResult {
     pub fn print(&self) {
         println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
         for c in &self.comps {
-            println!("{}", c.long_string());
+            println!("{}", c);
         }
         println!("Search completed in {}", PrettyDuration(self.duration));
     }
@@ -214,7 +215,7 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let Some(c) = &comp {
-            update_string.push_str(&c.long_string());
+            update_string.push_str(&c.to_string());
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);

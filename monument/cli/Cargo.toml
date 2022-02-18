@@ -14,6 +14,7 @@ bellframe = { version = "0.7.0", path = "../../bellframe/", features = ["serde"]
 itertools = "0.10"
 log = "0.4"
 monument = { version = "0.4.0", path = "../lib/" }
+ordered-float = "2.10"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "2.1"

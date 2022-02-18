@@ -4,6 +4,7 @@
 - (#48) Allow `start_indices`/`end_indices` to be overridden for each method
 - (#48) Allow negative values for `start_indices`/`end_indices` (still relative to 0 as a standard
     start)
+- (#49) Sort final composition list by absolute music score
 
 ### BellFrame
 - (#47) Rename `AnnotBlock` to `Block` (removing the type-def `Block = AnnotBlock<()>`).
