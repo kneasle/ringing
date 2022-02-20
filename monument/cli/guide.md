@@ -164,8 +164,10 @@ take you to more in-depth docs about it.
 
 **Calls:**
 - [`base_calls = "near"`](#base_calls)
-- [`bob_weight = -1.8`](#bob_weight)
-- [`single_weight = -2.3`](#single_weight)
+- [`bobs_only = false`](#bobs_only-singles_only)
+- [`singles_only = false`](#bobs_only-singles_only)
+- [`bob_weight = -1.8`](#bob_weight-single_weight)
+- [`single_weight = -2.3`](#bob_weight-single_weight)
 - [`calls = []`](#calls-2)
 
 **Music:**
@@ -298,6 +300,12 @@ base_calls = "far"  # 1(n-2) bob and 1(n-2)(n-1)n single
 # or
 base_calls = "none" # no base calls, only what you've added
 ```
+
+#### `bobs_only`, `singles_only`
+
+If either are `true`, then `base_calls` will only generate that call type.  Setting both `bobs_only`
+and `singles_only` to `true` makes no sense and causes an error. By default, both bobs and singles
+are generated.
 
 #### `bob_weight`, `single_weight`
 

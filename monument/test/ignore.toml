@@ -1,7 +1,10 @@
 # Tells Monument's test runner which files to ignore.  In this case, we don't want to interpret
 # music specification files as integration tests because they'll obviously fail to parse.
 
-ignore = ["test/cases/no-duffers.toml"]
+ignore = [
+    "test/cases/no-duffers.toml",  # Duffer-based filtering is currently bugged
+    "test/cases/bobs-and-singles-only.toml", # Waiting on tests for error messages
+]
 music_files = [
     "examples/music-6.toml",
     "examples/music-8.toml",

@@ -137,10 +137,14 @@ pub enum Error {
 
     NoMethods,
     CcLibNotFound,
-    MethodNotFound { suggestions: Vec<String> },
+    MethodNotFound {
+        suggestions: Vec<String>,
+    },
     MethodPnParse(PnBlockParseError),
 
     CallPnParse(String, place_not::ParseError),
+    /// The user set both `bobs_only = true` and `singles_only = true`.
+    BobsOnlyAndSinglesOnly,
     LeadLocationIndex(String, ParseIntError),
 
     LayoutGen(monument::layout::new::Error),
