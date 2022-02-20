@@ -4,6 +4,8 @@
 - (#50) Add `bobs_only` and `singles_only`.
 - (#50) Fix some dead links in Monument's guide.
 
+---
+
 ## 18th Feb 2021
 
 ### Monument v0.5.0
