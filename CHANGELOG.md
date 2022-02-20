@@ -1,17 +1,23 @@
+## (Unreleased)
+
+### Monument
+- (#50) Add `bobs_only` and `singles_only`.
+- (#50) Fix some dead links in Monument's guide.
+
 ## 18th Feb 2021
 
 ### Monument v0.5.0
-- (#48) Allow `start_indices`/`end_indices` to be overridden for each method
+- (#48) Allow `start_indices`/`end_indices` to be overridden for each method.
 - (#48) Allow negative values for `start_indices`/`end_indices` (still relative to 0 as a standard
-    start)
-- (#49) Sort final composition list by absolute music score
+    start).
+- (#49) Sort final composition list by absolute music score.
 
 ### BellFrame v0.8.0
 - (#47) Rename `AnnotBlock` to `Block` (removing the type-def `Block = AnnotBlock<()>`).
 - (#47) Use `u8` instead of `usize` as the underlying representation for `Bell`, `Stage` and places.
 
 ### Internal Improvements (Monument)
-- (#48) Make integration tests error on unspecified/new test cases
+- (#48) Make integration tests error on unspecified/new test cases.
 - (#44) Rewrite the test harness, which now doesn't depend on Python and also allows error messages
     to be tested.
 - (#43) Add READMEs on Monument's pages [on crates.io](https://crates.io/crates/monument).

@@ -43,6 +43,95 @@
       }
     ]
   },
+  "test/cases/bobs-only.toml": {
+    "comps": [
+      {
+        "length": 160,
+        "string": "WBBBMH",
+        "avg_score": -0.0675
+      },
+      {
+        "length": 240,
+        "string": "WBMHWMH",
+        "avg_score": -0.052500002
+      },
+      {
+        "length": 240,
+        "string": "WMHWBMH",
+        "avg_score": -0.052500002
+      },
+      {
+        "length": 288,
+        "string": "WBBMWBBM",
+        "avg_score": -0.05
+      },
+      {
+        "length": 272,
+        "string": "BBMBMH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "BBMHBH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "BHBBMH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "BHWBBH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "BMHBBM",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "WBBHBH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "WBBHWB",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 272,
+        "string": "WBWBBH",
+        "avg_score": -0.039705884
+      },
+      {
+        "length": 224,
+        "string": "MHMH",
+        "avg_score": -0.032142855
+      },
+      {
+        "length": 224,
+        "string": "WHWH",
+        "avg_score": -0.032142855
+      },
+      {
+        "length": 240,
+        "string": "BWM",
+        "avg_score": -0.022499999
+      },
+      {
+        "length": 240,
+        "string": "WMB",
+        "avg_score": -0.022499999
+      },
+      {
+        "length": 112,
+        "string": "",
+        "avg_score": 0.0
+      }
+    ]
+  },
   "test/cases/bristol-s8-qps.toml": {
     "comps": [
       {
@@ -6077,5 +6166,39 @@
   },
   "test/cases/self-false-3.toml": {
     "comps": []
+  },
+  "test/cases/singles-only.toml": {
+    "comps": [
+      {
+        "length": 224,
+        "string": "sMsHsMsH",
+        "avg_score": -0.041071426
+      },
+      {
+        "length": 224,
+        "string": "sWsHsWsH",
+        "avg_score": -0.041071426
+      },
+      {
+        "length": 224,
+        "string": "sHsH",
+        "avg_score": -0.020535713
+      },
+      {
+        "length": 224,
+        "string": "sMsM",
+        "avg_score": -0.020535713
+      },
+      {
+        "length": 224,
+        "string": "sWsW",
+        "avg_score": -0.020535713
+      },
+      {
+        "length": 112,
+        "string": "",
+        "avg_score": 0.0
+      }
+    ]
   }
 }

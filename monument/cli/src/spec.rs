@@ -66,6 +66,14 @@ pub struct Spec {
     /// Which calls should be used by default
     #[serde(default)] // Default to near calls
     base_calls: BaseCalls,
+    /// If `true`, then singles are excluded from `base_calls`.  This is mutually exclusive with
+    /// `singles_only`
+    #[serde(default)]
+    bobs_only: bool,
+    /// If `true`, then bobs are excluded from `base_calls`.  This is mutually exclusive with
+    /// `bobs_only`.
+    #[serde(default)]
+    singles_only: bool,
     /// The weight given to each bob from `base_calls`
     bob_weight: Option<f32>,
     /// The weight given to each single from `base_calls`
@@ -246,9 +254,13 @@ impl Spec {
     }
 
     fn calls(&self, stage: Stage) -> Result<Vec<Call>, Error> {
-        let mut call_specs =
-            self.base_calls
-                .to_call_specs(stage, self.bob_weight, self.single_weight);
+        let mut call_specs = self.base_calls.to_call_specs(
+            stage,
+            self.bobs_only,
+            self.singles_only,
+            self.bob_weight,
+            self.single_weight,
+        )?;
         for specific_call in &self.calls {
             call_specs.push(specific_call.to_call_spec(stage)?);
         }

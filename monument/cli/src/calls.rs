@@ -16,16 +16,18 @@ impl BaseCalls {
     pub fn to_call_specs(
         self,
         stage: Stage,
+        bobs_only: bool,
+        singles_only: bool,
         bob_weight: Option<f32>,
         single_weight: Option<f32>,
-    ) -> Vec<Call> {
+    ) -> Result<Vec<Call>, Error> {
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
         // generate comps on fewer than 8 bells, but we should still check because the alternative
         // is UB
         assert!(stage >= Stage::MINIMUS);
 
         let (mut bob, mut single) = match self {
-            BaseCalls::None => return vec![],
+            BaseCalls::None => return Ok(vec![]),
             BaseCalls::Near => (
                 Call::lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
                 Call::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
@@ -54,7 +56,12 @@ impl BaseCalls {
             single.set_weight(w);
         }
 
-        vec![bob, single]
+        Ok(match (bobs_only, singles_only) {
+            (false, false) => vec![bob, single],
+            (true, false) => vec![bob],
+            (false, true) => vec![single],
+            (true, true) => return Err(Error::BobsOnlyAndSinglesOnly),
+        })
     }
 }
 
