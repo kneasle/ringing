@@ -7,9 +7,10 @@ pub mod optimise;
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet},
+    sync::Mutex,
 };
 
-use bellframe::{Mask, Row, RowBuf, Stroke, Truth};
+use bellframe::{RowBuf, Stroke, Truth};
 use itertools::Itertools;
 
 use crate::{
@@ -17,9 +18,9 @@ use crate::{
         chunk_range::{ChunkRange, End, PerPartLength, RangeEnd, RangeFactory, TotalLength},
         ChunkId, Layout, LinkIdx, RowRange, StandardChunkId, StartIdx,
     },
-    music::{Breakdown, MusicType, Score, StrokeSet},
+    music::{Breakdown, Score, StrokeSet},
     utils::{Counts, FrontierItem, Rotation},
-    Query,
+    Config, Query,
 };
 
 use self::{
@@ -126,17 +127,24 @@ impl Graph {
 
     /// Repeatedly apply a sequence of [`Pass`]es until the graph stops getting smaller, or 20
     /// iterations are made.  Use [`Graph::optimise_with_iter_limit`] to set a custom iteration limit.
-    pub fn optimise(&mut self, passes: &mut [Pass], query: &Query) {
+    pub fn optimise(&mut self, passes: &[Mutex<Pass>], query: &Query) {
         self.optimise_with_iter_limit(passes, query, 20);
     }
 
     /// Repeatedly apply a sequence of [`Pass`]es until the graph either becomes static, or `limit`
     /// many iterations are performed.
-    pub fn optimise_with_iter_limit(&mut self, passes: &mut [Pass], query: &Query, limit: usize) {
+    pub fn optimise_with_iter_limit(
+        &mut self,
+        passes: &[Mutex<Pass>],
+        query: &Query,
+        limit: usize,
+    ) {
         let mut last_size = Size::from(&*self);
 
         for _ in 0..limit {
-            self.run_passes(passes, query);
+            for p in passes {
+                p.lock().unwrap().run(self, query);
+            }
 
             let new_size = Size::from(&*self);
             // Stop optimising if the optimisations don't make the graph strictly smaller.  If
@@ -146,13 +154,6 @@ impl Graph {
                 Some(Ordering::Less) | None => {}
             }
             last_size = new_size;
-        }
-    }
-
-    /// Run a sequence of [`Pass`]es on `self`
-    pub fn run_passes(&mut self, passes: &mut [Pass], query: &Query) {
-        for p in &mut *passes {
-            p.run(self, query);
         }
     }
 
@@ -395,24 +396,31 @@ impl Chunk {
 // LAYOUT -> GRAPH CONVERSION //
 ////////////////////////////////
 
+/// The different ways that graph building can fail
+#[derive(Debug)]
+pub enum BuildError {
+    /// The maximum graph size limit was reached
+    SizeLimit,
+}
+
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub fn from_layout(
-        layout: &Layout,
-        music_types: &[MusicType],
-        ch_weights: &[(Mask, f32)],
-        max_length: usize,
-        part_head: &Row,
-        start_stroke: Stroke,
-        allow_false: bool,
-    ) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_unoptimised(query: &Query, config: &Config) -> Result<Self, BuildError> {
+        log::debug!("Building `Graph`");
         // Build the shape of the graph using Dijkstra's algorithm
-        let (expanded_chunk_ranges, start_chunks, end_chunks, ch_equiv_map, part_heads) =
-            build_graph(layout, max_length, part_head);
+        let BuiltGraph {
+            expanded_chunk_ranges,
+            start_chunks,
+            end_chunks,
+            ch_equiv_map,
+            part_heads,
+        } = build_graph(query, config.graph_size_limit)?;
         let num_parts = part_heads.len() as Rotation;
 
         // `true` if any of the `music_types` care about stroke
-        let dependence_on_stroke = music_types
+        let dependence_on_stroke = query
+            .music_types
             .iter()
             .any(|ty| ty.stroke_set() != StrokeSet::Both);
 
@@ -437,14 +445,12 @@ impl Graph {
                 let new_chunk = build_chunk(
                     chunk_range,
                     *distance,
-                    layout,
-                    music_types,
-                    ch_weights,
-                    &part_heads,
                     // We've asserted that all chunks have even length, so that all chunks must start
                     // at the same stroke.  Therefore, we can simply pass 'start_stroke' straight
                     // to all the comps
-                    start_stroke,
+                    query.start_stroke,
+                    &part_heads,
+                    query,
                 );
                 (chunk_id.clone(), new_chunk)
             })
@@ -461,8 +467,8 @@ impl Graph {
             plural(end_chunks.len(), "end"),
         );
 
-        if !allow_false {
-            compute_falseness(&mut chunks, layout, &ch_equiv_map);
+        if !query.allow_false {
+            compute_falseness(&mut chunks, &query.layout, &ch_equiv_map);
         }
 
         // Add predecessor references (every chunk is a predecessor to all of its successors)
@@ -484,12 +490,12 @@ impl Graph {
             }
         }
 
-        Self {
+        Ok(Self {
             chunks,
             start_chunks,
             end_chunks,
             num_parts,
-        }
+        })
     }
 }
 
@@ -574,27 +580,25 @@ fn set_falseness_links(
     Truth::True
 }
 
+struct BuiltGraph {
+    expanded_chunk_ranges: HashMap<ChunkId, (ChunkRange, Distance)>,
+    start_chunks: Vec<(ChunkId, StartIdx, Rotation)>,
+    end_chunks: Vec<(ChunkId, End)>,
+    ch_equiv_map: HashMap<RowBuf, (RowBuf, Rotation)>,
+    part_heads: Vec<RowBuf>,
+}
+
 /// Use Dijkstra's algorithm to determine the overall structure of the graph, without computing the
 /// [`Chunk`]s themselves.
 #[allow(clippy::type_complexity)]
-fn build_graph(
-    layout: &Layout,
-    max_length: usize,
-    part_head: &Row,
-) -> (
-    HashMap<ChunkId, (ChunkRange, Distance)>,
-    Vec<(ChunkId, StartIdx, Rotation)>,
-    Vec<(ChunkId, End)>,
-    HashMap<RowBuf, (RowBuf, Rotation)>,
-    Vec<RowBuf>,
-) {
-    let mut range_factory = RangeFactory::new(layout, part_head);
+fn build_graph(query: &Query, size_limit: usize) -> Result<BuiltGraph, BuildError> {
+    let mut range_factory = RangeFactory::new(&query.layout, &query.part_head);
 
     let start_chunks = range_factory.start_ids();
     let mut end_chunks = Vec::<(ChunkId, End)>::new();
 
     // The set of chunks which have already been expanded
-    let mut expanded_chunks: HashMap<ChunkId, (ChunkRange, Distance)> = HashMap::new();
+    let mut expanded_chunk_ranges: HashMap<ChunkId, (ChunkRange, Distance)> = HashMap::new();
 
     // Initialise the frontier with the start chunks, all with distance 0
     let mut frontier: BinaryHeap<Reverse<FrontierItem<ChunkId>>> = BinaryHeap::new();
@@ -613,7 +617,7 @@ fn build_graph(
     {
         // Don't expand chunks multiple times (Dijkstra's algorithm makes sure that the first time
         // it is expanded will be have the shortest distance)
-        if expanded_chunks.get(&chunk_id).is_some() {
+        if expanded_chunk_ranges.get(&chunk_id).is_some() {
             continue;
         }
         // If the chunk hasn't been expanded yet, then add its reachable chunks to the frontier
@@ -623,7 +627,7 @@ fn build_graph(
         // If the shortest composition including this chunk is longer the length limit, then don't
         // include it in the chunk graph
         let new_dist = distance + chunk_range.total_length.0;
-        if new_dist > max_length {
+        if new_dist >= query.len_range.end {
             continue;
         }
         match &chunk_range.range_end {
@@ -640,19 +644,22 @@ fn build_graph(
             }
         }
         // Mark this chunk as expanded
-        expanded_chunks.insert(chunk_id, (chunk_range, distance));
+        expanded_chunk_ranges.insert(chunk_id, (chunk_range, distance));
+        if expanded_chunk_ranges.len() > size_limit {
+            return Err(BuildError::SizeLimit);
+        }
     }
 
     // Once Dijkstra's has finished, consume the `RangeFactory` and return the values needed to
     // complete the graph
     let (ch_equiv_map, part_heads) = range_factory.finish();
-    (
-        expanded_chunks,
+    Ok(BuiltGraph {
+        expanded_chunk_ranges,
         start_chunks,
         end_chunks,
         ch_equiv_map,
         part_heads,
-    )
+    })
 }
 
 /// Construct a [`Chunk`] from the data returned by the `RangeFactory`.  This is mostly
@@ -660,26 +667,24 @@ fn build_graph(
 fn build_chunk(
     chunk_range: &ChunkRange,
     distance: usize,
-    layout: &Layout,
-    music_types: &[MusicType],
-    ch_weights: &[(Mask, f32)],
-    part_heads: &[RowBuf],
     start_stroke: Stroke,
+    part_heads: &[RowBuf],
+    query: &Query,
 ) -> Chunk {
     // Add up music from each part
-    let mut music = Breakdown::zero(music_types.len());
+    let mut music = Breakdown::zero(query.music_types.len());
     for ph in part_heads {
         if let Some(source_ch) = chunk_range.chunk_id.course_head() {
             let ch = ph * source_ch;
             // Count weight from this part
             music += &Breakdown::from_rows(
-                chunk_range.untransposed_rows(layout),
+                chunk_range.untransposed_rows(&query.layout),
                 &ch,
-                music_types,
+                &query.music_types,
                 start_stroke,
             );
             // Count weight from CH masks
-            for (mask, weight) in ch_weights {
+            for (mask, weight) in &query.ch_weights {
                 if mask.matches(&ch) {
                     music.score += *weight * chunk_range.total_length.0 as f32; // Weight applies to each row
                 }
@@ -691,7 +696,8 @@ fn build_chunk(
     // of types considered 'non-duffer'.
     //
     // TODO: Determine how close to the ends of this chunk the music is generated?
-    let non_duffer = music_types
+    let non_duffer = query
+        .music_types
         .iter()
         .zip_eq(music.counts.as_slice())
         .any(|(music_type, count)| music_type.non_duffer() && *count > 0);

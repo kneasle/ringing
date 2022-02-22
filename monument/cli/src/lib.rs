@@ -42,7 +42,7 @@ pub fn init_logging(filter: LevelFilter) {
 pub fn run(
     input_file: &Path,
     debug_option: Option<DebugOption>,
-    queue_limit: usize,
+    config: &Config,
 ) -> Result<Option<QueryResult>, Error> {
     let start_time = Instant::now();
 
@@ -68,17 +68,10 @@ pub fn run(
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
-    // Generate config
-    let mut config = Config {
-        queue_limit,
-        num_threads: Some(1),
-        ..Config::default()
-    };
-
     // Run query and handle its debug output
-    let graph = query.unoptimised_graph();
+    let graph = query.unoptimised_graph(config).map_err(Error::GraphGen)?;
     debug_print!(Graph, graph);
-    let optimised_graphs = query.optimise_graph(graph, &mut config);
+    let optimised_graphs = query.optimise_graph(graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
@@ -90,7 +83,7 @@ pub fn run(
     Query::search(
         Arc::new(query),
         optimised_graphs,
-        &config,
+        config,
         move |update| {
             if let Some(comp) = update_logger.log(update) {
                 comps_for_closure.lock().unwrap().push(comp);
@@ -148,6 +141,7 @@ pub enum Error {
     LeadLocationIndex(String, ParseIntError),
 
     LayoutGen(monument::layout::new::Error),
+    GraphGen(monument::graph::BuildError),
 }
 
 /// What item should be debug printed

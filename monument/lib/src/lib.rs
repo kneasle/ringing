@@ -22,7 +22,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::sync_channel,
-        Arc,
+        Arc, Mutex,
     },
 };
 
@@ -66,7 +66,10 @@ pub struct Config {
     /// **physical** CPU cores (i.e. ignoring hyper-threading).
     pub num_threads: Option<usize>,
     pub queue_limit: usize,
-    pub optimisation_passes: Vec<Pass>,
+    pub optimisation_passes: Vec<Mutex<Pass>>,
+    /// The maximum graph size, in nodes.  If a search would produce a graph bigger than this, it
+    /// is aborted.
+    pub graph_size_limit: usize,
     pub split_by_start_chunk: bool,
 }
 
@@ -75,6 +78,7 @@ impl Default for Config {
         Self {
             num_threads: None,
             queue_limit: 10_000_000,
+            graph_size_limit: 100_000,
             optimisation_passes: graph::optimise::passes::default(),
             split_by_start_chunk: false,
         }
@@ -194,24 +198,13 @@ impl Hash for Comp {
 ////////////
 
 impl Query {
-    /// Creates an unoptimised [`Graph`] from which our compositions are generated
-    pub fn unoptimised_graph(&self) -> Graph {
-        log::debug!("Building `Graph`");
-        graph::Graph::from_layout(
-            &self.layout,
-            &self.music_types,
-            &self.ch_weights,
-            // `- 1` makes sure that the length limit is an **inclusive** bound
-            self.len_range.end - 1,
-            &self.part_head,
-            self.start_stroke,
-            self.allow_false,
-        )
+    pub fn unoptimised_graph(&self, config: &Config) -> Result<Graph, graph::BuildError> {
+        graph::Graph::new_unoptimised(self, config)
     }
 
     /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
     /// generate the same overall set of compositions.
-    pub fn optimise_graph(&self, graph: Graph, config: &mut Config) -> Vec<Graph> {
+    pub fn optimise_graph(&self, graph: Graph, config: &Config) -> Vec<Graph> {
         log::debug!("Optimising graph(s)");
         let mut graphs = if config.split_by_start_chunk {
             graph.split_by_start_chunk()
@@ -219,7 +212,7 @@ impl Query {
             vec![graph]
         };
         for g in &mut graphs {
-            g.optimise(&mut config.optimisation_passes, self);
+            g.optimise(&config.optimisation_passes, self);
             log::debug!(
                 "Optimised graph has {} chunks, {} starts, {} ends",
                 g.chunk_map().len(),
