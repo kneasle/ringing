@@ -11,6 +11,7 @@ use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
 use itertools::Itertools;
+use monument::Config;
 use monument_cli::DebugOption;
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -45,9 +46,10 @@ pub fn run(run_type: RunType) -> anyhow::Result<Outcome> {
     let cases = collect_cases(run_type)?;
     // Run the tests.  We run _tests_ in parallel, but _benchmarks_ sequentially
     println!("running {} tests", cases.len());
+    let run = |c: UnrunTestCase| run_and_print_test(c, run_type);
     let completed_tests: Vec<RunTestCase> = match run_type {
-        RunType::Test => cases.into_par_iter().map(run_and_print_test).collect(),
-        RunType::Bench => cases.into_iter().map(run_and_print_test).collect(),
+        RunType::Test => cases.into_par_iter().map(run).collect(),
+        RunType::Bench => cases.into_iter().map(run).collect(),
     };
     // Collate failures and unspecified tests from all `Suite`s
     report_failures(&completed_tests);
@@ -367,9 +369,17 @@ fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
 
 /// Run a specific test case, printing a line when finished.  The type signature is a bit weird but
 /// means that this can be used directly when mapping over iterators.
-fn run_and_print_test(unrun_case: UnrunTestCase) -> RunTestCase {
+fn run_and_print_test(unrun_case: UnrunTestCase, run_type: RunType) -> RunTestCase {
+    let config = Config {
+        queue_limit: QUEUE_LIMIT,
+        num_threads: match run_type {
+            RunType::Test => Some(1), // For tests, we run cases in parallel - one thread each
+            RunType::Bench => None,   // For bench, we run cases sequentially so no thread limit
+        },
+        ..Config::default()
+    };
     // Run the test
-    let run_case = run_test(unrun_case);
+    let run_case = run_test(unrun_case, &config);
     // Determine what should be printed after the '...'
     println!(
         "{} ... {}",
@@ -381,7 +391,7 @@ fn run_and_print_test(unrun_case: UnrunTestCase) -> RunTestCase {
 }
 
 /// Run a test case (skipping ignored cases), determining its [`TestResult`]
-fn run_test(case: UnrunTestCase) -> RunTestCase {
+fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
     // Skip any ignored tests
     if case.ignored {
         return RunTestCase {
@@ -396,7 +406,7 @@ fn run_test(case: UnrunTestCase) -> RunTestCase {
     let monument_result = monument_cli::run(
         &file_path_from_cargo_toml,
         no_search.then(|| DebugOption::StopBeforeSearch),
-        QUEUE_LIMIT,
+        config,
     );
     // Convert Monument's `Result` into a `Results`
     let actual_results = match monument_result {

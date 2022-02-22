@@ -217,7 +217,7 @@ mod music; // Proving chunks as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent chunks
 
 pub mod passes {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, sync::Mutex};
 
     use itertools::Itertools;
 
@@ -225,9 +225,10 @@ pub mod passes {
 
     use super::{DirectionalView, Pass};
 
-    /// A default sequence of built-in optimisation passes
-    pub fn default() -> Vec<Pass> {
-        vec![
+    /// A default sequence of built-in optimisation passes.  Each is stored in a [`Mutex`] to
+    /// enable concurrent access.
+    pub fn default() -> Vec<Mutex<Pass>> {
+        [
             // Distance-related optimisation
             compute_distances(),
             strip_long_chunks(),
@@ -242,6 +243,9 @@ pub mod passes {
             single_start_or_end_required(),
             remove_chunks_false_against_required(),
         ]
+        .into_iter()
+        .map(Mutex::new)
+        .collect_vec()
     }
 
     /* Simple passes */

@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#53) Add limit on graph size.  Set with `--graph-size-limit`, defaults to 100K chunks.
 - (#50) Add `bobs_only` and `singles_only`.
 - (#50) Fix some dead links in Monument's guide.
 
