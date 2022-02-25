@@ -148,10 +148,10 @@ impl Spec {
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
             .iter()
-            .map(MethodSpec::gen_method)
+            .map(|m_spec| MethodSpec::gen_method(m_spec, self.base_calls))
             .collect::<Result<_, _>>()?;
         if let Some(m) = &self.method {
-            loaded_methods.push(m.gen_method()?);
+            loaded_methods.push(m.gen_method(self.base_calls)?);
         }
         // Combine the methods' stages to get the overall stage
         let stage = loaded_methods
@@ -464,8 +464,26 @@ pub struct MethodCommon {
 }
 
 impl MethodSpec {
-    fn gen_method(&self) -> Result<(bellframe::Method, MethodCommon), Error> {
+    fn gen_method(
+        &self,
+        base_calls: BaseCalls,
+    ) -> Result<(bellframe::Method, MethodCommon), Error> {
         let mut method = self.get_method_without_lead_locations()?;
+
+        if base_calls != BaseCalls::None {
+            match method.name() {
+                // TODO: More precisely, we should check for Grandsire-like methods
+                "Grandsire" | "Stedman" => {
+                    log::warn!(
+                        "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
+                        method.name()
+                    );
+                    log::warn!("In general, Grandsire and Stedman aren't very well supported yet.");
+                    log::warn!("You're welcome to try, but be wary that weird things may happen.");
+                }
+                _ => {}
+            }
+        }
 
         for (index_str, name) in self.get_lead_locations() {
             let index = index_str

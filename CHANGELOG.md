@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.
 - (#54) Print comp list even when a search is aborted with `ctrl-C`.
 - (#54) Don't bother freeing memory allocated during the search algorithm.  This makes Monument
     terminate instantly, often shaving 10s of seconds from the search time.
