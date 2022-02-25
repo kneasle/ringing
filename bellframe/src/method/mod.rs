@@ -114,12 +114,17 @@ impl Method {
         self.class
     }
 
-    /// Gets the name of this `Method`
+    /// Gets the **name** of this `Method` - i.e. the [`title`](Self::title) without the
+    /// classification or [`Stage`].  Take Bristol Major as an example: its name is
+    /// `"Bristol"` but its title is `"Bristol Surprise Major"`.
     #[inline]
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Gets the **title** of this `Method` - i.e. including the classification or [`Stage`].
+    /// Take Bristol Major as an example: its name is `"Bristol"` but its title is `"Bristol
+    /// Surprise Major"`.
     pub fn title(&self) -> &str {
         self.title.as_ref()
     }
