@@ -1,3 +1,8 @@
+//! Crate for Monument's GUI
+
+#![deny(clippy::all)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
 mod params;
 mod utils;
 
