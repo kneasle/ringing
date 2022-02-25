@@ -5,14 +5,19 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 use monument::Config;
-use monument_cli::DebugOption;
+use monument_cli::{CtrlCBehaviour, DebugOption};
 use structopt::StructOpt;
 
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let maybe_results =
-        monument_cli::run(&args.input_file, args.debug_option, &args.config()).unwrap();
+    let maybe_results = monument_cli::run(
+        &args.input_file,
+        args.debug_option,
+        &args.config(),
+        CtrlCBehaviour::RecoverComps,
+    )
+    .unwrap();
     if let Some(results) = maybe_results {
         results.print();
     }
@@ -69,6 +74,10 @@ impl CliArgs {
     fn config(&self) -> Config {
         let mut config = Config {
             num_threads: self.num_threads,
+            // Don't `drop` any of the search data structures, since Monument will exit shortly
+            // after the search terminates.  With the `Arc`-based data structures, this is
+            // seriously beneficial - it shaves many seconds off Monument's total running time.
+            mem_forget_search_data: true,
             ..Config::default()
         };
         if let Some(q) = self.queue_limit {

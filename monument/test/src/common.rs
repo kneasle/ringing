@@ -12,7 +12,7 @@ use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
 use itertools::Itertools;
 use monument::Config;
-use monument_cli::DebugOption;
+use monument_cli::{CtrlCBehaviour, DebugOption};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
@@ -407,6 +407,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
         &file_path_from_cargo_toml,
         no_search.then(|| DebugOption::StopBeforeSearch),
         config,
+        CtrlCBehaviour::TerminateProcess, // Don't bother recovering comps whilst testing
     );
     // Convert Monument's `Result` into a `Results`
     let actual_results = match monument_result {
