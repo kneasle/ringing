@@ -28,6 +28,7 @@ pub(crate) fn search(
     graph: &crate::Graph,
     query: Arc<Query>,
     queue_limit: usize,
+    mem_forget_search_data: bool,
     update_channel: SyncSender<QueryUpdate>,
     abort_flag: Arc<AtomicBool>,
 ) {
@@ -178,7 +179,7 @@ pub(crate) fn search(
             && abort_flag.load(std::sync::atomic::Ordering::Relaxed)
         {
             log::info!("Aborting");
-            return;
+            break;
         }
 
         // Send stats every so often
@@ -199,6 +200,14 @@ pub(crate) fn search(
                 }))
                 .unwrap();
         }
+    }
+
+    // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
+    // don't care about leaking because the Monument process is about to terminate and the OS will
+    // clean up the memory anyway.
+    if mem_forget_search_data {
+        std::mem::forget(graph);
+        std::mem::forget(frontier);
     }
 }
 

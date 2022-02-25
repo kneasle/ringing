@@ -69,6 +69,10 @@ impl CliArgs {
     fn config(&self) -> Config {
         let mut config = Config {
             num_threads: self.num_threads,
+            // Don't `drop` any of the search data structures, since Monument will exit shortly
+            // after the search terminates.  With the `Arc`-based data structures, this is
+            // seriously beneficial - it shaves many seconds off Monument's total running time.
+            mem_forget_search_data: true,
             ..Config::default()
         };
         if let Some(q) = self.queue_limit {

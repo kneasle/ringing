@@ -62,25 +62,38 @@ impl Query {
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
 pub struct Config {
+    /* General */
     /// Number of threads used to generate compositions.  If `None`, this uses the number of
     /// **physical** CPU cores (i.e. ignoring hyper-threading).
     pub num_threads: Option<usize>,
-    pub queue_limit: usize,
+
+    /* Graph Generation */
     pub optimisation_passes: Vec<Mutex<Pass>>,
     /// The maximum graph size, in nodes.  If a search would produce a graph bigger than this, it
     /// is aborted.
     pub graph_size_limit: usize,
     pub split_by_start_chunk: bool,
+
+    /* Search */
+    pub queue_limit: usize,
+    /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
+    /// This massively improves the termination speed (because all individual allocations don't
+    /// need to be freed), but only makes sense for the CLI, where Monument will do exactly one
+    /// search run before terminating (thus returning the memory to the OS anyway).
+    pub mem_forget_search_data: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             num_threads: None,
-            queue_limit: 10_000_000,
+
             graph_size_limit: 100_000,
             optimisation_passes: graph::optimise::passes::default(),
             split_by_start_chunk: false,
+
+            queue_limit: 10_000_000,
+            mem_forget_search_data: false,
         }
     }
 }
@@ -250,6 +263,7 @@ impl Query {
             .map(|graph| {
                 let query = arc_self.clone();
                 let queue_limit = config.queue_limit;
+                let mem_forget_search_data = config.mem_forget_search_data;
                 let abort_flag = abort_flag.clone();
                 let update_channel = update_tx.clone();
                 std::thread::spawn(move || {
@@ -257,6 +271,7 @@ impl Query {
                         &graph,
                         query.clone(),
                         queue_limit / num_threads,
+                        mem_forget_search_data,
                         update_channel,
                         abort_flag,
                     );
