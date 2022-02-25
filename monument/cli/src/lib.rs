@@ -15,7 +15,10 @@ use std::{
     num::ParseIntError,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
     time::{Duration, Instant},
 };
 
@@ -43,9 +46,8 @@ pub fn run(
     input_file: &Path,
     debug_option: Option<DebugOption>,
     config: &Config,
+    ctrl_c_behaviour: CtrlCBehaviour,
 ) -> Result<Option<QueryResult>, Error> {
-    let start_time = Instant::now();
-
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
@@ -56,6 +58,8 @@ pub fn run(
             }
         };
     }
+
+    let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
     let spec =
@@ -68,7 +72,7 @@ pub fn run(
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
-    // Run query and handle its debug output
+    // Optimise the graph(s)
     let graph = query.unoptimised_graph(config).map_err(Error::GraphGen)?;
     debug_print!(Graph, graph);
     let optimised_graphs = query.optimise_graph(graph, config);
@@ -76,35 +80,61 @@ pub fn run(
         return Ok(None);
     }
 
-    // Print comps as they are generated
+    // Thread-safe data for the query engine
+    let abort_flag = Arc::new(AtomicBool::new(false));
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
-    let comps_for_closure = comps.clone();
     let mut update_logger = SingleLineProgressLogger::new();
+
+    // Run the search
+    if ctrl_c_behaviour == CtrlCBehaviour::RecoverComps {
+        let abort_flag = abort_flag.clone();
+        let handler = move || abort_flag.store(true, Ordering::Relaxed);
+        if let Err(e) = ctrlc::set_handler(handler) {
+            log::warn!("Error capturing ctrl-C: {}", e);
+        }
+    }
+    let on_find_comp = {
+        let comps = comps.clone();
+        move |update| {
+            if let Some(comp) = update_logger.log(update) {
+                comps.lock().unwrap().push(comp);
+            }
+        }
+    };
     Query::search(
         Arc::new(query),
         optimised_graphs,
         config,
-        move |update| {
-            if let Some(comp) = update_logger.log(update) {
-                comps_for_closure.lock().unwrap().push(comp);
-            }
-        },
-        // User can abort with ctrl-C, so we don't need to use the abort flag
-        Arc::new(AtomicBool::new(false)),
+        on_find_comp,
+        abort_flag.clone(),
     );
 
+    // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
     comps.sort_by_key(|comp| OrderedFloat(comp.music_score()));
     Ok(Some(QueryResult {
         comps,
-        duration: Instant::now() - start_time,
+        duration: start_time.elapsed(),
+        aborted: abort_flag.load(Ordering::SeqCst),
     }))
+}
+
+/// How this query run should handle `Ctrl-C`.  This is usually
+/// [`RecoverComps`](Self::RecoverComps) when running as a stand-alone command and
+/// [`TerminateProcess`](Self::TerminateProcess) when running in the unit tests.
+#[derive(Debug, PartialEq, Eq)]
+pub enum CtrlCBehaviour {
+    /// Terminate the process instantly, without attempting to recover the compositions
+    TerminateProcess,
+    /// Capture the `Ctrl-C`, abort the search, and print the comps
+    RecoverComps,
 }
 
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     pub comps: Vec<Comp>,
     pub duration: Duration,
+    pub aborted: bool,
 }
 
 impl QueryResult {
@@ -113,7 +143,15 @@ impl QueryResult {
         for c in &self.comps {
             println!("{}", c);
         }
-        println!("Search completed in {}", PrettyDuration(self.duration));
+        println!(
+            "{} compositions generated.  Search {} {}",
+            self.comps.len(),
+            match self.aborted {
+                true => "aborted after",
+                false => "completed in",
+            },
+            PrettyDuration(self.duration)
+        );
     }
 }
 
@@ -184,6 +222,7 @@ impl FromStr for DebugOption {
 struct SingleLineProgressLogger {
     last_progress: Progress,
     is_truncating_queue: bool,
+    is_aborting: bool,
     /// The number of characters in the last line we printed.  `UpdateLogger` will use this add
     /// enough spaces to the end of the next message to completely overwrite the last one
     last_line_length: usize,
@@ -194,6 +233,7 @@ impl SingleLineProgressLogger {
         Self {
             last_progress: Progress::START,
             is_truncating_queue: false,
+            is_aborting: false,
             last_line_length: 0,
         }
     }
@@ -221,7 +261,11 @@ impl SingleLineProgressLogger {
 
         let std_out = std::io::stdout();
         let mut std_out = std_out.lock();
-        write!(std_out, "{}\r", update_string).unwrap();
+        // We precede with a carriage return to make sure that we overwrite anything the user
+        // types (e.g. `^C`).  We don't do anything in the case that the user's input is longer
+        // than what we're writing - we'll just assume that no-one would be able to type that much
+        // in between updates (which happen many many times per second).
+        write!(std_out, "\r{}\r", update_string).unwrap();
         std_out.flush().unwrap(); // `std_out` won't flush by default without a newline
 
         comp
@@ -236,6 +280,10 @@ impl SingleLineProgressLogger {
                 self.is_truncating_queue = false;
             }
             QueryUpdate::TruncatingQueue => self.is_truncating_queue = true,
+            QueryUpdate::Aborting => {
+                self.is_truncating_queue = false;
+                self.is_aborting = true;
+            }
         }
         None
     }
@@ -252,9 +300,12 @@ impl SingleLineProgressLogger {
             p.max_length
         )
         .unwrap();
-        if self.is_truncating_queue {
-            buf.push_str(".  Truncating queue...");
-        }
+        buf.push_str(match (self.is_aborting, self.is_truncating_queue) {
+            (false, false) => "",
+            (true, false) => ".  Aborting...",
+            (false, true) => ".  Truncating queue...",
+            (true, true) => unreachable!("Must either be aborting or truncating queue"),
+        });
     }
 
     /// Add whitespace to the end of a string to make sure it will cover the last thing we printed.

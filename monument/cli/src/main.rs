@@ -5,14 +5,19 @@ use std::path::PathBuf;
 
 use log::LevelFilter;
 use monument::Config;
-use monument_cli::DebugOption;
+use monument_cli::{CtrlCBehaviour, DebugOption};
 use structopt::StructOpt;
 
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let maybe_results =
-        monument_cli::run(&args.input_file, args.debug_option, &args.config()).unwrap();
+    let maybe_results = monument_cli::run(
+        &args.input_file,
+        args.debug_option,
+        &args.config(),
+        CtrlCBehaviour::RecoverComps,
+    )
+    .unwrap();
     if let Some(results) = maybe_results {
         results.print();
     }

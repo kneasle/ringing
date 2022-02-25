@@ -301,6 +301,8 @@ pub enum QueryUpdate {
     Progress(Progress),
     /// The queue of prefixes has got too large and is being shortened
     TruncatingQueue,
+    /// The search is being aborted
+    Aborting,
 }
 
 #[derive(Debug)]

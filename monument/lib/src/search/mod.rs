@@ -178,7 +178,7 @@ pub(crate) fn search(
         if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0
             && abort_flag.load(std::sync::atomic::Ordering::Relaxed)
         {
-            log::info!("Aborting");
+            update_channel.send(QueryUpdate::Aborting).unwrap();
             break;
         }
 

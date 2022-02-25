@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#54) Print comp list even when a search is aborted with `ctrl-C`.
 - (#54) Don't bother freeing memory allocated during the search algorithm.  This makes Monument
     terminate instantly, often shaving 10s of seconds from the search time.
 - (#53) Add limit on graph size.  Set with `--graph-size-limit`, defaults to 100K chunks.
