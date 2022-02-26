@@ -20,12 +20,16 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseError::OddStageCross(stage) => {
-                write!(f, "Cross notation for odd stage {}", stage)
+                write!(
+                    f,
+                    "Cross notation isn't valid for odd stages (in this case {})",
+                    stage
+                )
             }
             ParseError::PlaceOutOfStage { place, stage } => {
                 write!(
                     f,
-                    "Place '{}' is out stage {}",
+                    "Place '{}' is out of stage {}",
                     Bell::from_index(*place),
                     stage
                 )
@@ -92,7 +96,7 @@ impl PlaceNot {
     /// // Parsing invalid or ambiguous PN is not OK, and warns you of the problem
     /// assert_eq!(
     ///     PlaceNot::parse("14T", Stage::MAJOR).unwrap_err().to_string(),
-    ///     "Place 'T' is out stage Major"
+    ///     "Place 'T' is out of stage Major"
     /// );
     /// assert_eq!(
     ///     PlaceNot::parse("15", Stage::MAJOR).unwrap_err().to_string(),
@@ -445,7 +449,7 @@ impl PnBlock {
             let byte_offset = sym_block.as_ptr() as usize - address_of_start_of_s;
             // Parse this symblock as an asymmetric block into `sym_block_buf`
             let is_asymmetric =
-                Self::parse_asym_block(sym_block, byte_offset, stage, &mut sym_block_buf)?;
+                Self::parse_asymmetric_block(sym_block, byte_offset, stage, &mut sym_block_buf)?;
 
             // Handle the output of parsing the current block
             if is_single_block || is_asymmetric {
@@ -465,9 +469,9 @@ impl PnBlock {
         }
     }
 
-    fn parse_asym_block(
+    fn parse_asymmetric_block(
         block: &str,
-        byte_offset: usize,
+        block_start_offset: usize,
         stage: Stage,
         buf: &mut Vec<PlaceNot>,
     ) -> Result<bool, PnBlockParseError> {
@@ -478,11 +482,11 @@ impl PnBlock {
         // parse
         let mut tok_indices = block
             .char_indices()
-            .map(|(i, c)| (i + byte_offset, CharMeaning::from(c)))
+            .map(|(i, c)| (i + block_start_offset, CharMeaning::from(c)))
             // Insert a 'fake' delimiter at the end, to make sure that the last chunk of place
             // notation is not ignored
             .chain(std::iter::once((
-                byte_offset + block.len(),
+                block_start_offset + block.len(),
                 CharMeaning::Delimiter,
             )))
             // We need one a lookahead of one char to make parsing easier
@@ -513,14 +517,13 @@ impl PnBlock {
         // used so that we can return a byte range in the case of an error
         let mut current_pn_start_index = 0;
         for (i, m) in tok_indices {
-            let index = i + byte_offset;
             match m {
                 // If the char is a bell name, then add it to the places
                 CharMeaning::Bell(b) => {
                     if places.is_empty() {
                         // If this was the first place of the pn chunk, then we store its index as
                         // the start of this pn block
-                        current_pn_start_index = index;
+                        current_pn_start_index = i;
                     }
                     places.push(b.index_u8());
                 }
@@ -534,7 +537,7 @@ impl PnBlock {
                         // This unsafety is OK, because we have just sorted the slice
                         let new_pn = unsafe {
                             PlaceNot::from_sorted_slice(&places, stage).map_err(|e| {
-                                PnBlockParseError::PnError(current_pn_start_index..index + 1, e)
+                                PnBlockParseError::PnError(current_pn_start_index..i, e)
                             })
                         }?;
                         places.clear();
@@ -543,7 +546,7 @@ impl PnBlock {
                     }
                 }
                 // A '+' (for asymmetric block) not at the start of a block is an error
-                CharMeaning::Asym => return Err(PnBlockParseError::PlusNotAtBlockStart(index)),
+                CharMeaning::Asym => return Err(PnBlockParseError::PlusNotAtBlockStart(i)),
                 // Unknown characters are ignored
                 CharMeaning::Unknown => continue,
             }
@@ -552,7 +555,7 @@ impl PnBlock {
                 buf.push(
                     PlaceNot::cross(stage)
                         .ok_or(ParseError::OddStageCross(stage))
-                        .map_err(|e| PnBlockParseError::PnError(index..index + 1, e))?,
+                        .map_err(|e| PnBlockParseError::PnError(i..i + 1, e))?,
                 );
             }
         }
@@ -689,91 +692,88 @@ impl From<char> for CharMeaning {
 
 #[cfg(test)]
 mod tests {
-    use super::ParseError;
+    use super::{ParseError, PnBlockParseError};
     use crate::{Block, PlaceNot, PnBlock, RowBuf, Stage};
 
     #[test]
     fn parse_ok() {
-        for (inp_string, stage, exp_places) in &[
-            // No implict places
-            ("14", Stage::MAJOR, vec![0, 3]),
-            ("1256", Stage::MINOR, vec![0, 1, 4, 5]),
-            ("16", Stage::MAXIMUS, vec![0, 5]),
-            ("127", Stage::TRIPLES, vec![0, 1, 6]),
-            ("3", Stage::CATERS, vec![2]),
-            // Implicit places in lead
-            ("4", Stage::MINIMUS, vec![0, 3]),
-            ("234", Stage::MINOR, vec![0, 1, 2, 3]),
-            ("478", Stage::MAJOR, vec![0, 3, 6, 7]),
-            ("470", Stage::ROYAL, vec![0, 3, 6, 9]),
-            ("2", Stage::TWO, vec![0, 1]),
-            // Implicit places in lie
-            ("3", Stage::MAJOR, vec![2, 7]),
-            ("12", Stage::DOUBLES, vec![0, 1, 4]),
-            ("1", Stage::TWO, vec![0, 1]),
-            ("14", Stage::CINQUES, vec![0, 3, 10]),
-            // Implicit places between two other places
-            ("146", Stage::MAJOR, vec![0, 3, 4, 5]),
-            ("13", Stage::SINGLES, vec![0, 1, 2]),
-            ("13", Stage::TRIPLES, vec![0, 1, 2]),
-            ("135", Stage::TRIPLES, vec![0, 1, 2, 3, 4]),
-            // Implicit places in multiple places
-            ("23", Stage::MAJOR, vec![0, 1, 2, 7]),
-            ("4", Stage::TRIPLES, vec![0, 3, 6]),
-            ("45", Stage::MINOR, vec![0, 3, 4, 5]),
-            ("46", Stage::CATERS, vec![0, 3, 4, 5, 8]),
-            // Out of order places
-            ("6152", Stage::MINOR, vec![0, 1, 4, 5]),
-            ("342", Stage::MINOR, vec![0, 1, 2, 3]),
-            ("32", Stage::MAJOR, vec![0, 1, 2, 7]),
-            ("21", Stage::DOUBLES, vec![0, 1, 4]),
-            // Misc characters
-            ("2\t  1 |", Stage::DOUBLES, vec![0, 1, 4]),
-            ("   6\n?15&2!", Stage::MINOR, vec![0, 1, 4, 5]),
-        ] {
-            let pn = PlaceNot::parse(inp_string, *stage).unwrap();
-            assert_eq!(pn.stage, *stage);
-            assert_eq!(pn.places, *exp_places);
+        #[track_caller]
+        fn check(inp_string: &str, stage: Stage, exp_places: Vec<u8>) {
+            let pn = PlaceNot::parse(inp_string, stage).unwrap();
+            assert_eq!(pn.stage, stage);
+            assert_eq!(pn.places, exp_places);
         }
+
+        // No implict places
+        check("14", Stage::MAJOR, vec![0, 3]);
+        check("1256", Stage::MINOR, vec![0, 1, 4, 5]);
+        check("16", Stage::MAXIMUS, vec![0, 5]);
+        check("127", Stage::TRIPLES, vec![0, 1, 6]);
+        check("3", Stage::CATERS, vec![2]);
+        // Implicit places in lead
+        check("4", Stage::MINIMUS, vec![0, 3]);
+        check("234", Stage::MINOR, vec![0, 1, 2, 3]);
+        check("478", Stage::MAJOR, vec![0, 3, 6, 7]);
+        check("470", Stage::ROYAL, vec![0, 3, 6, 9]);
+        check("2", Stage::TWO, vec![0, 1]);
+        // Implicit places in lie
+        check("3", Stage::MAJOR, vec![2, 7]);
+        check("12", Stage::DOUBLES, vec![0, 1, 4]);
+        check("1", Stage::TWO, vec![0, 1]);
+        check("14", Stage::CINQUES, vec![0, 3, 10]);
+        // Implicit places between two other places
+        check("146", Stage::MAJOR, vec![0, 3, 4, 5]);
+        check("13", Stage::SINGLES, vec![0, 1, 2]);
+        check("13", Stage::TRIPLES, vec![0, 1, 2]);
+        check("135", Stage::TRIPLES, vec![0, 1, 2, 3, 4]);
+        // Implicit places in multiple places
+        check("23", Stage::MAJOR, vec![0, 1, 2, 7]);
+        check("4", Stage::TRIPLES, vec![0, 3, 6]);
+        check("45", Stage::MINOR, vec![0, 3, 4, 5]);
+        check("46", Stage::CATERS, vec![0, 3, 4, 5, 8]);
+        // Out of order places
+        check("6152", Stage::MINOR, vec![0, 1, 4, 5]);
+        check("342", Stage::MINOR, vec![0, 1, 2, 3]);
+        check("32", Stage::MAJOR, vec![0, 1, 2, 7]);
+        check("21", Stage::DOUBLES, vec![0, 1, 4]);
+        // Misc characters
+        check("2\t  1 |", Stage::DOUBLES, vec![0, 1, 4]);
+        check("   6\n?15&2!", Stage::MINOR, vec![0, 1, 4, 5]);
     }
 
     #[test]
     fn parse_err_odd_bell_cross() {
-        for &stage in &[
-            Stage::SINGLES,
-            Stage::DOUBLES,
-            Stage::TRIPLES,
-            Stage::CATERS,
-            Stage::CINQUES,
-            Stage::SEPTUPLES,
-            Stage::SEXTUPLES,
-        ] {
+        for num_bells in 1u8..=u8::MAX {
+            let stage = Stage::new(num_bells);
+            let exp_result = if num_bells % 2 == 0 {
+                Ok(PlaceNot::cross(stage).unwrap()) // Even stages parse correctly
+            } else {
+                Err(ParseError::OddStageCross(stage)) // Odd stages cause an error
+            };
             for cross_not in &["x", "X", "-"] {
-                assert_eq!(
-                    PlaceNot::parse(*cross_not, stage),
-                    Err(ParseError::OddStageCross(stage))
-                );
+                assert_eq!(PlaceNot::parse(*cross_not, stage), exp_result);
             }
         }
     }
 
     #[test]
     fn parse_err_place_out_of_stage() {
-        for &(inp_string, stage, place) in &[
-            ("148", Stage::MINIMUS, 7),
-            ("91562", Stage::MINOR, 8),
-            ("  3", Stage::TWO, 2),
-        ] {
+        #[track_caller]
+        fn check(inp_string: &str, stage: Stage, place: u8) {
             assert_eq!(
                 PlaceNot::parse(inp_string, stage),
                 Err(ParseError::PlaceOutOfStage { stage, place })
             );
         }
+
+        check("148", Stage::MINIMUS, 7);
+        check("91562", Stage::MINOR, 8);
+        check("  3", Stage::TWO, 2);
     }
 
     #[test]
     fn parse_err_no_places_given() {
-        for num_bells in 1..12 {
+        for num_bells in 1..u8::MAX {
             assert_eq!(
                 PlaceNot::parse("", Stage::new(num_bells)),
                 Err(ParseError::NoPlacesGiven)
@@ -799,26 +799,61 @@ mod tests {
 
     #[test]
     fn parse_block_ok() {
-        let equal_blocks = [
-            (Stage::SINGLES, "1.3", "1   .  3", 2),
-            (Stage::MINIMUS, "-4-3-1-..2", "x14x34x14x12", 8),
-            (Stage::MINIMUS, "-4-3-1-..2", "-14x34-14x12", 8),
-            (Stage::MINIMUS, "x14x14,12", "-14-14-14-12", 8),
-            (Stage::TRIPLES, "2.3", "2,3", 2),
-            (Stage::MAJOR, "x1,1x,x1,1x,x1,2", "-18-18-18-18,12", 16),
-            (Stage::MAJOR, "+x4x1,", "x14x18", 4),
-            (Stage::MAXIMUS, "x4x1,", "x14x1Tx14x", 7),
-            (Stage::MAXIMUS, "xxx1", "---1T", 4),
-            (Stage::MAXIMUS, "x   -\tx1", "---1T", 4),
-        ];
-
-        for &(stage, s1, s2, exp_len) in &equal_blocks {
-            println!("Parsing {} vs {}", s1, s2);
+        #[track_caller]
+        fn check(stage: Stage, s1: &str, s2: &str, exp_len: usize) {
             let b1 = PnBlock::parse(s1, stage).unwrap();
             let b2 = PnBlock::parse(s2, stage).unwrap();
             assert_eq!(b1, b2);
             assert_eq!(b1.len(), exp_len);
         }
+
+        check(Stage::SINGLES, "1.3", "1   .  3", 2);
+        check(Stage::MINIMUS, "-4-3-1-..2", "x14x34x14x12", 8);
+        check(Stage::MINIMUS, "-4-3-1-..2", "-14x34-14x12", 8);
+        check(Stage::MINIMUS, "x14x14,12", "-14-14-14-12", 8);
+        check(Stage::TRIPLES, "2.3", "2,3", 2);
+        check(Stage::MAJOR, "x1,1x,x1,1x,x1,2", "-18-18-18-18,12", 16);
+        check(Stage::MAJOR, "+x4x1,", "x14x18", 4);
+        check(Stage::MAXIMUS, "x4x1,", "x14x1Tx14x", 7);
+        check(Stage::MAXIMUS, "xxx1", "---1T", 4);
+        check(Stage::MAXIMUS, "x   -\tx1", "---1T", 4);
+    }
+
+    #[test]
+    fn parse_block_err() {
+        use PnBlockParseError as PE;
+
+        #[track_caller]
+        fn check(pn_str: &str, stage: Stage, exp_error: PnBlockParseError) {
+            assert_eq!(PnBlock::parse(pn_str, stage), Err(exp_error));
+        }
+
+        check("", Stage::MAJOR, PE::EmptyBlock);
+        check("  *!^\"£^%as=", Stage::MAJOR, PE::EmptyBlock);
+        check("5+,3+46.5", Stage::MAJOR, PE::PlusNotAtBlockStart(1));
+        check("+5,3+46.5", Stage::MAJOR, PE::PlusNotAtBlockStart(4));
+        check("+5,+3456+5", Stage::MINOR, PE::PlusNotAtBlockStart(8));
+        check(
+            "x5x4.5x5.36.4x4.5x4x1,9",
+            Stage::MAJOR,
+            PE::PnError(
+                22..23,
+                ParseError::PlaceOutOfStage {
+                    place: 8,
+                    stage: Stage::MAJOR,
+                },
+            ),
+        );
+        check(
+            "x5x4.5x5.13827.4x4.5x4x1,9",
+            Stage::MAJOR,
+            PE::PnError(9..14, ParseError::AmbiguousPlacesBetween { p: 2, q: 6 }),
+        );
+        check(
+            "x5x4.5x5.1385271.4x4.5x4x1,9",
+            Stage::MAJOR,
+            PE::PnError(9..16, ParseError::DuplicatePlace(0)),
+        );
     }
 
     #[test]
@@ -866,21 +901,19 @@ mod tests {
 13254768
 13527486";
 
-        let equal_blocks = [
-            (Stage::MINOR, "34-36.14-12-36.14-14.36,12", alnick_lead), // Alnwick Surprise Minor
-            (Stage::MINOR, "34-3.4-2-3.4-4.3,+2", alnick_lead),        // Alnwick Surprise Minor
-            (Stage::MAJOR, "x18x18x18x18,12", plain_bob_major_lead),   // Plain Bob Major
-        ];
-
-        for &(stage, pn, block_str) in &equal_blocks {
-            println!("Parsing {}", pn);
+        #[track_caller]
+        fn check(stage: Stage, pn: &str, block_str: &str) {
             let expected_block = Block::parse(block_str).unwrap();
             let b1: Block<()> = PnBlock::parse(pn, stage)
                 .unwrap()
-                .to_block(expected_block.first_annot_row().unwrap().row().to_owned())
+                .to_block(expected_block.first_row().to_owned())
                 .unwrap();
             assert_eq!(b1, expected_block);
         }
+
+        check(Stage::MINOR, "34-36.14-12-36.14-14.36,12", alnick_lead); // Alnwick Surprise Minor
+        check(Stage::MINOR, "34-3.4-2-3.4-4.3,+2", alnick_lead); // Alnwick Surprise Minor
+        check(Stage::MAJOR, "x18x18x18x18,12", plain_bob_major_lead); // Plain Bob Major
     }
 
     #[test]

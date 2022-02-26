@@ -11,6 +11,9 @@
 - (#50) Add `bobs_only` and `singles_only`.
 - (#50) Fix some dead links in Monument's guide.
 
+### BellFrame
+- (#58) Fix incorrect indices for `PnBlockParseError`
+
 ---
 
 ## 18th Feb 2021
