@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#58) Add nice error messages for all custom errors (serde's errors are still lacking, but there's
+    little I can do about them for now).
 - (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
 - (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
 - (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.

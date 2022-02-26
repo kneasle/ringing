@@ -35,15 +35,15 @@ impl Display for InvalidRowError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             InvalidRowError::DuplicateBell(bell) => {
-                write!(f, "Bell '{}' appears twice.", bell)
+                write!(f, "bell '{}' appears twice.", bell)
             }
             InvalidRowError::BellOutOfStage(bell, stage) => {
-                write!(f, "Bell '{}' is not within stage {}", bell, stage)
+                write!(f, "bell '{}' is not within stage {}", bell, stage)
             }
             InvalidRowError::MissingBell(bell) => {
-                write!(f, "Bell '{}' is missing", bell)
+                write!(f, "bell '{}' is missing", bell)
             }
-            InvalidRowError::NoBells => write!(f, "Row would have no bells"),
+            InvalidRowError::NoBells => write!(f, "row would have no bells"),
         }
     }
 }

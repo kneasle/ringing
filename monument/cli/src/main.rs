@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use colored::Colorize;
 use log::LevelFilter;
 use monument::Config;
 use monument_cli::{CtrlCBehaviour, DebugOption};
@@ -11,15 +12,22 @@ use structopt::StructOpt;
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let maybe_results = monument_cli::run(
+    let result = monument_cli::run(
         &args.input_file,
         args.debug_option,
         &args.config(),
         CtrlCBehaviour::RecoverComps,
-    )
-    .unwrap();
-    if let Some(results) = maybe_results {
-        results.print();
+    );
+    match result {
+        Ok(Some(query_result)) => query_result.print(),
+        Ok(None) => assert!(args.debug_option.is_some()),
+        Err(e) => {
+            // In the case of an error, print the error message nicely then terminate the program
+            // with code -1 without causing a panic message.
+            println!("{} {:?}", "Error:".bright_red().bold(), e);
+            drop(args);
+            std::process::exit(-1);
+        }
     }
 }
 

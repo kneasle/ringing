@@ -1,5 +1,7 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
+    fmt::Write,
     ops::{Deref, Range},
     path::{Path, PathBuf},
     time::Duration,
@@ -9,8 +11,10 @@ use bellframe::{
     method::LABEL_LEAD_END,
     method_lib::QueryError,
     music::{Regex, RegexElem},
+    place_not::PnBlockParseError,
     Bell, Mask, MethodLib, Row, RowBuf, Stage, Stroke,
 };
+use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     layout::{
@@ -23,10 +27,7 @@ use monument::{
 };
 use serde::Deserialize;
 
-use crate::{
-    calls::{BaseCalls, SpecificCall},
-    Error,
-};
+use crate::calls::{BaseCalls, SpecificCall};
 
 use self::length::Length;
 
@@ -138,19 +139,19 @@ pub struct Spec {
 
 impl Spec {
     /// Read a `Spec` from a TOML file
-    pub fn read_from_file(path: &Path) -> Result<Self, TomlReadError> {
+    pub fn read_from_file(path: &Path) -> anyhow::Result<Self> {
         let mut toml_buf = String::new();
         read_toml(path, &mut toml_buf)
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`]
-    pub fn lower(&self, toml_path: &Path) -> Result<Query, Error> {
+    pub fn lower(&self, toml_path: &Path) -> anyhow::Result<Query> {
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
             .iter()
             .map(|m_spec| MethodSpec::gen_method(m_spec, self.base_calls))
-            .collect::<Result<_, _>>()?;
+            .collect::<anyhow::Result<_>>()?;
         if let Some(m) = &self.method {
             loaded_methods.push(m.gen_method(self.base_calls)?);
         }
@@ -159,13 +160,18 @@ impl Spec {
             .iter()
             .map(|(m, _)| m.stage())
             .max()
-            .ok_or(Error::NoMethods)?;
+            .ok_or_else(|| {
+                anyhow::Error::msg(
+                    "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`.",
+                )
+            })?;
         // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
         // `layout::new::Method`s
         let ch_masks = self.ch_mask_preset(stage)?.into_masks(stage);
         let calls = self.calls(stage)?;
-        let part_head =
-            RowBuf::parse_with_stage(&self.part_head, stage).map_err(Error::PartHeadParse)?;
+        let part_head = RowBuf::parse_with_stage(&self.part_head, stage).map_err(|e| {
+            anyhow::Error::msg(format!("Can't parse part head {:?}: {}", self.part_head, e))
+        })?;
         let (start_indices, end_indices) = self.start_end_indices(&part_head);
         let shorthands = monument::utils::default_shorthands(
             loaded_methods
@@ -200,8 +206,7 @@ impl Spec {
         let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
 
         // Generate the `Layout`
-        let layout = Layout::new(methods, self.splice_style, &part_head, self.leadwise)
-            .map_err(Error::LayoutGen)?;
+        let layout = Layout::new(methods, self.splice_style, &part_head, self.leadwise)?;
 
         let music_types = self.music_types(toml_path, stage)?;
         if music_types.is_empty() {
@@ -226,7 +231,7 @@ impl Spec {
         })
     }
 
-    fn music_types(&self, toml_path: &Path, stage: Stage) -> Result<Vec<MusicType>, Error> {
+    fn music_types(&self, toml_path: &Path, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
         let mut music_types = self
             .music
             .iter()
@@ -241,8 +246,7 @@ impl Spec {
             music_path.push(relative_music_path);
             // Parse the TOML
             let mut toml_buf = String::new();
-            let music_file: MusicFile = read_toml(&music_path, &mut toml_buf)
-                .map_err(|toml_err| Error::MusicFile(music_path.to_owned(), toml_err))?;
+            let music_file: MusicFile = read_toml(&music_path, &mut toml_buf)?;
             // Add the music types
             music_types.extend(
                 music_file
@@ -254,7 +258,7 @@ impl Spec {
         Ok(music_types)
     }
 
-    fn calls(&self, stage: Stage) -> Result<Vec<Call>, Error> {
+    fn calls(&self, stage: Stage) -> anyhow::Result<Vec<Call>> {
         let mut call_specs = self.base_calls.to_call_specs(
             stage,
             self.bobs_only,
@@ -268,7 +272,7 @@ impl Spec {
         Ok(call_specs)
     }
 
-    fn ch_mask_preset(&self, stage: Stage) -> Result<CourseHeadMaskPreset, Error> {
+    fn ch_mask_preset(&self, stage: Stage) -> anyhow::Result<CourseHeadMaskPreset> {
         Ok(if let Some(ch_mask_strings) = &self.course_heads {
             // If masks are specified, parse all the course head mask strings into `Mask`s,
             // defaulting to the tenor as calling bell
@@ -327,7 +331,7 @@ impl Spec {
         &self,
         stage: Stage,
         methods: impl IntoIterator<Item = &'m bellframe::Method>,
-    ) -> Result<Vec<(Mask, f32)>, Error> {
+    ) -> anyhow::Result<Vec<(Mask, f32)>> {
         // Get the set of lead heads, so we can expand each CH lead mask to every matching CH mask
         // (i.e. compute each lead head within that course).  For example, CH lead mask `*34` would
         // expand into:
@@ -356,7 +360,7 @@ impl Spec {
             // Add the patterns
             for mask_str in ch_masks {
                 let mask = Mask::parse_with_stage(mask_str, stage)
-                    .map_err(|e| Error::ChPatternParse(mask_str.to_owned(), e))?;
+                    .map_err(|e| mask_parse_error("course head weight", mask_str, e))?;
                 add_ch_pattern(&mask, *weight);
             }
         }
@@ -381,14 +385,14 @@ impl Spec {
     }
 }
 
-fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> Result<Vec<(Mask, Bell)>, Error> {
+fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<(Mask, Bell)>> {
     ch_mask_strings
         .iter()
         .map(|s| match Mask::parse_with_stage(s, stage) {
             Ok(mask) => Ok((mask, stage.tenor())),
-            Err(e) => Err(Error::ChMaskParse(s.to_owned(), e)),
+            Err(e) => Err(mask_parse_error("course head mask", s, e)),
         })
-        .collect::<Result<Vec<_>, _>>()
+        .collect()
 }
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent
@@ -412,12 +416,10 @@ pub enum TomlReadError {
     Parse(toml::de::Error),
 }
 
-pub fn read_toml<'de, T: Deserialize<'de>>(
-    path: &Path,
-    buf: &'de mut String,
-) -> Result<T, TomlReadError> {
-    *buf = std::fs::read_to_string(&path).map_err(TomlReadError::Io)?;
-    toml::from_str(buf).map_err(TomlReadError::Parse)
+pub fn read_toml<'de, T: Deserialize<'de>>(path: &Path, buf: &'de mut String) -> anyhow::Result<T> {
+    *buf = std::fs::read_to_string(&path)
+        .map_err(|e| anyhow::Error::msg(format!("Can't open {:?}: {}", path, e)))?;
+    toml::from_str(buf).map_err(|e| anyhow::Error::msg(format!("Error parsing {:?}: {}", path, e)))
 }
 
 ///////////////
@@ -468,7 +470,7 @@ impl MethodSpec {
     fn gen_method(
         &self,
         base_calls: BaseCalls,
-    ) -> Result<(bellframe::Method, MethodCommon), Error> {
+    ) -> anyhow::Result<(bellframe::Method, MethodCommon)> {
         let mut method = self.get_method_without_lead_locations()?;
 
         if base_calls != BaseCalls::None {
@@ -489,9 +491,14 @@ impl MethodSpec {
         }
 
         for (index_str, name) in self.get_lead_locations() {
-            let index = index_str
-                .parse::<isize>()
-                .map_err(|e| Error::LeadLocationIndex(index_str, e))?;
+            let index = index_str.parse::<isize>().map_err(|_| {
+                anyhow::Error::msg(format!(
+                    "Lead location {:?} (for label {:?} in {:?}) is not a valid integer",
+                    index_str,
+                    name,
+                    method.title()
+                ))
+            })?;
             let lead_len = method.lead_len() as isize;
             let wrapped_index = ((index % lead_len) + lead_len) % lead_len;
             // This cast is OK because we used % twice to guarantee a positive index
@@ -519,27 +526,19 @@ impl MethodSpec {
     }
 
     /// Attempt to generate a new [`Method`] with no lead location annotations
-    fn get_method_without_lead_locations(&self) -> Result<bellframe::Method, Error> {
+    fn get_method_without_lead_locations(&self) -> anyhow::Result<bellframe::Method> {
         match self {
             MethodSpec::FromCcLib { title, .. } | MethodSpec::JustTitle(title) => {
-                let lib = MethodLib::cc_lib().ok_or(Error::CcLibNotFound)?;
+                let lib = MethodLib::cc_lib().ok_or_else(|| {
+                    anyhow::Error::msg("Central Council method library can't be loaded.")
+                })?;
                 lib.get_by_title_with_suggestions(title, 5)
                     .map_err(|err| match err {
                         QueryError::PnParseErr { .. } => {
                             panic!("Method lib contains invalid place notation")
                         }
                         QueryError::NotFound(suggestions) => {
-                            // Only suggest the suggestions which (perhaps jointly) have the best edit
-                            // distance
-                            let first_suggestion_edit_dist = suggestions[0].1;
-                            let best_suggestions = suggestions
-                                .into_iter()
-                                .take_while(|&(_s, i)| i == first_suggestion_edit_dist)
-                                .map(|(s, _i)| s.to_owned())
-                                .collect_vec();
-                            Error::MethodNotFound {
-                                suggestions: best_suggestions,
-                            }
+                            anyhow::Error::msg(method_suggestion_message(title, suggestions))
                         }
                     })
             }
@@ -549,9 +548,146 @@ impl MethodSpec {
                 place_notation,
                 ..
             } => bellframe::Method::from_place_not_string(name.clone(), *stage, place_notation)
-                .map_err(Error::MethodPnParse),
+                .map_err(|e| anyhow::Error::msg(pn_parse_err_msg(name, place_notation, e))),
         }
     }
+}
+
+////////////////////
+// ERROR MESSAGES //
+////////////////////
+
+/// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
+/// The message looks something like the following:
+/// ```text
+/// Can't find "{title}" in the Central Council method library.  Did you mean:
+///      "{suggestions[0]}" ({diff for suggestions[0]})
+///   or "{suggestions[1]}" ({diff for suggestions[1]})
+///   or ...
+/// ```
+fn method_suggestion_message(title: &str, mut suggestions: Vec<(&str, usize)>) -> String {
+    // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
+    // deterministic (and, by extension, keeps the tests deterministic).
+    suggestions.sort_by_key(|&(name, edit_dist)| (edit_dist, name));
+
+    let mut message = format!(
+        "Can't find {:?} in the Central Council method library.",
+        title
+    );
+    message.push_str("  Did you mean:");
+    // Only suggest the suggestions which (perhaps jointly) have the best edit
+    // distance
+    let best_edit_dist = suggestions[0].1;
+    let mut is_first_suggestion = true;
+    for (suggested_title, edit_dist) in suggestions {
+        if edit_dist > best_edit_dist {
+            break;
+        }
+        message.push('\n');
+        message.push_str(if is_first_suggestion {
+            "     "
+        } else {
+            "  or "
+        });
+        write!(
+            message,
+            "{:?} ({})",
+            suggested_title,
+            difference::Changeset::new(title, suggested_title, "")
+        )
+        .unwrap();
+        is_first_suggestion = false;
+    }
+    message
+}
+
+/// Construct a human-friendly error message for a PN parse error, like:
+/// ```text
+/// Can't parse place notation for method "{name}":
+///       {method place notation}
+///             ^^^^ {error message}
+/// ```
+fn pn_parse_err_msg(name: &str, pn_str: &str, error: PnBlockParseError) -> String {
+    let (region, message) = match error {
+        PnBlockParseError::EmptyBlock => {
+            return format!(
+                "Can't have empty place notation block for method {:?}",
+                name
+            );
+        }
+        PnBlockParseError::PlusNotAtBlockStart(plus_idx) => (
+            plus_idx..plus_idx + 1,
+            "`+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
+                .to_owned(),
+        ),
+        PnBlockParseError::PnError(range, err) => (range, err.to_string()),
+    };
+
+    let pn_before_error = &pn_str[..region.start];
+    let pn_error = &pn_str[region.clone()];
+    let pn_after_error = &pn_str[region.end..];
+    // Given that we're labelling `region` with some `message`, construct the full string.
+    let mut msg = format!("Can't parse place notation for method {:?}:\n", name);
+    // Write the place notation string, with the offending 'region' bold.  Also use 5 spaces of
+    // margin, plus one `"`
+    writeln!(
+        msg,
+        "     \"{}{}{}\"",
+        pn_before_error,
+        pn_error.bright_red().bold(),
+        pn_after_error
+    )
+    .unwrap();
+    // Add the error message, with carets under the offending region
+    let chars_before_plus = pn_before_error.chars().count();
+    let caret_string = std::iter::repeat('^')
+        .take(pn_error.chars().count())
+        .join("")
+        .bright_red()
+        .bold();
+    msg.extend(std::iter::repeat(' ').take(6 + chars_before_plus)); // 6 extra for the margin
+    write!(msg, "{} {}", caret_string, message.bright_red().bold()).unwrap();
+    msg
+}
+
+/// Construct a human-friendly error message when a mask fails to parse.
+fn mask_parse_error(
+    mask_kind: &str,
+    string: &str,
+    e: bellframe::mask::ParseError,
+) -> anyhow::Error {
+    use bellframe::mask::ParseError as PE;
+    let mut s = format!("Can't parse {} {:?}: ", mask_kind, string);
+    match e {
+        PE::MultipleGlobs => {
+            s.push_str("too many `*`s.  Masks can only have one region with `x` or `*`.");
+        }
+        PE::BellExceedsStage(bell, stage) => {
+            write!(s, "bell {} is out of stage {}", bell, stage).unwrap();
+        }
+        PE::MismatchedLength(len, stage) => match len.cmp(&stage.num_bells()) {
+            Ordering::Less => write!(
+                s,
+                "mask is too short; did you mean `{}*` or `{}{}`?",
+                string,
+                string,
+                stage
+                    .bells()
+                    .skip(len)
+                    .map(|b| b.to_char().unwrap())
+                    .collect::<String>()
+            )
+            .unwrap(),
+            Ordering::Equal => unreachable!(),
+            Ordering::Greater => write!(
+                s,
+                "mask is too long, needing at least {} bells (too many for {})",
+                len, stage
+            )
+            .unwrap(),
+        },
+    }
+    anyhow::Error::msg(s)
 }
 
 ///////////

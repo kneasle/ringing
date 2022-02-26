@@ -2,8 +2,6 @@ use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use monument::layout::new::Call;
 use serde::{de, Deserialize, Deserializer};
 
-use super::Error;
-
 /// The values of the `base_calls` attribute
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BaseCalls {
@@ -20,7 +18,7 @@ impl BaseCalls {
         singles_only: bool,
         bob_weight: Option<f32>,
         single_weight: Option<f32>,
-    ) -> Result<Vec<Call>, Error> {
+    ) -> anyhow::Result<Vec<Call>> {
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
         // generate comps on fewer than 8 bells, but we should still check because the alternative
         // is UB
@@ -60,7 +58,11 @@ impl BaseCalls {
             (false, false) => vec![bob, single],
             (true, false) => vec![bob],
             (false, true) => vec![single],
-            (true, true) => return Err(Error::BobsOnlyAndSinglesOnly),
+            (true, true) => {
+                return Err(anyhow::Error::msg(
+                    "Can't be both `bobs_only` and `singles_only`",
+                ))
+            }
         })
     }
 }
@@ -102,14 +104,20 @@ pub struct SpecificCall {
 }
 
 impl SpecificCall {
-    pub(crate) fn to_call_spec(&self, stage: Stage) -> Result<Call, Error> {
+    pub(crate) fn to_call_spec(&self, stage: Stage) -> anyhow::Result<Call> {
         Ok(Call::new(
             self.symbol.clone(),
             self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
             self.calling_positions.clone(),
             self.lead_location.clone(),
-            PlaceNot::parse(&self.place_notation, stage)
-                .map_err(|e| Error::CallPnParse(self.place_notation.clone(), e))?,
+            PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
+                anyhow::Error::msg(format!(
+                    "Can't parse place notation {:?} for call {:?}: {}",
+                    self.place_notation,
+                    self.debug_symbol.as_ref().unwrap_or(&self.symbol),
+                    e
+                ))
+            })?,
             self.weight,
         ))
     }
