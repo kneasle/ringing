@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     ops::{Deref, Range},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use bellframe::{
@@ -480,6 +481,8 @@ impl MethodSpec {
                     );
                     log::warn!("In general, Grandsire and Stedman aren't very well supported yet.");
                     log::warn!("You're welcome to try, but be wary that weird things may happen.");
+                    // Pause so that the user can register the warnings
+                    std::thread::sleep(Duration::from_secs_f32(2.0));
                 }
                 _ => {}
             }
