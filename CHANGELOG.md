@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
 - (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.
 - (#54) Print comp list even when a search is aborted with `ctrl-C`.
 - (#54) Don't bother freeing memory allocated during the search algorithm.  This makes Monument
