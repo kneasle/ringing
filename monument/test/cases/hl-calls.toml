@@ -1,6 +1,6 @@
 length = { min = 0, max = 200 }
 method.title = "Bristol Surprise Major"
-method.lead_locations = { 0 = "LE", 16 = "HL" }
+method.lead_locations = { LE = 0, HL = 16 }
 default_music = false
 
 # music_file = "music-8.toml"

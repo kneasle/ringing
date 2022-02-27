@@ -237,7 +237,7 @@ method = "Bristol Surprise Major"
 [method]
 title = "Lincolnshire Surprise Major"
 shorthand = "N" # (optional; defaults to the first letter of the title)
-lead_locations = { 0: "LE", 16: "HL" } # (optional; defaults to `{0:"LE"}`)
+lead_locations = { LE = 0, HL = 16 } # (optional; defaults to `{ LE = 0 }`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
 course_heads = ["*78"]
@@ -251,12 +251,20 @@ name = "Double Norwich Court" # Note this is *name*, not *title*
 place_notation = "x4x36x5x8,8"
 stage = 8
 shorthand = "N" # (optional; defaults to the first letter of the title)
-lead_locations = { 0: "LE", 8: "HL" } # (optional; defaults to `{0:"LE"}`)
+lead_locations = { LE = 0, HL = 8 } # (optional; defaults to `{ LE = 0 }`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
 course_heads = ["*78"]
 start_indices = [2]
 end_indices = [2]
+```
+
+You can also specify multiple locations for the same lead label, useful for e.g. Stedman:
+
+```toml
+[method]
+title = "Stedman Triples"
+lead_locations = { SE = [3, 9] }
 ```
 
 #### `methods`

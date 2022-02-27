@@ -1,6 +1,10 @@
 ## (Unreleased)
 
 ### Monument
+- (#91) Allow multiple labels on the same row within a lead.  Also reversed the syntax from e.g.
+    `lead_locations = { 0 = "LE", 16 = "HL" }` to `lead_locations = { LE = 0, HL = 16 }`.  The same
+    label can be added to multiple rows like `lead_locations = { SE = [3, 9] }` (for Six-Ends in
+    Stedman).
 - (#89) Refactor the search algorithm (splitting the node expansion from the best-first search code)
 
 ---
@@ -50,6 +54,9 @@
 
 ### Internal Improvements
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
+
+### BellFrame
+- (#??) Allow multiple lead labels to be placed on the same row
 
 ---
 

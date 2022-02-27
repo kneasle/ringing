@@ -108,7 +108,7 @@ fn links(
         let lead = m.first_lead();
         let mut call_starts_for_this_method = HashMap::new();
         for (row_idx_after, annot_row_after) in lead.annot_rows().enumerate() {
-            if let Some(label) = annot_row_after.annot() {
+            for label in annot_row_after.annot() {
                 let row_idx_before = (row_idx_after + lead.len() - 1) % lead.len();
                 let row_before = lead.get_row(row_idx_before).unwrap();
                 let row_after_plain = lead.get_row(row_idx_before + 1).unwrap();
@@ -138,7 +138,6 @@ fn links(
     for call_starts_by_label in &call_starts {
         for (call_idx, call) in calls.iter_enumerated() {
             let label = call.lead_location.as_str();
-
             for start in &call_starts_by_label[label] {
                 let mut row_after_call = start.row_before.clone();
                 call.place_not.permute(&mut row_after_call).unwrap();

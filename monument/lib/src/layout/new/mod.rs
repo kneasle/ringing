@@ -273,14 +273,14 @@ impl std::ops::Deref for Method {
 #[derive(Debug, Clone)]
 struct Annot {
     sub_lead_idx: usize,
-    label: Option<String>,
+    labels: Vec<String>,
 }
 
 impl From<RowAnnot<'_>> for Annot {
     fn from(a: RowAnnot) -> Self {
         Self {
-            sub_lead_idx: a.sub_lead_idx(),
-            label: a.label().map(str::to_owned),
+            sub_lead_idx: a.sub_lead_idx,
+            labels: a.labels.to_owned(),
         }
     }
 }

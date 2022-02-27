@@ -19,7 +19,10 @@ pub struct Method {
     title: String,
     name: String,
     class: FullClass,
-    first_lead: Block<Option<String>>,
+    /// The first lead of this [`Method`], where each row can be given any number of arbitrary
+    /// labels.
+    // TODO: Use a `HashMap<(usize, String)>` to store lead labels?
+    first_lead: Block<Vec<String>>,
 }
 
 impl Method {
@@ -32,7 +35,7 @@ impl Method {
         title: String,
         name: String,
         class: FullClass,
-        first_lead: Block<Option<String>>,
+        first_lead: Block<Vec<String>>,
     ) -> Self {
         Self {
             title,
@@ -43,7 +46,7 @@ impl Method {
     }
 
     /// Create and classify a new `Method`, given its name and first lead
-    pub fn with_name(name: String, first_lead: Block<Option<String>>) -> Self {
+    pub fn with_name(name: String, first_lead: Block<Vec<String>>) -> Self {
         let class = FullClass::classify(&first_lead);
         Self {
             title: generate_title(&name, class, first_lead.stage()),
@@ -68,8 +71,11 @@ impl Method {
 
     /// Creates a new `Method` from some place notation, adding a lead end annotation.
     pub fn with_lead_end(name: String, block: &PnBlock) -> Self {
-        let mut first_lead: Block<Option<String>> = block.to_block_from_rounds();
-        *first_lead.get_annot_mut(first_lead.len() - 1).unwrap() = Some(LABEL_LEAD_END.to_owned());
+        let mut first_lead: Block<Vec<String>> = block.to_block_from_rounds();
+        first_lead
+            .get_annot_mut(first_lead.len() - 1)
+            .unwrap()
+            .push(LABEL_LEAD_END.to_owned());
         Self::with_name(name, first_lead)
     }
 
@@ -77,17 +83,10 @@ impl Method {
     // GETTERS //
     /////////////
 
-    /// Returns an `Block` of the first lead of this `Method`
-    #[deprecated(note = "Use `Method::first_lead` instead`")]
-    #[inline]
-    pub fn lead(&self) -> &Block<Option<String>> {
-        &self.first_lead
-    }
-
     /// Returns an [`Block`] of the first lead of this [`Method`], along with the lead
     /// location labels.
     #[inline]
-    pub fn first_lead(&self) -> &Block<Option<String>> {
+    pub fn first_lead(&self) -> &Block<Vec<String>> {
         &self.first_lead
     }
 
@@ -158,8 +157,7 @@ impl Method {
         // this lead
         let first_lead_with_indices = self
             .first_lead
-            // We use `as_deref` to convert `&Option<String>` to `Option<&str>`
-            .clone_map_annots_with_index(|i, label| RowAnnot::new(i, label.as_deref()));
+            .clone_map_annots_with_index(|i, labels| RowAnnot::new(i, labels));
 
         // Start with the first lead, and repeatedly add leads until we get back to rounds
         let mut plain_course = first_lead_with_indices;
@@ -174,30 +172,29 @@ impl Method {
     //////////////////////
 
     /// Sets or clears the label at a given index, panicking if the index is out of range
-    pub fn set_label(&mut self, index: usize, label: Option<String>) {
-        *self.first_lead.get_annot_mut(index).unwrap() = label;
+    pub fn add_label(&mut self, index: usize, label: String) {
+        let labels = self.first_lead.get_annot_mut(index).unwrap();
+        if !labels.contains(&label) {
+            labels.push(label);
+        }
     }
 
     /// Same as `self.set_label(0, Some(LABEL_LEAD_END.to_owned()))`
     pub fn set_lead_end_label(&mut self) {
-        self.set_label(0, Some(LABEL_LEAD_END.to_owned()))
+        self.add_label(0, LABEL_LEAD_END.to_owned())
     }
 
     /// Returns the label at a given index, panicking if the index is out of range
     // TODO: Make this not panic
-    pub fn get_label(&self, index: usize) -> Option<&str> {
-        self.first_lead
-            .get_annot(index)
-            .unwrap()
-            .as_ref()
-            .map(String::as_str)
+    pub fn get_labels(&self, index: usize) -> &[String] {
+        self.first_lead.get_annot(index).unwrap()
     }
 
     /// An [`Iterator`] over the sub-lead indices of a particular lead label.
     pub fn label_indices<'s>(&'s self, label: &'s str) -> impl Iterator<Item = usize> + 's {
         self.first_lead
             .annots()
-            .positions(move |l| l.as_ref().map(String::as_str) == Some(label))
+            .positions(move |labels| labels.iter().any(|l| l == label))
     }
 }
 
@@ -230,23 +227,15 @@ pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
 /// The source of a [`Row`] within a [`Method`]
 #[derive(Debug, Clone)]
 pub struct RowAnnot<'meth> {
-    sub_lead_idx: usize,
-    label: Option<&'meth str>,
+    pub sub_lead_idx: usize,
+    pub labels: &'meth [String],
 }
 
 impl<'meth> RowAnnot<'meth> {
-    fn new(sub_lead_idx: usize, label: Option<&'meth str>) -> Self {
+    fn new(sub_lead_idx: usize, labels: &'meth [String]) -> Self {
         Self {
             sub_lead_idx,
-            label,
+            labels,
         }
-    }
-
-    pub fn sub_lead_idx(&self) -> usize {
-        self.sub_lead_idx
-    }
-
-    pub fn label(&self) -> Option<&'meth str> {
-        self.label
     }
 }
