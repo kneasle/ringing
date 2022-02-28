@@ -29,7 +29,9 @@ def convert_leadwise(callstring):
     call_indices = []
     call_symbols = []
     def add_call(symbol):
-        call_indices.append(str(len(method_string)))
+        # assuming that number of leads = number of capital letters
+        lead_index = len([c for c in method_string if c.isupper()])
+        call_indices.append(str(lead_index))
         call_symbols.append(symbol)
 
     is_method = True
