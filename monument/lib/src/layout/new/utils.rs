@@ -128,7 +128,8 @@ fn filter_bells_fixed_by_call(
     set: &mut HashSet<Bell>,
 ) {
     // Note that all calls are required to only substitute one piece of place notation.
-    for sub_lead_idx_after_call in method.label_indices(&call.lead_location) {
+    for sub_lead_idx_after_call in method.label_indices(&call.lead_location_from) {
+        // TODO: Handle different from/to locations
         let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
         let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
 

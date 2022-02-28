@@ -372,7 +372,7 @@ impl Spec {
     ) -> anyhow::Result<()> {
         let sorted_calls = call_specs
             .iter()
-            .map(|call| (get_symbol(call), &call.lead_location, &call.place_not))
+            .map(|call| (get_symbol(call), &call.lead_location_from, &call.place_not))
             .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
         for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in
             sorted_calls.tuple_windows()

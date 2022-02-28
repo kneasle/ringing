@@ -98,10 +98,20 @@ pub struct SpecificCall {
     symbol: String,
     debug_symbol: Option<String>,
     #[serde(default = "lead_end")]
-    lead_location: String,
+    lead_location: LeadLocation,
     calling_positions: Option<CallingPositions>,
     #[serde(default = "default_call_score")]
     weight: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum LeadLocation {
+    /// from/to are the same location
+    Same(String),
+    /// from/to are different (e.g. for cases like Leary's 23, which use 6ths place calls in 8ths
+    /// place methods)
+    Different { from: String, to: String },
 }
 
 /// The different ways the user can specify a set of calling positions
@@ -129,19 +139,24 @@ impl SpecificCall {
             Some(CallingPositions::Str(s)) => s.chars().map(|c| c.to_string()).collect_vec(),
             Some(CallingPositions::List(positions)) => positions.clone(),
         };
+        let (lead_location_from, lead_location_to) = match &self.lead_location {
+            LeadLocation::Same(loc) => (loc.clone(), loc.clone()),
+            LeadLocation::Different { from, to } => (from.clone(), to.clone()),
+        };
         Ok(Call {
             display_symbol: self.symbol.clone(),
             debug_symbol: self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
             calling_positions,
-            lead_location: self.lead_location.clone(),
+            lead_location_from,
+            lead_location_to,
             place_not,
             weight: self.weight,
         })
     }
 }
 
-fn lead_end() -> String {
-    LABEL_LEAD_END.to_owned()
+fn lead_end() -> LeadLocation {
+    LeadLocation::Same(LABEL_LEAD_END.to_owned())
 }
 
 fn default_call_score() -> f32 {

@@ -274,7 +274,7 @@ fn generate_call_links(
 ) -> Result<()> {
     // Test every call in every valid position in the course ...
     for (call_idx, call) in calls.iter_enumerated() {
-        let lead_label = call.lead_location.as_str();
+        let lead_label = call.lead_location_from.as_str();
         let call_starts = link_gen_data
             .call_starts_by_label
             .get(lead_label)
