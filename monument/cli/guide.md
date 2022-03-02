@@ -403,7 +403,7 @@ weight = 0.05 # this is small because the weight is applied per row
 Generates `ch_weights` which apply the given weight to every row where a handbell pair coursing
 (this score gets multiplied for courses with multiple handbell pairs coursing).  Equivalent to
 something like this (truncated according to stage):
-```toml`
+```toml
 [[ch_weights]]
 patterns = [
     "*12", "*21",

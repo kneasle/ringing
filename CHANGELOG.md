@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
 - (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
 - (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.
 - (#54) Print comp list even when a search is aborted with `ctrl-C`.
