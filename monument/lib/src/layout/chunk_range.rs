@@ -338,8 +338,7 @@ impl<'a> RangeFactory<'a> {
             .cycle()
             .skip(id.row_idx.row)
             .take(shortest_length)
-            .map(Option::as_ref)
-            .flatten()
+            .filter_map(Option::as_ref)
         {
             label.push_str(l);
         }
