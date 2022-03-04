@@ -27,7 +27,10 @@ use monument::{
 };
 use serde::Deserialize;
 
-use crate::calls::{BaseCalls, SpecificCall};
+use crate::{
+    calls::{BaseCalls, SpecificCall},
+    Source,
+};
 
 use self::length::Length;
 
@@ -139,13 +142,20 @@ pub struct Spec {
 
 impl Spec {
     /// Read a `Spec` from a TOML file
-    pub fn read_from_file(path: &Path) -> anyhow::Result<Self> {
-        let mut toml_buf = String::new();
-        read_toml(path, &mut toml_buf)
+    pub fn from_source(source: Source) -> anyhow::Result<Self> {
+        let toml_buf;
+        let toml_string: &str = match source {
+            Source::Path(p) => {
+                toml_buf = read_file_to_string(p)?;
+                &toml_buf
+            }
+            Source::Str { spec, .. } => spec,
+        };
+        parse_toml(toml_string)
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`]
-    pub fn lower(&self, toml_path: &Path) -> anyhow::Result<Query> {
+    pub fn lower(&self, source: Source) -> anyhow::Result<Query> {
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
@@ -208,7 +218,7 @@ impl Spec {
         // Generate the `Layout`
         let layout = Layout::new(methods, self.splice_style, &part_head, self.leadwise)?;
 
-        let music_types = self.music_types(toml_path, stage)?;
+        let music_types = self.music_types(source, stage)?;
         if music_types.is_empty() {
             // TODO: Add default music
             log::warn!("No music patterns specified.  Are you sure you don't care about music?");
@@ -231,22 +241,37 @@ impl Spec {
         })
     }
 
-    fn music_types(&self, toml_path: &Path, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
+    fn music_types(&self, source: Source, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
+        // Compute the explicitly mentioned music types
         let mut music_types = self
             .music
             .iter()
             .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer))
             .collect_vec();
+        // Load the music from the `music_file`
         if let Some(relative_music_path) = &self.music_file {
-            // Compute the path of the music TOML file
-            let mut music_path = toml_path
-                .parent()
-                .expect("files should always have a parent")
-                .to_owned();
-            music_path.push(relative_music_path);
+            let toml_buf;
+            let music_file_toml_string: &str = match source {
+                Source::Path(spec_path) => {
+                    // If `self` was loaded from a file (as would be the case when using the CLI in
+                    // the wild), then we also load the music file from a file
+                    let mut music_path = spec_path
+                        .parent()
+                        .expect("files should always have a parent")
+                        .to_owned();
+                    music_path.push(relative_music_path);
+                    toml_buf = read_file_to_string(&music_path)?;
+                    &toml_buf
+                }
+                Source::Str { music_file, .. } => music_file.ok_or_else(|| {
+                    anyhow::Error::msg(
+                        "Spec string requires `music_file`, but no music file string was given",
+                    )
+                })?,
+            };
+
             // Parse the TOML
-            let mut toml_buf = String::new();
-            let music_file: MusicFile = read_toml(&music_path, &mut toml_buf)?;
+            let music_file: MusicFile = parse_toml(music_file_toml_string)?;
             // Add the music types
             music_types.extend(
                 music_file
@@ -407,19 +432,6 @@ fn method_count_range(
     let min = user_range.min.unwrap_or(min_f32.floor() as usize);
     let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
     min..max + 1 // + 1 because the `method_count` is an **inclusive** range
-}
-
-/// Error generated when a user tries to read a TOML file from the FS
-#[derive(Debug)]
-pub enum TomlReadError {
-    Io(std::io::Error),
-    Parse(toml::de::Error),
-}
-
-pub fn read_toml<'de, T: Deserialize<'de>>(path: &Path, buf: &'de mut String) -> anyhow::Result<T> {
-    *buf = std::fs::read_to_string(&path)
-        .map_err(|e| anyhow::Error::msg(format!("Can't open {:?}: {}", path, e)))?;
-    toml::from_str(buf).map_err(|e| anyhow::Error::msg(format!("Error parsing {:?}: {}", path, e)))
 }
 
 ///////////////
@@ -843,7 +855,20 @@ impl MusicSpec {
     }
 }
 
-/* Deserialization helpers */
+//////////////////////
+// HELPER FUNCTIONS //
+//////////////////////
+
+/// Attempt to read a file as a [`String`], returning a helpful error message on failure
+fn read_file_to_string(path: &Path) -> anyhow::Result<String> {
+    std::fs::read_to_string(path)
+        .map_err(|e| anyhow::Error::msg(format!("Can't open {:?}: {}", path, e)))
+}
+
+/// Attempt to read a file as a [`String`], returning a helpful error message on failure
+fn parse_toml<'de, T: Deserialize<'de>>(s: &'de str) -> anyhow::Result<T> {
+    toml::from_str(s).map_err(|e| anyhow::Error::msg(format!("Error parsing spec file: {}", e)))
+}
 
 fn get_one() -> f32 {
     1.0

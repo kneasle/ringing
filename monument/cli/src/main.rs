@@ -13,7 +13,7 @@ fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
     let result = monument_cli::run(
-        &args.input_file,
+        monument_cli::Source::Path(&args.input_file),
         args.debug_option,
         &args.config(),
         CtrlCBehaviour::RecoverComps,

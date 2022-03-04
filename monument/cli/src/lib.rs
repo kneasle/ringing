@@ -38,7 +38,7 @@ pub fn init_logging(filter: LevelFilter) {
 }
 
 pub fn run(
-    input_file: &Path,
+    source: Source,
     debug_option: Option<DebugOption>,
     config: &Config,
     ctrl_c_behaviour: CtrlCBehaviour,
@@ -57,12 +57,12 @@ pub fn run(
     let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
-    let spec = Spec::read_from_file(input_file)?;
+    let spec = Spec::from_source(source)?;
     debug_print!(Spec, spec);
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::debug!("Generating query");
-    let query = spec.lower(input_file)?;
+    let query = spec.lower(source)?;
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
@@ -113,6 +113,20 @@ pub fn run(
         duration: start_time.elapsed(),
         aborted: abort_flag.load(Ordering::SeqCst),
     }))
+}
+
+/// The `Source` of the TOML that Monument should read.  In nearly all cases, this will be loaded
+/// from a [`Path`].  For the test runner it's useful to be able to run Monument on strings that
+/// aren't loaded from a specific file, so for this we have the [`Str`](Self::Str) variant.
+#[derive(Debug, Clone, Copy)]
+pub enum Source<'a> {
+    /// The TOML 'spec' file should be loaded from this path
+    Path(&'a Path),
+    /// The TOML should be read directly from a string
+    Str {
+        spec: &'a str,
+        music_file: Option<&'a str>,
+    },
 }
 
 /// How this query run should handle `Ctrl-C`.  This is usually

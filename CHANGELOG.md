@@ -3,6 +3,7 @@
 ### Monument
 - (#58) Allow `calling_positions = "<string>"` to set the calling positions of a call to the
     characters in `<string>`.
+- (#58) Allow multiple test cases to be stored in one file
 - (#58) Add nice error messages for all custom errors (serde's errors are still lacking, but there's
     little I can do about them for now).
 - (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
