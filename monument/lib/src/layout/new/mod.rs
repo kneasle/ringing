@@ -287,40 +287,17 @@ impl From<RowAnnot<'_>> for Annot {
 /// The specification for a call that can be used in a composition
 #[derive(Debug, Clone)]
 pub struct Call {
-    display_symbol: String,
-    debug_symbol: String,
-    calling_positions: Vec<String>,
+    pub display_symbol: String,
+    pub debug_symbol: String,
+    pub calling_positions: Vec<String>,
 
-    lead_location: String,
-    place_not: PlaceNot,
+    pub lead_location: String,
+    pub place_not: PlaceNot,
 
-    weight: f32,
+    pub weight: f32,
 }
 
 impl Call {
-    pub fn new(
-        display_symbol: String,
-        debug_symbol: String,
-        calling_positions: Option<Vec<String>>,
-        lead_location: String,
-        place_not: PlaceNot,
-        weight: f32,
-    ) -> Self {
-        Self {
-            display_symbol,
-            debug_symbol,
-            calling_positions: calling_positions
-                .unwrap_or_else(|| default_calling_positions(&place_not)),
-            lead_location,
-            place_not,
-            weight,
-        }
-    }
-
-    pub fn set_weight(&mut self, weight: f32) {
-        self.weight = weight;
-    }
-
     ////////////////////////
     // DEFAULT CALL TYPES //
     ////////////////////////
@@ -354,31 +331,31 @@ impl Call {
 
     /// Create a bob which replaces the lead end with a given [`PlaceNot`]
     pub fn lead_end_bob(place_not: PlaceNot) -> Self {
-        Self::new(
-            String::new(),
-            "-".to_owned(),
-            None,
-            bellframe::method::LABEL_LEAD_END.to_owned(),
+        Self {
+            display_symbol: String::new(),
+            debug_symbol: "-".to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            -1.8, // Slightly punish bobs
-        )
+            weight: -1.8, // Slightly punish bobs
+        }
     }
 
     /// Create a bob which replaces the lead end with a given [`PlaceNot`]
     pub fn lead_end_single(place_not: PlaceNot) -> Self {
-        Self::new(
-            "s".to_owned(),
-            "s".to_owned(),
-            None,
-            bellframe::method::LABEL_LEAD_END.to_owned(),
+        Self {
+            display_symbol: "s".to_owned(),
+            debug_symbol: "s".to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            -2.3, // Punish singles slightly more than bobs
-        )
+            weight: -2.3, // Punish singles slightly more than bobs
+        }
     }
 }
 
 #[allow(clippy::branches_sharing_code)]
-fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // Generate calling positions that aren't M, W or H

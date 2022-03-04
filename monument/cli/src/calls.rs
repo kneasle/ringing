@@ -1,5 +1,6 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
-use monument::layout::new::Call;
+use itertools::Itertools;
+use monument::layout::new::{default_calling_positions, Call};
 use serde::{de, Deserialize, Deserializer};
 
 /// The values of the `base_calls` attribute
@@ -48,10 +49,10 @@ impl BaseCalls {
         };
 
         if let Some(w) = bob_weight {
-            bob.set_weight(w);
+            bob.weight = w;
         }
         if let Some(w) = single_weight {
-            single.set_weight(w);
+            single.weight = w;
         }
 
         Ok(match (bobs_only, singles_only) {
@@ -98,32 +99,47 @@ pub struct SpecificCall {
     debug_symbol: Option<String>,
     #[serde(default = "lead_end")]
     lead_location: String,
-    calling_positions: Option<Vec<String>>,
+    calling_positions: Option<CallingPositions>,
     #[serde(default = "default_call_score")]
     weight: f32,
 }
 
+/// The different ways the user can specify a set of calling positions
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+enum CallingPositions {
+    /// The calling positions should be the `char`s in the given string
+    Str(String),
+    /// Each calling position is explicitly listed
+    List(Vec<String>),
+}
+
 impl SpecificCall {
     pub(crate) fn to_call_spec(&self, stage: Stage) -> anyhow::Result<Call> {
-        Ok(Call::new(
-            self.symbol.clone(),
-            self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
-            self.calling_positions.clone(),
-            self.lead_location.clone(),
-            PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
-                anyhow::Error::msg(format!(
-                    "Can't parse place notation {:?} for call {:?}: {}",
-                    self.place_notation,
-                    self.debug_symbol.as_ref().unwrap_or(&self.symbol),
-                    e
-                ))
-            })?,
-            self.weight,
-        ))
+        let place_not = PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
+            anyhow::Error::msg(format!(
+                "Can't parse place notation {:?} for call {:?}: {}",
+                self.place_notation,
+                self.debug_symbol.as_ref().unwrap_or(&self.symbol),
+                e
+            ))
+        })?;
+        let calling_positions = match &self.calling_positions {
+            None => default_calling_positions(&place_not),
+            Some(CallingPositions::Str(s)) => s.chars().map(|c| c.to_string()).collect_vec(),
+            Some(CallingPositions::List(positions)) => positions.clone(),
+        };
+        Ok(Call {
+            display_symbol: self.symbol.clone(),
+            debug_symbol: self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
+            calling_positions,
+            lead_location: self.lead_location.clone(),
+            place_not,
+            weight: self.weight,
+        })
     }
 }
 
-#[inline(always)]
 fn lead_end() -> String {
     LABEL_LEAD_END.to_owned()
 }
