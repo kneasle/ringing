@@ -666,6 +666,7 @@ dependencies = [
  "ordered-float",
  "pulldown-cmark",
  "rayon",
+ "regex",
  "serde",
  "serde_json",
  "simple_logger",

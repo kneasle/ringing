@@ -15,6 +15,7 @@ use monument::Config;
 use monument_cli::{CtrlCBehaviour, DebugOption};
 use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 // NOTE: All paths are relative to the `monument` directory.  Cargo runs custom test code in the
@@ -29,6 +30,11 @@ const EXPECTED_RESULTS_PATH: &str = "test/results.json";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
 const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 3] = [
     ("test/cases/", SuiteStorage::Dir, SuiteUse::Test), // Test cases which we expect to succeed
+    (
+        "test/error-messages.md",
+        SuiteStorage::DedicatedFile,
+        SuiteUse::Test,
+    ),
     ("examples/", SuiteStorage::Dir, SuiteUse::Example), // Examples to show how Monument's TOML format works
 ];
 const PATH_TO_MONUMENT_DIR: &str = "../";
@@ -483,7 +489,17 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
             ActualResult::Parsed
         }
         // Search failed in some way
-        Err(e) => ActualResult::Error(format!("{:?}", e)), // TODO: Implement `Display` for errors
+        Err(e) => {
+            // ANSI colours are 'esc key' (1b in hex) followed by `[` then some codes, finishing
+            // with `m`.  We use `.*?` to consume anything, but stopping at the first `m` (`.*?` is
+            // the non-greedy version of `.*`)
+            let ansi_escape_regex = Regex::new("\x1b\\[.*?m").unwrap();
+            let error_string = format!("{:?}", e);
+            let color_free_error_string = ansi_escape_regex
+                .replace_all(&error_string, "")
+                .into_owned();
+            ActualResult::Error(color_free_error_string)
+        }
     };
     // Add the actual results to get a full search
     RunTestCase {
