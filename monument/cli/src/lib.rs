@@ -12,8 +12,7 @@ pub mod spec;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
-    num::ParseIntError,
-    path::{Path, PathBuf},
+    path::Path,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -22,10 +21,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bellframe::{
-    place_not::{self, PnBlockParseError},
-    InvalidRowError,
-};
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
 use ordered_float::OrderedFloat;
@@ -43,11 +38,11 @@ pub fn init_logging(filter: LevelFilter) {
 }
 
 pub fn run(
-    input_file: &Path,
+    source: Source,
     debug_option: Option<DebugOption>,
     config: &Config,
     ctrl_c_behaviour: CtrlCBehaviour,
-) -> Result<Option<QueryResult>, Error> {
+) -> anyhow::Result<Option<QueryResult>> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
@@ -62,18 +57,19 @@ pub fn run(
     let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
-    let spec =
-        Spec::read_from_file(input_file).map_err(|e| Error::SpecFile(input_file.to_owned(), e))?;
+    let spec = Spec::from_source(source)?;
     debug_print!(Spec, spec);
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::debug!("Generating query");
-    let query = spec.lower(input_file)?;
+    let query = spec.lower(source)?;
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
     // Optimise the graph(s)
-    let graph = query.unoptimised_graph(config).map_err(Error::GraphGen)?;
+    let graph = query
+        .unoptimised_graph(config)
+        .map_err(|e| anyhow::Error::msg(graph_build_err_msg(e)))?;
     debug_print!(Graph, graph);
     let optimised_graphs = query.optimise_graph(graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -119,6 +115,20 @@ pub fn run(
     }))
 }
 
+/// The `Source` of the TOML that Monument should read.  In nearly all cases, this will be loaded
+/// from a [`Path`].  For the test runner it's useful to be able to run Monument on strings that
+/// aren't loaded from a specific file, so for this we have the [`Str`](Self::Str) variant.
+#[derive(Debug, Clone, Copy)]
+pub enum Source<'a> {
+    /// The TOML 'spec' file should be loaded from this path
+    Path(&'a Path),
+    /// The TOML should be read directly from a string
+    Str {
+        spec: &'a str,
+        music_file: Option<&'a str>,
+    },
+}
+
 /// How this query run should handle `Ctrl-C`.  This is usually
 /// [`RecoverComps`](Self::RecoverComps) when running as a stand-alone command and
 /// [`TerminateProcess`](Self::TerminateProcess) when running in the unit tests.
@@ -155,33 +165,6 @@ impl QueryResult {
     }
 }
 
-/// The possible ways that a run of Monument could fail
-#[derive(Debug)]
-pub enum Error {
-    SpecFile(PathBuf, spec::TomlReadError),
-    MusicFile(PathBuf, spec::TomlReadError),
-
-    PartHeadParse(InvalidRowError),
-    // TODO: For too short inputs, suggest expanding with either bells or a `*`
-    ChMaskParse(String, bellframe::mask::ParseError),
-    ChPatternParse(String, bellframe::mask::ParseError),
-
-    NoMethods,
-    CcLibNotFound,
-    MethodNotFound {
-        suggestions: Vec<String>,
-    },
-    MethodPnParse(PnBlockParseError),
-
-    CallPnParse(String, place_not::ParseError),
-    /// The user set both `bobs_only = true` and `singles_only = true`.
-    BobsOnlyAndSinglesOnly,
-    LeadLocationIndex(String, ParseIntError),
-
-    LayoutGen(monument::layout::new::Error),
-    GraphGen(monument::graph::BuildError),
-}
-
 /// What item should be debug printed
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DebugOption {
@@ -210,6 +193,20 @@ impl FromStr for DebugOption {
                 v
             )),
         })
+    }
+}
+
+////////////////////
+// ERROR MESSAGES //
+////////////////////
+
+fn graph_build_err_msg(e: monument::graph::BuildError) -> String {
+    use monument::graph::BuildError as BE;
+    match e {
+        BE::SizeLimit(limit) => format!(
+            "Graph size limit of {} nodes reached.  You can set it higher with `--graph-size-limit <n>`.",
+            limit
+        )
     }
 }
 

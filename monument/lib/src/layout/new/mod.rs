@@ -1,5 +1,7 @@
 //! Utility code for building [`Layout`]s in common scenarios.
 
+use std::fmt::{Display, Formatter};
+
 use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
@@ -38,7 +40,10 @@ impl Layout {
 #[derive(Debug, Clone)]
 pub enum Error {
     NoMethods,
-    UndefinedLeadLocation(String),
+    UndefinedLeadLocation {
+        call_name: String,
+        label: String,
+    },
     DuplicateShorthand {
         shorthand: String,
         title1: String,
@@ -62,6 +67,62 @@ pub enum Error {
         input_mask2: Mask,
     },
 }
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoMethods => write!(f, "Can't have a composition with no methods"),
+            Self::DuplicateShorthand {
+                shorthand,
+                title1,
+                title2,
+            } => write!(
+                f,
+                "Methods {:?} and {:?} share a shorthand ({})",
+                title1, title2, shorthand
+            ),
+            Self::UndefinedLeadLocation { call_name, label } => write!(
+                f,
+                "Call {:?} refers to a lead location {:?}, which doesn't exist",
+                call_name, label
+            ), // TODO: Suggest one that does exist
+            Self::CallingPositionsTooShort {
+                call_name,
+                calling_position_len,
+                stage,
+            } => {
+                write!(
+                    f,
+                    "Call {:?} only specifies {} calling positions, but the stage is {}",
+                    call_name, calling_position_len, stage
+                )
+            }
+            // TODO: Rename 'calling bells' to 'observation bell'
+            Self::ConflictingCallingBell((mask1, calling_bell1), (mask2, calling_bell2)) => {
+                write!(
+                    f,
+                    "Conflicting observation bells:\n      {} wants {}\n  but {} wants {}",
+                    mask1, calling_bell1, mask2, calling_bell2
+                )
+            } // TODO: Make a test case for this once custom calling bells are possible
+            Self::AmbiguousCourseHeadPosition {
+                mask1,
+                input_mask1,
+                mask2,
+                input_mask2,
+            } => {
+                write!(
+                    f,
+                    "The same course could be given two different course heads:"
+                )?;
+                write!(f, "\n     {}, satisfying {}", mask1, input_mask1)?;
+                write!(f, "\n  or {}, satisfying {}", mask2, input_mask2)
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -226,40 +287,17 @@ impl From<RowAnnot<'_>> for Annot {
 /// The specification for a call that can be used in a composition
 #[derive(Debug, Clone)]
 pub struct Call {
-    display_symbol: String,
-    debug_symbol: String,
-    calling_positions: Vec<String>,
+    pub display_symbol: String,
+    pub debug_symbol: String,
+    pub calling_positions: Vec<String>,
 
-    lead_location: String,
-    place_not: PlaceNot,
+    pub lead_location: String,
+    pub place_not: PlaceNot,
 
-    weight: f32,
+    pub weight: f32,
 }
 
 impl Call {
-    pub fn new(
-        display_symbol: String,
-        debug_symbol: String,
-        calling_positions: Option<Vec<String>>,
-        lead_location: String,
-        place_not: PlaceNot,
-        weight: f32,
-    ) -> Self {
-        Self {
-            display_symbol,
-            debug_symbol,
-            calling_positions: calling_positions
-                .unwrap_or_else(|| default_calling_positions(&place_not)),
-            lead_location,
-            place_not,
-            weight,
-        }
-    }
-
-    pub fn set_weight(&mut self, weight: f32) {
-        self.weight = weight;
-    }
-
     ////////////////////////
     // DEFAULT CALL TYPES //
     ////////////////////////
@@ -293,31 +331,31 @@ impl Call {
 
     /// Create a bob which replaces the lead end with a given [`PlaceNot`]
     pub fn lead_end_bob(place_not: PlaceNot) -> Self {
-        Self::new(
-            String::new(),
-            "-".to_owned(),
-            None,
-            bellframe::method::LABEL_LEAD_END.to_owned(),
+        Self {
+            display_symbol: String::new(),
+            debug_symbol: "-".to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            -1.8, // Slightly punish bobs
-        )
+            weight: -1.8, // Slightly punish bobs
+        }
     }
 
     /// Create a bob which replaces the lead end with a given [`PlaceNot`]
     pub fn lead_end_single(place_not: PlaceNot) -> Self {
-        Self::new(
-            "s".to_owned(),
-            "s".to_owned(),
-            None,
-            bellframe::method::LABEL_LEAD_END.to_owned(),
+        Self {
+            display_symbol: "s".to_owned(),
+            debug_symbol: "s".to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
             place_not,
-            -2.3, // Punish singles slightly more than bobs
-        )
+            weight: -2.3, // Punish singles slightly more than bobs
+        }
     }
 }
 
 #[allow(clippy::branches_sharing_code)]
-fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // Generate calling positions that aren't M, W or H

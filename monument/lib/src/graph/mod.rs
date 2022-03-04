@@ -399,8 +399,8 @@ impl Chunk {
 /// The different ways that graph building can fail
 #[derive(Debug)]
 pub enum BuildError {
-    /// The maximum graph size limit was reached
-    SizeLimit,
+    /// The given maximum graph size limit was reached
+    SizeLimit(usize),
 }
 
 impl Graph {
@@ -646,7 +646,7 @@ fn build_graph(query: &Query, size_limit: usize) -> Result<BuiltGraph, BuildErro
         // Mark this chunk as expanded
         expanded_chunk_ranges.insert(chunk_id, (chunk_range, distance));
         if expanded_chunk_ranges.len() > size_limit {
-            return Err(BuildError::SizeLimit);
+            return Err(BuildError::SizeLimit(size_limit));
         }
     }
 

@@ -250,7 +250,10 @@ fn generate_call_links(
         let call_starts = link_gen_data
             .call_starts_by_label
             .get(lead_label)
-            .ok_or_else(|| Error::UndefinedLeadLocation(lead_label.to_owned()))?;
+            .ok_or_else(|| Error::UndefinedLeadLocation {
+                call_name: call.debug_symbol.to_owned(),
+                label: lead_label.to_owned(),
+            })?;
         for &from_idx in call_starts {
             if from_idx.block.index() != method_idx {
                 continue; // Skip any call starts which aren't from this method

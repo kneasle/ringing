@@ -1,6 +1,11 @@
 ## (Unreleased)
 
 ### Monument
+- (#58) Allow `calling_positions = "<string>"` to set the calling positions of a call to the
+    characters in `<string>`.
+- (#58) Allow multiple test cases to be stored in one file
+- (#58) Add nice error messages for all custom errors (serde's errors are still lacking, but there's
+    little I can do about them for now).
 - (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
 - (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
 - (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.
@@ -10,6 +15,9 @@
 - (#53) Add limit on graph size.  Set with `--graph-size-limit`, defaults to 100K chunks.
 - (#50) Add `bobs_only` and `singles_only`.
 - (#50) Fix some dead links in Monument's guide.
+
+### BellFrame
+- (#58) Fix incorrect indices for `PnBlockParseError`
 
 ---
 

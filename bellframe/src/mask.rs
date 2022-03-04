@@ -35,7 +35,7 @@ impl Mask {
         // TODO: Check validity
     }
 
-    pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, RegexToMaskError> {
+    pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, ParseError> {
         Self::from_regex(&Regex::parse(s), stage)
     }
 

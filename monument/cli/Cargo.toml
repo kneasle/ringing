@@ -10,8 +10,11 @@ license = "MIT"
 repository = "https://github.com/kneasle/ringing-monorepo"
 
 [dependencies]
+anyhow = "1.0"
 bellframe = { version = "0.8.0", path = "../../bellframe/", features = ["serde"] }
+colored = "2.0"
 ctrlc = "3.2"
+difference = "2.0"
 itertools = "0.10"
 log = "0.4"
 monument = { version = "0.5.0", path = "../lib/" }
@@ -23,12 +26,11 @@ structopt = "0.3"
 toml = "0.5"
 
 [dev-dependencies]
-anyhow = "1.0"
-colored = "2.0"
-difference = "2.0"
-serde_json = "1.0"
 ordered-float = { version = "2.10", features = ["serde"] }
+pulldown-cmark = "0.9"
 rayon = "1.5"
+regex = "1.5"
+serde_json = "1.0"
 walkdir = "2.3"
 
 [[test]]
