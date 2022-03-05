@@ -12,8 +12,8 @@ easily as possible**.  Monument should also be correct and performant, but this 
 all software.
 
 Note that this doesn't necessarily mean generating the perfect composition, or generating _every
-possible_ composition.  Monument guarantees neither of these but in return, Monument is _orders of
-magnitude faster_ than any other engine I'm aware of (if anyone knows of any faster
+possible_ composition.  Monument guarantees neither of these but in return, Monument is **orders of
+magnitude faster** than any other engine I'm aware of (if anyone knows of any faster
 generally-available engine, then please let me know!).
 
 ### Who _isn't_ Monument for?
