@@ -27,6 +27,7 @@ toml = "0.5"
 
 [dev-dependencies]
 ordered-float = { version = "2.10", features = ["serde"] }
+path-slash = "0.1"
 pulldown-cmark = "0.9"
 rayon = "1.5"
 regex = "1.5"

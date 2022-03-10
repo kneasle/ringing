@@ -14,6 +14,7 @@ use itertools::Itertools;
 use monument::Config;
 use monument_cli::{CtrlCBehaviour, DebugOption};
 use ordered_float::OrderedFloat;
+use path_slash::PathExt;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -258,16 +259,10 @@ fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteSt
                     .skip(1)
                     .collect::<PathBuf>();
                 for (heading_path, spec) in markdown::extract_cases(&markdown) {
-                    let name = format!(
-                        "{}: {}",
-                        file_path_relative_to_monument_dir
-                            .to_str()
-                            .expect("<non-utf8 file name>"),
-                        heading_path
-                    );
                     test_sources.push((
                         CaseSource::SectionOfFile {
-                            name,
+                            file_path: file_path_relative_to_monument_dir.clone(),
+                            section_name: heading_path,
                             spec,
                             music_file: None,
                         },
@@ -290,16 +285,17 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
 
     let mut unrun_test_cases = Vec::new();
     for (source, state) in sources {
+        let name = &source.name();
         // Load the values from the ignore/result files
-        let ignore_value = ignore.remove(source.name());
-        let results_value = results.remove(source.name());
+        let ignore_value = ignore.remove(name);
+        let results_value = results.remove(name);
         // Combine everything into an `UnrunTestCase`
         let ignored = match ignore_value {
             Some(IgnoreReason::MusicFile) => {
                 assert!(
                     results_value.is_none(),
                     "Music file {:?} shouldn't have results",
-                    source.name()
+                    name
                 );
                 continue; // Fully ignore music files
             }
@@ -391,7 +387,7 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
     let actual_results: ResultsFile = cases
         .into_iter()
         .filter_map(|case| {
-            let name = case.name().to_owned();
+            let name = case.name();
             let entry = match case.actual_result {
                 ActualResult::Ignored | ActualResult::Parsed => return None, // If no result, skip
                 ActualResult::Error(error_message) => ResultsFileEntry::Error { error_message },
@@ -516,7 +512,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
 fn report_failures(run_cases: &[RunTestCase]) {
     // Report all unspecified tests first
     for case in run_cases {
-        let path_string = unspecified_str(case.name());
+        let path_string = unspecified_str(&case.name());
         match case.outcome() {
             CaseOutcome::Unspecified(Ok(comps)) => {
                 println!();
@@ -539,7 +535,7 @@ fn report_failures(run_cases: &[RunTestCase]) {
     }
     // Report all the failures second
     for case in run_cases {
-        let path_string = fail_str(case.name());
+        let path_string = fail_str(&case.name());
         match case.outcome() {
             CaseOutcome::ParseError(err_msg) => {
                 println!();
@@ -669,33 +665,8 @@ struct UnrunTestCase {
 }
 
 impl UnrunTestCase {
-    fn name(&self) -> &str {
+    fn name(&self) -> String {
         self.source.name()
-    }
-}
-
-#[derive(Debug)]
-enum CaseSource {
-    /// This case was loaded from a TOML file.
-    ///
-    /// NOTE: The path is relative to the `monument/` directory
-    TomlFile(PathBuf),
-    /// This case was loaded from a section of another file
-    SectionOfFile {
-        /// A unique name for this test.  Usually a combination of the larger file's name and this
-        /// case's position within it.
-        name: String,
-        spec: String,
-        music_file: Option<String>,
-    },
-}
-
-impl CaseSource {
-    fn name(&self) -> &str {
-        match &self {
-            Self::TomlFile(path) => path.to_str().expect("Non-utf8 file name"),
-            Self::SectionOfFile { name, .. } => name,
-        }
     }
 }
 
@@ -734,6 +705,38 @@ impl std::ops::Deref for RunTestCase {
 
     fn deref(&self) -> &Self::Target {
         &self.base
+    }
+}
+
+#[derive(Debug)]
+enum CaseSource {
+    /// This case was loaded from a TOML file.
+    ///
+    /// NOTE: The path is relative to the `monument/` directory
+    TomlFile(PathBuf),
+    /// This case was loaded from a section of another file
+    SectionOfFile {
+        file_path: PathBuf,
+        /// A unique name for this test within the file
+        section_name: String,
+        spec: String,
+        music_file: Option<String>,
+    },
+}
+
+impl CaseSource {
+    /// Generate the unique name for this test.  This is the file's path (always delimited with '/'
+    /// so the names are consistent across all platforms), optionally extended with a section name
+    /// (if the same file contains many test cases).
+    fn name(&self) -> String {
+        match &self {
+            Self::TomlFile(path) => path.to_slash_lossy(),
+            Self::SectionOfFile {
+                file_path,
+                section_name,
+                ..
+            } => format!("{}: {}", file_path.to_slash_lossy(), section_name),
+        }
     }
 }
 
