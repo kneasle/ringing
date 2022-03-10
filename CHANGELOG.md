@@ -1,23 +1,31 @@
-## (Unreleased)
+## 10th March 2021
 
-### Monument
-- (#58) Allow `calling_positions = "<string>"` to set the calling positions of a call to the
-    characters in `<string>`.
-- (#58) Allow multiple test cases to be stored in one file
-- (#58) Add nice error messages for all custom errors (serde's errors are still lacking, but there's
-    little I can do about them for now).
-- (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
-- (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
-- (#55) Print warning for using plain-bob style calls in Grandsire or Stedman.
+### Monument v0.6.0
+
+#### Headline
+- (#58) Add nice error messages for all custom errors (TOML parsing errors are still lacking, but
+    they are substantially harder to fix).
 - (#54) Print comp list even when a search is aborted with `ctrl-C`.
+- (#50) Add `bobs_only` and `singles_only`.
+
+#### Smaller Fixes
+- (#58) Allow `calling_positions = "<string>"` to set the calling positions of a call to the
+    characters in `<string>` (previously `calling_positions` had to be an array).
+- (#56) Allow `to-complib.py` to handle multiple-letter method shorthands.
+- (#55) Print warning for using plain-bob style calls in Grandsire or Stedman (Grandsire and Stedman
+    are still pretty buggy anyway, though).
 - (#54) Don't bother freeing memory allocated during the search algorithm.  This makes Monument
     terminate instantly, often shaving 10s of seconds from the search time.
 - (#53) Add limit on graph size.  Set with `--graph-size-limit`, defaults to 100K chunks.
-- (#50) Add `bobs_only` and `singles_only`.
+
+#### Internal
+- (#58) Allow multiple test cases to be stored in one file
+- (#57) Fix mistake in `guide.md` which turned a large part of the guide into a giant code block.
 - (#50) Fix some dead links in Monument's guide.
 
-### BellFrame
+### BellFrame v0.8.1
 - (#58) Fix incorrect indices for `PnBlockParseError`
+
 
 ---
 
