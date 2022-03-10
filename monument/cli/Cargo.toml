@@ -1,6 +1,6 @@
 [package]
 name = "monument_cli"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
@@ -17,7 +17,7 @@ ctrlc = "3.2"
 difference = "2.0"
 itertools = "0.10"
 log = "0.4"
-monument = { version = "0.5.0", path = "../lib/" }
+monument = { version = "0.6.0", path = "../lib/" }
 ordered-float = "2.10"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
