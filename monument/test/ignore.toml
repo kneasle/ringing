@@ -3,7 +3,6 @@
 
 ignore = [
     "test/cases/no-duffers.toml",  # Duffer-based filtering is currently bugged
-    "test/cases/bobs-and-singles-only.toml", # Waiting on tests for error messages
 ]
 music_files = [
     "examples/music-6.toml",
