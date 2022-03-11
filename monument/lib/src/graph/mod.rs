@@ -139,19 +139,40 @@ impl Graph {
         query: &Query,
         limit: usize,
     ) {
-        let mut last_size = Size::from(&*self);
-
-        for _ in 0..limit {
+        let mut last_size = self.size();
+        let mut iter_count = 0;
+        loop {
+            // Run every optimisation pass
             for p in passes {
+                // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
+                // is unnecessary.  I think that this system can deadlock if multiple threads are
+                // optimising graphs in parallel using the same set of passes.
                 p.lock().unwrap().run(self, query);
             }
-
-            let new_size = Size::from(&*self);
-            // Stop optimising if the optimisations don't make the graph strictly smaller.  If
-            // they make some parts smaller but others larger, then keep optimising.
-            match new_size.partial_cmp(&last_size) {
-                Some(Ordering::Equal | Ordering::Greater) => return,
-                Some(Ordering::Less) | None => {}
+            // Stop optimising if the limit has been reached
+            if iter_count > limit {
+                log::warn!(
+                    "Graph optimisation limit reached, but more progress could have been made."
+                );
+                break;
+            }
+            iter_count += 1;
+            // Stop optimising if the graph has stopped getting smaller
+            let new_size = self.size();
+            match new_size.cmp(&last_size) {
+                // If graph got smaller, then keep optimising in case more optimisation is possible
+                Ordering::Less => {}
+                // If the last optimisation pass couldn't make `self` smaller, then assume no
+                // changes has been made and further optimisation is impossible
+                Ordering::Equal => {
+                    log::debug!(
+                        "Finished optimisation after {} iters of every pass",
+                        iter_count
+                    );
+                    break;
+                }
+                // Optimisation passes shouldn't increase the graph size
+                Ordering::Greater => unreachable!("Optimisation should never increase graph size"),
             }
             last_size = new_size;
         }
@@ -174,6 +195,24 @@ impl Graph {
 
     pub fn num_parts(&self) -> Rotation {
         self.num_parts
+    }
+
+    /// Return a value representing the 'size' of this graph.  Optimisation passes are
+    /// **required** to never increase this quantity.  Graph size is compared on the following
+    /// factors (in order of precedence, most important first):
+    /// 1. Number of nodes (smaller is better)
+    /// 2. Number of links (smaller is better)
+    /// 3. Number of required nodes (more is better)
+    pub fn size(&self) -> (usize, usize, Reverse<usize>) {
+        let mut num_links = 0;
+        let mut num_required_nodes = 0;
+        for chunk in self.chunks.values() {
+            num_links += chunk.successors.len();
+            if chunk.required {
+                num_required_nodes += 1;
+            }
+        }
+        (self.chunks.len(), num_links, Reverse(num_required_nodes))
     }
 }
 
@@ -215,54 +254,6 @@ impl Chunk {
             0 // Make sure that non-duffers are never pruned
         } else {
             self.lb_distance_from_non_duffer + self.length() + self.lb_distance_to_non_duffer
-        }
-    }
-}
-
-/// A measure of the `Size` of a [`Graph`].  Used to detect when further optimisations aren't
-/// useful.
-#[derive(Debug, PartialEq, Clone, Copy)]
-struct Size {
-    num_chunks: usize,
-    num_links: usize,
-    num_starts: usize,
-    num_ends: usize,
-}
-
-impl From<&Graph> for Size {
-    fn from(g: &Graph) -> Self {
-        Self {
-            num_chunks: g.chunks.len(),
-            // This assumes that every successor link also corresponds to a predecessor link
-            num_links: g.chunks().map(|(_id, chunk)| chunk.successors.len()).sum(),
-            num_starts: g.start_chunks.len(),
-            num_ends: g.end_chunks.len(),
-        }
-    }
-}
-
-impl PartialOrd for Size {
-    // TODO: Make this into a macro?
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let cmp_chunks = self.num_chunks.cmp(&other.num_chunks);
-        let cmp_links = self.num_links.cmp(&other.num_links);
-        let cmp_starts = self.num_starts.cmp(&other.num_starts);
-        let cmp_ends = self.num_ends.cmp(&other.num_ends);
-
-        let all_comparisons = [cmp_chunks, cmp_links, cmp_starts, cmp_ends];
-
-        let are_any_less = all_comparisons
-            .iter()
-            .any(|cmp| matches!(cmp, Ordering::Less));
-        let are_any_greater = all_comparisons
-            .iter()
-            .any(|cmp| matches!(cmp, Ordering::Greater));
-
-        match (are_any_less, are_any_greater) {
-            (true, false) => Some(Ordering::Less), // If nothing got larger, then the size is smaller
-            (false, true) => Some(Ordering::Greater), // If nothing got smaller, then the size is larger
-            (false, false) => Some(Ordering::Equal),  // No < or > means all components are equal
-            (true, true) => None, // If some are smaller & some are greater then these are incomparable
         }
     }
 }

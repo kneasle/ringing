@@ -49,6 +49,8 @@ const QUEUE_LIMIT: usize = 10_000_000;
 
 /// Run the full test suite.
 pub fn run(run_type: RunType) -> anyhow::Result<Outcome> {
+    monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
+
     // Collect the test cases
     let cases = sources_to_cases(collect_sources(run_type)?)?;
     // Run the tests.  We run _tests_ in parallel, but _benchmarks_ sequentially
