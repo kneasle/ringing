@@ -1,3 +1,10 @@
+## (Unreleased)
+
+### Monument
+- (#64) Use `goldilocks-json-fmt` to format the test result files.
+
+---
+
 ## 10th March 2021
 
 ### Monument v0.6.0
@@ -25,7 +32,6 @@
 
 ### BellFrame v0.8.1
 - (#58) Fix incorrect indices for `PnBlockParseError`
-
 
 ---
 
