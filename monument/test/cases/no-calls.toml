@@ -1,4 +1,5 @@
 length = "practice"
+num_comps = 150 # 2^7 = 128 comps are possible, so this forces Monument to enumerate them all
 base_calls = "none"
 methods = [
     "Cambridge Surprise Major",
