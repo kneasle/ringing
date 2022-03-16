@@ -156,24 +156,26 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     assert!(expected_results.is_empty());
     assert!(actual_results.is_empty());
 
-    // Early return if there's nothing to bless
     if changed_case_names.is_empty() {
+        // Special case if there's nothing to bless
         println!("Nothing to bless");
-        return Ok(());
-    }
-    // Print what we've done, and overwrite the results file
-    match level {
-        BlessLevel::OnlyUnspecified => println!("Blessing only unspecified/new test cases:"),
-        BlessLevel::Fails => println!("Blessing all cases, even fails:"),
-    }
-    for (level, name) in &changed_case_names {
+    } else {
+        // Print what we've done, and overwrite the results file
         match level {
-            ChangeType::New => println!("     (new) {}", unspecified_str(name)),
-            ChangeType::Fail => println!("    (fail) {}", fail_str(name)),
-            ChangeType::Removed => println!(" (removed) {}", name.yellow().bold()),
+            BlessLevel::OnlyUnspecified => println!("Blessing only unspecified/new test cases:"),
+            BlessLevel::Fails => println!("Blessing all cases, even fails:"),
         }
+        for (level, name) in &changed_case_names {
+            match level {
+                ChangeType::New => println!("     (new) {}", unspecified_str(name)),
+                ChangeType::Fail => println!("    (fail) {}", fail_str(name)),
+                ChangeType::Removed => println!(" (removed) {}", name.yellow().bold()),
+            }
+        }
+        println!("{} test cases blessed", changed_case_names.len());
     }
-    println!("{} test cases blessed", changed_case_names.len());
+    // Always write the results, even if there's nothing to bless.  This way, we can handle things
+    // like reformatting the JSON files
     write_results(&merged_results, EXPECTED_RESULTS_PATH)
 }
 
@@ -402,10 +404,13 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
 }
 
 fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
-    let toml_string = serde_json::to_string_pretty(results)
+    let unformatted_json = serde_json::to_string(results)
         .with_context(|| format!("Error serialising results file {:?}", path))?;
+    let formatted_json = goldilocks_json_fmt::format(&unformatted_json)
+        .expect("`serde_json` should emit valid JSON");
+
     let path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    std::fs::write(path_from_cargo_toml, toml_string.as_bytes())
+    std::fs::write(path_from_cargo_toml, formatted_json.as_bytes())
         .with_context(|| format!("Error writing results to {:?}", path))
 }
 
