@@ -13,5 +13,9 @@ weight = -2
 # Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
 # make Monument prefer LB5 courses over just keeping the 6 at home for ages).
 [[music]]
-patterns = ["*65432", "*23456", "23456*", "65432*"]
+patterns = [
+    "*65432", "*23456",
+    "23456*", "65432*",
+    "34567*", "76543*",
+]
 weight = 3
