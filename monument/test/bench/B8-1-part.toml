@@ -1,0 +1,22 @@
+length = "peal"
+method = "Bristol Surprise Major"
+course_heads = ["*78", "12437856"]
+# max_duffer_rows = 160 # 5 leads
+
+bob_weight = -9
+single_weight = -14
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = ["*5678", "*8765"]
+
+# Boost music off the front, to prevent Monument from jamming loads of calls together
+[[music]]
+patterns = ["5678*", "8765*"]
+weight = 3
+
+[[music]]
+pattern = "*6578"
+weight = 2

@@ -1,0 +1,25 @@
+length = "peal"
+method = "Birthday Delight Major"
+music_file = "../music/8.toml"
+start_indices = [-4]
+course_heads = ["24315678", "1*8"]
+
+bob_weight = -6
+single_weight = -10
+
+[[calls]]
+symbol = "t"
+place_notation = "38"
+
+[[music]]
+pattern = "*8765"
+weight = 2
+
+[[music]]
+pattern = "*87"
+stroke = "back"
+weight = -1
+
+[[ch_weights]]
+pattern = "*78"
+weight = 0.05

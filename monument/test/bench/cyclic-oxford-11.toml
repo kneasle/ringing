@@ -1,0 +1,27 @@
+length = "peal"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    "Bristol Surprise Major",
+    "London Surprise Major",
+
+    # { title = "Lancashire Surprise Major", shorthand = "A" },
+    "Deva Surprise Major",
+    # { title = "Ytterbium Surprise Major", shorthand = "T" },
+    # { title = "Double Norwich Court Bob Major", shorthand = "N" },
+]
+
+music_file = "../music/8.toml"
+part_head = "18234567"
+method_count = { min = 400, max = 700 }
+
+bob_weight = -2
+single_weight = -3
+
+[[music]]
+pattern = "*87"
+stroke = "back"
+weight = -0.8

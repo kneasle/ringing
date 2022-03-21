@@ -1,0 +1,35 @@
+length = "qp"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Bristol Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+    "Deva Surprise Major",
+]
+
+# music_file = "../examples/music-8.toml"
+# splice_style = "calls"
+part_head = "18234567"
+
+# split_tenors = true
+method_count = { min = 0, max = 448 }
+bob_weight = -5
+single_weight = -7
+
+[[music]]
+run_lengths = [4,5,6,7,8]
+
+[[music]]
+pattern = "*87"
+stroke = "back"
+weight = -1
+
+# [[music]]
+# patterns = ["5678*", "8765*"]
+# weight = 2
+
+# [[ch_weights]]
+# pattern = "*78"
+# weight = 0.03

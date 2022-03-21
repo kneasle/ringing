@@ -1,0 +1,23 @@
+length = "peal"
+method = "Bristol Surprise Major"
+part_head = "1342"
+start_indices = [2] # Only snap starts/finishes
+# course_heads = ["*78", "*7856", "*8765"]
+
+bob_weight = -7
+single_weight = -12
+
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = ["*5678", "*8765"]
+
+# Boost music off the front, to prevent Monument from jamming loads of calls together
+[[music]]
+patterns = ["5678*", "8765*"]
+weight = 6
+
+[[music]]
+pattern = "*6578"
+weight = 2

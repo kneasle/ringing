@@ -1,0 +1,21 @@
+length = { min = 5000, max = 5100 } # "peal"
+music_file = "../music/12.toml"
+
+bob_weight = -8
+single_weight = -10
+
+methods = ["Bristol Surprise Maximus", "Zanussi Surprise Maximus"]
+course_heads = ["*7890ET", "1765432890ET", "1674523890ET"]
+
+# [[music]]
+# run_lengths = [4, 5, 6]
+
+# [[calls]]
+# symbol = "x"
+# place_notation = "18"
+# weight = -8
+ 
+# [[calls]]
+# symbol = "y"
+# place_notation = "16"
+# weight = -8

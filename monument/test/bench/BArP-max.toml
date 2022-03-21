@@ -1,0 +1,11 @@
+length = { min = 5000, max = 5100 }
+methods = [
+    "Bristol Surprise Maximus",
+    "Ariel Surprise Maximus",
+    "Phobos Surprise Maximus",
+]
+part_head = "165432"
+music_file = "../music/12.toml"
+
+bob_weight = -15
+single_weight = -20
