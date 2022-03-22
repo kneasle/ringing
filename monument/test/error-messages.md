@@ -248,3 +248,59 @@ method = "Bristol Surprise Major"
 pattern = "*7*8"
 weight = 0.1
 ```
+
+
+
+## duplicate-calls
+
+### same-pn
+
+This doesn't actually produce an error message, because there are two definitions of the same call
+(1234 LE single) which Monument will deduplicate:
+
+```toml
+length = "practice"
+method = "Bristol Surprise Major"
+
+[[calls]]
+symbol = "s" # Not a clash, because this is an identical definition
+place_notation = "1234"
+```
+
+### different-lead-locations
+
+This doesn't actually produce an error message, because 's' is defined once on the lead-end and once
+on the half-lead:
+
+```toml
+length = "practice"
+method.title = "Bristol Surprise Major"
+method.lead_locations = { 0 = "LE", 16 = "HL" }
+
+[[calls]]
+symbol = "s" # Not a clash, because this is a HL call
+place_notation = "5678"
+lead_location = "HL"
+calling_positions = "hwmvfbil"
+```
+
+### display-symbol
+```toml
+length = "QP"
+method = "Bristol Surprise Major"
+
+[[calls]]
+debug_symbol = "z"
+symbol = "s" # Name clashes with the builtin 1234 singles
+place_notation = "1678"
+```
+
+### debug-symbol
+```toml
+length = "QP"
+method = "Bristol Surprise Major"
+
+[[calls]]
+symbol = "-" # Name clashes with the builtin 14 bob
+place_notation = "16"
+```

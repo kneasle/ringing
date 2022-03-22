@@ -2357,6 +2357,42 @@
   "test/error-messages.md: ch-pattern::too-short": {
     "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
   },
+  "test/error-messages.md: duplicate-calls::debug-symbol": {
+    "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
+  },
+  "test/error-messages.md: duplicate-calls::different-lead-locations": {
+    "comps": [
+      { "length": 64, "string": "sHsH", "avg_score": -0.071875 },
+      { "length": 128, "string": "HsHHsH", "avg_score": -0.0640625 },
+      { "length": 128, "string": "sHHsHH", "avg_score": -0.0640625 },
+      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.061458334 },
+      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.061458334 },
+      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.061458334 },
+      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
+      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
+      { "length": 288, "string": "sHsh", "avg_score": -0.018402778 },
+      { "length": 288, "string": "sMsm", "avg_score": -0.018402778 },
+      { "length": 288, "string": "shsH", "avg_score": -0.018402778 },
+      { "length": 288, "string": "swsW", "avg_score": -0.018402778 },
+      { "length": 224, "string": "", "avg_score": 0.0 }
+    ]
+  },
+  "test/error-messages.md: duplicate-calls::display-symbol": {
+    "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1678"
+  },
+  "test/error-messages.md: duplicate-calls::same-pn": {
+    "comps": [
+      { "length": 64, "string": "sHsH", "avg_score": -0.09375 },
+      { "length": 128, "string": "HsHHsH", "avg_score": -0.075 },
+      { "length": 128, "string": "sHHsHH", "avg_score": -0.075 },
+      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.06875 },
+      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.06875 },
+      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.06875 },
+      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
+      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
+      { "length": 224, "string": "", "avg_score": 0.0 }
+    ]
+  },
   "test/error-messages.md: duplicate-shorthand": {
     "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
   },

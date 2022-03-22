@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#67) Add error messages for giving the same debug/display name to multiple calls (specifically,
+    two calls at the same lead location but with different place notations).
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
 
 ---
