@@ -15,10 +15,10 @@ pub(super) fn strip_refs(graph: &mut Graph, _query: &Query) {
     for (_id, chunk) in graph.chunks_mut() {
         chunk
             .successors_mut()
-            .retain(|link| chunk_ids.contains(&link.id));
+            .retain(|link| chunk_ids.contains(&link.to));
         chunk
             .predecessors_mut()
-            .retain(|link| chunk_ids.contains(&link.id));
+            .retain(|link| chunk_ids.contains(&link.to));
         chunk
             .false_chunks_mut()
             .retain(|id| chunk_ids.contains(&ChunkId::Standard(id.clone())));

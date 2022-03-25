@@ -1,0 +1,10 @@
+length = "practice"
+base_calls = "none"
+num_comps = 200
+
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+]
+splice_weight = 1 # Encourage method splices
+method_count = { min = 0, max = 224 }

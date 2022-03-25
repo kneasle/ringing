@@ -4,13 +4,16 @@ use bellframe::{Mask, Row, RowBuf};
 use index_vec::IndexVec;
 
 use super::{Boundary, Result};
-use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, MethodBlock, RowIdx, StartOrEnd};
+use crate::{
+    layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, MethodBlock, RowIdx, StartOrEnd},
+    CallVec,
+};
 
 /// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
 const LEADWISE_PREFIX: &str = "#";
 
 /// Creates a `Layout` where every course is exactly one lead long.
-pub fn leadwise(methods: &[super::Method]) -> Result<Layout> {
+pub fn leadwise(methods: &[super::Method], calls: &CallVec<super::Call>) -> Result<Layout> {
     super::utils::check_duplicate_shorthands(methods)?;
 
     let stage = methods
@@ -28,15 +31,16 @@ pub fn leadwise(methods: &[super::Method]) -> Result<Layout> {
         })
         .collect::<BlockVec<_>>();
 
-    let fixed_bells = super::utils::fixed_bells(methods, stage);
+    let fixed_bells = super::utils::fixed_bells(methods, calls, stage);
     let lead_head_mask = Mask::fix_bells(stage, fixed_bells);
 
     Ok(Layout {
         starts: start_or_ends(&lead_head_mask, methods, Boundary::Start),
         ends: start_or_ends(&lead_head_mask, methods, Boundary::End),
-        links: links(methods, &lead_head_mask),
+        links: links(methods, calls, &lead_head_mask),
         method_blocks,
         stage,
+        leadwise: true,
     })
 }
 
@@ -87,7 +91,11 @@ fn start_or_ends<I: index_vec::Idx>(
     locs
 }
 
-fn links(methods: &[super::Method], lead_head_mask: &Mask) -> LinkVec<Link> {
+fn links(
+    methods: &[super::Method],
+    calls: &CallVec<super::Call>,
+    lead_head_mask: &Mask,
+) -> LinkVec<Link> {
     let mut call_starts: Vec<HashMap<&str, Vec<CallStart>>> = Vec::new();
     // Maps each lead label to where calls of that label can **end**
     let mut call_ends: HashMap<&str, Vec<CallEnd>> = HashMap::new();
@@ -123,7 +131,9 @@ fn links(methods: &[super::Method], lead_head_mask: &Mask) -> LinkVec<Link> {
     // Place calls between every `call_start` and every `call_end` of that lead label
     let mut links = Vec::new();
     for (method_idx, method) in methods.iter().enumerate() {
-        for call in &method.calls {
+        for &call_idx in &method.calls {
+            let call = &calls[call_idx];
+
             let label = call.lead_location.as_str();
             let starts = &call_starts[method_idx][label];
             let ends = &call_ends[label];
@@ -140,9 +150,8 @@ fn links(methods: &[super::Method], lead_head_mask: &Mask) -> LinkVec<Link> {
                         ch_mask: lead_head_mask.clone(),
                         ch_transposition: &row_after_call * &end.inv_row,
 
-                        debug_name: call.debug_symbol.clone(),
-                        display_name: format!("[{}]", call.debug_symbol),
-                        weight: call.weight,
+                        call_idx: Some(call_idx),
+                        calling_position: String::new(),
                     });
                     // Plain
                     links.push(plain_link(
@@ -190,9 +199,8 @@ fn plain_link(from: RowIdx, to: RowIdx, ch_mask: &Mask, ch_transposition: RowBuf
         ch_mask: ch_mask.clone(),
         ch_transposition,
 
-        debug_name: "p".to_owned(),
-        display_name: String::new(),
-        weight: 0.0,
+        call_idx: None,
+        calling_position: String::new(),
     }
 }
 

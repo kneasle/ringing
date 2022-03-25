@@ -36,13 +36,16 @@ use graph::{optimise::Pass, Graph};
 #[derive(Debug, Clone)]
 pub struct Query {
     pub layout: layout::Layout,
+
     pub len_range: Range<usize>,
     pub num_comps: usize,
     pub allow_false: bool,
 
+    pub calls: CallVec<CallType>,
     pub part_head: RowBuf,
     /// The `f32` is the weight given to every row in any course matching the given [`Mask`]
     pub ch_weights: Vec<(Mask, f32)>,
+    pub splice_weight: f32,
 
     pub music_types: Vec<music::MusicType>,
     pub start_stroke: Stroke,
@@ -56,6 +59,24 @@ impl Query {
 
     pub fn num_parts(&self) -> usize {
         self.part_head.order()
+    }
+}
+
+/// A type of call (e.g. bob or single)
+#[derive(Debug, Clone)]
+pub struct CallType {
+    pub debug_symbol: String,
+    pub display_symbol: String,
+    pub weight: f32,
+}
+
+impl From<layout::new::Call> for CallType {
+    fn from(c: layout::new::Call) -> Self {
+        Self {
+            debug_symbol: c.debug_symbol,
+            display_symbol: c.display_symbol,
+            weight: c.weight,
+        }
     }
 }
 
@@ -133,15 +154,26 @@ pub struct CompInner {
 impl Comp {
     pub fn call_string(&self) -> String {
         let layout = &self.query.layout;
+        let needs_brackets = layout.is_spliced() || layout.leadwise;
 
         let mut s = String::new();
         // Start
         s.push_str(&layout.starts[self.start_idx].label);
         // Chunks & links
         s.push_str(&self.start_chunk_label);
-        for (link_idx, link_label) in &self.links {
-            s.push_str(&layout.links[*link_idx].display_name);
-            s.push_str(link_label);
+        for (link_idx, chunk_label) in &self.links {
+            let link = &layout.links[*link_idx];
+            if let Some(call_idx) = link.call_idx {
+                let call = &self.query.calls[call_idx];
+                s.push_str(if needs_brackets { "[" } else { "" });
+                s.push_str(match layout.leadwise {
+                    true => &call.debug_symbol, // use debug symbols for leadwise
+                    false => &call.display_symbol,
+                });
+                s.push_str(&link.calling_position);
+                s.push_str(if needs_brackets { "]" } else { "" });
+            }
+            s.push_str(chunk_label);
         }
         // End
         s.push_str(self.end.label(layout));
@@ -331,3 +363,6 @@ impl Default for Progress {
         Self::START
     }
 }
+
+index_vec::define_index_type! { pub struct CallIdx = usize; }
+pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;

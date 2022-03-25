@@ -23,7 +23,7 @@ use monument::{
         Layout,
     },
     music::{MusicType, StrokeSet},
-    OptRange, Query,
+    CallIdx, CallType, CallVec, OptRange, Query,
 };
 use serde::Deserialize;
 
@@ -66,6 +66,9 @@ pub struct Spec {
     /// Bounds on how many rows of each method is allowed
     #[serde(default)]
     method_count: OptRange,
+    /// Score which is applied for every change of method.  Defaults to `0.0`
+    #[serde(default)]
+    splice_weight: f32,
 
     /* CALLS */
     /// Which calls should be used by default
@@ -211,7 +214,9 @@ impl Spec {
             }
             methods.push(layout::new::Method::new(
                 method,
-                calls.clone(),
+                // TODO: Apply all calls to all methods, and control calls exclusively using lead
+                // locations
+                (0..calls.len()).map(CallIdx::new).collect_vec(),
                 override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
                 count_range,
@@ -223,7 +228,13 @@ impl Spec {
         let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
 
         // Generate the `Layout`
-        let layout = Layout::new(methods, self.splice_style, &part_head, self.leadwise)?;
+        let layout = Layout::new(
+            methods,
+            &calls,
+            self.splice_style,
+            &part_head,
+            self.leadwise,
+        )?;
 
         let music_types = self.music_types(source, stage)?;
         if music_types.is_empty() {
@@ -238,8 +249,10 @@ impl Spec {
             num_comps: self.num_comps,
             allow_false: self.allow_false,
 
+            calls: calls.into_iter().map(CallType::from).collect(),
             part_head,
             ch_weights,
+            splice_weight: self.splice_weight,
 
             music_types,
             start_stroke: self.start_stroke,
@@ -289,7 +302,7 @@ impl Spec {
         Ok(music_types)
     }
 
-    fn calls(&self, stage: Stage) -> anyhow::Result<Vec<Call>> {
+    fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<Call>> {
         // Generate a full set of calls
         let mut call_specs = self.base_calls.to_call_specs(
             stage,
@@ -304,7 +317,7 @@ impl Spec {
         // Check for duplicate debug or display symbols
         Self::check_for_duplicate_call_names(&call_specs, "display", |call| &call.display_symbol)?;
         Self::check_for_duplicate_call_names(&call_specs, "debug", |call| &call.debug_symbol)?;
-        Ok(call_specs)
+        Ok(CallVec::from(call_specs))
     }
 
     /// Check for duplicate calls.  Calls are a 'duplicate' if assign the same symbol at the same

@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#69) Allow weights on method splicing with `splice_weight` (defaults to 0).
 - (#67) Add error messages for giving the same debug/display name to multiple calls (specifically,
     two calls at the same lead location but with different place notations).
 - (#66) Allow method counts to be overridden per-method.

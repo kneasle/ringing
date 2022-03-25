@@ -12,6 +12,7 @@ use itertools::Itertools;
 pub mod chunk_range;
 pub mod new;
 
+use crate::CallIdx;
 // Imports only used for doc comments
 #[allow(unused_imports)]
 use crate::graph::{Chunk, Graph};
@@ -50,6 +51,8 @@ pub struct Layout {
     /// are cases where e.g. snap finishes are allowed but snap starts are not.
     pub ends: EndVec<StartOrEnd>,
     pub stage: Stage,
+    /// `true` if this `Layout` is lead-wise
+    pub leadwise: bool,
 }
 
 impl Layout {
@@ -140,13 +143,10 @@ pub struct Link {
     /// The transposition of the course head taken when this is applied
     pub ch_transposition: RowBuf,
 
-    /// The name of this `Link`, used in debugging
-    pub debug_name: String,
-    /// The name of this `Link` used when generating human-friendly call strings
-    pub display_name: String,
-
-    /// The score given to each instance of this link
-    pub weight: f32,
+    /// The index of this link's [`CallType`], or `None` for plain leads.
+    pub call_idx: Option<CallIdx>,
+    /// The name for this call's position
+    pub calling_position: String,
 }
 
 impl Link {

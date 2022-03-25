@@ -161,6 +161,7 @@ take you to more in-depth docs about it.
 - [`methods`](#methods-2)
 - [`splice_style = "leads"`](#splice_style)
 - [`method_count`](#method_count) (default to ±10% balance)
+- [`splice_weight = 0.0`](#splice_weight)
 
 **Calls:**
 - [`base_calls = "near"`](#base_calls)
@@ -289,6 +290,11 @@ method_count.min = 0 # Allow Monument to ignore methods
 # or
 method_count = { min = 100, max = 300 } # Force a given method count range
 ```
+
+#### `splice_weight`
+
+Weight applied to each change of method.  Positive values will encourage more c.o.m.; negative
+values will encourage few c.o.m.  Defaults to 0.
 
 ### Calls
 

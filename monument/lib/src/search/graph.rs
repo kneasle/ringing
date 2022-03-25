@@ -33,8 +33,8 @@ pub struct Chunk {
 
     // Indices must be aligned with those from the source graph
     pub succs: Vec<Link>,
-    // If this chunk is added to a composition, these bits denote the set of chunks will be marked as
-    // unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
+    // If this chunk is added to a composition, these bits denote the set of chunks will be marked
+    // as unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
     // itself.
     pub falseness: BitVec,
 
@@ -48,17 +48,6 @@ pub struct Link {
     pub source_idx: LinkIdx,
     pub next_chunk: ChunkIdx,
     pub rot: Rotation,
-}
-
-impl Link {
-    pub fn new(score: f32, source_idx: LinkIdx, next_chunk: ChunkIdx, rot: Rotation) -> Self {
-        Self {
-            score: Score::from(score),
-            source_idx,
-            next_chunk,
-            rot,
-        }
-    }
 }
 
 ///////////////////////////////////////////
@@ -84,7 +73,7 @@ impl Graph {
             .map(|index| {
                 // Get the source chunk and its ChunkId
                 let index = ChunkIdx::new(index);
-                let (_id, source_chunk) = index_to_id[index].clone();
+                let (from_id, source_chunk) = index_to_id[index].clone();
 
                 // Generate a BitVec with a 1 for every chunk which is false against this chunk
                 let mut falseness = BitVec::from_elem(num_chunks, false);
@@ -98,11 +87,15 @@ impl Graph {
                     .successors()
                     .iter()
                     .filter_map(|link| {
-                        let link_idx = link.source_idx;
-                        let score =
-                            query.layout.links[link_idx].weight * source_graph.num_parts() as f32;
-                        let succ_idx = id_to_index.get(&link.id)?;
-                        Some(Link::new(score, link_idx, *succ_idx, link.rotation))
+                        Some(Link {
+                            score: Score::from(
+                                link.weight_per_part(&from_id, query)
+                                    * source_graph.num_parts() as f32,
+                            ),
+                            source_idx: link.source_idx,
+                            next_chunk: *id_to_index.get(&link.to)?,
+                            rot: link.rotation,
+                        })
                     })
                     .collect_vec();
 

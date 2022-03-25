@@ -28,8 +28,8 @@ pub struct Bell {
     /// [`Display`](std::fmt::Display)ed as `T`.
     ///
     /// `index` cannot take the value 255, since this would imply a [`Stage`] of 256 which is
-    /// unrepresentable.  We can use this as a 'null' value for e.g. [`Mask`](crate::Mask) to take up exactly
-    /// one byte per place.
+    /// unrepresentable.  We can use this as a 'null' value for e.g. [`Mask`](crate::Mask) to take
+    /// up exactly one byte per place.
     index: u8,
 }
 

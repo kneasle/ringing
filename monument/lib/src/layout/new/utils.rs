@@ -5,7 +5,7 @@ use std::{collections::HashSet, ops::Mul};
 use bellframe::{mask::BellAlreadySet, Bell, Mask, RowBuf, Stage};
 use itertools::Itertools;
 
-use crate::layout::Link;
+use crate::{layout::Link, CallVec};
 
 use super::{Error, Result};
 
@@ -62,8 +62,12 @@ impl CourseHeadMask {
     }
 }
 
-pub(super) fn preprocess_ch_masks(methods: &mut [super::Method], stage: Stage) -> Result<()> {
-    set_fixed_bells(methods, stage);
+pub(super) fn preprocess_ch_masks(
+    methods: &mut [super::Method],
+    calls: &CallVec<super::Call>,
+    stage: Stage,
+) -> Result<()> {
+    set_fixed_bells(methods, calls, stage);
     for m in methods {
         m.ch_masks = super::utils::dedup_ch_masks(&m.ch_masks)?;
     }
@@ -74,8 +78,8 @@ pub(super) fn preprocess_ch_masks(methods: &mut [super::Method], stage: Stage) -
 /// fix it in all the course heads of the methods.  In most cases, this will add the treble as a
 /// fixed bell (allowing the falseness detection to use it to reduce the size of the falseness
 /// table).
-fn set_fixed_bells(methods: &mut [super::Method], stage: Stage) {
-    let fixed_bells = fixed_bells(methods, stage);
+fn set_fixed_bells(methods: &mut [super::Method], calls: &CallVec<super::Call>, stage: Stage) {
+    let fixed_bells = fixed_bells(methods, calls, stage);
     for m in methods {
         add_fixed_bells_to_method(m, &fixed_bells);
     }
@@ -102,10 +106,14 @@ fn add_fixed_bells_to_method(method: &mut super::Method, fixed_bells: &[Bell]) {
 
 /// Returns the place bells which are always preserved by plain leads and all calls of all methods
 /// (e.g. hunt bells in non-variable-hunt compositions).
-pub(super) fn fixed_bells(methods: &[super::Method], stage: Stage) -> Vec<Bell> {
+pub(super) fn fixed_bells(
+    methods: &[super::Method],
+    calls: &CallVec<super::Call>,
+    stage: Stage,
+) -> Vec<Bell> {
     let mut all_bells = stage.bells().collect_vec();
     for m in methods {
-        let f = fixed_bells_of_method(&m.inner, &m.calls);
+        let f = fixed_bells_of_method(m, calls);
         all_bells.retain(|b| f.contains(b));
     }
     all_bells
@@ -113,13 +121,13 @@ pub(super) fn fixed_bells(methods: &[super::Method], stage: Stage) -> Vec<Bell> 
 
 /// Returns the place bells which are always preserved by plain leads and all calls of a single
 /// method (e.g. hunt bells in non-variable-hunt compositions).
-fn fixed_bells_of_method(method: &bellframe::Method, calls: &[super::Call]) -> HashSet<Bell> {
+fn fixed_bells_of_method(method: &super::Method, calls: &CallVec<super::Call>) -> HashSet<Bell> {
     // Start the set with the bells which are fixed by the plain lead of every method
     let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-    for call in calls {
+    for call_idx in &method.calls {
         // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
         // Grandsire is unaffected by a plain lead, but affected by calls)
-        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+        filter_bells_fixed_by_call(method, &calls[*call_idx], &mut fixed_bells);
     }
     fixed_bells
 }

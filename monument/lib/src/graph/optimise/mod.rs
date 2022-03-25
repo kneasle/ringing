@@ -428,7 +428,7 @@ fn compute_distances<'a>(
 
         // Expand this chunk
         for succ_link in chunk_view.successors() {
-            let succ_id = &succ_link.id;
+            let succ_id = &succ_link.to;
             let new_frontier_item = FrontierItem {
                 item: succ_id,
                 distance: distance_after_chunk,
