@@ -284,6 +284,7 @@ impl Spec {
     }
 
     fn calls(&self, stage: Stage) -> anyhow::Result<Vec<Call>> {
+        // Generate a full set of calls
         let mut call_specs = self.base_calls.to_call_specs(
             stage,
             self.bobs_only,
@@ -294,7 +295,35 @@ impl Spec {
         for specific_call in &self.calls {
             call_specs.push(specific_call.to_call_spec(stage)?);
         }
+        // Check for duplicate debug or display symbols
+        Self::check_for_duplicate_call_names(&call_specs, "display", |call| &call.display_symbol)?;
+        Self::check_for_duplicate_call_names(&call_specs, "debug", |call| &call.debug_symbol)?;
         Ok(call_specs)
+    }
+
+    /// Check for duplicate calls.  Calls are a 'duplicate' if assign the same symbol at the same
+    /// lead location but to **different** place notations.  If they're the same, then Monument
+    /// will de-duplicate them.
+    fn check_for_duplicate_call_names<'calls>(
+        call_specs: &'calls [layout::new::Call],
+        symbol_name: &str,
+        get_symbol: impl Fn(&'calls layout::new::Call) -> &'calls str,
+    ) -> anyhow::Result<()> {
+        let sorted_calls = call_specs
+            .iter()
+            .map(|call| (get_symbol(call), &call.lead_location, &call.place_not))
+            .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
+        for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in
+            sorted_calls.tuple_windows()
+        {
+            if sym1 == sym2 && lead_location1 == lead_location2 && pn1 != pn2 {
+                return Err(anyhow::Error::msg(format!(
+                    "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
+                    symbol_name, sym1, lead_location1, pn1, pn2
+                )));
+            }
+        }
+        Ok(())
     }
 
     fn ch_mask_preset(&self, stage: Stage) -> anyhow::Result<CourseHeadMaskPreset> {
