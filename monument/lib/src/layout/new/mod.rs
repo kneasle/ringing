@@ -1,12 +1,15 @@
 //! Utility code for building [`Layout`]s in common scenarios.
 
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    ops::Range,
+};
 
 use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
-use super::Layout;
+use super::{Layout, MethodBlock};
 
 pub mod coursewise;
 pub mod leadwise;
@@ -188,6 +191,8 @@ pub struct Method {
     inner: bellframe::Method,
     shorthand: String,
 
+    /// The number of rows of this method must fit within this [`Range`]
+    count_range: Range<usize>,
     /// Which [`Call`]s can be used within leads of this `Method`
     calls: Vec<Call>,
     /// The indices in which we can start a composition during this `Method`.  `None` means any
@@ -215,6 +220,7 @@ impl Method {
         calls: Vec<Call>,
         ch_masks: Vec<(Mask, Bell)>,
         shorthand: String,
+        count_range: Range<usize>,
         start_indices: Option<&[isize]>,
         end_indices: Option<&[isize]>,
     ) -> Self {
@@ -231,8 +237,9 @@ impl Method {
             end_indices: end_indices.map(convert_indices),
 
             inner: method,
-            shorthand,
 
+            shorthand,
+            count_range,
             calls,
             ch_masks: ch_masks
                 .into_iter()
@@ -248,11 +255,15 @@ impl Method {
         }
     }
 
-    fn block(&self, is_spliced: bool) -> Block<Option<String>> {
-        self.plain_course.clone().map_annots_with_index(|idx, _| {
+    fn course_method_block(&self, is_spliced: bool) -> MethodBlock {
+        let block = self.plain_course.clone().map_annots_with_index(|idx, _| {
             let sub_lead_idx = idx % self.lead_len();
             (sub_lead_idx == 0 && is_spliced).then(|| self.shorthand.clone())
-        })
+        });
+        MethodBlock {
+            block,
+            count_range: self.count_range.clone(),
+        }
     }
 }
 

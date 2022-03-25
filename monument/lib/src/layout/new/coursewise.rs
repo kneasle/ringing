@@ -39,9 +39,9 @@ pub fn coursewise(mut methods: Vec<super::Method>, splice_style: SpliceStyle) ->
         starts: rounds_locations(&methods, stage, Boundary::Start),
         ends: rounds_locations(&methods, stage, Boundary::End),
         // Create a block for each method
-        blocks: methods
+        method_blocks: methods
             .into_iter()
-            .map(|d| d.block(is_spliced))
+            .map(|m| m.course_method_block(is_spliced))
             .collect::<BlockVec<_>>(),
         stage,
     })

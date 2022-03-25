@@ -1,0 +1,7 @@
+length = "practice"
+methods = [
+    "Yorkshire Surprise Major",
+    { title = "Cambridge Surprise Major", count = { min = 64, max = 64 } }, # Require exactly 2 leads of Cambs
+]
+method_count = { min = 0, max = 224 }
+base_calls = "none"

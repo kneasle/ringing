@@ -3,6 +3,7 @@
 ### Monument
 - (#67) Add error messages for giving the same debug/display name to multiple calls (specifically,
     two calls at the same lead location but with different place notations).
+- (#66) Allow method counts to be overridden per-method.
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
 
 ---

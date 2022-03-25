@@ -1,6 +1,7 @@
 use std::{
     fmt::{Debug, Display, Formatter},
     hash::Hash,
+    ops::Range,
     sync::Arc,
 };
 
@@ -32,10 +33,11 @@ use crate::graph::{Chunk, Graph};
 pub struct Layout {
     /// The blocks that make up the composition.  [`Chunk`]s correspond to ranges of these `blocks`
     /// (pre-)transposed by some course head.
-    pub blocks: BlockVec<Block<Option<String>>>,
+    pub method_blocks: BlockVec<MethodBlock>,
     /// The [`Link`]s by which segments of composition can be connected.  These are usually calls,
-    /// but can also be the _absence_ of a call - note here that Monument will not implicitly add
-    /// 'plain' links; they have to be explicitly added (and potentially named).
+    /// but can also be the _absence_ of a call - note here that the `Layout` to [`Graph`]
+    /// conversion will not implicitly add 'plain' links; they have to be explicitly added (and
+    /// potentially named).
     ///
     /// Given a starting [`RowIdx`] of a course segment, Monument will extend it until the first
     /// [`Link`] which contains a matching course head [`Mask`].
@@ -53,7 +55,7 @@ pub struct Layout {
 impl Layout {
     pub fn num_methods(&self) -> usize {
         // TODO: Track methods properly
-        self.blocks.len()
+        self.method_blocks.len()
     }
 
     pub fn is_spliced(&self) -> bool {
@@ -68,7 +70,7 @@ impl Layout {
     /// 0).
     pub fn last_row_idx(&self, row_range: RowRange) -> Option<RowIdx> {
         (row_range.len.0 > 0).then(|| {
-            let block_len = self.blocks[row_range.start.block].len();
+            let block_len = self.method_blocks[row_range.start.block].block.len();
             RowIdx::new(
                 row_range.start.block,
                 // The subtraction here cannot overflow, because this code only executes when
@@ -94,7 +96,8 @@ impl Layout {
 
     /// Return the [`Row`]s in the plain course that are covered by a given range
     pub fn untransposed_rows(&self, range: RowRange) -> impl Iterator<Item = &'_ Row> {
-        self.blocks[range.start.block]
+        self.method_blocks[range.start.block]
+            .block
             .rows()
             .cycle()
             .skip(range.start.row)
@@ -113,6 +116,13 @@ impl Layout {
             .find(|(_idx, end)| end.row_idx == row_idx && &end.course_head == ch)
             .map(|(idx, _end)| idx)
     }
+}
+
+/// A [`Block`] of rows, corresponding to one method
+#[derive(Debug, Clone)]
+pub struct MethodBlock {
+    pub block: Block<Option<String>>,
+    pub count_range: Range<usize>,
 }
 
 /// A link between two segments of a course
