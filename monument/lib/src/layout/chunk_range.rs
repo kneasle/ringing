@@ -222,7 +222,7 @@ impl<'a> RangeFactory<'a> {
             );
         }
 
-        let block = &self.layout.blocks[id.row_idx.block];
+        let block = &self.layout.method_blocks[id.row_idx.block].block;
         let block_len = block.len();
         let length_between = |from: usize, to: usize| (to + block_len - from) % block_len;
 

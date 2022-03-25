@@ -183,36 +183,43 @@ impl Spec {
             anyhow::Error::msg(format!("Can't parse part head {:?}: {}", self.part_head, e))
         })?;
         let (start_indices, end_indices) = self.start_end_indices(&part_head);
+
+        // Convert the methods
+        let is_spliced = loaded_methods.len() > 1;
         let shorthands = monument::utils::default_shorthands(
             loaded_methods
                 .iter()
                 .map(|(m, common)| (m.title(), common.shorthand.as_deref())),
         );
+        let method_count = self.method_count.or_range(&default_method_count(
+            loaded_methods.len(),
+            &self.length.range,
+        ));
+        if is_spliced {
+            log::info!("method count range: {:?}", method_count);
+        }
         let mut methods = Vec::new();
+        #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_deref()` is really cheap
         for ((method, common), shorthand) in loaded_methods.into_iter().zip(shorthands) {
             let override_ch_masks = common
                 .course_heads
                 .map(|chs| parse_ch_masks(&chs, stage))
                 .transpose()?;
-            #[allow(clippy::or_fun_call)] // `start_indices.as_deref()` is a really cheap operation
-            let start_indices = common.start_indices.as_deref().or(start_indices.as_deref());
-            #[allow(clippy::or_fun_call)]
-            let end_indices = common.end_indices.as_deref().or(end_indices.as_deref());
+            let count_range = common.count_range.or_range(&method_count);
+            if is_spliced && common.count_range.is_set() {
+                log::info!("count range for {:<2}: {:?}", shorthand, count_range);
+            }
             methods.push(layout::new::Method::new(
                 method,
                 calls.clone(),
                 override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
-                start_indices,
-                end_indices,
+                count_range,
+                common.start_indices.as_deref().or(start_indices.as_deref()),
+                common.end_indices.as_deref().or(end_indices.as_deref()),
             ));
         }
 
-        let method_count_range =
-            method_count_range(methods.len(), &self.length.range, self.method_count);
-        if methods.len() > 1 {
-            log::info!("Method count range: {:?}", method_count_range);
-        }
         let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
 
         // Generate the `Layout`
@@ -229,7 +236,6 @@ impl Spec {
             layout,
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
-            method_count_range,
             allow_false: self.allow_false,
 
             part_head,
@@ -451,16 +457,11 @@ fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Ve
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent
 /// method balance.
-fn method_count_range(
-    num_methods: usize,
-    len_range: &Range<usize>,
-    user_range: OptRange,
-) -> Range<usize> {
+fn default_method_count(num_methods: usize, len_range: &Range<usize>) -> Range<usize> {
     let min_f32 = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
     let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
-    let min = user_range.min.unwrap_or(min_f32.floor() as usize);
-    let max = user_range.max.unwrap_or(max_f32.ceil() as usize);
-    min..max + 1 // + 1 because the `method_count` is an **inclusive** range
+    // + 1 because the `method_count` is an **inclusive** range
+    (min_f32.floor() as usize)..(max_f32.ceil() as usize + 1)
 }
 
 ///////////////
@@ -498,6 +499,10 @@ pub enum MethodSpec {
 #[serde(deny_unknown_fields)]
 pub struct MethodCommon {
     shorthand: Option<String>,
+
+    /// Optional override for method count range
+    #[serde(default, rename = "count")]
+    count_range: OptRange,
     /// The inputs to this map are numerical strings representing sub-lead indices, and the
     /// outputs are the lead location names
     lead_locations: Option<HashMap<String, String>>,

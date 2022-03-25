@@ -47,15 +47,15 @@ impl Counts {
 
     /// Determine the feasibility of getting every count within `target_range`, whilst distributing
     /// at most `max_count_left` counts.  This is used for pruning on method splices.
-    pub fn is_feasible(&self, max_count_left: usize, target_range: Range<usize>) -> bool {
+    pub fn is_feasible(&self, max_count_left: usize, target_ranges: &[Range<usize>]) -> bool {
         let mut rows_required = 0;
-        for &c in &self.0 {
+        for (&c, range) in self.0.iter().zip_eq(target_ranges) {
             // If one of the counts is already too large then we'll never get all the counts to be
             // contained in the target range
-            if c >= target_range.end {
+            if c >= range.end {
                 return false;
             }
-            rows_required += target_range.start.saturating_sub(c);
+            rows_required += range.start.saturating_sub(c);
         }
         rows_required <= max_count_left
     }

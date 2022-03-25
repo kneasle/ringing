@@ -39,7 +39,6 @@ pub struct Query {
     pub len_range: Range<usize>,
     pub num_comps: usize,
     pub allow_false: bool,
-    pub method_count_range: Range<usize>,
 
     pub part_head: RowBuf,
     /// The `f32` is the weight given to every row in any course matching the given [`Mask`]

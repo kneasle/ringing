@@ -235,6 +235,7 @@ title = "Lincolnshire Surprise Major"
 shorthand = "N" # (optional; defaults to the first letter of the title)
 lead_locations = { 0: "LE", 16: "HL" } # (optional; defaults to `{0:"LE"}`)
 # Overrides for global values (all optional):
+count = { min = 224, max = 600 }
 course_heads = ["*78"]
 start_indices = [2]
 end_indices = [2]
@@ -248,6 +249,7 @@ stage = 8
 shorthand = "N" # (optional; defaults to the first letter of the title)
 lead_locations = { 0: "LE", 8: "HL" } # (optional; defaults to `{0:"LE"}`)
 # Overrides for global values (all optional):
+count = { min = 224, max = 600 }
 course_heads = ["*78"]
 start_indices = [2]
 end_indices = [2]

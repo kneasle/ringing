@@ -7,6 +7,7 @@ use std::{
 };
 
 use bit_vec::BitVec;
+use itertools::Itertools;
 
 use crate::{
     layout::{LinkIdx, StartIdx},
@@ -37,6 +38,12 @@ pub(crate) fn search(
     let len_range = (query.len_range.start as u32)..(query.len_range.end as u32);
     let num_parts = graph.num_parts() as Rotation;
     let rotation_bitmap = coprime_bitmap(num_parts);
+    let method_count_ranges = query
+        .layout
+        .method_blocks
+        .iter()
+        .map(|b| b.count_range.clone())
+        .collect_vec();
 
     // Lower the hash-based graph into a graph that's immutable but faster to traverse
     let graph = self::graph::Graph::new(graph, &query);
@@ -86,7 +93,12 @@ pub(crate) fn search(
         // Check if the comp has come round
         if let Some(end) = chunk.end {
             if len_range.contains(&length)
-                && method_counts.is_feasible(0, query.method_count_range.clone())
+                // We have to re-check feasibility of `method_counts` even though a feasibility
+                // check is performed when expanding, because the check on expansion checks
+                // (conservatively) if the range is feasible within the _maximum possible_ length
+                // range.  However, the composition is likely to be _shorter_ than this range and
+                // removing those extra rows could make the method count infeasible.
+                && method_counts.is_feasible(0, &method_count_ranges)
                 && rotation_bitmap & (1 << rotation) != 0
             {
                 let (start_idx, start_chunk_label, links, music_counts) =
@@ -143,10 +155,7 @@ pub(crate) fn search(
             if unreachable_chunks.get(next_idx.index()).unwrap() {
                 continue; // Chunk is false against something already in the comp
             }
-            if !method_counts.is_feasible(
-                (len_range.end - length) as usize,
-                query.method_count_range.clone(),
-            ) {
+            if !method_counts.is_feasible((len_range.end - length) as usize, &method_count_ranges) {
                 continue; // Can't recover the method balance before running out of rows
             }
 

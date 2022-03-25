@@ -4,7 +4,7 @@ use bellframe::{Mask, Row, RowBuf};
 use index_vec::IndexVec;
 
 use super::{Boundary, Result};
-use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, RowIdx, StartOrEnd};
+use crate::layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, MethodBlock, RowIdx, StartOrEnd};
 
 /// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such
 const LEADWISE_PREFIX: &str = "#";
@@ -18,11 +18,13 @@ pub fn leadwise(methods: &[super::Method]) -> Result<Layout> {
         .map(|m| m.stage())
         .max()
         .expect("Can't compute stage of 0 methods");
-    let blocks = methods
+    let method_blocks = methods
         .iter()
-        .map(|m| {
-            m.first_lead()
-                .clone_map_annots_with_index(|i, _| (i == 0).then(|| m.shorthand.clone()))
+        .map(|m| MethodBlock {
+            block: m
+                .first_lead()
+                .clone_map_annots_with_index(|i, _| (i == 0).then(|| m.shorthand.clone())),
+            count_range: m.count_range.clone(),
         })
         .collect::<BlockVec<_>>();
 
@@ -33,7 +35,7 @@ pub fn leadwise(methods: &[super::Method]) -> Result<Layout> {
         starts: start_or_ends(&lead_head_mask, methods, Boundary::Start),
         ends: start_or_ends(&lead_head_mask, methods, Boundary::End),
         links: links(methods, &lead_head_mask),
-        blocks,
+        method_blocks,
         stage,
     })
 }
