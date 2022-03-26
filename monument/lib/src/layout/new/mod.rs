@@ -9,7 +9,7 @@ use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
-use crate::{CallIdx, CallVec};
+use crate::CallVec;
 
 use super::{Layout, MethodBlock};
 
@@ -196,8 +196,6 @@ pub struct Method {
 
     /// The number of rows of this method must fit within this [`Range`]
     count_range: Range<usize>,
-    /// Which [`Call`]s can be used within leads of this `Method`
-    calls: Vec<CallIdx>,
     /// The indices in which we can start a composition during this `Method`.  `None` means any
     /// index is allowed (provided the CH masks are satisfied).
     ///
@@ -220,7 +218,6 @@ pub struct Method {
 impl Method {
     pub fn new(
         method: bellframe::Method,
-        calls: Vec<CallIdx>,
         ch_masks: Vec<(Mask, Bell)>,
         shorthand: String,
         count_range: Range<usize>,
@@ -243,7 +240,6 @@ impl Method {
 
             shorthand,
             count_range,
-            calls,
             ch_masks: ch_masks
                 .into_iter()
                 .flat_map(|(mask, calling_bell)| utils::CourseHeadMask::new(mask, calling_bell))

@@ -143,7 +143,7 @@ pub struct Link {
     /// The transposition of the course head taken when this is applied
     pub ch_transposition: RowBuf,
 
-    /// The index of this link's [`CallType`], or `None` for plain leads.
+    /// The index of this link's [`CallType`](crate::CallType), or `None` for plain leads.
     pub call_idx: Option<CallIdx>,
     /// The name for this call's position
     pub calling_position: String,

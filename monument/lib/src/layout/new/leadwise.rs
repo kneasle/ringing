@@ -130,10 +130,8 @@ fn links(
 
     // Place calls between every `call_start` and every `call_end` of that lead label
     let mut links = Vec::new();
-    for (method_idx, method) in methods.iter().enumerate() {
-        for &call_idx in &method.calls {
-            let call = &calls[call_idx];
-
+    for (method_idx, _method) in methods.iter().enumerate() {
+        for (call_idx, call) in calls.iter_enumerated() {
             let label = call.lead_location.as_str();
             let starts = &call_starts[method_idx][label];
             let ends = &call_ends[label];

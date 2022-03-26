@@ -242,8 +242,7 @@ fn generate_call_links(
     links: &mut Vec<Link>,
 ) -> Result<()> {
     // Test every call in every valid position in the course ...
-    for &call_idx in &m.calls {
-        let call = &calls[call_idx];
+    for (call_idx, call) in calls.iter_enumerated() {
         let lead_label = call.lead_location.as_str();
         let call_starts = link_gen_data
             .call_starts_by_label
@@ -284,7 +283,7 @@ fn generate_call_links(
                 from_ch_mask.mask(),
                 &row_after_call,
                 Some(call_idx),
-                &calling_position,
+                calling_position,
                 None, // Calls are always allowed to change method
                 link_gen_data,
                 links,
@@ -302,7 +301,7 @@ fn generate_call_links(
                     from_ch_mask.mask(),
                     row_after_plain,
                     None,
-                    &calling_position,
+                    calling_position,
                     // If we're only splicing on calls, then don't add plain links that
                     // change method
                     (link_gen_data.splice_style == SpliceStyle::Calls).then(|| method_idx),

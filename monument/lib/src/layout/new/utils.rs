@@ -124,10 +124,10 @@ pub(super) fn fixed_bells(
 fn fixed_bells_of_method(method: &super::Method, calls: &CallVec<super::Call>) -> HashSet<Bell> {
     // Start the set with the bells which are fixed by the plain lead of every method
     let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-    for call_idx in &method.calls {
+    for call in calls {
         // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
         // Grandsire is unaffected by a plain lead, but affected by calls)
-        filter_bells_fixed_by_call(method, &calls[*call_idx], &mut fixed_bells);
+        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
     }
     fixed_bells
 }

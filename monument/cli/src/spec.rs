@@ -23,7 +23,7 @@ use monument::{
         Layout,
     },
     music::{MusicType, StrokeSet},
-    CallIdx, CallType, CallVec, OptRange, Query,
+    CallType, CallVec, OptRange, Query,
 };
 use serde::Deserialize;
 
@@ -214,9 +214,6 @@ impl Spec {
             }
             methods.push(layout::new::Method::new(
                 method,
-                // TODO: Apply all calls to all methods, and control calls exclusively using lead
-                // locations
-                (0..calls.len()).map(CallIdx::new).collect_vec(),
                 override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
                 count_range,
