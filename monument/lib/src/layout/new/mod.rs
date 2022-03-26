@@ -9,6 +9,8 @@ use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
 use serde::Deserialize;
 
+use crate::CallVec;
+
 use super::{Layout, MethodBlock};
 
 pub mod coursewise;
@@ -18,6 +20,7 @@ mod utils;
 impl Layout {
     pub fn new(
         methods: Vec<self::Method>,
+        calls: &CallVec<self::Call>,
         splice_style: SpliceStyle,
         part_head: &Row,
         leadwise: Option<bool>,
@@ -32,9 +35,9 @@ impl Layout {
         });
 
         if leadwise {
-            leadwise::leadwise(&methods)
+            leadwise::leadwise(&methods, calls)
         } else {
-            coursewise::coursewise(methods, splice_style)
+            coursewise::coursewise(methods, calls, splice_style)
         }
     }
 }
@@ -193,8 +196,6 @@ pub struct Method {
 
     /// The number of rows of this method must fit within this [`Range`]
     count_range: Range<usize>,
-    /// Which [`Call`]s can be used within leads of this `Method`
-    calls: Vec<Call>,
     /// The indices in which we can start a composition during this `Method`.  `None` means any
     /// index is allowed (provided the CH masks are satisfied).
     ///
@@ -217,7 +218,6 @@ pub struct Method {
 impl Method {
     pub fn new(
         method: bellframe::Method,
-        calls: Vec<Call>,
         ch_masks: Vec<(Mask, Bell)>,
         shorthand: String,
         count_range: Range<usize>,
@@ -240,7 +240,6 @@ impl Method {
 
             shorthand,
             count_range,
-            calls,
             ch_masks: ch_masks
                 .into_iter()
                 .flat_map(|(mask, calling_bell)| utils::CourseHeadMask::new(mask, calling_bell))

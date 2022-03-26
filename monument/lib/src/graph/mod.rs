@@ -104,19 +104,34 @@ pub struct Chunk {
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Link {
-    pub id: ChunkId,
+    pub to: ChunkId,
     /// Indexes into `Layout::links`
     pub source_idx: LinkIdx,
     pub rotation: Rotation,
 }
 
 impl Link {
-    pub fn new(id: ChunkId, source_idx: LinkIdx, rotation: Rotation) -> Self {
-        Self {
-            id,
-            source_idx,
-            rotation,
-        }
+    /// Computes the [`Score`] created by this link **in one part**
+    pub fn weight_per_part(&self, from: &ChunkId, query: &Query) -> f32 {
+        let source = &query.layout.links[self.source_idx];
+        let is_splice = match (from, &self.to) {
+            (ChunkId::ZeroLengthEnd, _) => {
+                unreachable!("Can't have link out of 0-length end node");
+            }
+            // Going to a 0-length end is **not** a splice
+            (ChunkId::Standard(_), ChunkId::ZeroLengthEnd) => false,
+            // A link between two full chunks is a splice iff it changes the block
+            (ChunkId::Standard(std1), ChunkId::Standard(std2)) => {
+                std1.row_idx.block != std2.row_idx.block
+            }
+        };
+
+        let call_weight = match source.call_idx {
+            Some(idx) => query.calls[idx].weight,
+            None => 0.0, // Plain leads have no weight
+        };
+        let splice_weight = if is_splice { query.splice_weight } else { 0.0 };
+        call_weight + splice_weight
     }
 }
 
@@ -467,10 +482,10 @@ impl Graph {
         for (id, _dist) in expanded_chunk_ranges {
             if let Some(chunk) = chunks.get(&id) {
                 for succ_link in chunk.successors.clone() {
-                    if let Some(succ_chunk) = chunks.get_mut(&succ_link.id) {
+                    if let Some(succ_chunk) = chunks.get_mut(&succ_link.to) {
                         assert!(succ_link.rotation < num_parts);
                         succ_chunk.predecessors.push(Link {
-                            id: id.clone(),
+                            to: id.clone(),
                             source_idx: succ_link.source_idx,
                             // Passing backwards over a link gives it the opposite rotation to
                             // traversing forward
@@ -719,7 +734,11 @@ fn build_chunk(
             .links()
             .iter()
             .cloned()
-            .map(|(idx, id, rotation)| Link::new(id, idx, rotation))
+            .map(|(source_idx, to, rotation)| Link {
+                to,
+                source_idx,
+                rotation,
+            })
             .collect_vec(),
 
         // These are populated in separate passes once all the `Chunk`s have been created
