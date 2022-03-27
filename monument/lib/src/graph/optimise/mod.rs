@@ -10,7 +10,7 @@ use std::{
 
 use crate::{layout::ChunkId, utils::FrontierItem, Query};
 
-use super::{Chunk, Graph};
+use super::{Chunk, Graph, Link, LinkId};
 
 use self::Direction::{Backward, Forward};
 
@@ -96,7 +96,7 @@ impl<'graph> DirectionalView<'graph> {
     pub fn chunks(&self) -> impl Iterator<Item = (&ChunkId, ChunkView)> {
         self.graph
             .chunks()
-            .map(|(id, chunk)| (id, ChunkView::new(chunk, self.direction)))
+            .map(|(id, chunk)| (id, ChunkView::new(chunk, self.graph, self.direction)))
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
@@ -118,7 +118,7 @@ impl<'graph> DirectionalView<'graph> {
     pub fn get_chunk(&'graph self, id: &ChunkId) -> Option<ChunkView<'graph>> {
         self.graph
             .get_chunk(id)
-            .map(|chunk| ChunkView::new(chunk, self.direction))
+            .map(|chunk| ChunkView::new(chunk, self.graph, self.direction))
     }
 
     pub fn get_chunk_mut(&'graph mut self, id: &ChunkId) -> Option<ChunkViewMut<'graph>> {
@@ -141,26 +141,44 @@ impl<'graph> DirectionalView<'graph> {
 #[non_exhaustive]
 pub struct ChunkView<'graph> {
     pub chunk: &'graph Chunk,
+    pub graph: &'graph Graph,
     pub direction: Direction,
 }
 
 impl<'graph> ChunkView<'graph> {
-    pub fn new(chunk: &'graph Chunk, direction: Direction) -> Self {
-        Self { chunk, direction }
+    #[must_use]
+    pub fn new(chunk: &'graph Chunk, graph: &'graph Graph, direction: Direction) -> Self {
+        Self {
+            chunk,
+            graph,
+            direction,
+        }
     }
 
-    pub fn successors(self) -> &'graph [super::Link] {
-        match self.direction {
+    pub fn successors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
+        self.convert_links(match self.direction {
             Forward => self.chunk.successors(),
             Backward => self.chunk.predecessors(),
-        }
+        })
     }
 
-    pub fn predecessors(self) -> &'graph [super::Link] {
-        match self.direction {
+    pub fn predecessors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
+        self.convert_links(match self.direction {
             Forward => self.chunk.predecessors(),
             Backward => self.chunk.successors(),
-        }
+        })
+    }
+
+    fn convert_links(
+        &'graph self,
+        links: &'graph [LinkId],
+    ) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
+        links.iter().filter_map(|link_id| {
+            Some(LinkView {
+                link: self.graph.get_link(*link_id)?,
+                direction: self.direction,
+            })
+        })
     }
 }
 
@@ -178,14 +196,14 @@ impl<'graph> ChunkViewMut<'graph> {
         Self { chunk, direction }
     }
 
-    pub fn successors_mut(&mut self) -> &mut Vec<super::Link> {
+    pub fn successors_mut(&mut self) -> &mut Vec<super::LinkId> {
         match self.direction {
             Forward => self.chunk.successors_mut(),
             Backward => self.chunk.predecessors_mut(),
         }
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<super::Link> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<super::LinkId> {
         match self.direction {
             Forward => self.chunk.predecessors_mut(),
             Backward => self.chunk.successors_mut(),
@@ -205,6 +223,30 @@ impl<'graph> ChunkViewMut<'graph> {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_non_duffer,
             Backward => &mut self.chunk.lb_distance_to_non_duffer,
+        }
+    }
+}
+
+/// A view of a [`Link`], facing in a given [`Direction`]
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct LinkView<'graph> {
+    pub link: &'graph Link,
+    pub direction: Direction,
+}
+
+impl<'graph> LinkView<'graph> {
+    pub fn from(&self) -> &'graph ChunkId {
+        match self.direction {
+            Direction::Forward => &self.link.from,
+            Direction::Backward => &self.link.to,
+        }
+    }
+
+    pub fn to(&self) -> &'graph ChunkId {
+        match self.direction {
+            Direction::Forward => &self.link.to,
+            Direction::Backward => &self.link.from,
         }
     }
 }
@@ -397,22 +439,22 @@ fn compute_distances<'a>(
 
     // A priority queue of ChunkIds, sorted by distance with the nearest chunks at the front of the
     // queue.  Initialise this with just the start chunks.
-    let mut frontier: BinaryHeap<Reverse<FrontierItem<&ChunkId>>> = start_chunks
+    let mut frontier: BinaryHeap<Reverse<FrontierItem<ChunkId>>> = start_chunks
         .into_iter()
-        .map(|(id, dist)| FrontierItem::new(id, dist))
+        .map(|(id, dist)| FrontierItem::new(id.clone(), dist))
         .map(Reverse)
         .collect();
 
     // Run Dijkstra's algorithm on the chunks
     while let Some(Reverse(FrontierItem { item: id, distance })) = frontier.pop() {
-        let chunk_view = match view.get_chunk(id) {
+        let chunk_view = match view.get_chunk(&id) {
             Some(v) => v,
             None => continue, // Don't expand chunk links which don't lead anywhere
         };
 
         // Mark this chunk as expanded, and ignore it if we've already expanded it (because
         // Dijkstra's guarantees it must have been given a distance <= to `distance`)
-        if let Some(&existing_dist) = expanded_chunk_distances.get(id) {
+        if let Some(&existing_dist) = expanded_chunk_distances.get(&id) {
             assert!(existing_dist <= distance);
             continue;
         }
@@ -428,9 +470,8 @@ fn compute_distances<'a>(
 
         // Expand this chunk
         for succ_link in chunk_view.successors() {
-            let succ_id = &succ_link.to;
             let new_frontier_item = FrontierItem {
-                item: succ_id,
+                item: succ_link.to().clone(),
                 distance: distance_after_chunk,
             };
             frontier.push(Reverse(new_frontier_item));

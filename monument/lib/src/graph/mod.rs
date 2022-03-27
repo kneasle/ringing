@@ -7,6 +7,7 @@ pub mod optimise;
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet},
+    ops::Index,
     sync::Mutex,
 };
 
@@ -40,11 +41,13 @@ pub struct Graph {
     // that isn't actually in the graph - in this case they will be ignored or discarded during the
     // optimisation process).
     chunks: HashMap<ChunkId, Chunk>,
+    links: LinkSet,
+
     /// **Invariant**: If `start_chunks` points to a chunk, it **must** be a start chunk (i.e. not
     /// have any predecessors, and have `start_label` set)
     start_chunks: Vec<(ChunkId, StartIdx, Rotation)>,
-    /// **Invariant**: If `start_chunks` points to a chunk, it **must** be a end chunk (i.e. not have
-    /// any successors, and have `end_chunks` set)
+    /// **Invariant**: If `start_chunks` points to a chunk, it **must** be a end chunk (i.e. not
+    /// have any successors, and have `end_chunks` set)
     end_chunks: Vec<(ChunkId, End)>,
     /// The number of different parts
     num_parts: Rotation,
@@ -64,8 +67,8 @@ pub struct Chunk {
     /// The string that should be added when this chunk is generated
     label: String,
 
-    successors: Vec<Link>,
-    predecessors: Vec<Link>,
+    successors: Vec<LinkId>,
+    predecessors: Vec<LinkId>,
 
     /// The chunks which share rows with `self`, including `self` (because all chunks are false
     /// against themselves).  Optimisation passes probably shouldn't mess with falseness.
@@ -102,12 +105,19 @@ pub struct Chunk {
     pub lb_distance_to_rounds: Distance,
 }
 
+//////////
+// LINK //
+//////////
+
+/// A link between two [`Chunk`]s in a [`Graph`]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Link {
+    pub from: ChunkId,
     pub to: ChunkId,
     /// Indexes into `Layout::links`
     pub source_idx: LinkIdx,
     pub rotation: Rotation,
+    pub rotation_back: Rotation,
 }
 
 impl Link {
@@ -135,13 +145,72 @@ impl Link {
     }
 }
 
+/// Unique identifier for a [`Link`] within a [`Graph`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LinkId(usize);
+
+/// A [`HashMap`] containing a set of [`Link`]s, all addressed by unique [`LinkId`]s
+#[derive(Debug, Clone, Default)]
+pub struct LinkSet {
+    next_id: usize,
+    map: HashMap<LinkId, Link>,
+}
+
+impl LinkSet {
+    /// Create a [`LinkSet`] containing no [`Link`]s
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a new [`Link`] to this set, returning its [`LinkId`]
+    pub fn add(&mut self, link: Link) -> LinkId {
+        let id = self.next_id();
+        self.map.insert(id, link);
+        id
+    }
+
+    pub fn get(&self, id: LinkId) -> Option<&Link> {
+        self.map.get(&id)
+    }
+
+    pub fn get_mut(&mut self, id: LinkId) -> Option<&mut Link> {
+        self.map.get_mut(&id)
+    }
+
+    pub fn keys(&self) -> std::iter::Copied<std::collections::hash_map::Keys<LinkId, Link>> {
+        self.map.keys().copied()
+    }
+
+    /// Remove any [`Link`]s from `self` which don't satisfy a given predicate
+    pub fn retain(&mut self, mut pred: impl FnMut(LinkId, &mut Link) -> bool) {
+        self.map.retain(|id, link| pred(*id, link))
+    }
+
+    /// Get a new [`LinkId`], unique from all the others returned from `self`
+    fn next_id(&mut self) -> LinkId {
+        let id = LinkId(self.next_id);
+        self.next_id += 1;
+        id
+    }
+}
+
+impl Index<LinkId> for LinkSet {
+    type Output = Link;
+
+    #[track_caller]
+    fn index(&self, index: LinkId) -> &Self::Output {
+        &self.map[&index]
+    }
+}
+
 // ------------------------------------------------------------------------------------------
 
 impl Graph {
     //! Optimisation
 
     /// Repeatedly apply a sequence of [`Pass`]es until the graph stops getting smaller, or 20
-    /// iterations are made.  Use [`Graph::optimise_with_iter_limit`] to set a custom iteration limit.
+    /// iterations are made.  Use [`Graph::optimise_with_iter_limit`] to set a custom iteration
+    /// limit.
     pub fn optimise(&mut self, passes: &[Mutex<Pass>], query: &Query) {
         self.optimise_with_iter_limit(passes, query, 20);
     }
@@ -280,6 +349,14 @@ impl Graph {
 
     // Getters
 
+    pub fn get_link(&self, id: LinkId) -> Option<&Link> {
+        self.links.get(id)
+    }
+
+    pub fn get_link_mut(&mut self, id: LinkId) -> Option<&mut Link> {
+        self.links.get_mut(id)
+    }
+
     pub fn get_chunk<'graph>(&'graph self, id: &ChunkId) -> Option<&'graph Chunk> {
         self.chunks.get(id)
     }
@@ -373,19 +450,19 @@ impl Chunk {
 
     // CROSS-CHUNK REFERENCES //
 
-    pub fn successors(&self) -> &[Link] {
+    pub fn successors(&self) -> &[LinkId] {
         self.successors.as_slice()
     }
 
-    pub fn successors_mut(&mut self) -> &mut Vec<Link> {
+    pub fn successors_mut(&mut self) -> &mut Vec<LinkId> {
         &mut self.successors
     }
 
-    pub fn predecessors(&self) -> &[Link] {
+    pub fn predecessors(&self) -> &[LinkId] {
         self.predecessors.as_slice()
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<Link> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<LinkId> {
         &mut self.predecessors
     }
 
@@ -432,6 +509,7 @@ impl Graph {
 
         // Convert each `expanded_chunk_range` into a full `Chunk`, albeit without
         // predecessor/falseness references
+        let mut links = LinkSet::new();
         let mut chunks: HashMap<ChunkId, Chunk> = expanded_chunk_ranges
             .iter()
             .map(|(chunk_id, (chunk_range, distance))| {
@@ -451,12 +529,14 @@ impl Graph {
                 let new_chunk = build_chunk(
                     chunk_range,
                     *distance,
-                    // We've asserted that all chunks have even length, so that all chunks must start
-                    // at the same stroke.  Therefore, we can simply pass 'start_stroke' straight
-                    // to all the comps
+                    num_parts,
+                    // We've asserted that all chunks have even length, so that all chunks must
+                    // start at the same stroke.  Therefore, we can simply pass 'start_stroke'
+                    // straight to all the comps
                     query.start_stroke,
                     &part_heads,
                     query,
+                    &mut links,
                 );
                 (chunk_id.clone(), new_chunk)
             })
@@ -481,16 +561,9 @@ impl Graph {
         log::debug!("Setting predecessor links");
         for (id, _dist) in expanded_chunk_ranges {
             if let Some(chunk) = chunks.get(&id) {
-                for succ_link in chunk.successors.clone() {
-                    if let Some(succ_chunk) = chunks.get_mut(&succ_link.to) {
-                        assert!(succ_link.rotation < num_parts);
-                        succ_chunk.predecessors.push(Link {
-                            to: id.clone(),
-                            source_idx: succ_link.source_idx,
-                            // Passing backwards over a link gives it the opposite rotation to
-                            // traversing forward
-                            rotation: num_parts - succ_link.rotation,
-                        });
+                for succ_link_id in chunk.successors.clone() {
+                    if let Some(succ_chunk) = chunks.get_mut(&links[succ_link_id].to) {
+                        succ_chunk.predecessors.push(succ_link_id);
                     }
                 }
             }
@@ -498,6 +571,7 @@ impl Graph {
 
         Ok(Self {
             chunks,
+            links,
             start_chunks,
             end_chunks,
             num_parts,
@@ -505,8 +579,8 @@ impl Graph {
     }
 }
 
-/// Given an initial set of chunks, compute the pairs of false chunks and remove any chunks which are
-/// self-false.
+/// Given an initial set of chunks, compute the pairs of false chunks and remove any chunks which
+/// are self-false.
 fn compute_falseness(
     chunks: &mut HashMap<ChunkId, Chunk>,
     layout: &Layout,
@@ -673,9 +747,11 @@ fn build_graph(query: &Query, size_limit: usize) -> Result<BuiltGraph, BuildErro
 fn build_chunk(
     chunk_range: &ChunkRange,
     distance: usize,
+    num_parts: Rotation,
     start_stroke: Stroke,
     part_heads: &[RowBuf],
     query: &Query,
+    link_set: &mut LinkSet,
 ) -> Chunk {
     // Add up music from each part
     let mut music = Breakdown::zero(query.music_types.len());
@@ -709,6 +785,22 @@ fn build_chunk(
         .zip_eq(music.counts.as_slice())
         .any(|(music_type, count)| music_type.non_duffer() && *count > 0);
 
+    let successors = chunk_range
+        .links()
+        .iter()
+        .cloned()
+        .map(|(source_idx, to, rotation)| {
+            assert!(rotation < num_parts);
+            link_set.add(Link {
+                from: chunk_range.chunk_id.clone(),
+                to,
+                source_idx,
+                rotation,
+                rotation_back: num_parts - rotation,
+            })
+        })
+        .collect_vec();
+
     Chunk {
         per_part_length: chunk_range.per_part_length,
         total_length: chunk_range.total_length,
@@ -731,16 +823,7 @@ fn build_chunk(
         // so we can set it to 0 without breaking any invariants.
         lb_distance_to_rounds: 0,
 
-        successors: chunk_range
-            .links()
-            .iter()
-            .cloned()
-            .map(|(source_idx, to, rotation)| Link {
-                to,
-                source_idx,
-                rotation,
-            })
-            .collect_vec(),
+        successors,
 
         // These are populated in separate passes once all the `Chunk`s have been created
         false_chunks: Vec::new(),
