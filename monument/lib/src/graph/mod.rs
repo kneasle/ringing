@@ -692,7 +692,8 @@ fn build_chunk(
             // Count weight from CH masks
             for (mask, weight) in &query.ch_weights {
                 if mask.matches(&ch) {
-                    music.score += *weight * chunk_range.total_length.0 as f32; // Weight applies to each row
+                    // Weight applies to each row
+                    music.score += *weight * chunk_range.per_part_length.0 as f32;
                 }
             }
         }

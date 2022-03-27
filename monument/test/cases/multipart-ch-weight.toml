@@ -1,0 +1,14 @@
+# We expect both of 'sH' and 'HsHH' to have an average score of 1, because each row generates a
+# score of 1 (from the CH weight).  There was a bug where CH weights would be erroneously multiplied
+# by the number of parts (thus giving these an average score of 2).
+
+length = "practice"
+methods = ["Bristol Surprise Major"]
+part_head = "1243"
+
+bob_weight = 0
+single_weight = 0
+
+[[ch_weights]]
+pattern = "*5678"
+weight = 1
