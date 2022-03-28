@@ -1526,6 +1526,12 @@
       { "length": 672, "string": "H", "avg_score": 0.13779762, "part_head": "14235678" }
     ]
   },
+  "test/cases/multipart-ch-weight.toml": {
+    "comps": [
+      { "length": 192, "string": "HsHH", "avg_score": 1.0, "part_head": "12435678" },
+      { "length": 64, "string": "sH", "avg_score": 1.0, "part_head": "12435678" }
+    ]
+  },
   "test/cases/multipart-far-calls.toml": {
     "comps": [
       { "length": 1440, "string": "sVsVBI", "avg_score": 0.13625, "part_head": "1452367890" },

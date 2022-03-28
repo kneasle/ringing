@@ -11,18 +11,21 @@ pub(super) fn strip_refs(graph: &mut Graph, _query: &Query) {
     // Strip start/end chunks
     graph.retain_start_chunks(|(id, _start_idx, _rotation)| chunk_ids.contains(id));
     graph.retain_end_chunks(|(id, _end_idx)| chunk_ids.contains(id));
+    // Only keep links which go between two valid chunks
+    graph
+        .links
+        .retain(|_id, link| chunk_ids.contains(&link.from) && chunk_ids.contains(&link.to));
+    let link_ids = graph.links.keys().collect::<HashSet<_>>();
     // Strip chunk refs (i.e. predecessor, successor or falseness)
     for (_id, chunk) in graph.chunks_mut() {
         chunk
             .successors_mut()
-            .retain(|link| chunk_ids.contains(&link.to));
+            .retain(|link| link_ids.contains(link));
         chunk
             .predecessors_mut()
-            .retain(|link| chunk_ids.contains(&link.to));
+            .retain(|link| link_ids.contains(link));
         chunk
             .false_chunks_mut()
             .retain(|id| chunk_ids.contains(&ChunkId::Standard(id.clone())));
     }
-
-    // TODO: Strip `successor` ptrs which don't have a matching `predecessor` (or vice versa)
 }

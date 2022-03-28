@@ -86,12 +86,12 @@ impl Graph {
                 let succs = source_chunk
                     .successors()
                     .iter()
-                    .filter_map(|link| {
+                    .filter_map(|link_id| {
+                        let link = source_graph.get_link(*link_id)?;
+                        let score =
+                            link.weight_per_part(&from_id, query) * source_graph.num_parts() as f32;
                         Some(Link {
-                            score: Score::from(
-                                link.weight_per_part(&from_id, query)
-                                    * source_graph.num_parts() as f32,
-                            ),
+                            score: Score::from(score),
                             source_idx: link.source_idx,
                             next_chunk: *id_to_index.get(&link.to)?,
                             rot: link.rotation,
