@@ -1,12 +1,17 @@
 ## (Unreleased)
 
-### Monument
-- (#70) New graph optimisation: remove links between two mutually false chunks (such a link could
-    never be used without immediate falseness).
+---
+
+## 28th March 2021
+
+### Monument v0.7.0
+- (#70) New graph optimisation: remove links between mutually false chunks.
 - (#69) Allow weights on method splicing with `splice_weight` (defaults to 0).
 - (#67) Add error messages for giving the same debug/display name to multiple calls (specifically,
     two calls at the same lead location but with different place notations).
-- (#66) Allow method counts to be overridden per-method.
+- (#66) Allow method counts to be overridden per-method (by adding a `count` parameter to methods).
+
+### Internal Improvements
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
 
 ---
