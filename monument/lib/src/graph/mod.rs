@@ -224,6 +224,7 @@ impl Graph {
         limit: usize,
     ) {
         let mut last_size = self.size();
+        log::debug!("Initial graph size: {:?}", last_size);
         let mut iter_count = 0;
         loop {
             // Run every optimisation pass
@@ -243,6 +244,7 @@ impl Graph {
             iter_count += 1;
             // Stop optimising if the graph has stopped getting smaller
             let new_size = self.size();
+            log::debug!("New size: {:?}", new_size);
             match new_size.cmp(&last_size) {
                 // If graph got smaller, then keep optimising in case more optimisation is possible
                 Ordering::Less => {}
@@ -310,6 +312,20 @@ impl Graph {
         self.chunks.retain(pred);
     }
 
+    /// Removes all links for whom `pred` returns `false`.  The parameters of `pred` are
+    /// `(link, chunk_from, chunk_to)`
+    pub fn retain_links(
+        &mut self,
+        mut pred: impl FnMut(&Link, &ChunkId, &Chunk, &ChunkId, &Chunk) -> bool,
+    ) {
+        self.links.retain(|_id, link| {
+            match (self.chunks.get(&link.from), self.chunks.get(&link.to)) {
+                (Some(from), Some(to)) => pred(link, &link.from, from, &link.to, to),
+                _ => false, // If either side of the link is missing, remove the link
+            }
+        })
+    }
+
     /// Remove elements from [`Self::start_chunks`] for which a predicate returns `false`.
     pub fn retain_start_chunks(
         &mut self,
@@ -326,6 +342,14 @@ impl Graph {
 
 impl Chunk {
     //! Helpers for optimisation passes
+
+    /// Returns the mutual truth of `self` against the chunk with id of `other`
+    pub fn truth_against(&self, other: &ChunkId) -> Truth {
+        Truth::from(match other.std_id() {
+            Some(std_id) => !self.false_chunks.contains(std_id),
+            None => true, // All chunks are true against 0-length chunks
+        })
+    }
 
     /// A lower bound on the length of a composition which passes through this chunk.
     pub fn min_comp_length(&self) -> usize {

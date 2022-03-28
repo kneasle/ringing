@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#70) New graph optimisation: remove links between two mutually false chunks (such a link could
+    never be used without immediate falseness).
 - (#69) Allow weights on method splicing with `splice_weight` (defaults to 0).
 - (#67) Add error messages for giving the same debug/display name to multiple calls (specifically,
     two calls at the same lead location but with different place notations).

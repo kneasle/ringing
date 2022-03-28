@@ -271,6 +271,8 @@ pub mod passes {
     /// enable concurrent access.
     pub fn default() -> Vec<Mutex<Pass>> {
         [
+            // Misc optimisations
+            remove_links_between_false_nodes(),
             // Distance-related optimisation
             compute_distances(),
             strip_long_chunks(),
@@ -308,6 +310,15 @@ pub mod passes {
     /// removing any which can't reach rounds in either direction.
     pub fn remove_chunks_exceeding_max_count() -> Pass {
         Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count))
+    }
+
+    /// Creates a [`Pass`] which removes any links between two nodes which are mutually false.
+    pub fn remove_links_between_false_nodes() -> Pass {
+        Pass::Single(Box::new(|graph: &mut Graph, _query: &Query| {
+            graph.retain_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
+                chunk_from.truth_against(id_to).is_true()
+            })
+        }))
     }
 
     /* Distance related passes */
