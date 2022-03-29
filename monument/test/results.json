@@ -274,6 +274,9 @@
       { "length": 1344, "string": "#DLSYSL", "avg_score": 0.14434524, "part_head": "18234567" }
     ]
   },
+  "test/cases/exact-count.toml": {
+    "comps": [{ "length": 224, "string": "", "avg_score": 0.25892857 }]
+  },
   "test/cases/false-course-1.toml": { "comps": [] },
   "test/cases/false-course-2.toml": {
     "comps": [
