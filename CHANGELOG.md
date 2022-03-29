@@ -1,5 +1,9 @@
 ## (Unreleased)
 
+### Monument
+- (#71) Allow specifying an exact count with e.g. `count = 224` rather than
+    `count = { min = 224, max = 224 }`.
+
 ---
 
 ## 28th March 2021

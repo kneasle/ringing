@@ -2,7 +2,7 @@ use std::{
     cmp::Ordering,
     collections::HashMap,
     fmt::Write,
-    ops::{Deref, Range},
+    ops::{self, Deref},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -65,7 +65,7 @@ pub struct Spec {
     splice_style: SpliceStyle,
     /// Bounds on how many rows of each method is allowed
     #[serde(default)]
-    method_count: OptRange,
+    method_count: RangeInclusive,
     /// Score which is applied for every change of method.  Defaults to `0.0`
     #[serde(default)]
     splice_weight: f32,
@@ -194,7 +194,7 @@ impl Spec {
                 .iter()
                 .map(|(m, common)| (m.title(), common.shorthand.as_deref())),
         );
-        let method_count = self.method_count.or_range(&default_method_count(
+        let method_count = OptRange::from(self.method_count).or_range(&default_method_count(
             loaded_methods.len(),
             &self.length.range,
         ));
@@ -208,8 +208,9 @@ impl Spec {
                 .course_heads
                 .map(|chs| parse_ch_masks(&chs, stage))
                 .transpose()?;
-            let count_range = common.count_range.or_range(&method_count);
-            if is_spliced && common.count_range.is_set() {
+            let explicit_count_range = OptRange::from(common.count_range);
+            let count_range = explicit_count_range.or_range(&method_count);
+            if is_spliced && explicit_count_range.is_set() {
                 log::info!("count range for {:<2}: {:?}", shorthand, count_range);
             }
             methods.push(layout::new::Method::new(
@@ -467,7 +468,7 @@ fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Ve
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent
 /// method balance.
-fn default_method_count(num_methods: usize, len_range: &Range<usize>) -> Range<usize> {
+fn default_method_count(num_methods: usize, len_range: &ops::Range<usize>) -> ops::Range<usize> {
     let min_f32 = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
     let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
     // + 1 because the `method_count` is an **inclusive** range
@@ -512,7 +513,7 @@ pub struct MethodCommon {
 
     /// Optional override for method count range
     #[serde(default, rename = "count")]
-    count_range: OptRange,
+    count_range: RangeInclusive,
     /// The inputs to this map are numerical strings representing sub-lead indices, and the
     /// outputs are the lead location names
     lead_locations: Option<HashMap<String, String>>,
@@ -781,7 +782,7 @@ pub enum MusicSpec {
         pattern: String,
         /// For each pattern, which music counts are allowed
         #[serde(default)]
-        count_each: OptRange,
+        count_each: RangeInclusive,
         #[serde(flatten)]
         common: MusicCommon,
     },
@@ -789,7 +790,7 @@ pub enum MusicSpec {
         patterns: Vec<String>,
         /// For each pattern, which music counts are allowed
         #[serde(default)]
-        count_each: OptRange,
+        count_each: RangeInclusive,
         #[serde(flatten)]
         common: MusicCommon,
     },
@@ -802,7 +803,7 @@ pub struct MusicCommon {
     weight: f32,
     /// Possibly unbounded range of counts which are allowed in this music type
     #[serde(rename = "count", default)]
-    count_range: OptRange,
+    count_range: RangeInclusive,
     /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
     non_duffer: Option<bool>,
     /// Which strokes this music can apply to
@@ -817,7 +818,7 @@ impl MusicSpec {
             /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
             Runs(&'_self [u8], &'_self bool),
             /// Equivalent to [`Self::Pattern`] or [`Self::Pattern`]
-            Patterns(&'_self [String], &'_self OptRange),
+            Patterns(&'_self [String], &'_self RangeInclusive),
         }
 
         use std::slice::from_ref;
@@ -858,15 +859,17 @@ impl MusicSpec {
                 vec![MusicType::new(
                     regexes,
                     common.weight,
-                    common.count_range,
+                    common.count_range.into(),
                     non_duffer,
                     common.strokes,
                 )]
             }
             LoweredType::Patterns(patterns, count_each) => {
                 let regexes = patterns.iter().map(|s| Regex::parse(s));
+                let count_each = OptRange::from(*count_each);
+                let count_range = OptRange::from(common.count_range);
                 if count_each.is_set() {
-                    if common.count_range.is_set() {
+                    if count_range.is_set() {
                         todo!("Mixing `count` and `count_each` isn't implemented yet!");
                     }
                     // If just `count_each` is set, we generate a separate `MusicType` for each
@@ -877,7 +880,7 @@ impl MusicSpec {
                             MusicType::new(
                                 vec![regex],
                                 common.weight,
-                                *count_each,
+                                count_each,
                                 non_duffer,
                                 common.strokes,
                             )
@@ -889,7 +892,7 @@ impl MusicSpec {
                     vec![MusicType::new(
                         regexes.collect_vec(),
                         common.weight,
-                        common.count_range,
+                        count_range,
                         non_duffer,
                         common.strokes,
                     )]
@@ -899,9 +902,40 @@ impl MusicSpec {
     }
 }
 
-//////////////////////
-// HELPER FUNCTIONS //
-//////////////////////
+/////////////
+// HELPERS //
+/////////////
+
+/// A version of [`OptRange`] which allows for convenient deserialisation from a single number
+/// (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum RangeInclusive {
+    SingleNumber(usize),
+    Range {
+        min: Option<usize>,
+        max: Option<usize>,
+    },
+}
+
+impl Default for RangeInclusive {
+    fn default() -> Self {
+        Self::Range {
+            min: None,
+            max: None,
+        }
+    }
+}
+
+impl From<RangeInclusive> for OptRange {
+    fn from(r: RangeInclusive) -> Self {
+        let (min, max) = match r {
+            RangeInclusive::SingleNumber(n) => (Some(n), Some(n)),
+            RangeInclusive::Range { min, max } => (min, max),
+        };
+        OptRange { min, max }
+    }
+}
 
 /// Attempt to read a file as a [`String`], returning a helpful error message on failure
 fn read_file_to_string(path: &Path) -> anyhow::Result<String> {
