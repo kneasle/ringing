@@ -35,7 +35,7 @@ impl Layout {
         });
 
         if leadwise {
-            leadwise::leadwise(&methods, calls)
+            leadwise::leadwise(&methods, calls, splice_style)
         } else {
             coursewise::coursewise(methods, calls, splice_style)
         }

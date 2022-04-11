@@ -1,0 +1,8 @@
+length = "QP"
+methods = ["Little Bob Major", "Plain Bob Major"]
+music_file = "music-8.toml"
+splice_style = "calls"
+part_head = "18234567"
+method_count = { min = 400, max = 800 }
+bob_weight = -6
+single_weight = -8

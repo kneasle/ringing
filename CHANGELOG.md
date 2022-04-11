@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#73) `splice_style = "calls"` and `splice_style = "call_locations"` now work with multi-part
+    compositions which involve the tenor.
 - (#71) Allow specifying an exact count with e.g. `count = 224` rather than
     `count = { min = 224, max = 224 }`.
 
