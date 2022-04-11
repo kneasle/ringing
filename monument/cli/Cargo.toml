@@ -26,7 +26,7 @@ structopt = "0.3"
 toml = "0.5"
 
 [dev-dependencies]
-goldilocks-json-fmt = "0.1"
+goldilocks-json-fmt = "0.2"
 ordered-float = { version = "2.10", features = ["serde"] }
 path-slash = "0.1"
 pulldown-cmark = "0.9"
