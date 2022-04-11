@@ -406,7 +406,7 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
 fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
     let unformatted_json = serde_json::to_string(results)
         .with_context(|| format!("Error serialising results file {:?}", path))?;
-    let formatted_json = goldilocks_json_fmt::format(&unformatted_json)
+    let formatted_json = goldilocks_json_fmt::format_within_width(&unformatted_json, 115)
         .expect("`serde_json` should emit valid JSON");
 
     let path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
