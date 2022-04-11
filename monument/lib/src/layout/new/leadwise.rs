@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use bellframe::{Mask, Row, RowBuf};
 use index_vec::IndexVec;
 
-use super::{Boundary, Result, SpliceStyle};
+use super::{Boundary, Result};
 use crate::{
     layout::{BlockIdx, BlockVec, Layout, Link, LinkVec, MethodBlock, RowIdx, StartOrEnd},
-    CallVec,
+    CallVec, SpliceStyle,
 };
 
 /// Prefix inserted at the front of every leadwise composition to allow it to be parsed as such

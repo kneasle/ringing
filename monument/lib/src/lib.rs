@@ -9,6 +9,7 @@ pub mod music;
 mod search;
 pub mod utils;
 
+use serde::Deserialize;
 pub use utils::OptRange;
 
 use itertools::Itertools;
@@ -40,6 +41,7 @@ pub struct Query {
     pub len_range: Range<usize>,
     pub num_comps: usize,
     pub allow_false: bool,
+    pub splice_style: SpliceStyle,
 
     pub calls: CallVec<CallType>,
     pub part_head: RowBuf,
@@ -59,6 +61,26 @@ impl Query {
 
     pub fn num_parts(&self) -> usize {
         self.part_head.order()
+    }
+}
+
+/// The different styles of spliced that can be generated
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
+pub enum SpliceStyle {
+    /// Splices could happen at any lead label
+    #[serde(rename = "leads")]
+    LeadLabels,
+    /// Splice only happen whenever a call _could_ have happened
+    #[serde(rename = "call locations")]
+    CallLocations,
+    /// Splices only happen when calls are actually made
+    #[serde(rename = "calls")]
+    Calls,
+}
+
+impl Default for SpliceStyle {
+    fn default() -> Self {
+        Self::LeadLabels
     }
 }
 

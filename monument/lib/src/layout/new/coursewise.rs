@@ -6,10 +6,10 @@ use std::{
 use bellframe::{Mask, Row, RowBuf, Stage};
 use index_vec::IndexVec;
 
-use super::{utils::CourseHeadMask, Boundary, Error, Result, SpliceStyle};
+use super::{utils::CourseHeadMask, Boundary, Error, Result};
 use crate::{
     layout::{BlockIdx, BlockVec, Layout, Link, RowIdx, StartOrEnd},
-    CallIdx, CallVec,
+    CallIdx, CallVec, SpliceStyle,
 };
 
 /// Generate a [`Layout`] such that chunks will be labelled by their course-head, rather than by

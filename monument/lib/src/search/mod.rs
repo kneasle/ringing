@@ -13,7 +13,7 @@ use crate::{
     layout::{BlockIdx, LinkIdx, StartIdx},
     music::Score,
     utils::{coprime_bitmap, Counts, Rotation},
-    Comp, CompInner, Progress, Query, QueryUpdate,
+    Comp, CompInner, Progress, Query, QueryUpdate, SpliceStyle,
 };
 
 mod graph;
@@ -101,6 +101,8 @@ pub(crate) fn search(
                 && method_counts.is_feasible(0, &method_count_ranges)
                 && rotation_bitmap & (1 << rotation) != 0
             {
+                let std_out = std::io::stdout();
+                let _lock = std_out.lock();
                 let FlattenOutput {
                     start_idx,
                     start_chunk_label,
@@ -108,9 +110,22 @@ pub(crate) fn search(
                     music_counts,
                     splice_over_part_head,
                 } = path.flatten(&graph, &query);
-                // Add/subtract weights from the splices over the part head
                 if splice_over_part_head {
+                    // Add/subtract weights from the splices over the part head
                     score += (query.num_parts() - 1) as f32 * query.splice_weight;
+
+                    let finishes_with_plain = if chunk.id.is_standard() {
+                        true // If we don't finish with a 0-length end then there can't be a call
+                    } else if let Some((link_idx, _s)) = links.last() {
+                        // If the last link is explicitly plain, then we finish with a plain
+                        query.layout.links[*link_idx].call_idx.is_none()
+                    } else {
+                        // If there were no links, then there can't be any calls either
+                        true
+                    };
+                    if query.splice_style == SpliceStyle::Calls && finishes_with_plain {
+                        continue; // Don't generate comp if it would violate the splice style
+                    }
                 }
                 let comp = Comp {
                     query: query.clone(),

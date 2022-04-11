@@ -19,11 +19,11 @@ use itertools::Itertools;
 use monument::{
     layout::{
         self,
-        new::{Call, CourseHeadMaskPreset, SpliceStyle},
+        new::{Call, CourseHeadMaskPreset},
         Layout,
     },
     music::{MusicType, StrokeSet},
-    CallType, CallVec, OptRange, Query,
+    CallType, CallVec, OptRange, Query, SpliceStyle,
 };
 use serde::Deserialize;
 
@@ -246,6 +246,7 @@ impl Spec {
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
             allow_false: self.allow_false,
+            splice_style: self.splice_style,
 
             calls: calls.into_iter().map(CallType::from).collect(),
             part_head,

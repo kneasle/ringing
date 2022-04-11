@@ -271,6 +271,18 @@
   "test/cases/cyclic-callwise.toml": {
     "comps": [
       {
+        "length": 1344,
+        "string": "#PPPP[s]PP[s]LLLLLL[s]LLLLLL[s]",
+        "avg_score": -0.06845238,
+        "part_head": "16782345"
+      },
+      {
+        "length": 1288,
+        "string": "#PPPPPPP[s]L[s]L[s]LLLL[s]LLL[-]",
+        "avg_score": -0.06832298,
+        "part_head": "13456782"
+      },
+      {
         "length": 1288,
         "string": "#PPP[-]L[-]LLLLL[-]LLLLLLL[-]PP[-]",
         "avg_score": -0.06832298,
@@ -733,12 +745,6 @@
         "part_head": "13456782"
       },
       {
-        "length": 1344,
-        "string": "#P[-]LLLLLLL[-]PPPPP[-]LLL[-]LL",
-        "avg_score": -0.04613095,
-        "part_head": "17823456"
-      },
-      {
         "length": 1288,
         "string": "#PPPPPP[-]L[s]LLLL[-]LL[s]LL[-]P",
         "avg_score": -0.045807455,
@@ -755,12 +761,6 @@
         "string": "#PPPPP[-]LL[s]LL[-]LLLL[s]L[-]PP",
         "avg_score": -0.044254657,
         "part_head": "18234567"
-      },
-      {
-        "length": 1288,
-        "string": "#P[-]LLLLLLL[-]PPPPP[-]P[-]LL",
-        "avg_score": -0.044254657,
-        "part_head": "17823456"
       },
       {
         "length": 1344,
@@ -3081,6 +3081,74 @@
       { "length": 224, "string": "<BBBBBBB>", "avg_score": 0.0 },
       { "length": 224, "string": "BBBBBBB", "avg_score": 0.0 },
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.0 }
+    ]
+  },
+  "test/cases/plain-splice-over-part-head-2.toml": {
+    "comps": [
+      { "length": 192, "string": "DD[H]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 384, "string": "DD[sH]D[xB]D[sH]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 672, "string": "D[xB]DDDDDD", "avg_score": 0.0, "part_head": "13425678" },
+      { "length": 384, "string": "D[xB]D[sH]DD[sH]", "avg_score": 0.0, "part_head": "13425678" },
+      { "length": 336, "string": "NNNNNN[xB]N", "avg_score": 0.0, "part_head": "13425678" },
+      { "length": 240, "string": "NNNNN[H]", "avg_score": 0.0, "part_head": "14235678" },
+      {
+        "length": 432,
+        "string": "D[xB]D[sH]NNNNN[sH]",
+        "avg_score": 0.011574074,
+        "part_head": "13425678"
+      },
+      {
+        "length": 432,
+        "string": "NNNNN[sH]D[xB]D[sH]",
+        "avg_score": 0.011574074,
+        "part_head": "14235678"
+      }
+    ]
+  },
+  "test/cases/plain-splice-over-part-head.toml": {
+    "comps": [
+      { "length": 192, "string": "DD[H]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 384, "string": "DD[sH]D[xB]D[sH]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 672, "string": "D[xB]DDDDDD", "avg_score": 0.0, "part_head": "13425678" },
+      { "length": 384, "string": "D[xB]D[sH]DD[sH]", "avg_score": 0.0, "part_head": "13425678" },
+      { "length": 672, "string": "YYYYYYY[H]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 192, "string": "Y[xB]Y", "avg_score": 0.0, "part_head": "13425678" },
+      {
+        "length": 384,
+        "string": "DD[sH]D[xB]Y[sH]",
+        "avg_score": 0.013020833,
+        "part_head": "14235678"
+      },
+      {
+        "length": 384,
+        "string": "DD[sH]Y[xB]Y[sH]",
+        "avg_score": 0.013020833,
+        "part_head": "14235678"
+      },
+      {
+        "length": 384,
+        "string": "Y[xB]D[sH]DD[sH]",
+        "avg_score": 0.013020833,
+        "part_head": "13425678"
+      },
+      {
+        "length": 384,
+        "string": "Y[xB]Y[sH]DD[sH]",
+        "avg_score": 0.013020833,
+        "part_head": "13425678"
+      },
+      {
+        "length": 384,
+        "string": "DD[sH]Y[xB]D[sH]",
+        "avg_score": 0.015625,
+        "part_head": "14235678"
+      },
+      {
+        "length": 384,
+        "string": "D[xB]Y[sH]DD[sH]",
+        "avg_score": 0.015625,
+        "part_head": "13425678"
+      }
     ]
   },
   "test/cases/self-false-1.toml": {
