@@ -1,0 +1,12 @@
+# This tests that splices over part heads are counted.  For example `CY[H]x3` should have a weight
+# of 5 (splices), not 3 (as you'd get if you discounted splices over the part heads).
+length = { min = 0, max = 800 }
+part_head = "1342"
+course_heads = ["*5678"]
+
+methods = ["Yorkshire Surprise Major", "Cornwall Surprise Major"]
+method_count = { min = 0, max = 800 }
+splice_weight = 1
+
+bob_weight = 0
+single_weight = 0

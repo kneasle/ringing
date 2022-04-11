@@ -10,10 +10,10 @@ use bit_vec::BitVec;
 use itertools::Itertools;
 
 use crate::{
-    layout::{LinkIdx, StartIdx},
+    layout::{BlockIdx, LinkIdx, StartIdx},
     music::Score,
     utils::{coprime_bitmap, Counts, Rotation},
-    Comp, CompInner, Progress, Query, QueryUpdate,
+    Comp, CompInner, Progress, Query, QueryUpdate, SpliceStyle,
 };
 
 mod graph;
@@ -75,7 +75,7 @@ pub(crate) fn search(
     while let Some(prefix) = frontier.pop() {
         let CompPrefix {
             inner,
-            avg_score,
+            avg_score: _, // We recompute this because splices over the part head might change `score`
             length,
         } = prefix;
         let PrefixInner {
@@ -85,7 +85,7 @@ pub(crate) fn search(
             rotation,
             len_since_non_duffer,
 
-            score,
+            mut score,
             method_counts,
         } = *inner;
         let chunk = &graph.chunks[chunk_idx];
@@ -101,8 +101,32 @@ pub(crate) fn search(
                 && method_counts.is_feasible(0, &method_count_ranges)
                 && rotation_bitmap & (1 << rotation) != 0
             {
-                let (start_idx, start_chunk_label, links, music_counts) =
-                    path.flatten(&graph, &query);
+                let std_out = std::io::stdout();
+                let _lock = std_out.lock();
+                let FlattenOutput {
+                    start_idx,
+                    start_chunk_label,
+                    links,
+                    music_counts,
+                    splice_over_part_head,
+                } = path.flatten(&graph, &query);
+                if splice_over_part_head {
+                    // Add/subtract weights from the splices over the part head
+                    score += (query.num_parts() - 1) as f32 * query.splice_weight;
+
+                    let finishes_with_plain = if chunk.id.is_standard() {
+                        true // If we don't finish with a 0-length end then there can't be a call
+                    } else if let Some((link_idx, _s)) = links.last() {
+                        // If the last link is explicitly plain, then we finish with a plain
+                        query.layout.links[*link_idx].call_idx.is_none()
+                    } else {
+                        // If there were no links, then there can't be any calls either
+                        true
+                    };
+                    if query.splice_style == SpliceStyle::Calls && finishes_with_plain {
+                        continue; // Don't generate comp if it would violate the splice style
+                    }
+                }
                 let comp = Comp {
                     query: query.clone(),
 
@@ -117,7 +141,7 @@ pub(crate) fn search(
                         method_counts,
                         music_counts,
                         total_score: score,
-                        avg_score,
+                        avg_score: score / length as f32,
                     },
                 };
                 update_channel.send(QueryUpdate::Comp(comp)).unwrap();
@@ -329,27 +353,54 @@ enum CompPath {
     Cons(Rc<Self>, LinkIdx, ChunkIdx),
 }
 
+struct FlattenOutput {
+    start_idx: StartIdx,
+    start_chunk_label: String,
+    links: Vec<(LinkIdx, String)>,
+    music_counts: Counts,
+    /// `true` if a single part of the composition finishes on a different method to which it
+    /// started (i.e. there would possibly be a splice over the part-head).
+    splice_over_part_head: bool,
+}
+
+/// Data passed back up the call stack from `flatten_recursive`
+struct RecursiveFlattenOutput {
+    start_idx: StartIdx,
+    start_chunk_label: String,
+    first_block_idx: BlockIdx,
+    last_block_idx: BlockIdx,
+}
+
 impl CompPath {
-    fn flatten(
-        &self,
-        graph: &Graph,
-        query: &Query,
-    ) -> (StartIdx, String, Vec<(LinkIdx, String)>, Counts) {
+    fn flatten(&self, graph: &Graph, query: &Query) -> FlattenOutput {
         let mut links = Vec::new();
         let mut music_counts = Counts::zeros(query.music_types.len());
-        let (start_idx, start_chunk_label) =
-            self.flatten_recursive(graph, query, &mut links, &mut music_counts);
-        (start_idx, start_chunk_label, links, music_counts)
+        let flatten_output = self.flatten_recursive(graph, query, &mut links, &mut music_counts);
+        FlattenOutput {
+            start_idx: flatten_output.start_idx,
+            start_chunk_label: flatten_output.start_chunk_label,
+            links,
+            music_counts,
+            splice_over_part_head: flatten_output.first_block_idx != flatten_output.last_block_idx,
+        }
     }
 
-    /// Recursively flatten `self`, returning the index and label of the start chunk
+    /// Recursively flatten `self`, returning
+    /// ```text
+    /// (
+    ///     index of start chunk,
+    ///     string of the start chunk,
+    ///     BlockIdx of first chunk,
+    ///     BlockIdx of last chunk,
+    /// )
+    /// ```
     fn flatten_recursive(
         &self,
         graph: &Graph,
         query: &Query,
         link_vec: &mut Vec<(LinkIdx, String)>,
         music_counts: &mut Counts,
-    ) -> (StartIdx, String) {
+    ) -> RecursiveFlattenOutput {
         match self {
             Self::Start(start_idx) => {
                 let (start_chunk_idx, _, _) = graph
@@ -359,14 +410,30 @@ impl CompPath {
                     .unwrap();
                 let start_chunk = &graph.chunks[*start_chunk_idx];
                 *music_counts += &start_chunk.music_counts;
-                (*start_idx, start_chunk.label.clone())
+                let start_block_idx = start_chunk
+                    .id
+                    .row_idx()
+                    .expect("Can't start with a 0-length end chunk")
+                    .block;
+                RecursiveFlattenOutput {
+                    start_idx: *start_idx,
+                    start_chunk_label: start_chunk.label.clone(),
+                    first_block_idx: start_block_idx,
+                    last_block_idx: start_block_idx,
+                }
             }
             Self::Cons(lhs, link, chunk_idx) => {
-                let start = lhs.flatten_recursive(graph, query, link_vec, music_counts);
+                // Recursively flatten all previous links in the list
+                let mut output = lhs.flatten_recursive(graph, query, link_vec, music_counts);
+                // Update music counts and list the links used
                 let chunk = &graph.chunks[*chunk_idx];
                 *music_counts += &chunk.music_counts;
                 link_vec.push((*link, chunk.label.clone()));
-                start
+                // Update the `last_block_idx` and propagate the output
+                if let Some(row_idx) = chunk.id.row_idx() {
+                    output.last_block_idx = row_idx.block;
+                }
+                output
             }
         }
     }

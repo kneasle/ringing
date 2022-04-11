@@ -7,9 +7,8 @@ use std::{
 
 use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
 use itertools::Itertools;
-use serde::Deserialize;
 
-use crate::CallVec;
+use crate::{CallVec, SpliceStyle};
 
 use super::{Layout, MethodBlock};
 
@@ -35,7 +34,7 @@ impl Layout {
         });
 
         if leadwise {
-            leadwise::leadwise(&methods, calls)
+            leadwise::leadwise(&methods, calls, splice_style)
         } else {
             coursewise::coursewise(methods, calls, splice_style)
         }
@@ -131,26 +130,6 @@ impl Display for Error {
 impl std::error::Error for Error {}
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-/// The different styles of spliced that can be generated
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
-pub enum SpliceStyle {
-    /// Splices could happen at any lead label
-    #[serde(rename = "leads")]
-    LeadLabels,
-    /// Splice only happen whenever a call _could_ have happened
-    #[serde(rename = "call locations")]
-    CallLocations,
-    /// Splices only happen when calls are actually made
-    #[serde(rename = "calls")]
-    Calls,
-}
-
-impl Default for SpliceStyle {
-    fn default() -> Self {
-        Self::LeadLabels
-    }
-}
 
 #[derive(Debug, Clone)]
 pub enum CourseHeadMaskPreset {

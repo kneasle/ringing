@@ -19,6 +19,8 @@ pub struct Graph {
 
 #[derive(Debug, Clone)]
 pub struct Chunk {
+    pub id: ChunkId,
+
     pub score: Score,
     pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
 
@@ -100,6 +102,8 @@ impl Graph {
                     .collect_vec();
 
                 Chunk {
+                    id: from_id,
+
                     score: source_chunk.score(),
                     music_counts: source_chunk.music().counts.clone(),
 

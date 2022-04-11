@@ -1,0 +1,18 @@
+# This tests that, if `splice_style = "calls"`, no plain splices are taken (even over the part
+# head).  In this case, neither `D[xB]Y` or `Y[xB]DDDDD` should be emitted.
+length = { min = 0, max = 800 }
+part_head = "1342"
+course_heads = ["*5678"]
+
+methods = ["Deva Surprise Major", "Ytterbium Surprise Major"]
+method_count = { min = 0, max = 800 }
+splice_style = "calls"
+splice_weight = 1
+
+bob_weight = 0
+single_weight = 0
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+weight = 0
