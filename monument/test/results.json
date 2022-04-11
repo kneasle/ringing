@@ -3116,6 +3116,14 @@
       { "length": 112, "string": "", "avg_score": 0.0 }
     ]
   },
+  "test/cases/splice-over-part-head.toml": {
+    "comps": [
+      { "length": 384, "string": "CCCC[H]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 672, "string": "YYYYYYY[H]", "avg_score": 0.0, "part_head": "14235678" },
+      { "length": 480, "string": "YYYYC[H]", "avg_score": 0.010416667, "part_head": "14235678" },
+      { "length": 192, "string": "CY[H]", "avg_score": 0.026041666, "part_head": "14235678" }
+    ]
+  },
   "test/cases/splice-weight-1.toml": {
     "comps": [
       { "length": 224, "string": "#CCCCCCC", "avg_score": 0.0 },
