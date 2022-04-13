@@ -41,6 +41,6 @@ fn main() -> anyhow::Result<()> {
 fn print_bless_usage() {
     println!();
     println!("Possible options:");
-    println!("    `cargo bless`       : Bless only unspecified/new test cases");
+    println!("    `cargo bless`        : Bless only unspecified/new test cases");
     println!("    `cargo bless --fails`: Bless everything, even failed test cases");
 }

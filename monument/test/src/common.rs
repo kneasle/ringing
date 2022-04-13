@@ -5,6 +5,7 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fmt::{Debug, Display, Formatter},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::Context;
@@ -26,18 +27,27 @@ use serde::{Deserialize, Serialize};
 // Also NOTE: We use JSON for the results file, because serialization to JSON always succeeds
 // whilst serialization to TOML fails when mixing empty and non-empty lists (which we do all the
 // time because some tests produce no results).
-const IGNORE_PATH: &str = "test/ignore.toml";
-const EXPECTED_RESULTS_PATH: &str = "test/results.json";
-const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
-const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 3] = [
+const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 4] = [
     ("test/cases/", SuiteStorage::Dir, SuiteUse::Test), // Test cases which we expect to succeed
     (
         "test/error-messages.md",
         SuiteStorage::DedicatedFile,
         SuiteUse::Test,
-    ),
+    ), // Tests which are expected to have errors, to check the error messages
     ("examples/", SuiteStorage::Dir, SuiteUse::Example), // Examples to show how Monument's TOML format works
+    ("test/bench/", SuiteStorage::Dir, SuiteUse::Bench), // Real searches, used for benchmarking
 ];
+
+const IGNORE_PATH: &str = "test/ignore.toml";
+const EXPECTED_RESULTS_PATH: &str = "test/results.json";
+const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
+
+/// Approximate benchmark times.  We use these whilst determining the benchmark order, to make sure
+/// that fast benchmarks get run first.
+const APPROX_BENCH_PATH: &str = "test/approx-bench-times.json";
+const LAST_BENCH_PATH: &str = "test/.last-bench-times.json";
+const PINNED_BENCH_PATH: &str = "test/.pinned-bench-times.json";
+
 const PATH_TO_MONUMENT_DIR: &str = "../";
 
 /// The maximum number of items allowed in the queue at one time
@@ -49,7 +59,12 @@ const QUEUE_LIMIT: usize = 10_000_000;
 
 /// Run the full test suite.
 pub fn run(run_type: RunType) -> anyhow::Result<Outcome> {
-    monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
+    let log_level = match run_type {
+        RunType::Test => log::LevelFilter::Warn, // Tests run so fast that '-q' is fine
+        RunType::Bench => log::LevelFilter::Info, // Benchmarks are real search queries, so we want
+                                                  // progress updates
+    };
+    monument_cli::init_logging(log_level);
 
     // Collect the test cases
     let cases = sources_to_cases(collect_sources(run_type)?)?;
@@ -92,8 +107,8 @@ pub enum Outcome {
 impl Outcome {
     fn colored_string(self) -> ColoredString {
         match self {
-            Self::Pass => ok_string(),
-            Self::Fail => fail_string(),
+            Self::Pass => "ok".color(OK_COLOR),
+            Self::Fail => "fail".color(FAIL_COLOR),
         }
     }
 }
@@ -209,9 +224,12 @@ enum SuiteStorage {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SuiteState {
-    Run,
+    /// The file should be run but not timed
+    Test,
+    /// The file should be run and timed
+    Bench,
+    /// The file should be run, but only until just before the search starts
     Parse,
-    Ignore,
 }
 
 /// Determine where all the tests should come from, and how they should be run
@@ -222,12 +240,15 @@ fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteSt
         // Determine whether tests in this directory should be run
         let state = match (run_type, suite_use) {
             // If `cargo test`, parse everything but only run `test/cases/`
-            (RunType::Test, SuiteUse::Test) => SuiteState::Run,
-            (RunType::Test, SuiteUse::Bench | SuiteUse::Example) => SuiteState::Parse,
+            (RunType::Test, SuiteUse::Test) => SuiteState::Test,
+            (RunType::Test, SuiteUse::Bench) => SuiteState::Parse,
+            (RunType::Test, SuiteUse::Example) => SuiteState::Parse,
             // If `cargo bench`, only run benchmarks and ignore everything else
-            // TODO: Run `examples/` as benchmarks?
-            (RunType::Bench, SuiteUse::Bench) => SuiteState::Run,
-            (RunType::Bench, SuiteUse::Test | SuiteUse::Example) => SuiteState::Ignore,
+            (RunType::Bench, SuiteUse::Bench) => SuiteState::Bench,
+            (RunType::Bench, SuiteUse::Test | SuiteUse::Example) => {
+                println!("{} {}", "ignoring".color(IGNORED_COLOR), path);
+                continue;
+            }
         };
 
         // TODO: Make newtypes for the different relative paths?
@@ -279,13 +300,15 @@ fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteSt
     Ok(test_sources)
 }
 
-/// Convert ([`CaseSource`], [`SuiteState`]) pairs into [`UnrunTestCase`]s.  TODO: Implement this
-/// as an iterator chain
+/// Convert ([`CaseSource`], [`SuiteState`]) pairs into [`UnrunTestCase`]s.
 fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Vec<UnrunTestCase>> {
     // Combine them with the auxiliary files (results, ignore, timings, etc.) to get the
     // `UnrunTestCase`s
     let mut results = load_results(EXPECTED_RESULTS_PATH)?;
     let mut ignore = load_ignore()?;
+    let mut approx_bench_times = load_bench_times(APPROX_BENCH_PATH)?;
+    let mut last_bench_times = load_bench_times(LAST_BENCH_PATH)?;
+    let mut pinned_bench_times = load_bench_times(PINNED_BENCH_PATH)?;
 
     let mut unrun_test_cases = Vec::new();
     for (source, state) in sources {
@@ -293,7 +316,7 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
         // Load the values from the ignore/result files
         let ignore_value = ignore.remove(name);
         let results_value = results.remove(name);
-        // Combine everything into an `UnrunTestCase`
+
         let ignored = match ignore_value {
             Some(IgnoreReason::MusicFile) => {
                 assert!(
@@ -316,12 +339,23 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
             Some(ResultsFileEntry::Comps { comps }) => ExpectedResult::Comps(comps),
             None => ExpectedResult::NoCompsGiven,
         };
+        let extract_duration = |file: &mut Option<BenchTimesFile>| -> Option<Duration> {
+            file.as_mut()?.remove(name).map(Duration::from_secs_f32)
+        };
+        let benchmarks = BenchmarkDurations {
+            approx: extract_duration(&mut approx_bench_times),
+            pinned: extract_duration(&mut pinned_bench_times),
+            last: extract_duration(&mut last_bench_times),
+        };
+        // Combine everything into an `UnrunTestCase`
         unrun_test_cases.push(UnrunTestCase {
             source,
             ignored,
             expected_results,
+            benchmarks,
         });
     }
+    // If we're running benchmarks
     Ok(unrun_test_cases)
 }
 
@@ -329,10 +363,17 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
 // IGNORE/RESULT FILES //
 /////////////////////////
 
-/// The contents of the `results.toml` file, found at [`RESULTS_PATH`].  We use a [`BTreeMap`] so
+/// The contents of the `results.json` file, found at [`RESULTS_PATH`].  We use a [`BTreeMap`] so
 /// that the test cases are always written in a consistent order (i.e. alphabetical order by file
 /// path), thus making the diffs easier to digest.
 type ResultsFile = BTreeMap<String, ResultsFileEntry>;
+
+/// The contents of the `{,last-,pinned-}bench-times.json` files.  We use a [`BTreeMap`] so that
+/// the test cases are always written in a consistent order (i.e.  alphabetical order by file
+/// path), thus making the diffs easier to digest.
+///
+/// The times are stored in seconds.
+type BenchTimesFile = BTreeMap<String, f32>;
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -382,11 +423,22 @@ fn load_ignore() -> anyhow::Result<HashMap<String, IgnoreReason>> {
     Ok(ignore_map)
 }
 
+fn load_bench_times(path: impl AsRef<Path>) -> anyhow::Result<Option<BenchTimesFile>> {
+    let full_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
+    let json = match std::fs::read_to_string(&full_path) {
+        Ok(json) => json,
+        Err(_) => return Ok(None), // It's OK to not find benchmark files
+    };
+    let results_file: BenchTimesFile = serde_json::from_str(&json)
+        .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
+    Ok(Some(results_file))
+}
+
 fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
     let full_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    let toml = std::fs::read_to_string(&full_path)
+    let json = std::fs::read_to_string(&full_path)
         .with_context(|| format!("Error loading results file ({:?})", full_path))?;
-    let results_file: ResultsFile = serde_json::from_str(&toml)
+    let results_file: ResultsFile = serde_json::from_str(&json)
         .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
     Ok(results_file)
 }
@@ -433,14 +485,20 @@ fn run_and_print_test(unrun_case: UnrunTestCase, run_type: RunType) -> RunTestCa
         },
         ..Config::default()
     };
+    // Print benchmarks before we start running, so we know what's being run
+    if run_type == RunType::Bench {
+        println!("Benching {}:", unrun_case.name());
+    }
     // Run the test
     let run_case = run_test(unrun_case, &config);
-    // Determine what should be printed after the '...'
-    println!(
-        "{} ... {}",
-        run_case.name(),
-        run_case.outcome().colored_string()
-    );
+    // Print test outcomes once they finish (tests are fast enough that this is OK)
+    if run_type == RunType::Test {
+        println!(
+            "{} ... {}",
+            run_case.name(),
+            run_case.outcome().colored_string()
+        );
+    }
     // Return the completed results
     run_case
 }
@@ -452,6 +510,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
         return RunTestCase {
             base: case,
             actual_result: ActualResult::Ignored,
+            duration: Duration::ZERO,
         };
     }
 
@@ -477,7 +536,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
         CtrlCBehaviour::TerminateProcess, // Don't bother recovering comps whilst testing
     );
     // Convert Monument's `Result` into a `Results`
-    let actual_results = match monument_result {
+    let (duration, actual_result) = match monument_result {
         // Successful search run
         Ok(Some(result)) => {
             assert!(!no_search);
@@ -485,13 +544,13 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
             // This guarantees a consistent ordering even if Monument's output order is non-deterministic
             let mut comps = result.comps.iter().map(Comp::from).collect_vec();
             comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
-            ActualResult::Comps(comps)
+            (result.duration, ActualResult::Comps(comps))
         }
         // Successful `no_search` run, since no comp array was generated (the file was just
         // parsed and verified)
         Ok(None) => {
             assert!(no_search);
-            ActualResult::Parsed
+            (Duration::ZERO, ActualResult::Parsed)
         }
         // Search failed in some way
         Err(e) => {
@@ -503,13 +562,14 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
             let color_free_error_string = ansi_escape_regex
                 .replace_all(&error_string, "")
                 .into_owned();
-            ActualResult::Error(color_free_error_string)
+            (Duration::ZERO, ActualResult::Error(color_free_error_string))
         }
     };
     // Add the actual results to get a full search
     RunTestCase {
         base: case,
-        actual_result: actual_results,
+        actual_result,
+        duration,
     }
 }
 
@@ -669,8 +729,21 @@ struct UnrunTestCase {
     source: CaseSource,
     ignored: bool,
     expected_results: ExpectedResult,
-    // pinned_duration: Duration,
-    // last_duration: Duration,
+    benchmarks: BenchmarkDurations,
+}
+
+#[derive(Debug)]
+struct BenchmarkDurations {
+    /// A rough guide on how long each benchmark will take.  Monument will always run benchmarks by
+    /// increasing order of this (and `None < Some(x)` for all `x` so any new cases will be run
+    /// first).
+    approx: Option<Duration>,
+    /// A duration which was explicitly 'pinned' by the user, against which all future benchmark
+    /// runs will be tested (until a new result set is pinned).  This is usually used to save the
+    /// benchmark times before embarking on optimisation.
+    pinned: Option<Duration>,
+    /// The last benchmark result
+    last: Option<Duration>,
 }
 
 impl UnrunTestCase {
@@ -682,7 +755,7 @@ impl UnrunTestCase {
 #[derive(Debug)]
 struct RunTestCase {
     base: UnrunTestCase,
-    // duration: Duration,
+    duration: Duration,
     actual_result: ActualResult,
 }
 
@@ -813,11 +886,11 @@ type CompOrErr<'case> = Result<&'case [Comp], &'case str>;
 impl CaseOutcome<'_> {
     fn colored_string(self) -> ColoredString {
         match self {
-            Self::Parsed => "parsed".color(Color::Green),
-            Self::Ignored => "ignored".color(Color::Yellow),
+            Self::Parsed => "parsed".color(OK_COLOR),
+            Self::Ignored => "ignored".color(IGNORED_COLOR),
             Self::Unspecified(_) => "unspecified".color(UNSPECIFIED_COLOR),
-            Self::Specified { expected, actual } if expected == actual => ok_string(),
-            Self::Specified { .. } | Self::ParseError(_) => fail_string(),
+            Self::Specified { expected, actual } if expected == actual => "ok".color(OK_COLOR),
+            Self::Specified { .. } | Self::ParseError(_) => "fail".color(FAIL_COLOR),
         }
     }
 }
@@ -859,9 +932,9 @@ impl From<&monument::Comp> for Comp {
 
 impl Display for Comp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>4}/{:>8.5}", self.length, self.avg_score)?;
+        write!(f, "{:>4}  {:>8.5}", self.length, self.avg_score)?;
         if let Some(p) = &self.part_head {
-            write!(f, "/{}", p)?;
+            write!(f, "  {}", p)?;
         }
         write!(f, ": {}", self.string)
     }
@@ -995,13 +1068,7 @@ fn fail_str(s: &str) -> ColoredString {
     s.color(FAIL_COLOR).bold()
 }
 
-fn ok_string() -> ColoredString {
-    "ok".color(Color::Green)
-}
-
-fn fail_string() -> ColoredString {
-    "fail".color(FAIL_COLOR)
-}
-
+const OK_COLOR: Color = Color::Green;
 const FAIL_COLOR: Color = Color::BrightRed;
 const UNSPECIFIED_COLOR: Color = Color::BrightBlue;
+const IGNORED_COLOR: Color = Color::Yellow;
