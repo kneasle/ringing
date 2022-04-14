@@ -39,3 +39,8 @@ walkdir = "2.3"
 name = "integration"
 path = "../test/src/test.rs"
 harness = false
+
+[[bench]]
+name = "benchmarks"
+path = "../test/src/bench.rs"
+harness = false
