@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#77) Tie-break equally musical compositions by their average overall score.
 - (#73) `splice_style = "calls"` will no longer generate splices over part heads.
 - (#73) `splice_weight` is now applied to splices over part heads.
 - (#73) `splice_style = "calls"` now works for cyclic compositions.
