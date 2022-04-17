@@ -295,8 +295,9 @@ impl SingleLineProgressLogger {
         let p = &self.last_progress;
         write!(
             buf,
-            "    {} iters, {} items in queue, avg/max len {:.0}/{}",
+            "    {} iters, {} comps :: {} items in queue, avg/max len {:.0}/{}",
             BigNumInt(p.iter_count),
+            BigNumInt(p.num_comps),
             BigNumInt(p.queue_len),
             p.avg_length,
             p.max_length

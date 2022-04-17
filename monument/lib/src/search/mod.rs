@@ -227,6 +227,7 @@ pub(crate) fn search(
             update_channel
                 .send(QueryUpdate::Progress(Progress {
                     iter_count,
+                    num_comps,
                     queue_len: frontier.len(),
                     avg_length: total_len as f32 / frontier.len() as f32,
                     max_length,

@@ -362,6 +362,9 @@ pub enum QueryUpdate {
 pub struct Progress {
     /// How many chunks have been expanded so far
     pub iter_count: usize,
+    /// How many comps have been generated so far
+    pub num_comps: usize,
+
     /// The current length of the A* queue
     pub queue_len: usize,
     /// The average length of a composition in the queue
@@ -374,6 +377,8 @@ impl Progress {
     /// The [`Progress`] made by a search which hasn't started yet
     pub const START: Self = Self {
         iter_count: 0,
+        num_comps: 0,
+
         queue_len: 0,
         avg_length: 0.0,
         max_length: 0,
