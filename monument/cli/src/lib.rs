@@ -107,7 +107,12 @@ pub fn run(
 
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
-    comps.sort_by_key(|comp| OrderedFloat(comp.music_score()));
+    comps.sort_by_key(|comp| {
+        (
+            OrderedFloat(comp.music_score()),
+            OrderedFloat(comp.avg_score),
+        )
+    });
     Ok(Some(QueryResult {
         comps,
         duration: start_time.elapsed(),
