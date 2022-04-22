@@ -2,9 +2,9 @@ length = { min = 0, max = 800 }
 method = "Bristol Surprise Royal"
 base_calls = "far"
 
-music_file = "../examples/music-10.toml"
+music_file = "../music/10.toml"
 default_non_duffer = false
-# max_duffer_rows = 40
+max_duffer_rows = 40
 
 [[music]]
 patterns = [

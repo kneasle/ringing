@@ -1,5 +1,5 @@
 length = "practice"
 method = "Bristol Surprise Major"
-music_file = "music-8.toml"
+music_file = "../music/8.toml"
 part_head = "1243"
 course_heads = ["xxxx5678"]

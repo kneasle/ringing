@@ -3,5 +3,5 @@
 length = "practice"
 num_comps = 400 # 328 comps are possible, so asking for 400 requires Monument generate them all
 methods = ["Bristol Surprise Major", "Lancashire Surprise Major"]
-music_file = "music-8.toml"
+music_file = "../music/8.toml"
 method_count = { min = 0, max = 500 } # Allow any combination of methods

@@ -1,4 +1,4 @@
 length = { min = 0, max = 500 }
 methods = ["Plain Bob Major", "Little Bob Major"]
 part_head = "13456782"
-music_file = "../cases/music-8.toml"
+music_file = "../music/8.toml"

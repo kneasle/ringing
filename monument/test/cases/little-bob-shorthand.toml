@@ -5,4 +5,4 @@
 length = "practice"
 methods = ["Plain Bob Major", "Little Bob Major"]
 base_calls = "none"
-music_file = "music-8.toml"
+music_file = "../music/8.toml"
