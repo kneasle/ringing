@@ -2984,6 +2984,9 @@
   "test/error-messages.md: ch-pattern::too-short": {
     "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
   },
+  "test/error-messages.md: chs-not-in-other-parts": {
+    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
+  },
   "test/error-messages.md: duplicate-calls::debug-symbol": {
     "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
   },
