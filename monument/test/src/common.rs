@@ -456,11 +456,9 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
     }
 
     // Determine the source of this test
-    let file_path_from_cargo_toml;
     let source = match &case.source {
         CaseSource::TomlFile(path) => {
-            file_path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-            monument_cli::Source::Path(&file_path_from_cargo_toml)
+            monument_cli::Source::Path(PathBuf::from(PATH_TO_MONUMENT_DIR).join(path))
         }
         CaseSource::SectionOfFile {
             spec, music_file, ..

@@ -12,7 +12,7 @@ pub mod spec;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
-    path::Path,
+    path::PathBuf,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -57,12 +57,12 @@ pub fn run(
     let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
-    let spec = Spec::from_source(source)?;
+    let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::debug!("Generating query");
-    let query = spec.lower(source)?;
+    let query = spec.lower(&source)?;
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
@@ -121,12 +121,13 @@ pub fn run(
 }
 
 /// The `Source` of the TOML that Monument should read.  In nearly all cases, this will be loaded
-/// from a [`Path`].  For the test runner it's useful to be able to run Monument on strings that
-/// aren't loaded from a specific file, so for this we have the [`Str`](Self::Str) variant.
-#[derive(Debug, Clone, Copy)]
+/// from the file a given [`Path`](std::path::Path).  For the test runner it's useful to be able to
+/// run Monument on strings that aren't loaded from a specific file, so for this we have the
+/// [`Str`](Self::Str) variant.
+#[derive(Debug, Clone)]
 pub enum Source<'a> {
     /// The TOML 'spec' file should be loaded from this path
-    Path(&'a Path),
+    Path(PathBuf),
     /// The TOML should be read directly from a string
     Str {
         spec: &'a str,
