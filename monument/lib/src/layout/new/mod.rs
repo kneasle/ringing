@@ -5,7 +5,7 @@ use std::{
     ops::Range,
 };
 
-use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, Stage};
+use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 use crate::{CallVec, SpliceStyle};
@@ -36,7 +36,7 @@ impl Layout {
         if leadwise {
             leadwise::leadwise(&methods, calls, splice_style)
         } else {
-            coursewise::coursewise(methods, calls, splice_style)
+            coursewise::coursewise(methods, calls, splice_style, part_head)
         }
     }
 }
@@ -58,6 +58,11 @@ pub enum Error {
         call_name: String,
         calling_position_len: usize,
         stage: Stage,
+    },
+    NoCourseHeadInPart {
+        mask_in_first_part: Mask,
+        part_head: RowBuf,
+        mask_in_other_part: Mask,
     },
     /// Some courses match two different CH masks which specify **different** calling bells.
     ConflictingCallingBell((Mask, Bell), (Mask, Bell)),
@@ -91,6 +96,21 @@ impl Display for Error {
                 "Call {:?} refers to a lead location {:?}, which doesn't exist",
                 call_name, label
             ), // TODO: Suggest one that does exist
+            Self::NoCourseHeadInPart {
+                mask_in_first_part,
+                part_head,
+                mask_in_other_part,
+            } => {
+                writeln!(f,
+                    "course head `{}` becomes `{}` in the part starting `{}`, which isn't in `course_heads`.",
+                    mask_in_first_part, mask_in_other_part, part_head
+                )?;
+                write!(
+                    f,
+                    "   help: consider adding `{}` to `course_heads`",
+                    mask_in_other_part
+                )
+            }
             Self::CallingPositionsTooShort {
                 call_name,
                 calling_position_len,

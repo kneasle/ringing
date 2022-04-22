@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#80) Add error for CHs that aren't in other parts
 - (#79) Generate a progress update as the search finishes
 - (#79) Print number of compositions generated in the progress line
 - (#77) Tie-break equally musical compositions by their average overall score.

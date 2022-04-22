@@ -23,7 +23,6 @@ use std::{
 
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
-use ordered_float::OrderedFloat;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -105,14 +104,10 @@ pub fn run(
         abort_flag.clone(),
     );
 
+    use ordered_float::OrderedFloat as OF;
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
-    comps.sort_by_key(|comp| {
-        (
-            OrderedFloat(comp.music_score()),
-            OrderedFloat(comp.avg_score),
-        )
-    });
+    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.avg_score)));
     Ok(Some(QueryResult {
         comps,
         duration: start_time.elapsed(),

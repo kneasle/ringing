@@ -18,6 +18,7 @@ pub fn coursewise(
     mut methods: Vec<super::Method>,
     calls: &CallVec<super::Call>,
     splice_style: SpliceStyle,
+    part_head: &Row,
 ) -> Result<Layout> {
     // Cache data about each method, and compute the overall stage of the comp
     super::utils::check_duplicate_shorthands(&methods)?;
@@ -32,6 +33,7 @@ pub fn coursewise(
     // Pre-process CH masks
     super::utils::preprocess_ch_masks(&mut methods, calls, stage)?;
     for m in &methods {
+        check_chs_in_other_parts(&m.ch_masks, part_head)?;
         super::utils::check_for_ambiguous_courses(
             &m.ch_masks,
             &m.lead_head().closure_from_rounds(),
@@ -53,6 +55,31 @@ pub fn coursewise(
         stage,
         leadwise: false,
     })
+}
+
+/// Check that the set of CH masks is preserved by the part head.
+fn check_chs_in_other_parts(chs: &[CourseHeadMask], part_head: &Row) -> Result<()> {
+    for part_head in part_head.closure() {
+        'ch_loop: for mask in chs {
+            let mask_in_other_part = part_head.mul(mask.mask());
+            // Check if there's an entry in `chs` which matches the `mask_in_other_part`
+            for mask2 in chs {
+                if mask_in_other_part.is_subset_of(mask2.mask())
+                    && mask.calling_bell() == mask2.calling_bell()
+                {
+                    continue 'ch_loop; // `mask2` contains `transposed_mask`, so we're good
+                }
+            }
+            // If no matching CH mask was found, then `mask` doesn't have any matching entry in
+            // the part starting with `ph`
+            return Err(Error::NoCourseHeadInPart {
+                mask_in_first_part: mask.mask().to_owned(),
+                part_head,
+                mask_in_other_part,
+            });
+        }
+    }
+    Ok(()) // If we didn't find a mismatch, then the CHs are OK
 }
 
 /////////////////////

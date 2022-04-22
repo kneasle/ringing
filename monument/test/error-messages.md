@@ -304,3 +304,12 @@ method = "Bristol Surprise Major"
 symbol = "-" # Name clashes with the builtin 14 bob
 place_notation = "16"
 ```
+
+## chs-not-in-other-parts
+
+```toml
+length = "peal"
+method = "Bristol Surprise Major"
+part_head = "134265"
+course_heads = ["*78", "*7856"] # `*7856` becomes `*7865` in other parts
+```
