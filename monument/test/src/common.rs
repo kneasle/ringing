@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use colored::Colorize;
+use monument_cli::Source;
 use path_slash::PathExt;
+use serde::Serialize;
 
 /// The path from `monument_cli`'s `Cargo.toml` file to the `monument/` directory.
 ///
@@ -132,6 +134,20 @@ impl CaseSource {
                 section_name,
                 ..
             } => format!("{}: {}", file_path.to_slash_lossy(), section_name),
+        }
+    }
+
+    pub fn to_monument_source(&self) -> Source {
+        match self {
+            CaseSource::TomlFile(path) => {
+                monument_cli::Source::Path(PathBuf::from(PATH_TO_MONUMENT_DIR).join(path))
+            }
+            CaseSource::SectionOfFile {
+                spec, music_file, ..
+            } => monument_cli::Source::Str {
+                spec,
+                music_file: music_file.as_deref(),
+            },
         }
     }
 }
@@ -291,6 +307,7 @@ mod markdown {
 // COLORS //
 ////////////
 
+#[allow(dead_code)] // Some colors are only used by the test runner, not the benchmarks
 pub mod colors {
     use colored::{Color, ColoredString, Colorize};
 
@@ -306,4 +323,19 @@ pub mod colors {
     pub const FAIL: Color = Color::BrightRed;
     pub const UNSPECIFIED: Color = Color::BrightBlue;
     pub const IGNORED: Color = Color::Yellow;
+}
+
+//////////
+// MISC //
+//////////
+
+pub fn write_json<T: Serialize>(contents: &T, path: &str) -> anyhow::Result<()> {
+    let unformatted_json = serde_json::to_string(contents)
+        .with_context(|| format!("Error serialising results file {:?}", path))?;
+    let formatted_json = goldilocks_json_fmt::format_within_width(&unformatted_json, 115)
+        .expect("`serde_json` should emit valid JSON");
+
+    let path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
+    std::fs::write(path_from_cargo_toml, formatted_json.as_bytes())
+        .with_context(|| format!("Error writing results to {:?}", path))
 }

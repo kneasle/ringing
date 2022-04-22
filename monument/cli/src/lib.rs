@@ -42,6 +42,7 @@ pub fn run(
     debug_option: Option<DebugOption>,
     config: &Config,
     ctrl_c_behaviour: CtrlCBehaviour,
+    print_comps: bool,
 ) -> anyhow::Result<Option<QueryResult>> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
@@ -79,7 +80,7 @@ pub fn run(
     // Thread-safe data for the query engine
     let abort_flag = Arc::new(AtomicBool::new(false));
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
-    let mut update_logger = SingleLineProgressLogger::new();
+    let mut update_logger = SingleLineProgressLogger::new(print_comps);
 
     // Run the search
     if ctrl_c_behaviour == CtrlCBehaviour::RecoverComps {
@@ -223,6 +224,9 @@ fn graph_build_err_msg(e: monument::graph::BuildError) -> String {
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
 /// search progresses.
 struct SingleLineProgressLogger {
+    /// If `false` then no compositions will be printed
+    print_comps: bool,
+
     last_progress: Progress,
     is_truncating_queue: bool,
     is_aborting: bool,
@@ -232,8 +236,10 @@ struct SingleLineProgressLogger {
 }
 
 impl SingleLineProgressLogger {
-    fn new() -> Self {
+    fn new(print_comps: bool) -> Self {
         Self {
+            print_comps,
+
             last_progress: Progress::START,
             is_truncating_queue: false,
             is_aborting: false,
@@ -255,9 +261,11 @@ impl SingleLineProgressLogger {
         // Decide what string we're going to print.  This may have multiple lines (if a comp was
         // generated).
         let mut update_string = String::new();
-        if let Some(c) = &comp {
-            update_string.push_str(&c.to_string());
-            update_string.push('\n');
+        if self.print_comps {
+            if let Some(c) = &comp {
+                update_string.push_str(&c.to_string());
+                update_string.push('\n');
+            }
         }
         self.append_progress_string(&mut update_string);
         let update_string = self.extend_string(&update_string);

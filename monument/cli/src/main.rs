@@ -17,6 +17,7 @@ fn main() {
         args.debug_option,
         &args.config(),
         CtrlCBehaviour::RecoverComps,
+        true, // Do print comps
     );
     match result {
         Ok(Some(query_result)) => query_result.print(),

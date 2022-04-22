@@ -19,10 +19,8 @@ use serde::{Deserialize, Serialize};
 
 mod common;
 
-use common::{
-    colors::{self, fail_str, unspecified_str},
-    CaseSource, CaseUse, PATH_TO_MONUMENT_DIR, QUEUE_LIMIT,
-};
+use colors::{fail_str, unspecified_str};
+use common::{CaseSource, CaseUse, PATH_TO_MONUMENT_DIR, QUEUE_LIMIT};
 
 // NOTE: All paths are relative to the `monument` directory.  Cargo runs custom test code in the
 // same directory as the `Cargo.toml` for that crate (in our case `monument/cli/Cargo.toml`), so
@@ -198,7 +196,7 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     }
     // Always write the results, even if there's nothing to bless.  This way, we can handle things
     // like reformatting the JSON files
-    write_results(&merged_results, EXPECTED_RESULTS_PATH)
+    common::write_json(&merged_results, EXPECTED_RESULTS_PATH)
 }
 
 ////////////////////////
@@ -331,18 +329,7 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
             Some((name, entry))
         })
         .collect();
-    write_results(&actual_results, ACTUAL_RESULTS_PATH)
-}
-
-fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
-    let unformatted_json = serde_json::to_string(results)
-        .with_context(|| format!("Error serialising results file {:?}", path))?;
-    let formatted_json = goldilocks_json_fmt::format_within_width(&unformatted_json, 115)
-        .expect("`serde_json` should emit valid JSON");
-
-    let path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    std::fs::write(path_from_cargo_toml, formatted_json.as_bytes())
-        .with_context(|| format!("Error writing results to {:?}", path))
+    common::write_json(&actual_results, ACTUAL_RESULTS_PATH)
 }
 
 ////////////////////////
@@ -381,17 +368,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
     }
 
     // Determine the source of this test
-    let source = match &case.source {
-        CaseSource::TomlFile(path) => {
-            monument_cli::Source::Path(PathBuf::from(PATH_TO_MONUMENT_DIR).join(path))
-        }
-        CaseSource::SectionOfFile {
-            spec, music_file, ..
-        } => monument_cli::Source::Str {
-            spec,
-            music_file: music_file.as_deref(),
-        },
-    };
+    let source = case.source.to_monument_source();
 
     // Run Monument
     let no_search = case.expected_results == ExpectedResult::Parsed;
@@ -400,6 +377,7 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
         no_search.then(|| DebugOption::StopBeforeSearch),
         config,
         CtrlCBehaviour::TerminateProcess, // Don't bother recovering comps whilst testing
+        false,                            // Don't print comps
     );
     // Convert Monument's `Result` into a `Results`
     let actual_result = match monument_result {
@@ -755,4 +733,25 @@ impl Display for Comp {
         }
         write!(f, ": {}", self.string)
     }
+}
+
+////////////
+// COLORS //
+////////////
+
+pub mod colors {
+    use colored::{Color, ColoredString, Colorize};
+
+    pub fn unspecified_str(s: &str) -> ColoredString {
+        s.color(UNSPECIFIED).bold()
+    }
+
+    pub fn fail_str(s: &str) -> ColoredString {
+        s.color(FAIL).bold()
+    }
+
+    pub const OK: Color = Color::Green;
+    pub const FAIL: Color = Color::BrightRed;
+    pub const UNSPECIFIED: Color = Color::BrightBlue;
+    pub const IGNORED: Color = Color::Yellow;
 }

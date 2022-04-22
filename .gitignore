@@ -1,8 +1,10 @@
 # Cargo's build files
 **/target
 
-# Cached files from the test/benchmark runner
+# Cached files from the test/benchmark runners
 monument/test/.last-results.json
+monument/test/.last-bench-times.json
+monument/test/.pinned-bench-times.json
 
 # Where I store comps I'm working on that I don't want to show to everyone
 */comps/
