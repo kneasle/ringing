@@ -3,5 +3,5 @@
 length = { min = 0, max = 2000 }
 base_calls = "far"
 method = "Bristol Surprise Royal"
-music_file = "music-10.toml"
+music_file = "../music/10.toml"
 part_head = "14523"

@@ -307,9 +307,13 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
             None => false,
         };
         let expected_results = match results_value {
-            _ if state == SuiteState::Parse => ExpectedResult::Parsed,
-            Some(ResultsFileEntry::Comps { comps }) => ExpectedResult::Comps(comps),
+            // Errors are always emitted, even for 'parsed' tests.  So errors take precedence over
+            // everything.
             Some(ResultsFileEntry::Error { error_message }) => ExpectedResult::Error(error_message),
+            // If no errors, then 'parsed' takes precedence over everything else
+            _ if state == SuiteState::Parse => ExpectedResult::Parsed,
+            // If the state is `SuiteState::Run`, then we want the expected comps
+            Some(ResultsFileEntry::Comps { comps }) => ExpectedResult::Comps(comps),
             None => ExpectedResult::NoCompsGiven,
         };
         unrun_test_cases.push(UnrunTestCase {
@@ -452,11 +456,9 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
     }
 
     // Determine the source of this test
-    let file_path_from_cargo_toml;
     let source = match &case.source {
         CaseSource::TomlFile(path) => {
-            file_path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-            monument_cli::Source::Path(&file_path_from_cargo_toml)
+            monument_cli::Source::Path(PathBuf::from(PATH_TO_MONUMENT_DIR).join(path))
         }
         CaseSource::SectionOfFile {
             spec, music_file, ..

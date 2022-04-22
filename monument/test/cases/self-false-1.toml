@@ -5,5 +5,5 @@ methods = [
     "Bristol Surprise Major",
     { name = "Ummm", place_notation = "xxx1x4,8", stage = 8 }, # Each lead is false against itself
 ]
-music_file = "music-8.toml"
+music_file = "../music/8.toml"
 method_count = { min = 0, max = 500 } # Allow not using any Ummm

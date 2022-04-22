@@ -145,7 +145,7 @@ pub struct Spec {
 
 impl Spec {
     /// Read a `Spec` from a TOML file
-    pub fn from_source(source: Source) -> anyhow::Result<Self> {
+    pub fn from_source(source: &Source) -> anyhow::Result<Self> {
         let toml_buf;
         let toml_string: &str = match source {
             Source::Path(p) => {
@@ -158,7 +158,7 @@ impl Spec {
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`]
-    pub fn lower(&self, source: Source) -> anyhow::Result<Query> {
+    pub fn lower(&self, source: &Source) -> anyhow::Result<Query> {
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
@@ -259,7 +259,7 @@ impl Spec {
         })
     }
 
-    fn music_types(&self, source: Source, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
+    fn music_types(&self, source: &Source, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
         // Compute the explicitly mentioned music types
         let mut music_types = self
             .music

@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#79) Generate a progress update as the search finishes
+- (#79) Print number of compositions generated in the progress line
 - (#77) Tie-break equally musical compositions by their average overall score.
 - (#73) `splice_style = "calls"` will no longer generate splices over part heads.
 - (#73) `splice_weight` is now applied to splices over part heads.
@@ -9,6 +11,8 @@
     `count = { min = 224, max = 224 }`.
 
 ---
+
+
 
 ## 28th March 2021
 
@@ -23,6 +27,8 @@
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
 
 ---
+
+
 
 ## 10th March 2021
 
@@ -54,6 +60,8 @@
 
 ---
 
+
+
 ## 18th Feb 2021
 
 ### Monument v0.5.0
@@ -74,6 +82,8 @@
 
 ---
 
+
+
 ## 12th Feb 2021
 
 ### Monument v0.4.0
@@ -83,6 +93,8 @@
 - (#40) Set default of `num_comps` to 100.
 
 ---
+
+
 
 ## 1st Feb 2021
 
@@ -104,6 +116,8 @@
 - (#32) Run CI in debug mode for a small speed gain.
 
 ---
+
+
 
 ## 18th Jan 2021
 

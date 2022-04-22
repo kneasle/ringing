@@ -217,23 +217,12 @@ pub(crate) fn search(
 
         // Send stats every so often
         if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
-            let mut total_len = 0;
-            let mut max_length = 0;
-            frontier.iter().for_each(|n| {
-                total_len += n.length as usize;
-                max_length = max_length.max(n.length);
-            });
-
-            update_channel
-                .send(QueryUpdate::Progress(Progress {
-                    iter_count,
-                    queue_len: frontier.len(),
-                    avg_length: total_len as f32 / frontier.len() as f32,
-                    max_length,
-                }))
-                .unwrap();
+            send_update(&frontier, &update_channel, iter_count, num_comps);
         }
     }
+
+    // Always send a final update before finishing
+    send_update(&frontier, &update_channel, iter_count, num_comps);
 
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
@@ -242,6 +231,29 @@ pub(crate) fn search(
         std::mem::forget(graph);
         std::mem::forget(frontier);
     }
+}
+
+fn send_update(
+    frontier: &BinaryHeap<CompPrefix>,
+    update_channel: &SyncSender<QueryUpdate>,
+    iter_count: usize,
+    num_comps: usize,
+) {
+    let mut total_len = 0;
+    let mut max_length = 0;
+    frontier.iter().for_each(|n| {
+        total_len += n.length as usize;
+        max_length = max_length.max(n.length);
+    });
+    update_channel
+        .send(QueryUpdate::Progress(Progress {
+            iter_count,
+            num_comps,
+            queue_len: frontier.len(),
+            avg_length: total_len as f32 / frontier.len() as f32,
+            max_length,
+        }))
+        .unwrap();
 }
 
 fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {

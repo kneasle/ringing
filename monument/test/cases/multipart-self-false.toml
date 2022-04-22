@@ -6,4 +6,4 @@
 length = "practice"
 method = "Oxford Treble Bob Major"
 part_head = "1243"
-music_file = "music-8.toml"
+music_file = "../music/8.toml"

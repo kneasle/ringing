@@ -1,4 +1,4 @@
 length = 224
 method = "Bristol Surprise Major"
-music_file = "music-8.toml"
+music_file = "../music/8.toml"
 method_count = 224
