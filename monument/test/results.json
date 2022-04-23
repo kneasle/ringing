@@ -878,6 +878,126 @@
       { "length": 1344, "string": "#DLSYSL", "avg_score": 0.14434524, "part_head": "18234567" }
     ]
   },
+  "test/cases/error-messages.md: ambiguous-course-heads": {
+    "error_message": "The same course could be given two different course heads:\n     1x5x6x78, satisfying 1xxxxx78\n  or 1xx8x756, satisfying 1xxxxx56"
+  },
+  "test/cases/error-messages.md: bobs-and-singles-only": {
+    "error_message": "Can't be both `bobs_only` and `singles_only`"
+  },
+  "test/cases/error-messages.md: call-pn-parse": {
+    "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
+  },
+  "test/cases/error-messages.md: calling-positions-too-short": {
+    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage is Major"
+  },
+  "test/cases/error-messages.md: ch-mask::bell-out-of-stage": {
+    "error_message": "Can't parse course head mask \"1234*9\": bell 9 is out of stage Major"
+  },
+  "test/cases/error-messages.md: ch-mask::too-long": {
+    "error_message": "Can't parse course head mask \"1234x5678\": mask is too long, needing at least 9 bells (too many for Major)"
+  },
+  "test/cases/error-messages.md: ch-mask::too-many-*s": {
+    "error_message": "Can't parse course head mask \"1*2*3\": too many `*`s.  Masks can only have one region with `x` or `*`."
+  },
+  "test/cases/error-messages.md: ch-mask::too-short": {
+    "error_message": "Can't parse course head mask \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
+  },
+  "test/cases/error-messages.md: ch-pattern::bell-out-of-stage": {
+    "error_message": "Can't parse course head weight \"x9*\": bell 9 is out of stage Major"
+  },
+  "test/cases/error-messages.md: ch-pattern::too-long": {
+    "error_message": "Can't parse course head weight \"1234*5678x\": mask is too long, needing at least 9 bells (too many for Major)"
+  },
+  "test/cases/error-messages.md: ch-pattern::too-many-*s": {
+    "error_message": "Can't parse course head weight \"*7*8\": too many `*`s.  Masks can only have one region with `x` or `*`."
+  },
+  "test/cases/error-messages.md: ch-pattern::too-short": {
+    "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
+  },
+  "test/cases/error-messages.md: chs-not-in-other-parts": {
+    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
+  },
+  "test/cases/error-messages.md: duplicate-calls::debug-symbol": {
+    "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
+  },
+  "test/cases/error-messages.md: duplicate-calls::different-lead-locations": {
+    "comps": [
+      { "length": 64, "string": "sHsH", "avg_score": -0.071875 },
+      { "length": 128, "string": "HsHHsH", "avg_score": -0.0640625 },
+      { "length": 128, "string": "sHHsHH", "avg_score": -0.0640625 },
+      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.061458334 },
+      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.061458334 },
+      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.061458334 },
+      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
+      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
+      { "length": 288, "string": "sHsh", "avg_score": -0.018402778 },
+      { "length": 288, "string": "sMsm", "avg_score": -0.018402778 },
+      { "length": 288, "string": "shsH", "avg_score": -0.018402778 },
+      { "length": 288, "string": "swsW", "avg_score": -0.018402778 },
+      { "length": 224, "string": "", "avg_score": 0.0 }
+    ]
+  },
+  "test/cases/error-messages.md: duplicate-calls::display-symbol": {
+    "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1678"
+  },
+  "test/cases/error-messages.md: duplicate-calls::same-pn": {
+    "comps": [
+      { "length": 64, "string": "sHsH", "avg_score": -0.09375 },
+      { "length": 128, "string": "HsHHsH", "avg_score": -0.075 },
+      { "length": 128, "string": "sHHsHH", "avg_score": -0.075 },
+      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.06875 },
+      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.06875 },
+      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.06875 },
+      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
+      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
+      { "length": 224, "string": "", "avg_score": 0.0 }
+    ]
+  },
+  "test/cases/error-messages.md: duplicate-shorthand": {
+    "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
+  },
+  "test/cases/error-messages.md: method-not-found::case-1": {
+    "error_message": "Can't find \"Brisol Suprise Major\" in the Central Council method library.  Did you mean:\n     \"Bristol Surprise Major\" (Bristol Surprise Major)"
+  },
+  "test/cases/error-messages.md: method-not-found::case-2": {
+    "error_message": "Can't find \"Camibridge Surprise Manor\" in the Central Council method library.  Did you mean:\n     \"Cambridge Surprise Major\" (Camibridge Surprise Manjor)\n  or \"Cambridge Surprise Minor\" (Camibridge Surprise Mainor)"
+  },
+  "test/cases/error-messages.md: method-not-found::case-3": {
+    "error_message": "Can't find \"Corwnall Surprise major\" in the Central Council method library.  Did you mean:\n     \"Cornwall Surprise Major\" (Cornwnall Surprise mMajor)"
+  },
+  "test/cases/error-messages.md: method-pn-parsing::ambiguous-gap": {
+    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n        ^^ Ambiguous gap of 3 bells between places '1' and '5'."
+  },
+  "test/cases/error-messages.md: method-pn-parsing::bell-out-of-stage": {
+    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.5x4x1,+9\"\n                              ^ Place '9' is out of stage Major"
+  },
+  "test/cases/error-messages.md: method-pn-parsing::misplaced-plus": {
+    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5+4.5x5.36.4x4.5x4x1,+8\"\n         ^ `+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
+  },
+  "test/cases/error-messages.md: method-pn-parsing::odd-stage-cross": {
+    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n       ^ Cross notation isn't valid for odd stages (in this case Triples)"
+  },
+  "test/cases/error-messages.md: method-pn-parsing::repeated-place": {
+    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.585x4x1,+9\"\n                       ^^^ Place '5' is duplicated"
+  },
+  "test/cases/error-messages.md: misc-method-parsing::non-integer-lead-index": {
+    "error_message": "Lead location \"X\" (for label \"LE\" in \"Bristol Surprise Royal\") is not a valid integer"
+  },
+  "test/cases/error-messages.md: no-methods": {
+    "error_message": "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`."
+  },
+  "test/cases/error-messages.md: part-head-parse::1": {
+    "error_message": "Can't parse part head \"13\": bell '2' is missing"
+  },
+  "test/cases/error-messages.md: part-head-parse::2": {
+    "error_message": "Can't parse part head \"1321\": bell '1' appears twice."
+  },
+  "test/cases/error-messages.md: part-head-parse::3": {
+    "error_message": "Can't parse part head \"123456789\": bell '9' is not within stage Major"
+  },
+  "test/cases/error-messages.md: undefined-lead-location": {
+    "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
+  },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25892857 }] },
   "test/cases/false-course-1.toml": { "comps": [] },
   "test/cases/false-course-2.toml": {
@@ -2947,125 +3067,5 @@
       { "length": 224, "string": "CYCYCYC", "avg_score": 0.026785715 },
       { "length": 224, "string": "YCYCYCY", "avg_score": 0.026785715 }
     ]
-  },
-  "test/error-messages.md: ambiguous-course-heads": {
-    "error_message": "The same course could be given two different course heads:\n     1x5x6x78, satisfying 1xxxxx78\n  or 1xx8x756, satisfying 1xxxxx56"
-  },
-  "test/error-messages.md: bobs-and-singles-only": {
-    "error_message": "Can't be both `bobs_only` and `singles_only`"
-  },
-  "test/error-messages.md: call-pn-parse": {
-    "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
-  },
-  "test/error-messages.md: calling-positions-too-short": {
-    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage is Major"
-  },
-  "test/error-messages.md: ch-mask::bell-out-of-stage": {
-    "error_message": "Can't parse course head mask \"1234*9\": bell 9 is out of stage Major"
-  },
-  "test/error-messages.md: ch-mask::too-long": {
-    "error_message": "Can't parse course head mask \"1234x5678\": mask is too long, needing at least 9 bells (too many for Major)"
-  },
-  "test/error-messages.md: ch-mask::too-many-*s": {
-    "error_message": "Can't parse course head mask \"1*2*3\": too many `*`s.  Masks can only have one region with `x` or `*`."
-  },
-  "test/error-messages.md: ch-mask::too-short": {
-    "error_message": "Can't parse course head mask \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
-  },
-  "test/error-messages.md: ch-pattern::bell-out-of-stage": {
-    "error_message": "Can't parse course head weight \"x9*\": bell 9 is out of stage Major"
-  },
-  "test/error-messages.md: ch-pattern::too-long": {
-    "error_message": "Can't parse course head weight \"1234*5678x\": mask is too long, needing at least 9 bells (too many for Major)"
-  },
-  "test/error-messages.md: ch-pattern::too-many-*s": {
-    "error_message": "Can't parse course head weight \"*7*8\": too many `*`s.  Masks can only have one region with `x` or `*`."
-  },
-  "test/error-messages.md: ch-pattern::too-short": {
-    "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
-  },
-  "test/error-messages.md: chs-not-in-other-parts": {
-    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
-  },
-  "test/error-messages.md: duplicate-calls::debug-symbol": {
-    "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
-  },
-  "test/error-messages.md: duplicate-calls::different-lead-locations": {
-    "comps": [
-      { "length": 64, "string": "sHsH", "avg_score": -0.071875 },
-      { "length": 128, "string": "HsHHsH", "avg_score": -0.0640625 },
-      { "length": 128, "string": "sHHsHH", "avg_score": -0.0640625 },
-      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.061458334 },
-      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.061458334 },
-      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.061458334 },
-      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
-      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
-      { "length": 288, "string": "sHsh", "avg_score": -0.018402778 },
-      { "length": 288, "string": "sMsm", "avg_score": -0.018402778 },
-      { "length": 288, "string": "shsH", "avg_score": -0.018402778 },
-      { "length": 288, "string": "swsW", "avg_score": -0.018402778 },
-      { "length": 224, "string": "", "avg_score": 0.0 }
-    ]
-  },
-  "test/error-messages.md: duplicate-calls::display-symbol": {
-    "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1678"
-  },
-  "test/error-messages.md: duplicate-calls::same-pn": {
-    "comps": [
-      { "length": 64, "string": "sHsH", "avg_score": -0.09375 },
-      { "length": 128, "string": "HsHHsH", "avg_score": -0.075 },
-      { "length": 128, "string": "sHHsHH", "avg_score": -0.075 },
-      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.06875 },
-      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.06875 },
-      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.06875 },
-      { "length": 96, "string": "HHH", "avg_score": -0.056249995 },
-      { "length": 288, "string": "MBW", "avg_score": -0.018749999 },
-      { "length": 224, "string": "", "avg_score": 0.0 }
-    ]
-  },
-  "test/error-messages.md: duplicate-shorthand": {
-    "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
-  },
-  "test/error-messages.md: method-not-found::case-1": {
-    "error_message": "Can't find \"Brisol Suprise Major\" in the Central Council method library.  Did you mean:\n     \"Bristol Surprise Major\" (Bristol Surprise Major)"
-  },
-  "test/error-messages.md: method-not-found::case-2": {
-    "error_message": "Can't find \"Camibridge Surprise Manor\" in the Central Council method library.  Did you mean:\n     \"Cambridge Surprise Major\" (Camibridge Surprise Manjor)\n  or \"Cambridge Surprise Minor\" (Camibridge Surprise Mainor)"
-  },
-  "test/error-messages.md: method-not-found::case-3": {
-    "error_message": "Can't find \"Corwnall Surprise major\" in the Central Council method library.  Did you mean:\n     \"Cornwall Surprise Major\" (Cornwnall Surprise mMajor)"
-  },
-  "test/error-messages.md: method-pn-parsing::ambiguous-gap": {
-    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n        ^^ Ambiguous gap of 3 bells between places '1' and '5'."
-  },
-  "test/error-messages.md: method-pn-parsing::bell-out-of-stage": {
-    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.5x4x1,+9\"\n                              ^ Place '9' is out of stage Major"
-  },
-  "test/error-messages.md: method-pn-parsing::misplaced-plus": {
-    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5+4.5x5.36.4x4.5x4x1,+8\"\n         ^ `+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
-  },
-  "test/error-messages.md: method-pn-parsing::odd-stage-cross": {
-    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n       ^ Cross notation isn't valid for odd stages (in this case Triples)"
-  },
-  "test/error-messages.md: method-pn-parsing::repeated-place": {
-    "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.585x4x1,+9\"\n                       ^^^ Place '5' is duplicated"
-  },
-  "test/error-messages.md: misc-method-parsing::non-integer-lead-index": {
-    "error_message": "Lead location \"X\" (for label \"LE\" in \"Bristol Surprise Royal\") is not a valid integer"
-  },
-  "test/error-messages.md: no-methods": {
-    "error_message": "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`."
-  },
-  "test/error-messages.md: part-head-parse::1": {
-    "error_message": "Can't parse part head \"13\": bell '2' is missing"
-  },
-  "test/error-messages.md: part-head-parse::2": {
-    "error_message": "Can't parse part head \"1321\": bell '1' appears twice."
-  },
-  "test/error-messages.md: part-head-parse::3": {
-    "error_message": "Can't parse part head \"123456789\": bell '9' is not within stage Major"
-  },
-  "test/error-messages.md: undefined-lead-location": {
-    "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
   }
 }

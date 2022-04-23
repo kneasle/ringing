@@ -32,7 +32,7 @@ const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
 const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 3] = [
     ("test/cases/", SuiteStorage::Dir, SuiteUse::Test), // Test cases which we expect to succeed
     (
-        "test/error-messages.md",
+        "test/cases/error-messages.md",
         SuiteStorage::DedicatedFile,
         SuiteUse::Test,
     ),
