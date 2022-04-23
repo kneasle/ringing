@@ -1,0 +1,11 @@
+[[music]]
+run_lengths = [4, 5, 6]
+
+[[music]]
+pattern = "*56"
+weight = 0.2
+
+[[music]]
+# Queens, 'whittingtons', exploded tittums and tittums
+patterns = ["135246", "531246", "342516", "142536"]
+weight = 3

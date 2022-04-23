@@ -1,9 +1,11 @@
 ## (Unreleased)
 
 ### Monument
-- (#80) Add error for CHs that aren't in other parts
-- (#79) Generate a progress update as the search finishes
-- (#79) Print number of compositions generated in the progress line
+- (#81) Fall back on a default music profile if no music is specified.  `default_music = false` will
+    disable this.
+- (#80) Add error for CHs that aren't in other parts.
+- (#79) Generate a progress update as the search finishes.
+- (#79) Print number of compositions generated in the progress line.
 - (#77) Tie-break equally musical compositions by their average overall score.
 - (#73) `splice_style = "calls"` will no longer generate splices over part heads.
 - (#73) `splice_weight` is now applied to splices over part heads.

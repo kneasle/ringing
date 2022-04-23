@@ -18,11 +18,13 @@ use crate::CallIdx;
 use crate::graph::{Chunk, Graph};
 
 /// A somewhat human-friendly representation of the course layout of a composition, meant to be
-/// easy to generate.  A `Layout` consists of a set of blocks of rows, which are usually the plain
-/// courses of the methods being rung.  Some of these rows can be annotated with a label, which
-/// will cause that label to be inserted into the composition string whenever that row is used
-/// (useful for adding method labels in spliced).  Branches in the composition (e.g. choices
-/// between making/not making calls) are represented as [`Link`]s.
+/// easy to generate.
+///
+/// A `Layout` consists of a set of blocks of rows, which are usually the plain courses of the
+/// methods being rung.  Some of these rows can be annotated with a label, which will cause that
+/// label to be inserted into the composition string whenever that row is used (useful for adding
+/// method labels in spliced).  Branches in the composition (e.g. choices between making/not making
+/// calls) are represented as [`Link`]s.
 ///
 /// Every useful composition structure (that I can think of) can be represented like this, but it
 /// is not efficient to use `Layout`s directly in the composing loop.  Therefore, Monument

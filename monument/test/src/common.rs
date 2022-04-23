@@ -29,10 +29,15 @@ use serde::{Deserialize, Serialize};
 const IGNORE_PATH: &str = "test/ignore.toml";
 const EXPECTED_RESULTS_PATH: &str = "test/results.json";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
-const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 3] = [
+const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 4] = [
     ("test/cases/", SuiteStorage::Dir, SuiteUse::Test), // Test cases which we expect to succeed
     (
         "test/cases/error-messages.md",
+        SuiteStorage::DedicatedFile,
+        SuiteUse::Test,
+    ),
+    (
+        "test/cases/default-music.md",
         SuiteStorage::DedicatedFile,
         SuiteUse::Test,
     ),
@@ -526,8 +531,9 @@ fn report_failures(run_cases: &[RunTestCase]) {
             CaseOutcome::Unspecified(Ok(comps)) => {
                 println!();
                 println!(
-                    "Unspecified results for {}.  These comps were generated:",
-                    path_string
+                    "Unspecified results for {}.  These {} comps were generated:",
+                    path_string,
+                    comps.len()
                 );
                 println!("{}", Comp::multiline_string(comps));
             }

@@ -91,6 +91,11 @@ pub struct Spec {
     calls: Vec<SpecificCall>,
 
     /* MUSIC */
+    /// If `default_music = true` and no other music is specified, Monument will insert a 'default'
+    /// music profile.  If you truly don't care about music, set this to `false` and don't specify
+    /// your own music.
+    #[serde(default = "get_true")]
+    default_music: bool,
     /// Path to a file containing a music definition, relative to **this** TOML file
     music_file: Option<PathBuf>,
     /// Specification of which classes of music Monument should consider
@@ -234,12 +239,6 @@ impl Spec {
             self.leadwise,
         )?;
 
-        let music_types = self.music_types(source, stage)?;
-        if music_types.is_empty() {
-            // TODO: Add default music
-            log::warn!("No music patterns specified.  Are you sure you don't care about music?");
-        }
-
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
@@ -253,7 +252,7 @@ impl Spec {
             ch_weights,
             splice_weight: self.splice_weight,
 
-            music_types,
+            music_types: self.music_types(source, stage)?,
             start_stroke: self.start_stroke,
             max_duffer_rows: self.max_duffer_rows,
         })
@@ -266,7 +265,23 @@ impl Spec {
             .iter()
             .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer))
             .collect_vec();
-        // Load the music from the `music_file`
+
+        /// Load the music from the `music_file`.  This has to be a macro, since a closure would
+        /// have to capture `&mut music_types` (thus preventing us from checking if it's empty)
+        macro_rules! add_music_toml {
+            ($toml_str: expr) => {{
+                // Parse the TOML
+                let music_file: MusicFile = parse_toml($toml_str)?;
+                // Add the music types
+                music_types.extend(
+                    music_file
+                        .music
+                        .iter()
+                        .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer)),
+                );
+            }};
+        }
+
         if let Some(relative_music_path) = &self.music_file {
             let toml_buf;
             let music_file_toml_string: &str = match source {
@@ -288,15 +303,28 @@ impl Spec {
                 })?,
             };
 
-            // Parse the TOML
-            let music_file: MusicFile = parse_toml(music_file_toml_string)?;
-            // Add the music types
-            music_types.extend(
-                music_file
-                    .music
-                    .iter()
-                    .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer)),
-            );
+            add_music_toml!(music_file_toml_string);
+        }
+        // Add default music if `default_music = true` and there aren't any music types
+        if music_types.is_empty() && self.default_music {
+            #[rustfmt::skip]
+            let default_music_toml = match stage {
+                Stage::MINOR   => Some(include_str!("default-music-minor.toml")),
+                Stage::TRIPLES => Some(include_str!("default-music-triples.toml")),
+                Stage::MAJOR   => Some(include_str!("default-music-major.toml")),
+                Stage::ROYAL   => Some(include_str!("default-music-royal.toml")),
+                Stage::MAXIMUS => Some(include_str!("default-music-maximus.toml")),
+                _ => None,
+            };
+
+            match default_music_toml {
+                Some(toml) => {
+                    log::info!("No music specified, falling back on default.");
+                    log::info!("Set `default_music = false` if you don't want music.");
+                    add_music_toml!(toml);
+                }
+                None => log::warn!("No default music profile for {}", stage),
+            }
         }
         Ok(music_types)
     }
@@ -810,6 +838,17 @@ pub struct MusicCommon {
     /// Which strokes this music can apply to
     #[serde(rename = "stroke", default)]
     strokes: StrokeSet,
+}
+
+impl Default for MusicCommon {
+    fn default() -> Self {
+        Self {
+            weight: 1.0,
+            count_range: RangeInclusive::default(),
+            non_duffer: None,
+            strokes: StrokeSet::Both,
+        }
+    }
 }
 
 impl MusicSpec {
