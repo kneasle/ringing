@@ -172,6 +172,7 @@ take you to more in-depth docs about it.
 - [`calls = []`](#calls-2)
 
 **Music:**
+- [`default_music = true`](#default_music)
 - [`music_file`](#music_file) (optional)
 - [`music = []`](#music-2)
 - [`start_stroke = "back"`](#start_stroke)
@@ -334,6 +335,69 @@ weight = -4            # Optional; Score given to each instance of this call.  D
 ```
 
 ### Music
+
+#### `default_music`
+
+If set to `true`, then a 'default' music profile is used if no custom music is specified.  **NOTE:**
+this defaults to `true`, so you have to explicitly set it to false.  The default music profiles are
+equivalent to importing the following music files:
+
+##### Minor:
+```toml
+[[music]]
+run_lengths = [4, 5, 6]
+
+[[music]]
+pattern = "*56"
+weight = 0.2
+
+[[music]]
+# Queens, 'whittingtons', exploded tittums and tittums
+patterns = ["135246", "531246", "342516", "142536"]
+weight = 3
+```
+
+##### Major:
+```toml
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = [
+    "6578*", "*6578",
+    "5678*", "*5678",
+    "8765*", "*8765",
+]
+
+# Queens and Kings
+[[music]]
+patterns = ["13572468", "75312468"]
+weight = 3
+```
+
+##### Even-bell stages above Royal:
+(extend the `run_lengths` and `patterns` accordingly)
+```toml
+[[music]]
+run_lengths = [4, 5, 6, 7, 8, 9, 10]
+
+# Counting 67890s as 5-bell runs tends to make Monument generate very static compositions, leaving 6
+# unaffected for as long as possible.  So we nerf 67890s to encourage it to generate more
+# interesting comps
+[[music]]
+patterns = ["09876*", "*67890"]
+weight = -0.5
+
+# Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
+# make Monument prefer LB5 courses over just keeping the 6 at home for ages).
+[[music]]
+patterns = [
+    "*65432", "*23456",
+    "23456*", "65432*",
+    "34567*", "76543*",
+]
+weight = 1.5
+```
 
 #### `music_file`
 

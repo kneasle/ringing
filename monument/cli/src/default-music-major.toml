@@ -1,0 +1,14 @@
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+
+[[music]]
+patterns = [
+    "6578*", "*6578",
+    "5678*", "*5678",
+    "8765*", "*8765",
+]
+
+# Queens and Kings
+[[music]]
+patterns = ["13572468", "75312468"]
+weight = 3

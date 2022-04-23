@@ -261,6 +261,7 @@ This doesn't actually produce an error message, because there are two definition
 ```toml
 length = "practice"
 method = "Bristol Surprise Major"
+default_music = false
 
 [[calls]]
 symbol = "s" # Not a clash, because this is an identical definition
@@ -276,6 +277,7 @@ on the half-lead:
 length = "practice"
 method.title = "Bristol Surprise Major"
 method.lead_locations = { 0 = "LE", 16 = "HL" }
+default_music = false
 
 [[calls]]
 symbol = "s" # Not a clash, because this is a HL call
