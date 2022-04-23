@@ -29,19 +29,9 @@ use serde::{Deserialize, Serialize};
 const IGNORE_PATH: &str = "test/ignore.toml";
 const EXPECTED_RESULTS_PATH: &str = "test/results.json";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
-const TEST_SUITES: [(&str, SuiteStorage, SuiteUse); 4] = [
-    ("test/cases/", SuiteStorage::Dir, SuiteUse::Test), // Test cases which we expect to succeed
-    (
-        "test/cases/error-messages.md",
-        SuiteStorage::DedicatedFile,
-        SuiteUse::Test,
-    ),
-    (
-        "test/cases/default-music.md",
-        SuiteStorage::DedicatedFile,
-        SuiteUse::Test,
-    ),
-    ("examples/", SuiteStorage::Dir, SuiteUse::Example), // Examples to show how Monument's TOML format works
+const TEST_DIRS: [(&str, SuiteUse); 2] = [
+    ("test/cases/", SuiteUse::Test), // Test cases which we expect to succeed
+    ("examples/", SuiteUse::Example), // Examples to show how Monument's TOML format works
 ];
 const PATH_TO_MONUMENT_DIR: &str = "../";
 
@@ -201,17 +191,6 @@ enum SuiteUse {
     Bench,
 }
 
-/// The different ways a test suite can be stored
-#[derive(Debug, Clone, Copy)]
-enum SuiteStorage {
-    /// The suite is a directory of single files, each of which is a test case
-    Dir,
-    /// The suite is a single markdown file containing a tree of headers, containing TOML code
-    /// blocks for the spec files
-    DedicatedFile,
-    // TODO: Load examples in the guide
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SuiteState {
     Run,
@@ -223,7 +202,7 @@ enum SuiteState {
 fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteState)>> {
     // Collect the individual test sources from every suite
     let mut test_sources: Vec<(CaseSource, SuiteState)> = Vec::new();
-    for (path, storage, suite_use) in TEST_SUITES {
+    for (path, suite_use) in TEST_DIRS {
         // Determine whether tests in this directory should be run
         let state = match (run_type, suite_use) {
             // If `cargo test`, parse everything but only run `test/cases/`
@@ -237,47 +216,44 @@ fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteSt
 
         // TODO: Make newtypes for the different relative paths?
         let path_relative_to_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-        match storage {
-            SuiteStorage::Dir => {
-                // Walk the directory for test cases (i.e. `*.toml` files)
-                for entry in walkdir::WalkDir::new(&path_relative_to_cargo_toml) {
-                    // Get the path of the file, relative to the `monument` directory
-                    let entry = entry.context("Error reading directory")?;
-                    if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
-                        continue; // Skip anything that isn't a TOML file
-                    }
-                    let file_path_relative_to_monument_dir =
-                        entry.path().components().skip(1).collect::<PathBuf>();
+
+        // Walk the directory for test cases (i.e. `*.toml` files)
+        for entry in walkdir::WalkDir::new(&path_relative_to_cargo_toml) {
+            // Get the path of the file, relative to the `monument` directory
+            let entry = entry.context("Error reading directory")?;
+            let extension = entry.path().extension().and_then(|s| s.to_str());
+            let file_path_relative_to_monument_dir =
+                entry.path().components().skip(1).collect::<PathBuf>();
+
+            match extension {
+                Some("toml") => {
                     test_sources.push((
                         CaseSource::TomlFile(file_path_relative_to_monument_dir),
                         state,
                     ));
                 }
-            }
-            SuiteStorage::DedicatedFile => {
-                // Parse the file as markdown
-                let markdown =
-                    std::fs::read_to_string(&path_relative_to_cargo_toml).with_context(|| {
+                Some("md") => {
+                    // Parse the file as markdown
+                    let markdown = std::fs::read_to_string(entry.path()).with_context(|| {
                         format!(
                             "Error reading test suite file {:?}",
                             &path_relative_to_cargo_toml
                         )
                     })?;
-                let file_path_relative_to_monument_dir = path_relative_to_cargo_toml
-                    .components()
-                    .skip(1)
-                    .collect::<PathBuf>();
-                for (heading_path, spec) in markdown::extract_cases(&markdown) {
-                    test_sources.push((
-                        CaseSource::SectionOfFile {
-                            file_path: file_path_relative_to_monument_dir.clone(),
-                            section_name: heading_path,
-                            spec,
-                            music_file: None,
-                        },
-                        state,
-                    ));
+                    for (heading_path, spec) in markdown::extract_cases(&markdown) {
+                        test_sources.push((
+                            CaseSource::SectionOfFile {
+                                file_path: file_path_relative_to_monument_dir.clone(),
+                                section_name: heading_path,
+                                spec,
+                                music_file: None,
+                            },
+                            state,
+                        ));
+                    }
                 }
+                // Ignore any files that aren't `.toml` or `.md`
+                _ => print!("Ignoring {:?}", file_path_relative_to_monument_dir),
             }
         }
     }
