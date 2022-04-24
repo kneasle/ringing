@@ -20,23 +20,19 @@ impl Layout {
     pub fn new(
         methods: Vec<self::Method>,
         calls: &CallVec<self::Call>,
+        calling_bell: Bell,
         splice_style: SpliceStyle,
         part_head: &Row,
         leadwise: Option<bool>,
     ) -> Result<Self> {
-        let leadwise = leadwise.unwrap_or_else(|| {
-            // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
-            // all calling bells
-            !methods
-                .iter()
-                .flat_map(|m| &m.ch_masks)
-                .all(|ch_mask| part_head.is_fixed(ch_mask.calling_bell()))
-        });
+        // Set 'coursewise' as the default iff the part head doesn't preserve the positions of
+        // the calling bell
+        let leadwise = leadwise.unwrap_or_else(|| !part_head.is_fixed(calling_bell));
 
         if leadwise {
             leadwise::leadwise(&methods, calls, splice_style)
         } else {
-            coursewise::coursewise(methods, calls, splice_style, part_head)
+            coursewise::coursewise(methods, calls, calling_bell, splice_style, part_head)
         }
     }
 }
@@ -155,16 +151,15 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum CourseHeadMaskPreset {
     TenorsTogether,
     SplitTenors,
-    Custom(Vec<(Mask, Bell)>),
+    Custom(Vec<Mask>),
 }
 
 impl CourseHeadMaskPreset {
-    pub fn into_masks(self, stage: Stage) -> Vec<(Mask, Bell)> {
-        let tenor = stage.tenor();
+    pub fn into_masks(self, stage: Stage) -> Vec<Mask> {
         match self {
-            Self::TenorsTogether => vec![(tenors_together_mask(stage), tenor)],
+            Self::TenorsTogether => vec![tenors_together_mask(stage)],
             // Only fix the tenor for split tenors comps
-            Self::SplitTenors => vec![(Mask::fix_bells(stage, vec![tenor]), tenor)],
+            Self::SplitTenors => vec![Mask::fix_bells(stage, vec![stage.tenor()])],
             Self::Custom(ch_masks) => ch_masks,
         }
     }
@@ -217,7 +212,8 @@ pub struct Method {
 impl Method {
     pub fn new(
         method: bellframe::Method,
-        ch_masks: Vec<(Mask, Bell)>,
+        ch_masks: Vec<Mask>,
+        calling_bell: Bell,
         shorthand: String,
         count_range: Range<usize>,
         start_indices: Option<&[isize]>,
@@ -241,7 +237,7 @@ impl Method {
             count_range,
             ch_masks: ch_masks
                 .into_iter()
-                .flat_map(|(mask, calling_bell)| utils::CourseHeadMask::new(mask, calling_bell))
+                .flat_map(|mask| utils::CourseHeadMask::new(mask, calling_bell))
                 .collect_vec(),
         }
     }

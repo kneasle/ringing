@@ -1,6 +1,9 @@
 ## (Unreleased)
 
 ### Monument
+- (#82) Add `calling_bell` parameter to override the bell used when determining calling positions
+    (a.k.a. the 'observation' bell).  If unspecified, this defaults to the heaviest bell in the
+    stage.
 - (#81) Fall back on a default music profile if no music is specified.  `default_music = false` will
     disable this.
 - (#80) Add error for CHs that aren't in other parts.

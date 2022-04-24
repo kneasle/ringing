@@ -71,6 +71,9 @@ pub struct Spec {
     splice_weight: f32,
 
     /* CALLS */
+    /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
+    /// heaviest bell
+    calling_bell: Option<u8>,
     /// Which calls should be used by default
     #[serde(default)] // Default to near calls
     base_calls: BaseCalls,
@@ -183,6 +186,13 @@ impl Spec {
                     "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`.",
                 )
             })?;
+        let calling_bell = match self.calling_bell {
+            Some(v) => Bell::from_number(v).ok_or_else(|| {
+                anyhow::Error::msg("Invalid calling bell: bell number 0 doesn't exist.")
+            })?,
+            None => stage.tenor(),
+        };
+
         // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
         // `layout::new::Method`s
         let ch_masks = self.ch_mask_preset(stage)?.into_masks(stage);
@@ -221,6 +231,7 @@ impl Spec {
             methods.push(layout::new::Method::new(
                 method,
                 override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
+                calling_bell,
                 shorthand,
                 count_range,
                 common.start_indices.as_deref().or(start_indices.as_deref()),
@@ -234,6 +245,7 @@ impl Spec {
         let layout = Layout::new(
             methods,
             &calls,
+            calling_bell,
             self.splice_style,
             &part_head,
             self.leadwise,
@@ -485,12 +497,11 @@ impl Spec {
     }
 }
 
-fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<(Mask, Bell)>> {
+fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
     ch_mask_strings
         .iter()
-        .map(|s| match Mask::parse_with_stage(s, stage) {
-            Ok(mask) => Ok((mask, stage.tenor())),
-            Err(e) => Err(mask_parse_error("course head mask", s, e)),
+        .map(|s| {
+            Mask::parse_with_stage(s, stage).map_err(|e| mask_parse_error("course head mask", s, e))
         })
         .collect()
 }
