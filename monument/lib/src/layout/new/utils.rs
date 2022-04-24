@@ -18,11 +18,6 @@ pub(super) const SNAP_FINISH_LABEL: &str = ">";
 #[derive(Debug, Clone)]
 pub struct CourseHeadMask {
     mask: Mask,
-    /// The bell who's position determines the names of the [`Call`]s in this course.
-    ///
-    /// **Invariant**: `mask` must specify a location for this [`Bell`].  This means that every
-    /// call at a given position through a course will be given the same name.
-    calling_bell: Bell,
 }
 
 impl CourseHeadMask {
@@ -37,17 +32,14 @@ impl CourseHeadMask {
     /// would be called a `M`, whereas a call at `12345xx8` would be called `H`).
     pub(super) fn new(mask: Mask, calling_bell: Bell) -> Vec<Self> {
         if mask.place_of(calling_bell).is_some() {
-            return vec![Self { mask, calling_bell }];
+            return vec![Self { mask }];
         } else {
             mask.unspecified_places()
                 .map(|pl| {
                     let mut new_mask = mask.to_owned();
                     // Unwrap is safe because the calling bell can't already be in the mask
                     new_mask.set_bell(calling_bell, pl).unwrap();
-                    Self {
-                        mask: new_mask,
-                        calling_bell,
-                    }
+                    Self { mask: new_mask }
                 })
                 .collect_vec()
         }
@@ -55,10 +47,6 @@ impl CourseHeadMask {
 
     pub fn mask(&self) -> &Mask {
         &self.mask
-    }
-
-    pub fn calling_bell(&self) -> Bell {
-        self.calling_bell
     }
 }
 
@@ -177,9 +165,7 @@ fn dedup_ch_masks(course_head_masks: &[CourseHeadMask]) -> Result<Vec<CourseHead
             if i == other_i {
                 continue; // Don't compare masks against themselves
             }
-            if ch_mask.mask().is_subset_of(other_ch_mask.mask())
-                && ch_mask.calling_bell() == other_ch_mask.calling_bell()
-            {
+            if ch_mask.mask().is_subset_of(other_ch_mask.mask()) {
                 continue 'outer; // Skip this `ch_mask` if it is implied by another mask
             }
         }

@@ -3,7 +3,7 @@ use std::{
     ops::Mul,
 };
 
-use bellframe::{Mask, Row, RowBuf, Stage};
+use bellframe::{Bell, Mask, Row, RowBuf, Stage};
 use index_vec::IndexVec;
 
 use super::{utils::CourseHeadMask, Boundary, Error, Result};
@@ -17,6 +17,7 @@ use crate::{
 pub fn coursewise(
     mut methods: Vec<super::Method>,
     calls: &CallVec<super::Call>,
+    calling_bell: Bell,
     splice_style: SpliceStyle,
     part_head: &Row,
 ) -> Result<Layout> {
@@ -41,7 +42,7 @@ pub fn coursewise(
     }
 
     // Generate links
-    let links = generate_links(&methods, calls, stage, splice_style)?.into();
+    let links = generate_links(&methods, calls, calling_bell, stage, splice_style)?.into();
 
     Ok(Layout {
         links,
@@ -64,9 +65,7 @@ fn check_chs_in_other_parts(chs: &[CourseHeadMask], part_head: &Row) -> Result<(
             let mask_in_other_part = part_head.mul(mask.mask());
             // Check if there's an entry in `chs` which matches the `mask_in_other_part`
             for mask2 in chs {
-                if mask_in_other_part.is_subset_of(mask2.mask())
-                    && mask.calling_bell() == mask2.calling_bell()
-                {
+                if mask_in_other_part.is_subset_of(mask2.mask()) {
                     continue 'ch_loop; // `mask2` contains `transposed_mask`, so we're good
                 }
             }
@@ -90,6 +89,7 @@ fn check_chs_in_other_parts(chs: &[CourseHeadMask], part_head: &Row) -> Result<(
 fn generate_links(
     methods: &[super::Method],
     calls: &CallVec<super::Call>,
+    calling_bell: Bell,
     stage: Stage,
     mut splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
@@ -112,6 +112,7 @@ fn generate_links(
         calls,
         &call_ends,
         &call_starts_by_label,
+        calling_bell,
         stage,
         splice_style,
     )?;
@@ -218,6 +219,7 @@ fn generate_all_links(
     calls: &CallVec<super::Call>,
     call_ends: &[CallEnd],
     call_starts_by_label: &HashMap<&str, Vec<RowIdx>>,
+    calling_bell: Bell,
     stage: Stage,
     splice_style: SpliceStyle,
 ) -> Result<Vec<Link>> {
@@ -244,6 +246,7 @@ fn generate_all_links(
                 method_idx,
                 method_data,
                 calls,
+                calling_bell,
                 from_ch_mask,
                 &link_gen_data,
                 &mut links,
@@ -264,6 +267,7 @@ fn generate_call_links(
     method_idx: usize,
     m: &super::Method,
     calls: &CallVec<super::Call>,
+    calling_bell: Bell,
     from_ch_mask: &CourseHeadMask,
     link_gen_data: &LinkGenData,
     links: &mut Vec<Link>,
@@ -294,7 +298,7 @@ fn generate_call_links(
 
             // Get the debug/display names for any link in this position
             let tenor_place = mask_after_call
-                .place_of(from_ch_mask.calling_bell())
+                .place_of(calling_bell)
                 .expect("Course head mask doesn't fix the calling bell");
             let calling_position = call.calling_positions.get(tenor_place).ok_or_else(|| {
                 Error::CallingPositionsTooShort {
