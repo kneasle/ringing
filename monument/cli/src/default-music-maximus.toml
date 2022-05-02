@@ -19,6 +19,6 @@ patterns = [
 weight = 3
 
 [[music]]
-pattern = "*ET"
+pattern = "*TE"
 stroke = "back"
 weight = -0.7
