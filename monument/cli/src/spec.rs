@@ -279,7 +279,8 @@ impl Spec {
             .collect_vec();
 
         /// Load the music from the `music_file`.  This has to be a macro, since a closure would
-        /// have to capture `&mut music_types` (thus preventing us from checking if it's empty)
+        /// have to capture `&mut music_types` (thus preventing us from borrowing it again to check
+        /// `music_types.is_empty()`)
         macro_rules! add_music_toml {
             ($toml_str: expr) => {{
                 // Parse the TOML
@@ -331,11 +332,13 @@ impl Spec {
 
             match default_music_toml {
                 Some(toml) => {
-                    log::info!("No music specified, falling back on default.");
-                    log::info!("Set `default_music = false` if you don't want music.");
+                    log::warn!("No music specified, so falling back on default.  Set `default_music = false` if you genuinely don't want any music scoring.");
                     add_music_toml!(toml);
                 }
-                None => log::warn!("No default music profile for {}", stage),
+                None => log::warn!(
+                    "No default music profile for {}.  No music will be scored.",
+                    stage
+                ),
             }
         }
         Ok(music_types)
