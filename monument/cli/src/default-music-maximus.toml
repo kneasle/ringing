@@ -17,3 +17,8 @@ patterns = [
     "34567*", "76543*",
 ]
 weight = 3
+
+[[music]]
+pattern = "*ET"
+stroke = "back"
+weight = -0.7
