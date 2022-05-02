@@ -121,9 +121,11 @@ Search completed in 3.364357029s
 3.4s is not bad!  And those compositions are pretty decent too.  You can see how the call weighting
 is promoting compositions which make clever use of few calls.
 
-You can use [`to-complib.py`](to-complib.py) to copy the string to paste into CompLib.  For example,
-running `./to-complib.py BBBB[B]YYYY[B]YYYYY[M]BBBBBB[W]E[sH]BBBB[B]E[V]BBBBBBB[F]E[bB]EEE[H]BBBB[B]EE[W]B` 
-gives this:
+You can use [`to-complib.py`](to-complib.py) to generate a calling string to paste into CompLib's
+composition input spreadsheet.  The string will be automatically copied to your system's clipboard.
+For example, running `./to-complib.py
+BBBB[B]YYYY[B]YYYYY[M]BBBBBB[W]E[sH]BBBB[B]E[V]BBBBBBB[F]E[bB]EEE[H]BBBB[B]EE[W]B` will copy this
+into your clipboard:
 ```text
 M	F	Methods	V	B	H	W
 				-
@@ -141,7 +143,7 @@ M	F	Methods	V	B	H	W
 		BBBBYYYYYYYYYBBBBBBEBBBBEBBBBBBBEEEEBBBBEEB
 ```
 
-Which, when copied into CompLib, gives
+When pasted into CompLib, this gives
 [this comp](https://complib.org/composition/90918?accessKey=88cedf2b68369eb0987a752ca5b17bc76931eb8c).
 
 ---
@@ -161,18 +163,18 @@ take you to more in-depth docs about it.
 - [`methods`](#methods-2)
 - [`splice_style = "leads"`](#splice_style)
 - [`method_count`](#method_count) (default to ±10% balance)
-- [`splice_weight = 0.0`](#splice_weight)
+- [`splice_weight = 0.0`](#splice_weight) _(since v0.7.0)_
 
 **Calls:**
 - [`base_calls = "near"`](#base_calls)
-- [`bobs_only = false`](#bobs_only-singles_only)
-- [`singles_only = false`](#bobs_only-singles_only)
+- [`bobs_only = false`](#bobs_only-singles_only) _(since v0.6.0)_
+- [`singles_only = false`](#bobs_only-singles_only) _(since v0.6.0)_
 - [`bob_weight = -1.8`](#bob_weight-single_weight)
 - [`single_weight = -2.3`](#bob_weight-single_weight)
 - [`calls = []`](#calls-2)
 
 **Music:**
-- [`default_music = true`](#default_music)
+- [`default_music = true`](#default_music) _(since v0.8.0)_
 - [`music_file`](#music_file) (optional)
 - [`music = []`](#music-2)
 - [`start_stroke = "back"`](#start_stroke)
@@ -280,22 +282,22 @@ splice_style = "call locations" # only change method whenever a call _could_ hap
 splice_style = "calls"          # only change method when a call does happen
 ```
 
-Note that currently `splice_style = "call locations"` and `splice_style = "calls"` will both insert
-methods splices over part heads.  This is a bug and will be fixed.
+Note that, for versions before `v0.8.0`, `splice_style = "call locations"` and `splice_style =
+"calls"` will both allow splices over part heads.  This is fixed in `v0.8.0` and later.
 
 #### `method_count`
 
-Min-max limits on how many rows of each method is allowed.  Defaults to +-10% method balance.
+Min-max limits on how many rows of each method is allowed.  Defaults to ±10% method balance.
 ```toml
-method_count.min = 0 # Allow Monument to ignore methods
+method_count.min = 0 # Allow Monument to ignore methods, but keep the default maximum
 # or
 method_count = { min = 100, max = 300 } # Force a given method count range
 ```
 
-#### `splice_weight`
+#### `splice_weight` _(since v0.7.0)_
 
 Weight applied to each change of method.  Positive values will encourage more c.o.m.; negative
-values will encourage few c.o.m.  Defaults to 0.
+values will encourage few c.o.m.  Defaults to 0 (i.e. don't care about c.o.m.).
 
 ### Calls
 
@@ -310,7 +312,7 @@ base_calls = "far"  # 1(n-2) bob and 1(n-2)(n-1)n single
 base_calls = "none" # no base calls, only what you've added
 ```
 
-#### `bobs_only`, `singles_only`
+#### `bobs_only`, `singles_only` _(since v0.6.0)_
 
 If either are `true`, then `base_calls` will only generate that call type.  Setting both `bobs_only`
 and `singles_only` to `true` makes no sense and causes an error. By default, both bobs and singles
@@ -330,74 +332,23 @@ place_notation = "16"
 symbol = "x"
 debug_symbol = "x"     # Optional; symbol to use for debugging.  Defaults to same as `symbol`
 lead_location = "LE"   # Optional; where in the method to apply the call.  Defaults to "LE"
-calling_positions = "LIBFVXSMWH" # Optional; defaults to some sane values
+calling_positions = "LIBFVXSMWH" # Optional; defaults to 'LIBFVXSEN...' with 'MWH' added
 weight = -4            # Optional; Score given to each instance of this call.  Defaults to -3
 ```
 
 ### Music
 
-#### `default_music`
+#### `default_music` _(since v0.8.0)_
 
 If set to `true`, then a 'default' music profile is used if no custom music is specified.  **NOTE:**
 this defaults to `true`, so you have to explicitly set it to false.  The default music profiles are
 equivalent to importing the following music files:
 
-##### Minor:
-```toml
-[[music]]
-run_lengths = [4, 5, 6]
-
-[[music]]
-pattern = "*56"
-weight = 0.2
-
-[[music]]
-# Queens, 'whittingtons', exploded tittums and tittums
-patterns = ["135246", "531246", "342516", "142536"]
-weight = 3
-```
-
-##### Major:
-```toml
-[[music]]
-run_lengths = [4, 5, 6, 7, 8]
-
-[[music]]
-patterns = [
-    "6578*", "*6578",
-    "5678*", "*5678",
-    "8765*", "*8765",
-]
-
-# Queens and Kings
-[[music]]
-patterns = ["13572468", "75312468"]
-weight = 3
-```
-
-##### Even-bell stages above Royal:
-(extend the `run_lengths` and `patterns` accordingly)
-```toml
-[[music]]
-run_lengths = [4, 5, 6, 7, 8, 9, 10]
-
-# Counting 67890s as 5-bell runs tends to make Monument generate very static compositions, leaving 6
-# unaffected for as long as possible.  So we nerf 67890s to encourage it to generate more
-# interesting comps
-[[music]]
-patterns = ["09876*", "*67890"]
-weight = -0.5
-
-# Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
-# make Monument prefer LB5 courses over just keeping the 6 at home for ages).
-[[music]]
-patterns = [
-    "*65432", "*23456",
-    "23456*", "65432*",
-    "34567*", "76543*",
-]
-weight = 1.5
-```
+- [Minor](src/default-music-minor.toml)
+- [Triples](src/default-music-triples.toml)
+- [Major](src/default-music-major.toml)
+- [Royal](src/default-music-royal.toml)
+- [Maximus](src/default-music-maximus.toml)
 
 #### `music_file`
 
@@ -452,8 +403,8 @@ course_heads = ["*78", "xxxx7856", "12345xxx"]
 #### `split_tenors`
 
 If `course_heads` isn't specified, this lets Monument use any courses, as opposed to just those with
-the tenors together.  Warning: on higher stages, this will cause Monument to use lots of memory.
-Defaults to `false`.
+the tenors together.  On higher stages, this will almost certainly cause Monument's graph size limit
+to be reached.  Defaults to `false`.
 
 #### `ch_weights`
 
@@ -491,8 +442,8 @@ Defaults to 0.
 #### `leadwise`
 
 If set, this will stop Monument using calling positions, and instead label all the calls
-positionally.  `course_heads`, `split_tenors` and `ch_weights` are then obviously incompatible, and
-this will generate split-tenors compositions.  You should rarely have to set this yourself; by
+positionally.  `course_heads`, `split_tenors` and `ch_weights` will obviously have no effect, and
+this will always generate split-tenors compositions.  You should rarely have to set this yourself; by
 default, Monument will set this automatically if the tenor is affected by the part head (e.g. in
 cyclic) but otherwise will stick to course-wise compositions.  The only times you're likely to need
 this is for weird cases like differential methods, which don't have a well-defined concept of a
