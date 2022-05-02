@@ -1,18 +1,28 @@
-## (Unreleased)
+## 2nd May 2022
 
-### Monument
+### Monument v0.8.0
+
+#### Headline Features
 - (#82) Add `calling_bell` parameter to override the bell used when determining calling positions
     (a.k.a. the 'observation' bell).  If unspecified, this defaults to the heaviest bell in the
     stage.
 - (#81) Fall back on a default music profile if no music is specified.  `default_music = false` will
-    disable this.
-- (#80) Add error for CHs that aren't in other parts.
-- (#79) Generate a progress update as the search finishes.
-- (#79) Print number of compositions generated in the progress line.
-- (#77) Tie-break equally musical compositions by their average overall score.
+    disable this.  Now, Monument will produce good results even if you only specify `length` and
+    `method`.
+
+#### Bug Fixes
 - (#73) `splice_style = "calls"` will no longer generate splices over part heads.
 - (#73) `splice_weight` is now applied to splices over part heads.
 - (#73) `splice_style = "calls"` now works for cyclic compositions.
+
+#### Smaller Features
+- (#80) Add error for CHs that aren't in other parts (e.g. setting 
+    `course_heads = ["*78", "*7856"]` and `part_head = "134265"` now produces an error, because
+    `*7856` becomes `*7865` in even-numbered parts).
+- (#79) Generate a final 'search complete' progress update just after the search finishes.
+- (#79) Print number of compositions generated in the progress line.
+- (#77) When outputting compositions, tie-break equally musical compositions by their average
+    overall score per row.
 - (#71) Allow specifying an exact count with e.g. `count = 224` rather than
     `count = { min = 224, max = 224 }`.
 
@@ -20,7 +30,7 @@
 
 
 
-## 28th March 2021
+## 28th March 2022
 
 ### Monument v0.7.0
 - (#70) New graph optimisation: remove links between mutually false chunks.
@@ -36,7 +46,7 @@
 
 
 
-## 10th March 2021
+## 10th March 2022
 
 ### Monument v0.6.0
 
@@ -68,7 +78,7 @@
 
 
 
-## 18th Feb 2021
+## 18th Feb 2022
 
 ### Monument v0.5.0
 - (#48) Allow `start_indices`/`end_indices` to be overridden for each method.
@@ -90,7 +100,7 @@
 
 
 
-## 12th Feb 2021
+## 12th Feb 2022
 
 ### Monument v0.4.0
 - (#42) Add `handbell_coursing_weight` to easily add `ch_weights` for handbells in their coursing
@@ -102,7 +112,7 @@
 
 
 
-## 1st Feb 2021
+## 1st Feb 2022
 
 ### Monument v0.3.0
 - (#39) Rework all `README`s and Monument's guide to make them more clear and readable.
@@ -125,7 +135,7 @@
 
 
 
-## 18th Jan 2021
+## 18th Jan 2022
 
 ### Monument v0.2.3
 - (#26) Fix off-by-one error when outputting part heads of multi-part compositions
