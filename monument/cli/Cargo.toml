@@ -18,7 +18,7 @@ difference = "2.0"
 itertools = "0.10"
 log = "0.4"
 monument = { version = "0.7.0", path = "../lib/" }
-ordered-float = "2.10"
+ordered-float = "3.0"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
 simple_logger = "2.1"
@@ -27,7 +27,7 @@ toml = "0.5"
 
 [dev-dependencies]
 goldilocks-json-fmt = "0.2"
-ordered-float = { version = "2.10", features = ["serde"] }
+ordered-float = { version = "3.0", features = ["serde"] }
 path-slash = "0.1"
 pulldown-cmark = "0.9"
 rayon = "1.5"
