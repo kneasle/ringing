@@ -145,6 +145,7 @@ impl Default for Config {
 pub struct Comp {
     /// The [`Query`] from which this `Comp` was generated.  This is ignored when computing
     /// [`Eq`]uality and when [`Hash`]ing.
+    // TODO: Remove this
     pub query: Arc<Query>,
     pub inner: CompInner,
 }
