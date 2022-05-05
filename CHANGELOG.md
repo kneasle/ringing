@@ -1,3 +1,12 @@
+## (Unreleased)
+
+### Monument
+- (#89) Refactor the search algorithm (splitting the node expansion from the best-first search code)
+
+---
+
+
+
 ## 2nd May 2022
 
 ### Monument v0.8.0
