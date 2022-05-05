@@ -128,6 +128,7 @@ impl Layout {
 pub struct MethodBlock {
     pub block: Block<Option<String>>,
     pub count_range: Range<usize>,
+    pub shorthand: String,
 }
 
 /// A link between two segments of a course

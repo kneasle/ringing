@@ -21,6 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
 use ringing_utils::{BigNumInt, PrettyDuration};
@@ -70,6 +71,7 @@ pub fn run(
         .unoptimised_graph(config)
         .map_err(|e| anyhow::Error::msg(graph_build_err_msg(e)))?;
     debug_print!(Graph, graph);
+    let comp_printer = CompPrinter::new(&query);
     let optimised_graphs = query.optimise_graph(graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
@@ -78,7 +80,7 @@ pub fn run(
     // Thread-safe data for the query engine
     let abort_flag = Arc::new(AtomicBool::new(false));
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
-    let mut update_logger = SingleLineProgressLogger::new();
+    let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     // Run the search
     if ctrl_c_behaviour == CtrlCBehaviour::RecoverComps {
@@ -104,12 +106,13 @@ pub fn run(
         abort_flag.clone(),
     );
 
-    use ordered_float::OrderedFloat as OF;
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
+    use ordered_float::OrderedFloat as OF;
     comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.avg_score)));
     Ok(Some(QueryResult {
         comps,
+        comp_printer,
         duration: start_time.elapsed(),
         aborted: abort_flag.load(Ordering::SeqCst),
     }))
@@ -146,14 +149,18 @@ pub struct QueryResult {
     pub comps: Vec<Comp>,
     pub duration: Duration,
     pub aborted: bool,
+
+    comp_printer: CompPrinter,
 }
 
 impl QueryResult {
     pub fn print(&self) {
         println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
         for c in &self.comps {
-            println!("{}", c);
+            println!("{}", self.comp_printer.comp_string(c));
         }
+        println!("{}", self.comp_printer.ruleoff());
+        println!("{}", self.comp_printer.header());
         println!(
             "{} compositions generated.  Search {} {}",
             self.comps.len(),
@@ -218,6 +225,8 @@ fn graph_build_err_msg(e: monument::graph::BuildError) -> String {
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
 /// search progresses.
 struct SingleLineProgressLogger {
+    comp_printer: CompPrinter,
+
     last_progress: Progress,
     is_truncating_queue: bool,
     is_aborting: bool,
@@ -227,8 +236,10 @@ struct SingleLineProgressLogger {
 }
 
 impl SingleLineProgressLogger {
-    fn new() -> Self {
+    fn new(comp_printer: CompPrinter) -> Self {
         Self {
+            comp_printer,
+
             last_progress: Progress::START,
             is_truncating_queue: false,
             is_aborting: false,
@@ -251,7 +262,7 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let Some(c) = &comp {
-            update_string.push_str(&c.to_string());
+            update_string.push_str(&self.comp_printer.comp_string(c));
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);
@@ -330,4 +341,113 @@ impl SingleLineProgressLogger {
 
         output
     }
+}
+
+#[derive(Debug, Clone)]
+struct CompPrinter {
+    /// For each method in the composition:
+    /// ```text
+    /// (
+    ///     maximum width of row count,
+    ///     shorthand
+    /// )
+    /// ```
+    method_counts: Vec<(usize, String)>,
+    /// If a part head should be displayed, then what's its width
+    part_head_width: Option<usize>,
+}
+
+impl CompPrinter {
+    fn new(query: &Query) -> Self {
+        Self {
+            method_counts: query
+                .layout
+                .method_blocks
+                .iter()
+                .map(|mb| {
+                    // `-1` converts from exclusive to inclusive range
+                    //
+                    // TODO: Once integer logarithms become stable, use `.log10() + 1`
+                    let max_count_width = format!("{:?}", mb.count_range.end - 1).len();
+                    let max_width = max_count_width.max(mb.shorthand.len());
+                    (max_width, mb.shorthand.clone())
+                })
+                .collect_vec(),
+            // TODO: Compress the PH by omitting fixed tenors (e.g. outputting `1342` instead of
+            // `13425678`)
+            part_head_width: (query.num_parts() > 2).then(|| query.part_head.stage().num_bells()),
+        }
+    }
+
+    fn ruleoff(&self) -> String {
+        // Ruleoff is the same as header, but with every non-'|' char replaced with '-'
+        let mut ruleoff = self
+            .header()
+            .chars()
+            .map(|c| if c == '|' { '|' } else { '-' })
+            .collect::<String>();
+        ruleoff.push_str("---"); // Add a couple of extra `-`s to make the ruleoff a bit longer
+        ruleoff
+    }
+
+    fn header(&self) -> String {
+        let mut s = " len ".to_owned();
+        // Method shorthands (for counts)
+        if self.method_counts.len() > 1 {
+            s.push_str("  ");
+            for (width, shorthand) in &self.method_counts {
+                write_centered_text(shorthand, *width, &mut s);
+                s.push(' ');
+            }
+        }
+        s.push('|');
+        // Part head
+        if let Some(w) = self.part_head_width {
+            // Add 2 to the width to get one char of extra padding on either side
+            write_centered_text("PH", w + 2, &mut s);
+            s.push('|');
+        }
+        write!(s, "  music  | avg score | calling").unwrap();
+        s
+    }
+
+    fn comp_string(&self, comp: &Comp) -> String {
+        // Length
+        let mut s = format!("{:>4} ", comp.length);
+        // Method counts (for spliced)
+        if self.method_counts.len() > 1 {
+            s.push_str(": ");
+            for ((width, _), count) in self.method_counts.iter().zip_eq(comp.method_counts.iter()) {
+                write!(s, "{:>width$} ", count, width = *width).unwrap();
+            }
+        }
+        s.push('|');
+        // Part head (if >=3 parts)
+        if self.part_head_width.is_some() {
+            write!(s, " {} |", comp.part_head()).unwrap();
+        }
+        // total music score, avg score, call string
+        write!(
+            s,
+            " {:>7.2} | {:>9.7} | {}",
+            comp.music_score(),
+            comp.avg_score,
+            comp.call_string()
+        )
+        .unwrap();
+        s
+    }
+}
+
+/// Write some `string` to `out`, centering it among `width` spaces (rounding to the right).
+fn write_centered_text(string: &str, width: usize, out: &mut String) {
+    let w = width.saturating_sub(string.len());
+    push_multiple(' ', w - (w / 2), out);
+    out.push_str(string);
+    push_multiple(' ', w / 2, out);
+}
+
+/// Push `n` copies of `c` to the end of `out`
+fn push_multiple(c: char, n: usize, out: &mut String) {
+    out.extend(std::iter::repeat(c).take(n));
 }
