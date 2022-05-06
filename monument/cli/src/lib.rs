@@ -21,6 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
 use monument::{Comp, Config, Progress, Query, QueryUpdate};
@@ -373,9 +374,8 @@ impl CompPrinter {
                     (max_width, mb.shorthand.clone())
                 })
                 .collect_vec(),
-            // TODO: Compress the PH by omitting fixed tenors (e.g. outputting `1342` instead of
-            // `13425678`)
-            part_head_width: (query.num_parts() > 2).then(|| query.part_head.stage().num_bells()),
+            part_head_width: (query.num_parts() > 2)
+                .then(|| query.part_head.effective_stage().num_bells()),
         }
     }
 
@@ -424,7 +424,7 @@ impl CompPrinter {
         s.push('|');
         // Part head (if >=3 parts)
         if self.part_head_width.is_some() {
-            write!(s, " {} |", comp.part_head()).unwrap();
+            write!(s, " {} |", ShortRow(&comp.part_head())).unwrap();
         }
         // total music score, avg score, call string
         write!(

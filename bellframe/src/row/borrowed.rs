@@ -997,6 +997,21 @@ impl Display for Row {
     }
 }
 
+/// New-type of a [`Row`] which displays that [`Row`], but with all the fixed 'cover bells'
+/// removed.  This will have the length of the [`effective_stage`](Row::effective_stage) of the
+/// [`Row`].
+pub struct ShortRow<'r>(pub &'r Row);
+
+impl Display for ShortRow<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let length = self.0.effective_stage().num_bells();
+        for b in self.0.bell_iter().take(length) {
+            write!(f, "{}", b)?;
+        }
+        Ok(())
+    }
+}
+
 /// A new-type over a [`Row`] which just displays the [`Bell`]s as its [`Debug`] implementation
 /// (i.e. the [`Debug`] impl of [`DbgRow`] is identical to the [`Display`] impl of [`Row`]).
 #[derive(Clone)]
