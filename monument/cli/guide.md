@@ -174,7 +174,8 @@ take you to more in-depth docs about it.
 - [`calls = []`](#calls-2)
 
 **Music:**
-- [`default_music = true`](#default_music) _(since v0.8.0)_
+- ~[`default_music = true`](#default_music)~ _(since v0.8.0, replaced by `base_music` in v0.9.0)_
+- [`base_music = "default"`](#base_music) _(since v0.9.0)_
 - [`music_file`](#music_file) (optional)
 - [`music = []`](#music-2)
 - [`start_stroke = "back"`](#start_stroke)
@@ -379,17 +380,29 @@ be spliced over a call).
 
 ### Music
 
-#### `default_music` _(since v0.8.0)_
+#### `default_music` _(since v0.8.0, replaced by `base_music` in v0.9.0)_
 
-If set to `true`, then a 'default' music profile is used if no custom music is specified.  **NOTE:**
-this defaults to `true`, so you have to explicitly set it to false.  The default music profiles are
-equivalent to importing the following music files:
+See `base_music`:
+- `default_music = false` is equivalent to `base_music = "none"`
+- `default_music = true` is equivalent to `base_music = "default"`
 
-- [Minor](src/default-music-minor.toml)
-- [Triples](src/default-music-triples.toml)
-- [Major](src/default-music-major.toml)
-- [Royal](src/default-music-royal.toml)
-- [Maximus](src/default-music-maximus.toml)
+#### `base_music`
+
+Like [`base_calls`](#base_calls), `base_music` adds a set of basic music definitions to the search.
+`base_music` has two values, the default being `base_music = "default"`:
+
+1. `base_music = "none"`:  Adds no music to the search; the only music will be what you explicitly
+   specify.
+2. `base_music = "default"`:  For most stages, this adds a basic music profile intended to be a sane
+   default for most music tastes.  This roughly follows the 'headline' music in CompLib (i.e. the
+   summary line shown below every composition.
+
+   The default music profiles are equivalent to importing the following music files:
+   - [Minor](src/default-music-minor.toml)
+   - [Triples](src/default-music-triples.toml)
+   - [Major](src/default-music-major.toml)
+   - [Royal](src/default-music-royal.toml)
+   - [Maximus](src/default-music-maximus.toml)
 
 #### `music_file`
 
@@ -412,6 +425,11 @@ weight = 2    # Score applied per instance of this music type.  Optional; defaul
 count = { min = 12, max = 24 } # Overall required count range
 stroke = "back" # On which stroke(s) to count this music.
                 # Options: "both" (default), "back", "hand".
+show = true # If `true`, display this music in the composition summary.
+            # Optional; defaults to `true`
+name = "87s at back" # If `show = true`, sets a custom name used in the summary output.
+                     # By default, Monument will decide how to display music (often combining
+                     # separate patterns together)
 ```
 
 #### `start_stroke`

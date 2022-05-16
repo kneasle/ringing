@@ -1,4 +1,4 @@
 length = "practice"
 method = "Plain Bob Major"
 bobs_only = true
-default_music = false
+base_music = "none"

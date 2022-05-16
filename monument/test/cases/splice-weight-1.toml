@@ -2,7 +2,7 @@ length = "practice"
 base_calls = "none"
 num_comps = 200
 leadwise = true # Check that this still works for leadwise
-default_music = false
+base_music = "none"
 
 methods = [
     "Cambridge Surprise Major",

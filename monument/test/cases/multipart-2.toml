@@ -1,5 +1,7 @@
 length = { min = 0, max = 2000 }
 method = "Yorkshire Surprise Major"
-music_file = "../music/8.toml"
 part_head = "1423"
 course_heads = ["*678"]
+
+base_music = "none"
+music_file = "../music/8.toml"

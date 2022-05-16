@@ -7,7 +7,7 @@ num_comps = 500 # 453 comps are possible, so asking for 500 will force Monument 
 method = "Plain Bob Major"
 split_tenors = true
 
-default_music = false
+base_music = "none"
 
 bob_weight = -4
 single_weight = -7

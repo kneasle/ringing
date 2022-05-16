@@ -1,4 +1,6 @@
 length = { min = 0, max = 500 }
 methods = ["Plain Bob Major", "Little Bob Major"]
 part_head = "13456782"
+
+base_music = "none"
 music_file = "../music/8.toml"
