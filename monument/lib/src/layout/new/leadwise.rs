@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use bellframe::{Mask, Row, RowBuf};
 use index_vec::IndexVec;
@@ -108,7 +108,7 @@ fn links(
         let lead = m.first_lead();
         let mut call_starts_for_this_method = HashMap::new();
         for (row_idx_after, annot_row_after) in lead.annot_rows().enumerate() {
-            if let Some(label) = annot_row_after.annot() {
+            for label in annot_row_after.annot() {
                 let row_idx_before = (row_idx_after + lead.len() - 1) % lead.len();
                 let row_before = lead.get_row(row_idx_before).unwrap();
                 let row_after_plain = lead.get_row(row_idx_before + 1).unwrap();
@@ -137,12 +137,16 @@ fn links(
     // Place calls between every `call_start` and every `call_end` of that lead label
     for call_starts_by_label in &call_starts {
         for (call_idx, call) in calls.iter_enumerated() {
-            let label = call.lead_location.as_str();
-
-            for start in &call_starts_by_label[label] {
+            // Some methods might not contain a lead location for every call (if e.g. you're using
+            // lead labels to control when calls can be placed), so we have to `map_or` to an empty
+            // array.
+            let starts = call_starts_by_label
+                .get(call.lead_location_from.as_str())
+                .map_or::<&[_], _>(&[], Vec::deref);
+            for start in starts {
                 let mut row_after_call = start.row_before.clone();
                 call.place_not.permute(&mut row_after_call).unwrap();
-                for end in &call_ends[label] {
+                for end in &call_ends[call.lead_location_to.as_str()] {
                     // Call
                     links.push(Link {
                         from: start.row_idx,

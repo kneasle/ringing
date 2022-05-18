@@ -372,7 +372,7 @@ impl Spec {
     ) -> anyhow::Result<()> {
         let sorted_calls = call_specs
             .iter()
-            .map(|call| (get_symbol(call), &call.lead_location, &call.place_not))
+            .map(|call| (get_symbol(call), &call.lead_location_from, &call.place_not))
             .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
         for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in
             sorted_calls.tuple_windows()
@@ -557,13 +557,28 @@ pub struct MethodCommon {
     /// Optional override for method count range
     #[serde(default, rename = "count")]
     count_range: RangeInclusive,
-    /// The inputs to this map are numerical strings representing sub-lead indices, and the
-    /// outputs are the lead location names
-    lead_locations: Option<HashMap<String, String>>,
+    /// Maps labels to where in the lead they occur
+    lead_locations: Option<HashMap<String, LeadLocations>>,
     /// Custom set of course head masks for this method
     course_heads: Option<Vec<String>>,
     start_indices: Option<Vec<isize>>,
     end_indices: Option<Vec<isize>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum LeadLocations {
+    JustOne(isize),
+    Many(Vec<isize>),
+}
+
+impl LeadLocations {
+    fn as_slice(&self) -> &[isize] {
+        match self {
+            Self::JustOne(idx) => std::slice::from_ref(idx),
+            Self::Many(indices) => indices,
+        }
+    }
 }
 
 impl MethodSpec {
@@ -590,19 +605,13 @@ impl MethodSpec {
             }
         }
 
-        for (index_str, name) in self.get_lead_locations() {
-            let index = index_str.parse::<isize>().map_err(|_| {
-                anyhow::Error::msg(format!(
-                    "Lead location {:?} (for label {:?} in {:?}) is not a valid integer",
-                    index_str,
-                    name,
-                    method.title()
-                ))
-            })?;
-            let lead_len = method.lead_len() as isize;
-            let wrapped_index = ((index % lead_len) + lead_len) % lead_len;
-            // This cast is OK because we used % twice to guarantee a positive index
-            method.set_label(wrapped_index as usize, Some(name.clone()));
+        let lead_len = method.lead_len() as isize;
+        for (name, locations) in self.get_lead_locations() {
+            for l in locations.as_slice() {
+                let wrapped_index = ((l % lead_len) + lead_len) % lead_len;
+                // This cast is OK because we used % twice to guarantee a positive index
+                method.add_label(wrapped_index as usize, name.clone());
+            }
         }
 
         let common = self
@@ -619,7 +628,7 @@ impl MethodSpec {
         }
     }
 
-    fn get_lead_locations(&self) -> HashMap<String, String> {
+    fn get_lead_locations(&self) -> HashMap<String, LeadLocations> {
         self.common()
             .and_then(|c| c.lead_locations.clone())
             .unwrap_or_else(default_lead_labels)
@@ -1019,10 +1028,9 @@ fn backstroke() -> Stroke {
 }
 
 /// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
-#[inline]
-fn default_lead_labels() -> HashMap<String, String> {
+fn default_lead_labels() -> HashMap<String, LeadLocations> {
     let mut labels = HashMap::new();
-    labels.insert("0".to_owned(), LABEL_LEAD_END.to_owned());
+    labels.insert(LABEL_LEAD_END.to_owned(), LeadLocations::JustOne(0));
     labels
 }
 

@@ -85,18 +85,6 @@ method = "Corwnall Surprise major" # TODO: Maybe we shouldn't display a diff for
 
 
 
-## misc-method-parsing
-
-### non-integer-lead-index
-```toml
-length = "QP"
-[method]
-title = "Bristol Surprise Royal"
-lead_locations = { X = "LE" } # 'X' isn't a valid integer
-```
-
-
-
 ## no-methods
 ```toml
 length = "QP"
@@ -276,7 +264,7 @@ on the half-lead:
 ```toml
 length = "practice"
 method.title = "Bristol Surprise Major"
-method.lead_locations = { 0 = "LE", 16 = "HL" }
+method.lead_locations = { LE = 0, HL = 16 }
 default_music = false
 
 [[calls]]

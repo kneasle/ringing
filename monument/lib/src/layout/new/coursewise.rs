@@ -133,7 +133,7 @@ fn call_starts_by_label(methods: &[super::Method]) -> HashMap<&str, Vec<RowIdx>>
         // ... for every labelled row ...
         let course_len = d.plain_course.len();
         for (row_idx, annot) in d.plain_course.annots().enumerate() {
-            if let Some(label) = &annot.label {
+            for label in &annot.labels {
                 // ... mark that a similarly-labelled call could be called just before this label
                 let call_start_idx = (row_idx + course_len - 1) % course_len;
 
@@ -169,7 +169,7 @@ fn call_ends(methods: &[super::Method]) -> Vec<CallEnd> {
     for (method_idx, d) in methods.iter().enumerate() {
         // ... for every labelled row in the plain course ...
         for (row_idx, annot_row) in d.plain_course.annot_rows().enumerate() {
-            if annot_row.annot().label.is_some() {
+            if !annot_row.annot().labels.is_empty() {
                 let row_after_call = annot_row.row();
                 // ... for every course head mask ...
                 for (ch_mask_idx, ch_mask) in d.ch_masks.iter().enumerate() {
@@ -274,7 +274,7 @@ fn generate_call_links(
 ) -> Result<()> {
     // Test every call in every valid position in the course ...
     for (call_idx, call) in calls.iter_enumerated() {
-        let lead_label = call.lead_location.as_str();
+        let lead_label = call.lead_location_from.as_str();
         let call_starts = link_gen_data
             .call_starts_by_label
             .get(lead_label)

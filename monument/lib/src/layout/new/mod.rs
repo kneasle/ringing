@@ -5,7 +5,10 @@ use std::{
     ops::Range,
 };
 
-use bellframe::{method::RowAnnot, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage};
+use bellframe::{
+    method::{RowAnnot, LABEL_LEAD_END},
+    Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage,
+};
 use itertools::Itertools;
 
 use crate::{CallVec, SpliceStyle};
@@ -273,14 +276,14 @@ impl std::ops::Deref for Method {
 #[derive(Debug, Clone)]
 struct Annot {
     sub_lead_idx: usize,
-    label: Option<String>,
+    labels: Vec<String>,
 }
 
 impl From<RowAnnot<'_>> for Annot {
     fn from(a: RowAnnot) -> Self {
         Self {
-            sub_lead_idx: a.sub_lead_idx(),
-            label: a.label().map(str::to_owned),
+            sub_lead_idx: a.sub_lead_idx,
+            labels: a.labels.to_owned(),
         }
     }
 }
@@ -296,7 +299,8 @@ pub struct Call {
     pub debug_symbol: String,
     pub calling_positions: Vec<String>,
 
-    pub lead_location: String,
+    pub lead_location_from: String,
+    pub lead_location_to: String,
     pub place_not: PlaceNot,
 
     pub weight: f32,
@@ -340,7 +344,8 @@ impl Call {
             display_symbol: String::new(),
             debug_symbol: "-".to_owned(),
             calling_positions: default_calling_positions(&place_not),
-            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
+            lead_location_from: LABEL_LEAD_END.to_owned(),
+            lead_location_to: LABEL_LEAD_END.to_owned(),
             place_not,
             weight: -1.8, // Slightly punish bobs
         }
@@ -352,7 +357,8 @@ impl Call {
             display_symbol: "s".to_owned(),
             debug_symbol: "s".to_owned(),
             calling_positions: default_calling_positions(&place_not),
-            lead_location: bellframe::method::LABEL_LEAD_END.to_owned(),
+            lead_location_from: LABEL_LEAD_END.to_owned(),
+            lead_location_to: LABEL_LEAD_END.to_owned(),
             place_not,
             weight: -2.3, // Punish singles slightly more than bobs
         }

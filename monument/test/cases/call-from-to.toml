@@ -1,0 +1,25 @@
+# Like Leary's 23, these comps use `14` bobs only in 2nds place methods and `16` bobs only in 8ths
+# place methods.
+
+length = "QP"
+methods = [
+    { title = "Yorkshire Surprise Major",   lead_locations = { LE = 0, 2nds = 0 } },
+    { title = "Superlative Surprise Major", lead_locations = { LE = 0, 2nds = 0 } },
+    { title = "Bristol Surprise Major",     lead_locations = { LE = 0, 8ths = 0 } },
+    { title = "Deva Surprise Major",        lead_locations = { LE = 0, 8ths = 0 } },
+]
+method_count = { min = 224, max = 448 }
+
+part_head = "13456782"
+
+base_calls = "none" # Only use our own custom calls
+[[calls]]
+symbol = ""
+debug_symbol = "-"
+place_notation = "14"
+lead_location = { from = "2nds", to = "LE" }
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+lead_location = { from = "8ths", to = "LE" }
