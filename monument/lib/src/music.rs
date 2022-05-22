@@ -11,11 +11,11 @@ pub type Score = OrderedFloat<f32>;
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
 pub struct MusicType {
-    regexes: Vec<Regex>,
-    weight: Score,
-    count_range: OptRange,
-    non_duffer: bool,
-    stroke_set: StrokeSet,
+    pub regexes: Vec<Regex>,
+    pub weight: Score,
+    pub count_range: OptRange,
+    pub non_duffer: bool,
+    pub stroke_set: StrokeSet,
 }
 
 impl MusicType {
@@ -24,31 +24,25 @@ impl MusicType {
         weight: f32,
         count_range: OptRange,
         non_duffer: bool,
-        strokes: StrokeSet,
+        stroke_set: StrokeSet,
     ) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
             non_duffer,
-            stroke_set: strokes,
+            stroke_set,
         }
     }
 
-    pub fn count_range(&self) -> OptRange {
-        self.count_range
-    }
-
-    pub fn non_duffer(&self) -> bool {
-        self.non_duffer
-    }
-
-    pub fn stroke_set(&self) -> StrokeSet {
-        self.stroke_set
-    }
-
-    pub fn weight(&self) -> OrderedFloat<f32> {
-        self.weight
+    /// Return the total number of possible instances of this music type, or `None` if the
+    /// computation caused `usize` to overflow.
+    pub fn max_count(&self, stage: Stage) -> Option<usize> {
+        let mut sum = 0;
+        for r in &self.regexes {
+            sum += r.num_matching_rows(stage)?;
+        }
+        Some(sum)
     }
 }
 

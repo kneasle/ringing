@@ -211,7 +211,7 @@ impl Comp {
         self.music_counts
             .iter()
             .zip_eq(&self.query.music_types)
-            .map(|(count, music_type)| f32::from(music_type.weight()) * *count as f32)
+            .map(|(count, music_type)| f32::from(music_type.weight) * *count as f32)
             .sum::<f32>()
     }
 }
