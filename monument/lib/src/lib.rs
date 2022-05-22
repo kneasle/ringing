@@ -50,6 +50,7 @@ pub struct Query {
     pub splice_weight: f32,
 
     pub music_types: MusicTypeVec<music::MusicType>,
+    pub music_displays: Vec<music::MusicDisplay>,
     pub start_stroke: Stroke,
     pub max_duffer_rows: Option<usize>,
 }

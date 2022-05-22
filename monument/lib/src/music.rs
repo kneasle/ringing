@@ -1,6 +1,9 @@
 use std::ops::{Add, AddAssign};
 
-use crate::utils::{Counts, OptRange};
+use crate::{
+    utils::{Counts, OptRange},
+    MusicTypeIdx,
+};
 use bellframe::{music::Regex, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
@@ -147,8 +150,53 @@ impl AddAssign<&Breakdown> for Breakdown {
     }
 }
 
+///////////////////
+// MUSIC DISPLAY //
+///////////////////
+
+/// How music counts can be displayed.  This could take its counts from multiple [`MusicType`]s,
+/// and takes a few forms:
+/// 1. Just a total count: e.g. `*5678: 23`
+/// 2. Just a breakdown: e.g. `5678s: 24f,81i,24b`
+/// 3. A breakdown and a total count: e.g. `4-runs: 312 (73f,132i,107b)`
+///
+/// Setting all sources to `None` is allowed, but will cause nothing to be displayed.
+#[derive(Debug, Clone)]
+pub struct MusicDisplay {
+    /// The name used to identify this type of music
+    pub name: String,
+
+    /// The index of the [`MusicType`] which provides the total count
+    pub source_total: Option<MusicTypeIdx>,
+
+    /// The index of the [`MusicType`] which provides the count off the front
+    pub source_front: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the internal count
+    pub source_internal: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the count off the back
+    pub source_back: Option<MusicTypeIdx>,
+}
+
+impl MusicDisplay {
+    /// Creates a new [`MusicDisplay`] with no corresponding [`MusicType`]s
+    pub fn empty(name: String) -> Self {
+        Self {
+            name,
+            source_total: None,
+            source_front: None,
+            source_internal: None,
+            source_back: None,
+        }
+    }
+}
+
+////////////////
+// STROKE SET //
+////////////////
+
+/// A set of at least one [`Stroke`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(rename_all = "snake_case")]
 pub enum StrokeSet {
     Hand,
     Back,

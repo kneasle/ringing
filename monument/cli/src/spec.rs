@@ -252,6 +252,8 @@ impl Spec {
             self.leadwise,
         )?;
 
+        let (music_types, music_displays) = self.music(source, stage)?;
+
         // Build this layout into a `Graph`
         Ok(Query {
             layout,
@@ -265,17 +267,18 @@ impl Spec {
             ch_weights,
             splice_weight: self.splice_weight,
 
-            music_types: self.music_types(source, stage)?,
+            music_types,
+            music_displays,
             start_stroke: self.start_stroke,
             max_duffer_rows: self.max_duffer_rows,
         })
     }
 
-    fn music_types(
+    fn music(
         &self,
         source: &Source,
         stage: Stage,
-    ) -> anyhow::Result<MusicTypeVec<MusicType>> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>)> {
         // Compute the explicitly mentioned music types
         let mut music_types = self
             .music
@@ -346,7 +349,9 @@ impl Spec {
                 ),
             }
         }
-        Ok(music_types.into_iter().map(|(t, _)| t).collect())
+
+        // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
+        Ok(compute_music_displays(music_types))
     }
 
     fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<Call>> {
@@ -891,7 +896,7 @@ impl Default for MusicCommon {
 
 impl MusicSpec {
     /// Generates a [`MusicType`] representing `self`.
-    fn to_music_types(&self, stage: Stage) -> Vec<(MusicType, Option<MusicDisplay>)> {
+    fn to_music_types(&self, stage: Stage) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
         match self {
             Self::RunLength {
                 length,
@@ -922,7 +927,7 @@ fn music_type_runs(
     internal: bool,
     common: &MusicCommon,
     stage: Stage,
-) -> Vec<(MusicType, Option<MusicDisplay>)> {
+) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
     let mut music_types = Vec::new();
 
     // Create individual `MusicType`s if needed for the breakdown.  The breakdown will be displayed
@@ -943,7 +948,7 @@ fn music_type_runs(
                 // Add `MusicType` for the front/back/internal count
                 music_types.push((
                     MusicType::new(regexes.clone(), common.strokes, 0.0, OptRange::default()),
-                    Some(MusicDisplay {
+                    Some(MusicTypeDisplay {
                         full_name: String::new(),
                         pattern: Some((pattern_name.clone(), position)),
                     }),
@@ -966,7 +971,7 @@ fn music_type_runs(
                     common.weight,
                     OptRange::default(),
                 ),
-                Some(MusicDisplay {
+                Some(MusicTypeDisplay {
                     full_name: String::new(),
                     pattern: Some((pattern_name, PatternPosition::Anywhere)),
                 }),
@@ -1003,7 +1008,7 @@ fn music_type_patterns(
     count_each: OptRangeInclusive,
     common: &MusicCommon,
     stage: Stage,
-) -> Vec<(MusicType, Option<MusicDisplay>)> {
+) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
     let regexes = patterns.iter().map(|s| Regex::parse(s, stage));
     let individual_count = OptRange::from(count_each);
     let combined_count = OptRange::from(common.count_range);
@@ -1014,7 +1019,7 @@ fn music_type_patterns(
     if individual_count.is_set() || (common.show && common.name.is_none()) {
         types.extend(regexes.clone().map(|regex| {
             let name = match (common.show, &common.name) {
-                (true, None) => Some(MusicDisplay::from_regex(&regex)),
+                (true, None) => Some(MusicTypeDisplay::from_regex(&regex)),
                 // If `show = true` and `name` is set, then this group *as a whole* will be named
                 (true, Some(_)) => None,
                 (false, _) => None, // If `show = false`, then no names are generated
@@ -1029,7 +1034,7 @@ fn music_type_patterns(
     // Create a single music type for the whole group
     if types.is_empty() || combined_count.is_set() || (common.show && common.name.is_some()) {
         let name = match (common.show, &common.name) {
-            (true, Some(name)) => Some(MusicDisplay::with_custom_name(name)),
+            (true, Some(name)) => Some(MusicTypeDisplay::with_custom_name(name)),
             // If `common.show = true` but `common.name` is not set, then the regexes will be named
             // individually
             (true, None) => None,
@@ -1051,9 +1056,9 @@ fn music_type_patterns(
     types
 }
 
-/// The name given to a [`MusicType`]
+/// The way a [`MusicType`] should be displayed
 #[derive(Debug, Clone)]
-struct MusicDisplay {
+struct MusicTypeDisplay {
     /// A specific full name given to this [`MusicType`], used when this row isn't part of a
     /// combined pattern.  Usually this is the compressed regex (e.g. `*5678`) or a specific name,
     /// like `"87s at back"` or `"Queens"`.
@@ -1074,7 +1079,7 @@ enum PatternPosition {
     Anywhere,
 }
 
-impl MusicDisplay {
+impl MusicTypeDisplay {
     fn with_custom_name(name: &str) -> Self {
         Self {
             full_name: name.to_owned(),
@@ -1188,6 +1193,111 @@ impl MusicDisplay {
         pattern_string.extend(std::iter::repeat('x').take(xs_back));
         Some((pattern_string, position))
     }
+}
+
+/// Given a list of [`MusicType`]s annotated with how to display each of them (i.e. a
+/// [`MusicTypeDisplay`]), provide an independent list of [`monument::music::MusicDisplay`]s, which
+/// describe how to display **all** the [`MusicType`]s.
+///
+/// This generates a more compact output by combining the same pattern in different locations (e.g.
+/// 4-bell runs/5678s/6578s can be either front/internal/back).
+fn compute_music_displays(
+    annot_music_types: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
+) -> (MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>) {
+    use monument::music::MusicDisplay;
+
+    let num_music_types = annot_music_types.len();
+
+    // Create an initial set of `MusicDisplay`s by grouping equivalent patterns into the same
+    // `MusicDisplay`
+    let mut music_types = MusicTypeVec::new();
+    let mut music_displays = Vec::<MusicDisplay>::new();
+    for (music_type_idx, (music_type, music_type_display)) in
+        annot_music_types.into_iter_enumerated()
+    {
+        if let Some(MusicTypeDisplay { full_name, pattern }) = music_type_display {
+            match pattern {
+                Some((pattern_name, position)) => {
+                    // Display this pattern as `{pattern_name}s` (e.g. a pattern of "5678" will be
+                    // displayed as "5678s").
+                    let mut display_name = pattern_name;
+                    display_name.push('s');
+                    // Find or create a `MusicDisplay` with this `pattern_name`
+                    let music_display_idx = music_displays
+                        .iter()
+                        .position(|d| d.name == display_name)
+                        .unwrap_or_else(|| {
+                            music_displays.push(MusicDisplay::empty(display_name.clone()));
+                            music_displays.len() - 1 // Index of the new `MusicDisplay`
+                        });
+                    let music_display = &mut music_displays[music_display_idx];
+                    assert_eq!(music_display.name, display_name);
+                    // Depending on this pattern's position in the row, set this `MusicType` to
+                    // contribute the corresponding total
+                    let source = match position {
+                        PatternPosition::Front => &mut music_display.source_front,
+                        PatternPosition::Internal => &mut music_display.source_internal,
+                        PatternPosition::Back => &mut music_display.source_back,
+                        PatternPosition::Anywhere => &mut music_display.source_total,
+                    };
+                    *source = Some(music_type_idx);
+                }
+                // If this pattern has no position, we always create a new [`MusicDisplay`] with
+                // this [`MusicType`] as the total
+                None => music_displays.push(MusicDisplay {
+                    name: full_name,
+                    source_total: Some(music_type_idx),
+                    source_front: None,
+                    source_internal: None,
+                    source_back: None,
+                }),
+            }
+        }
+
+        // Add every music type, even if it's not displayed
+        music_types.push(music_type);
+    }
+
+    assert_eq!(music_types.len(), num_music_types); // Check that no `MusicType`s got missed
+
+    // These music types may contain degenerate cases, like patterns which only appear in one
+    // position within the row.  Here, we filter those out and replace them with an equivalent
+    // `MusicDisplay` with just a total
+    for music_display in &mut music_displays {
+        if music_display.source_total.is_some() {
+            continue; // Skip any music displays which already have a total
+        }
+
+        // Decide which (if any) of the front/internal/back sources need to be replaced
+        let (source, position) = match (
+            &mut music_display.source_front,
+            &mut music_display.source_internal,
+            &mut music_display.source_back,
+        ) {
+            (Some(source), None, None) => (source, PatternPosition::Front),
+            (None, Some(source), None) => (source, PatternPosition::Internal),
+            (None, None, Some(source)) => (source, PatternPosition::Back),
+            _ => continue,
+        };
+
+        // Move this front/internal/back source to become the total
+        music_display.source_total = Some(*source);
+        // Clear all the other sources (including the one we took the source from)
+        music_display.source_back = None;
+        music_display.source_internal = None;
+        music_display.source_back = None;
+        // Modify the name
+        let mut pattern = std::mem::take(&mut music_display.name);
+        assert_eq!(pattern.pop(), Some('s')); // The name was the pattern with 's' at the end
+        music_display.name = match position {
+            PatternPosition::Front => format!("{pattern}*"),
+            PatternPosition::Internal => format!("x*{pattern}*x"),
+            PatternPosition::Back => format!("*{pattern}"),
+            PatternPosition::Anywhere => unreachable!(),
+        };
+    }
+
+    (music_types, music_displays)
 }
 
 /////////////
@@ -1425,7 +1535,7 @@ mod length {
 mod tests {
     use bellframe::{music::Regex, Stage};
 
-    use super::{MusicDisplay, PatternPosition};
+    use super::{MusicTypeDisplay, PatternPosition};
 
     #[test]
     fn extract_regex_pattern() {
@@ -1437,7 +1547,7 @@ mod tests {
             expected_position: PatternPosition,
         ) {
             let regex = Regex::parse(regex_str, stage);
-            let (actual_pattern, actual_position) = MusicDisplay::pattern(&regex).unwrap();
+            let (actual_pattern, actual_position) = MusicTypeDisplay::pattern(&regex).unwrap();
             assert_eq!(actual_pattern, expected_pattern);
             assert_eq!(actual_position, expected_position);
         }
@@ -1471,7 +1581,10 @@ mod tests {
     fn extract_regex_no_pattern() {
         #[track_caller]
         fn check_no_pattern(regex_str: &str, stage: Stage) {
-            assert_eq!(MusicDisplay::pattern(&Regex::parse(regex_str, stage)), None);
+            assert_eq!(
+                MusicTypeDisplay::pattern(&Regex::parse(regex_str, stage)),
+                None
+            );
         }
 
         check_no_pattern("x2*3x", Stage::MAJOR);
