@@ -65,7 +65,7 @@ pub struct Spec {
     splice_style: SpliceStyle,
     /// Bounds on how many rows of each method is allowed
     #[serde(default)]
-    method_count: RangeInclusive,
+    method_count: OptRangeInclusive,
     /// Score which is applied for every change of method.  Defaults to `0.0`
     #[serde(default)]
     splice_weight: f32,
@@ -556,7 +556,7 @@ pub struct MethodCommon {
 
     /// Optional override for method count range
     #[serde(default, rename = "count")]
-    count_range: RangeInclusive,
+    count_range: OptRangeInclusive,
     /// Maps labels to where in the lead they occur
     lead_locations: Option<HashMap<String, LeadLocations>>,
     /// Custom set of course head masks for this method
@@ -834,7 +834,7 @@ pub enum MusicSpec {
         pattern: String,
         /// For each pattern, which music counts are allowed
         #[serde(default)]
-        count_each: RangeInclusive,
+        count_each: OptRangeInclusive,
         #[serde(flatten)]
         common: MusicCommon,
     },
@@ -842,7 +842,7 @@ pub enum MusicSpec {
         patterns: Vec<String>,
         /// For each pattern, which music counts are allowed
         #[serde(default)]
-        count_each: RangeInclusive,
+        count_each: OptRangeInclusive,
         #[serde(flatten)]
         common: MusicCommon,
     },
@@ -855,7 +855,7 @@ pub struct MusicCommon {
     weight: f32,
     /// Possibly unbounded range of counts which are allowed in this music type
     #[serde(rename = "count", default)]
-    count_range: RangeInclusive,
+    count_range: OptRangeInclusive,
     /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
     non_duffer: Option<bool>,
     /// Which strokes this music can apply to
@@ -867,7 +867,7 @@ impl Default for MusicCommon {
     fn default() -> Self {
         Self {
             weight: 1.0,
-            count_range: RangeInclusive::default(),
+            count_range: OptRangeInclusive::default(),
             non_duffer: None,
             strokes: StrokeSet::Both,
         }
@@ -881,7 +881,7 @@ impl MusicSpec {
             /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
             Runs(&'_self [u8], &'_self bool),
             /// Equivalent to [`Self::Pattern`] or [`Self::Pattern`]
-            Patterns(&'_self [String], &'_self RangeInclusive),
+            Patterns(&'_self [String], &'_self OptRangeInclusive),
         }
 
         use std::slice::from_ref;
@@ -973,7 +973,7 @@ impl MusicSpec {
 /// (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
-pub enum RangeInclusive {
+pub enum OptRangeInclusive {
     SingleNumber(usize),
     Range {
         min: Option<usize>,
@@ -981,7 +981,7 @@ pub enum RangeInclusive {
     },
 }
 
-impl Default for RangeInclusive {
+impl Default for OptRangeInclusive {
     fn default() -> Self {
         Self::Range {
             min: None,
@@ -990,11 +990,11 @@ impl Default for RangeInclusive {
     }
 }
 
-impl From<RangeInclusive> for OptRange {
-    fn from(r: RangeInclusive) -> Self {
+impl From<OptRangeInclusive> for OptRange {
+    fn from(r: OptRangeInclusive) -> Self {
         let (min, max) = match r {
-            RangeInclusive::SingleNumber(n) => (Some(n), Some(n)),
-            RangeInclusive::Range { min, max } => (min, max),
+            OptRangeInclusive::SingleNumber(n) => (Some(n), Some(n)),
+            OptRangeInclusive::Range { min, max } => (min, max),
         };
         OptRange { min, max }
     }
