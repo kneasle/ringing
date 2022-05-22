@@ -49,7 +49,7 @@ pub struct Query {
     pub ch_weights: Vec<(Mask, f32)>,
     pub splice_weight: f32,
 
-    pub music_types: Vec<music::MusicType>,
+    pub music_types: MusicTypeVec<music::MusicType>,
     pub start_stroke: Stroke,
     pub max_duffer_rows: Option<usize>,
 }
@@ -393,4 +393,6 @@ impl Default for Progress {
 }
 
 index_vec::define_index_type! { pub struct CallIdx = usize; }
+index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
 pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

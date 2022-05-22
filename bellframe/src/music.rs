@@ -174,6 +174,37 @@ impl Regex {
         runs
     }
 
+    /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    pub fn runs_internal(stage: Stage, len: u8) -> Vec<Self> {
+        let num_bells = stage.num_bells_u8();
+        if num_bells < len {
+            return vec![];
+        }
+
+        let mut runs = Vec::with_capacity((num_bells as usize).saturating_sub(3) * 2);
+        // Iterate over every bell which could start a run
+        for i in 0..=num_bells - len {
+            // An iterator that yields the bells forming this run in ascending order
+            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+
+            // The unsafety is OK because all the input patterns are normalised
+
+            // Descending runs (e.g. `x*1234x*`)
+            let mut desc_elems = vec![RegexElem::Any, RegexElem::Glob];
+            desc_elems.extend(run_iterator.clone());
+            desc_elems.extend([RegexElem::Any, RegexElem::Glob]);
+            runs.push(unsafe { Self::from_vec_unchecked(desc_elems, stage) });
+            // Ascending runs (e.g. `x*4321x*`)
+            let mut asc_elems = vec![RegexElem::Any, RegexElem::Glob];
+            asc_elems.extend(run_iterator.rev());
+            asc_elems.extend([RegexElem::Any, RegexElem::Glob]);
+            runs.push(unsafe { Self::from_vec_unchecked(asc_elems, stage) });
+        }
+
+        runs
+    }
+
     /// Creates a set of `Regex`es which match runs of a given length off the **back** of a
     /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
     pub fn runs_back(stage: Stage, len: u8) -> Vec<Self> {

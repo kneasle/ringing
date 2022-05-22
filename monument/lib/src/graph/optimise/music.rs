@@ -90,7 +90,6 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     // chunk is removed.
     if no_required_chunks {
         log::warn!("No required chunks made");
-        todo!();
     }
 }
 

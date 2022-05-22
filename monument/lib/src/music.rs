@@ -12,25 +12,26 @@ pub type Score = OrderedFloat<f32>;
 #[derive(Debug, Clone)]
 pub struct MusicType {
     pub regexes: Vec<Regex>,
+    pub strokes: StrokeSet,
+
     pub weight: Score,
     pub count_range: OptRange,
     pub non_duffer: bool,
-    pub stroke_set: StrokeSet,
 }
 
 impl MusicType {
     pub fn new(
         regexes: Vec<Regex>,
+        stroke_set: StrokeSet,
         weight: f32,
         count_range: OptRange,
-        stroke_set: StrokeSet,
     ) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
             non_duffer: false, // TODO: Implement non-duffers properly
-            stroke_set,
+            strokes: stroke_set,
         }
     }
 
@@ -77,7 +78,7 @@ impl Breakdown {
             course_head.mul_into(r, &mut temp_row).unwrap();
             // ... for every music type ...
             for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
-                if ty.stroke_set.contains(start_stroke.offset(idx)) {
+                if ty.strokes.contains(start_stroke.offset(idx)) {
                     // ... count the number of instances of that type of music
                     for regex in &ty.regexes {
                         if regex.matches(&temp_row) {
