@@ -36,11 +36,13 @@ impl Mask {
     }
 
     pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, ParseError> {
-        Self::from_regex(&Regex::parse(s), stage)
+        Self::from_regex(&Regex::parse(s, stage))
     }
 
     /// Convert a [`Regex`] into a `Mask`, expanding one `*` if it exists.
-    pub fn from_regex(regex: &Regex, stage: Stage) -> Result<Self, RegexToMaskError> {
+    pub fn from_regex(regex: &Regex) -> Result<Self, RegexToMaskError> {
+        let stage = regex.stage();
+
         // Validate the regex
         let num_elems = regex.elems().len();
         let num_globs = regex
@@ -428,6 +430,7 @@ impl From<Mask> for Regex {
             mask.bells
                 .iter()
                 .map(|b| b.map_or(RegexElem::Any, RegexElem::Bell)),
+            mask.stage(),
         )
     }
 }
@@ -441,7 +444,7 @@ mod tests {
         #[track_caller]
         fn check_ok(regex: &str, num_bells: u8, mask: &str) {
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex), Stage::new(num_bells)),
+                Mask::from_regex(&Regex::parse(regex, Stage::new(num_bells))),
                 Ok(Mask::parse(mask))
             );
         }
@@ -449,7 +452,7 @@ mod tests {
         fn check_err_exceeds_stage(regex: &str, num_bells: u8, bell: char) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex), stage),
+                Mask::from_regex(&Regex::parse(regex, stage)),
                 Err(RegexToMaskError::BellExceedsStage(
                     Bell::from_name(bell).unwrap(),
                     stage
@@ -460,7 +463,7 @@ mod tests {
         fn check_err_multiple_globs(regex: &str, num_bells: u8) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex), stage),
+                Mask::from_regex(&Regex::parse(regex, stage)),
                 Err(RegexToMaskError::MultipleGlobs)
             );
         }
@@ -468,7 +471,7 @@ mod tests {
         fn check_err_mismatched_length(regex: &str, num_bells: u8, length: usize) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex), stage),
+                Mask::from_regex(&Regex::parse(regex, stage)),
                 Err(RegexToMaskError::MismatchedLength(length, stage))
             );
         }

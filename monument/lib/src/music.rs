@@ -37,10 +37,10 @@ impl MusicType {
 
     /// Return the total number of possible instances of this music type, or `None` if the
     /// computation caused `usize` to overflow.
-    pub fn max_count(&self, stage: Stage) -> Option<usize> {
+    pub fn max_count(&self) -> Option<usize> {
         let mut sum = 0;
         for r in &self.regexes {
-            sum += r.num_matching_rows(stage)?;
+            sum += r.num_matching_rows()?;
         }
         Some(sum)
     }

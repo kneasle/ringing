@@ -485,13 +485,12 @@ impl Spec {
                 let left_bell = right_bell + 1;
                 // For every handbell pair, we need patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
-                    let regex = Regex::from_elems([
-                        RegexElem::Glob,
-                        RegexElem::Bell(b1),
-                        RegexElem::Bell(b2),
-                    ]);
-                    let mask = Mask::from_regex(&regex, stage)
-                        .expect("Handbell patterns should always be valid");
+                    let regex = Regex::from_elems(
+                        [RegexElem::Glob, RegexElem::Bell(b1), RegexElem::Bell(b2)],
+                        stage,
+                    );
+                    let mask =
+                        Mask::from_regex(&regex).expect("Handbell patterns should always be valid");
                     add_ch_pattern(&mask, self.handbell_coursing_weight);
                 }
             }
@@ -928,7 +927,7 @@ impl MusicSpec {
                 )]
             }
             LoweredType::Patterns(patterns, count_each) => {
-                let regexes = patterns.iter().map(|s| Regex::parse(s));
+                let regexes = patterns.iter().map(|s| Regex::parse(s, stage));
                 let count_each = OptRange::from(*count_each);
                 let count_range = OptRange::from(common.count_range);
                 if count_each.is_set() {
