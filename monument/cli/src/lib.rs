@@ -63,7 +63,7 @@ pub fn run(
 
     // Convert the `Spec` into a `Layout` and other data required for running a search
     log::debug!("Generating query");
-    let query = spec.lower(&source)?;
+    let query = Arc::new(spec.lower(&source)?);
     debug_print!(Query, query);
     debug_print!(Layout, &query.layout);
 
@@ -72,7 +72,6 @@ pub fn run(
         .unoptimised_graph(config)
         .map_err(|e| anyhow::Error::msg(graph_build_err_msg(e)))?;
     debug_print!(Graph, graph);
-    let comp_printer = CompPrinter::new(&query);
     let optimised_graphs = query.optimise_graph(graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
@@ -81,6 +80,7 @@ pub fn run(
     // Thread-safe data for the query engine
     let abort_flag = Arc::new(AtomicBool::new(false));
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
+    let comp_printer = CompPrinter::new(query.clone());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     // Run the search
@@ -100,7 +100,7 @@ pub fn run(
         }
     };
     Query::search(
-        Arc::new(query),
+        query,
         optimised_graphs,
         config,
         on_find_comp,
@@ -227,6 +227,7 @@ fn graph_build_err_msg(e: monument::graph::BuildError) -> String {
 /// search progresses.
 struct SingleLineProgressLogger {
     comp_printer: CompPrinter,
+    is_first_comp: bool,
 
     last_progress: Progress,
     is_truncating_queue: bool,
@@ -240,6 +241,7 @@ impl SingleLineProgressLogger {
     fn new(comp_printer: CompPrinter) -> Self {
         Self {
             comp_printer,
+            is_first_comp: true,
 
             last_progress: Progress::START,
             is_truncating_queue: false,
@@ -263,6 +265,13 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let Some(c) = &comp {
+            if self.is_first_comp {
+                update_string.push_str(&self.comp_printer.header());
+                update_string.push('\n');
+                update_string.push_str(&self.comp_printer.ruleoff());
+                update_string.push('\n');
+                self.is_first_comp = false;
+            }
             update_string.push_str(&self.comp_printer.comp_string(c));
             update_string.push('\n');
         }
@@ -346,6 +355,8 @@ impl SingleLineProgressLogger {
 
 #[derive(Debug, Clone)]
 struct CompPrinter {
+    query: Arc<Query>,
+
     /// For each method in the composition:
     /// ```text
     /// (
@@ -356,11 +367,18 @@ struct CompPrinter {
     method_counts: Vec<(usize, String)>,
     /// If a part head should be displayed, then what's its width
     part_head_width: Option<usize>,
+    /// The column widths of every `MusicDisplay` in the output
+    music_widths: Vec<usize>,
 }
 
 impl CompPrinter {
-    fn new(query: &Query) -> Self {
+    fn new(query: Arc<Query>) -> Self {
         Self {
+            music_widths: query
+                .music_displays
+                .iter()
+                .map(|d| d.col_width(&query.music_types))
+                .collect_vec(),
             method_counts: query
                 .layout
                 .method_blocks
@@ -376,6 +394,8 @@ impl CompPrinter {
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
                 .then(|| query.part_head.effective_stage().num_bells()),
+
+            query,
         }
     }
 
@@ -396,7 +416,7 @@ impl CompPrinter {
         if self.method_counts.len() > 1 {
             s.push_str("  ");
             for (width, shorthand) in &self.method_counts {
-                write_centered_text(shorthand, *width, &mut s);
+                write_centered_text(&mut s, shorthand, *width);
                 s.push(' ');
             }
         }
@@ -404,10 +424,23 @@ impl CompPrinter {
         // Part head
         if let Some(w) = self.part_head_width {
             // Add 2 to the width to get one char of extra padding on either side
-            write_centered_text("PH", w + 2, &mut s);
+            write_centered_text(&mut s, "PH", w + 2);
             s.push('|');
         }
-        write!(s, "  music  | avg score | calling").unwrap();
+        // Music
+        s.push_str("  music  ");
+        if !self.query.music_displays.is_empty() {
+            s.push(' ');
+        }
+        for (music_display, col_width) in
+            self.query.music_displays.iter().zip_eq(&self.music_widths)
+        {
+            s.push_str("  ");
+            write_centered_text(&mut s, &music_display.name, *col_width);
+            s.push(' ');
+        }
+        // Everything else
+        s.push_str("| avg score | calling");
         s
     }
 
@@ -422,28 +455,38 @@ impl CompPrinter {
             }
         }
         s.push('|');
-        // Part head (if >=3 parts)
+        // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
             write!(s, " {} |", ShortRow(&comp.part_head())).unwrap();
         }
-        // total music score, avg score, call string
-        write!(
-            s,
-            " {:>7.2} | {:>9.7} | {}",
-            comp.music_score(),
-            comp.avg_score,
-            comp.call_string()
-        )
-        .unwrap();
+        // Music
+        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
+        if !self.query.music_displays.is_empty() {
+            s.push(':');
+        }
+        for (music_display, col_width) in
+            self.query.music_displays.iter().zip_eq(&self.music_widths)
+        {
+            s.push_str("  ");
+            write_centered_text(
+                &mut s,
+                &music_display
+                    .display_counts(&self.query.music_types, comp.music_counts.as_slice()),
+                *col_width,
+            );
+            s.push(' ');
+        }
+        // avg score, call string
+        write!(s, "| {:>9.7} | {}", comp.avg_score, comp.call_string()).unwrap();
         s
     }
 }
 
 /// Write some `string` to `out`, centering it among `width` spaces (rounding to the right).
-fn write_centered_text(string: &str, width: usize, out: &mut String) {
-    let w = width.saturating_sub(string.len());
+fn write_centered_text(out: &mut String, text: &str, width: usize) {
+    let w = width.saturating_sub(text.len());
     push_multiple(' ', w - (w / 2), out);
-    out.push_str(string);
+    out.push_str(text);
     push_multiple(' ', w / 2, out);
 }
 
