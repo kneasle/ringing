@@ -108,8 +108,9 @@ pub struct Spec {
     #[serde(default = "backstroke")]
     start_stroke: Stroke,
     /// The value for `non_duffer` given to music types when none is explicitly given
-    #[serde(default = "get_true")]
-    default_non_duffer: bool,
+    // TODO: Uncomment these when implementing non-duffers
+    // #[serde(default = "get_true")]
+    // default_non_duffer: bool,
     /// The most consecutive rows of duffer chunks.
     max_duffer_rows: Option<usize>,
 
@@ -275,7 +276,7 @@ impl Spec {
         let mut music_types = self
             .music
             .iter()
-            .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer))
+            .flat_map(|spec| spec.to_music_types(stage))
             .collect_vec();
 
         /// Load the music from the `music_file`.  This has to be a macro, since a closure would
@@ -290,7 +291,7 @@ impl Spec {
                     music_file
                         .music
                         .iter()
-                        .flat_map(|spec| spec.to_music_types(stage, self.default_non_duffer)),
+                        .flat_map(|spec| spec.to_music_types(stage)),
                 );
             }};
         }
@@ -856,7 +857,8 @@ pub struct MusicCommon {
     #[serde(rename = "count", default)]
     count_range: OptRangeInclusive,
     /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
-    non_duffer: Option<bool>,
+    // TODO: Uncomment when implementing non-duffers
+    // non_duffer: Option<bool>,
     /// Which strokes this music can apply to
     #[serde(rename = "stroke", default)]
     strokes: StrokeSet,
@@ -867,7 +869,6 @@ impl Default for MusicCommon {
         Self {
             weight: 1.0,
             count_range: OptRangeInclusive::default(),
-            non_duffer: None,
             strokes: StrokeSet::Both,
         }
     }
@@ -875,7 +876,7 @@ impl Default for MusicCommon {
 
 impl MusicSpec {
     /// Generates a [`MusicType`] representing `self`.
-    pub fn to_music_types(&self, stage: Stage, default_non_duffer: bool) -> Vec<MusicType> {
+    pub fn to_music_types(&self, stage: Stage) -> Vec<MusicType> {
         enum LoweredType<'_self> {
             /// Equivalent to [`Self::Runs`] or [`Self::RunsList`]
             Runs(&'_self [u8], &'_self bool),
@@ -908,7 +909,6 @@ impl MusicSpec {
                 common,
             } => (LoweredType::Patterns(patterns, count_each), common),
         };
-        let non_duffer = common.non_duffer.unwrap_or(default_non_duffer);
 
         match lowered_type {
             LoweredType::Runs(lengths, internal) => {
@@ -922,7 +922,6 @@ impl MusicSpec {
                     regexes,
                     common.weight,
                     common.count_range.into(),
-                    non_duffer,
                     common.strokes,
                 )]
             }
@@ -939,13 +938,7 @@ impl MusicSpec {
                     // that pattern.
                     regexes
                         .map(|regex| {
-                            MusicType::new(
-                                vec![regex],
-                                common.weight,
-                                count_each,
-                                non_duffer,
-                                common.strokes,
-                            )
+                            MusicType::new(vec![regex], common.weight, count_each, common.strokes)
                         })
                         .collect_vec()
                 } else {
@@ -955,7 +948,6 @@ impl MusicSpec {
                         regexes.collect_vec(),
                         common.weight,
                         count_range,
-                        non_duffer,
                         common.strokes,
                     )]
                 }

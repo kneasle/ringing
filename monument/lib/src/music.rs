@@ -23,14 +23,13 @@ impl MusicType {
         regexes: Vec<Regex>,
         weight: f32,
         count_range: OptRange,
-        non_duffer: bool,
         stroke_set: StrokeSet,
     ) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
-            non_duffer,
+            non_duffer: false, // TODO: Implement non-duffers properly
             stroke_set,
         }
     }
