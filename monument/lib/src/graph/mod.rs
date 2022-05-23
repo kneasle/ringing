@@ -529,7 +529,7 @@ impl Graph {
         let dependence_on_stroke = query
             .music_types
             .iter()
-            .any(|ty| ty.stroke_set() != StrokeSet::Both);
+            .any(|ty| ty.strokes != StrokeSet::Both);
 
         // Convert each `expanded_chunk_range` into a full `Chunk`, albeit without
         // predecessor/falseness references
@@ -786,7 +786,7 @@ fn build_chunk(
             music += &Breakdown::from_rows(
                 chunk_range.untransposed_rows(&query.layout),
                 &ch,
-                &query.music_types,
+                query.music_types.as_raw_slice(),
                 start_stroke,
             );
             // Count weight from CH masks
@@ -807,7 +807,7 @@ fn build_chunk(
         .music_types
         .iter()
         .zip_eq(music.counts.as_slice())
-        .any(|(music_type, count)| music_type.non_duffer() && *count > 0);
+        .any(|(music_type, count)| music_type.non_duffer && *count > 0);
 
     let successors = chunk_range
         .links()

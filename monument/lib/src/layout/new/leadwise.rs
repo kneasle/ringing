@@ -32,6 +32,7 @@ pub fn leadwise(
                 .first_lead()
                 .clone_map_annots_with_index(|i, _| (i == 0).then(|| m.shorthand.clone())),
             count_range: m.count_range.clone(),
+            shorthand: m.shorthand.clone(),
         })
         .collect::<BlockVec<_>>();
 

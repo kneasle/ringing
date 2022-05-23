@@ -49,7 +49,8 @@ pub struct Query {
     pub ch_weights: Vec<(Mask, f32)>,
     pub splice_weight: f32,
 
-    pub music_types: Vec<music::MusicType>,
+    pub music_types: MusicTypeVec<music::MusicType>,
+    pub music_displays: Vec<music::MusicDisplay>,
     pub start_stroke: Stroke,
     pub max_duffer_rows: Option<usize>,
 }
@@ -211,7 +212,7 @@ impl Comp {
         self.music_counts
             .iter()
             .zip_eq(&self.query.music_types)
-            .map(|(count, music_type)| f32::from(music_type.weight()) * *count as f32)
+            .map(|(count, music_type)| f32::from(music_type.weight) * *count as f32)
             .sum::<f32>()
     }
 }
@@ -393,4 +394,6 @@ impl Default for Progress {
 }
 
 index_vec::define_index_type! { pub struct CallIdx = usize; }
+index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
 pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

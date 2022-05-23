@@ -1,6 +1,12 @@
-use std::ops::{Add, AddAssign};
+use std::{
+    fmt::Write,
+    ops::{Add, AddAssign},
+};
 
-use crate::utils::{Counts, OptRange};
+use crate::{
+    utils::{Counts, OptRange},
+    MusicTypeIdx, MusicTypeVec,
+};
 use bellframe::{music::Regex, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
@@ -11,44 +17,38 @@ pub type Score = OrderedFloat<f32>;
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
 pub struct MusicType {
-    regexes: Vec<Regex>,
-    weight: Score,
-    count_range: OptRange,
-    non_duffer: bool,
-    stroke_set: StrokeSet,
+    pub regexes: Vec<Regex>,
+    pub strokes: StrokeSet,
+
+    pub weight: Score,
+    pub count_range: OptRange,
+    pub non_duffer: bool,
 }
 
 impl MusicType {
     pub fn new(
         regexes: Vec<Regex>,
+        stroke_set: StrokeSet,
         weight: f32,
         count_range: OptRange,
-        non_duffer: bool,
-        strokes: StrokeSet,
     ) -> Self {
         Self {
             regexes,
             weight: OrderedFloat(weight),
             count_range,
-            non_duffer,
-            stroke_set: strokes,
+            non_duffer: false, // TODO: Implement non-duffers properly
+            strokes: stroke_set,
         }
     }
 
-    pub fn count_range(&self) -> OptRange {
-        self.count_range
-    }
-
-    pub fn non_duffer(&self) -> bool {
-        self.non_duffer
-    }
-
-    pub fn stroke_set(&self) -> StrokeSet {
-        self.stroke_set
-    }
-
-    pub fn weight(&self) -> OrderedFloat<f32> {
-        self.weight
+    /// Return the total number of possible instances of this music type, or `None` if the
+    /// computation caused `usize` to overflow.
+    pub fn max_count(&self) -> Option<usize> {
+        let mut sum = 0;
+        for r in &self.regexes {
+            sum += r.num_matching_rows()?;
+        }
+        Some(sum)
     }
 }
 
@@ -84,7 +84,7 @@ impl Breakdown {
             course_head.mul_into(r, &mut temp_row).unwrap();
             // ... for every music type ...
             for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
-                if ty.stroke_set.contains(start_stroke.offset(idx)) {
+                if ty.strokes.contains(start_stroke.offset(idx)) {
                     // ... count the number of instances of that type of music
                     for regex in &ty.regexes {
                         if regex.matches(&temp_row) {
@@ -153,8 +153,134 @@ impl AddAssign<&Breakdown> for Breakdown {
     }
 }
 
+///////////////////
+// MUSIC DISPLAY //
+///////////////////
+
+/// How music counts can be displayed.  This could take its counts from multiple [`MusicType`]s,
+/// and takes a few forms:
+/// 1. Just a total count: e.g. `*5678: 23`
+/// 2. Just a breakdown: e.g. `5678s: 24f,81i,24b`
+/// 3. A breakdown and a total count: e.g. `4-runs: 312 (73f,132i,107b)`
+///
+/// Setting all sources to `None` is allowed, but will create an empty column.
+#[derive(Debug, Clone)]
+pub struct MusicDisplay {
+    /// The name used to identify this type of music
+    pub name: String,
+
+    /// The index of the [`MusicType`] which provides the total count
+    pub source_total: Option<MusicTypeIdx>,
+
+    /// The index of the [`MusicType`] which provides the count off the front
+    pub source_front: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the internal count
+    pub source_internal: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the count off the back
+    pub source_back: Option<MusicTypeIdx>,
+}
+
+impl MusicDisplay {
+    /// Creates a new [`MusicDisplay`] with no corresponding [`MusicType`]s
+    pub fn empty(name: String) -> Self {
+        Self {
+            name,
+            source_total: None,
+            source_front: None,
+            source_internal: None,
+            source_back: None,
+        }
+    }
+
+    /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
+    /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
+    pub fn col_width(&self, music_types: &MusicTypeVec<MusicType>) -> usize {
+        // We always pad the counts as much as required, so displaying a set of 0s results in a
+        // maximum-width string (i.e. all output strings are the same length)
+        let max_count_width = self
+            .display_counts(music_types, &vec![0; music_types.len()])
+            .len();
+        max_count_width.max(self.name.len())
+    }
+
+    /// Generate a compact string representing a given set of music counts
+    pub fn display_counts(
+        &self,
+        music_types: &MusicTypeVec<MusicType>,
+        counts: &[usize],
+    ) -> String {
+        let mut s = String::new();
+
+        // Add total count
+        if let Some(total_idx) = self.source_total {
+            write!(
+                s,
+                "{:>width$}",
+                counts[total_idx.index()],
+                width = max_count_len(&music_types[total_idx])
+            )
+            .unwrap();
+        }
+
+        // Add specific counts (if there are any)
+        if self.source_front.is_some()
+            || self.source_internal.is_some()
+            || self.source_back.is_some()
+        {
+            // Add brackets if there's a total score
+            if self.source_total.is_some() {
+                s.push_str(" (");
+            }
+            // Add every front/internal/back count for which we have a source
+            let mut is_first_count = true;
+            for (source, position_char) in [
+                (&self.source_front, 'f'),
+                (&self.source_internal, 'i'),
+                (&self.source_back, 'b'),
+            ] {
+                if let Some(music_type_idx) = source {
+                    // Add separating comma
+                    if !is_first_count {
+                        s.push(' ');
+                    }
+                    is_first_count = false;
+                    // Add the number
+                    write!(
+                        s,
+                        "{:>width$}",
+                        counts[music_type_idx.index()],
+                        width = max_count_len(&music_types[*music_type_idx])
+                    )
+                    .unwrap();
+                    s.push(position_char);
+                }
+            }
+            if self.source_total.is_some() {
+                s.push(')'); // Add closing brackets if there's a total score
+            }
+        }
+
+        s
+    }
+}
+
+/// Prints the width of the largest count possible for a [`MusicType`] (assuming that rows can't be
+/// repeated).
+fn max_count_len(music_type: &MusicType) -> usize {
+    // Determine how to display the music summary
+    let max_music_count = music_type.max_count().unwrap_or(usize::MAX);
+    // `min(3)` because we don't expect more than 999 instances of a music type, even
+    // if more theoretically exist
+    max_music_count.to_string().len().min(3)
+}
+
+////////////////
+// STROKE SET //
+////////////////
+
+/// A set of at least one [`Stroke`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(rename_all = "snake_case")]
 pub enum StrokeSet {
     Hand,
     Back,

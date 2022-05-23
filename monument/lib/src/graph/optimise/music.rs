@@ -21,7 +21,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
         .music_types
         .iter()
         .enumerate()
-        .filter_map(|(i, ty)| ty.count_range().min.map(|min| (i, min)))
+        .filter_map(|(i, ty)| ty.count_range.min.map(|min| (i, min)))
         .collect::<HashMap<_, _>>();
 
     if min_music_counts.is_empty() {
@@ -90,7 +90,6 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     // chunk is removed.
     if no_required_chunks {
         log::warn!("No required chunks made");
-        todo!();
     }
 }
 
@@ -111,7 +110,7 @@ pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query
         .enumerate()
     {
         let music_type = &query.music_types[music_ty_idx];
-        if let Some(count_limit) = music_type.count_range().max {
+        if let Some(count_limit) = music_type.count_range.max {
             let max_count_left_per_chunk = count_limit.checked_sub(count_from_required).expect(
                 "Search can't be completed because the required chunks exceed a maximum music count.",
             );

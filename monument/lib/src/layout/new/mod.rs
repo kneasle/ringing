@@ -260,6 +260,7 @@ impl Method {
         MethodBlock {
             block,
             count_range: self.count_range.clone(),
+            shorthand: self.shorthand.clone(),
         }
     }
 }
