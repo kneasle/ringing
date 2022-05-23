@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#92) Print music as part of the composition summary.
+- (#92) Remove fixed tenors from part heads (e.g. `1342567890ET` is now be just `1342`).
 - (#91) Calls can now go from/to different lead labels.  Set this with e.g.
     `lead_location = { from = "2nds", to = "HL" }`.  Useful for adding finer control over where
     calls can be placed.
@@ -9,6 +11,9 @@
     label can be added to multiple rows like `lead_locations = { SE = [3, 9] }` (for Six-Ends in
     Stedman).
 - (#89) Refactor the search algorithm (splitting the node expansion from the best-first search code)
+
+### BellFrame
+- (#92) Give `Regex`es a specific `Stage`.
 
 ---
 
