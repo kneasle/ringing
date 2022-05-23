@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#94) Replace `default_music` with `base_music` (to be consistent with `base_calls`).
 - (#92) Print music as part of the composition summary.
 - (#92) Remove fixed tenors from part heads (e.g. `1342567890ET` is now be just `1342`).
 - (#91) Calls can now go from/to different lead labels.  Set this with e.g.

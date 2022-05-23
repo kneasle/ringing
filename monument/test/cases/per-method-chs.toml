@@ -5,4 +5,4 @@ methods = [
     { title = "Bristol Surprise Major", course_heads = ["12345678"] }
 ]
 method_count = { min = 0, max = 400 }
-default_music = false
+base_music = "none"

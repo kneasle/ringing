@@ -6,4 +6,6 @@ methods = [
 ]
 splice_style = "calls"
 method_count.max = 400
+
+base_music = "none"
 music_file = "../music/8.toml"

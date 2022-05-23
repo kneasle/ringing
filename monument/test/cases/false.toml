@@ -1,5 +1,7 @@
 length = "practice"
 methods = ["Bristol Surprise Major", "Yorkshire Surprise Major"]
-music_file = "../music/8.toml"
 base_calls = "none"
 allow_false = true
+
+base_music = "none"
+music_file = "../music/8.toml"

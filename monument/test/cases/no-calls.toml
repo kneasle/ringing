@@ -7,4 +7,6 @@ methods = [
 ]
 splice_style = "leads"
 method_count = { min = 0, max = 300 }
+
+base_music = "none"
 music_file = "../music/8.toml"

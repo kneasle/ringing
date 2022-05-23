@@ -5,7 +5,7 @@
 length = "practice"
 methods = ["Bristol Surprise Major"]
 part_head = "1243"
-default_music = false
+base_music = "none"
 
 bob_weight = 0
 single_weight = 0

@@ -1,7 +1,7 @@
 length = "practice"
-base_calls = "none"
 num_comps = 200
-default_music = false
+base_calls = "none"
+base_music = "none"
 
 methods = [
     "Cambridge Surprise Major",

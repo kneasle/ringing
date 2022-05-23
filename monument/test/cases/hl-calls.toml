@@ -1,9 +1,7 @@
 length = { min = 0, max = 200 }
 method.title = "Bristol Surprise Major"
 method.lead_locations = { LE = 0, HL = 16 }
-default_music = false
-
-# music_file = "music-8.toml"
+base_music = "none"
 
 [[calls]]
 place_notation = "58"

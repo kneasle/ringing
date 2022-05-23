@@ -94,11 +94,10 @@ pub struct Spec {
     calls: Vec<SpecificCall>,
 
     /* MUSIC */
-    /// If `default_music = true` and no other music is specified, Monument will insert a 'default'
-    /// music profile.  If you truly don't care about music, set this to `false` and don't specify
-    /// your own music.
-    #[serde(default = "get_true")]
-    default_music: bool,
+    /// Adds preset music patterns to the scoring.  If you truly want no music (e.g. to search for
+    /// handbell-friendly comps), set `base_music = "none"`.
+    #[serde(default)]
+    base_music: BaseMusic,
     /// Path to a file containing a music definition, relative to **this** TOML file
     music_file: Option<PathBuf>,
     /// Specification of which classes of music Monument should consider
@@ -303,6 +302,7 @@ impl Spec {
             }};
         }
 
+        // Add music from music file
         if let Some(relative_music_path) = &self.music_file {
             let toml_buf;
             let music_file_toml_string: &str = match source {
@@ -326,28 +326,10 @@ impl Spec {
 
             add_music_toml!(music_file_toml_string);
         }
-        // Add default music if `default_music = true` and there aren't any music types
-        if music_types.is_empty() && self.default_music {
-            #[rustfmt::skip]
-            let default_music_toml = match stage {
-                Stage::MINOR   => Some(include_str!("default-music-minor.toml")),
-                Stage::TRIPLES => Some(include_str!("default-music-triples.toml")),
-                Stage::MAJOR   => Some(include_str!("default-music-major.toml")),
-                Stage::ROYAL   => Some(include_str!("default-music-royal.toml")),
-                Stage::MAXIMUS => Some(include_str!("default-music-maximus.toml")),
-                _ => None,
-            };
 
-            match default_music_toml {
-                Some(toml) => {
-                    log::warn!("No music specified, so falling back on default.  Set `default_music = false` if you genuinely don't want any music scoring.");
-                    add_music_toml!(toml);
-                }
-                None => log::warn!(
-                    "No default music profile for {}.  No music will be scored.",
-                    stage
-                ),
-            }
+        // Add music from base_music
+        if let Some(base_music_toml) = self.base_music.toml(stage) {
+            add_music_toml!(base_music_toml);
         }
 
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
@@ -811,6 +793,55 @@ fn mask_parse_error(
 ///////////
 // MUSIC //
 ///////////
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BaseMusic {
+    /// No music specified
+    None,
+    /// A default music profile is used
+    Default,
+    // TODO: Other music profiles, e.g. CompLib's
+}
+
+impl BaseMusic {
+    fn toml(self, stage: Stage) -> Option<&'static str> {
+        match self {
+            BaseMusic::None => None,
+            BaseMusic::Default => {
+                let toml = default_music_toml(stage);
+                match toml {
+                    Some(_) => log::warn!(
+                        r#"Using default music.  If you want no music, set `base_music = "none"`."#
+                    ),
+                    None => log::warn!(
+                        "No default music profile for {}.  No music will be scored.",
+                        stage
+                    ),
+                }
+                toml
+            }
+        }
+    }
+}
+
+#[rustfmt::skip] // So the `=>`s can line up
+fn default_music_toml(stage: Stage) -> Option<&'static str> {
+    match stage {
+        Stage::MINOR   => Some(include_str!("default-music-minor.toml")),
+        Stage::TRIPLES => Some(include_str!("default-music-triples.toml")),
+        Stage::MAJOR   => Some(include_str!("default-music-major.toml")),
+        Stage::ROYAL   => Some(include_str!("default-music-royal.toml")),
+        Stage::MAXIMUS => Some(include_str!("default-music-maximus.toml")),
+        _ => None,
+    }
+}
+
+impl Default for BaseMusic {
+    fn default() -> Self {
+        Self::Default
+    }
+}
 
 /// The specification for a music file
 #[derive(Debug, Clone, Deserialize)]

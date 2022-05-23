@@ -1,9 +1,9 @@
 length = "practice"
+num_comps = 150 # 120 Comps are generated
 methods = [
     "Yorkshire Surprise Major",
     { title = "Cambridge Surprise Major", count.min = 64 }, # Require >=2 leads of Cambs
 ]
 method_count = { min = 0, max = 224 }
 base_calls = "none"
-num_comps = 150 # 120 Comps are generated
-default_music = false
+base_music = "none"

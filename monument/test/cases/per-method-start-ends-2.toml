@@ -6,4 +6,4 @@ methods = [
 end_indices = [2] # Force Yorkshire to finish at the snap
 course_heads = ["*5678"] # Don't allow snaps in Bristol (because that'd require `*5x678`)
 method_count = { min = 0, max = 400 }
-default_music = false
+base_music = "none"

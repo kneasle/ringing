@@ -1,10 +1,11 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
 use monument::layout::new::{default_calling_positions, Call};
-use serde::{de, Deserialize, Deserializer};
+use serde::Deserialize;
 
 /// The values of the `base_calls` attribute
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum BaseCalls {
     None,
     Near,
@@ -71,22 +72,6 @@ impl BaseCalls {
 impl Default for BaseCalls {
     fn default() -> Self {
         Self::Near
-    }
-}
-
-impl<'de> Deserialize<'de> for BaseCalls {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let lower_str = s.to_lowercase();
-        Ok(match lower_str.as_str() {
-            "none" => BaseCalls::None,
-            "near" => BaseCalls::Near,
-            "far" => BaseCalls::Far,
-            _ => return Err(de::Error::custom(format!("unknown call type '{}'", s))),
-        })
     }
 }
 
