@@ -1,13 +1,17 @@
-## (Unreleased)
+## 25th May 2022
 
-### Monument
+### Monument v0.9.0
+
+#### Headline Features
+- (#94) Replace `default_music` with `base_music` (to be consistent with `base_calls`).
+- (#92) Print music as part of the composition summary.
+
+#### Smaller Features
 - (#95) Suggest using `{bob,single}s_only = true` if `{single,bob}_weight` is set to a large
     negative value.  `{bob,single}s_only` is faster than using `{single,bob}_weight`, but sometimes
     both call types are _required_ to bring a composition round with the right length so Monument
     can't automatically set `{bob,single}s_only`.
-- (#94) Replace `default_music` with `base_music` (to be consistent with `base_calls`).
-- (#92) Print music as part of the composition summary.
-- (#92) Remove fixed tenors from part heads (e.g. `1342567890ET` is now be just `1342`).
+- (#92) Remove fixed tenors from part heads in summary (e.g. `1342567890ET` is now be just `1342`).
 - (#91) Calls can now go from/to different lead labels.  Set this with e.g.
     `lead_location = { from = "2nds", to = "HL" }`.  Useful for adding finer control over where
     calls can be placed.
@@ -15,10 +19,13 @@
     `lead_locations = { 0 = "LE", 16 = "HL" }` to `lead_locations = { LE = 0, HL = 16 }`.  The same
     label can be added to multiple rows like `lead_locations = { SE = [3, 9] }` (for Six-Ends in
     Stedman).
+
+#### Internal Improvements
 - (#89) Refactor the search algorithm (splitting the node expansion from the best-first search code)
 
-### BellFrame
+### BellFrame v0.8.5
 - (#92) Give `Regex`es a specific `Stage`.
+- (#91) Allow multiple lead labels to be placed on the same row
 
 ---
 
@@ -26,7 +33,11 @@
 
 ## 2nd May 2022
 
-### Monument v0.8.0
+### Monument v0.8.1
+
+- (No PR) Fix incorrect 'ETs at back' to 'TEs at back' in the default music
+
+### Monument v0.8.0 (yanked)
 
 #### Headline Features
 - (#82) Add `calling_bell` parameter to override the bell used when determining calling positions
@@ -67,9 +78,6 @@
 
 ### Internal Improvements
 - (#64) Use `goldilocks-json-fmt` to format the test result files.
-
-### BellFrame
-- (#??) Allow multiple lead labels to be placed on the same row
 
 ---
 
