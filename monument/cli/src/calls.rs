@@ -22,8 +22,8 @@ impl BaseCalls {
         single_weight: Option<f32>,
     ) -> anyhow::Result<Vec<Call>> {
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
-        // generate comps on fewer than 8 bells, but we should still check because the alternative
-        // is UB
+        // generate comps on fewer than 8 bells, but we should still check because otherwise the
+        // `unsafe` code causes undefined behaviour
         assert!(stage >= Stage::MINIMUS);
 
         let (mut bob, mut single) = match self {
@@ -49,10 +49,20 @@ impl BaseCalls {
             }
         };
 
+        /// Any value of `{bob,single}_weight` smaller than this will trigger a warning to set
+        /// `{single,bob}s_only = true`.
+        const BIG_NEGATIVE_WEIGHT: f32 = -100.0;
+
         if let Some(w) = bob_weight {
+            if w <= BIG_NEGATIVE_WEIGHT {
+                log::warn!("It looks like you're trying to make a singles only composition; consider using `singles_only = true` explicitly.");
+            }
             bob.weight = w;
         }
         if let Some(w) = single_weight {
+            if w <= BIG_NEGATIVE_WEIGHT {
+                log::warn!("It looks like you're trying to make a bobs only composition; consider using `bobs_only = true` explicitly.");
+            }
             single.weight = w;
         }
 
