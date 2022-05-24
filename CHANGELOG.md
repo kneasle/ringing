@@ -1,6 +1,10 @@
 ## (Unreleased)
 
 ### Monument
+- (#95) Suggest using `{bob,single}s_only = true` if `{single,bob}_weight` is set to a large
+    negative value.  `{bob,single}s_only` is faster than using `{single,bob}_weight`, but sometimes
+    both call types are _required_ to bring a composition round with the right length so Monument
+    can't automatically set `{bob,single}s_only`.
 - (#94) Replace `default_music` with `base_music` (to be consistent with `base_calls`).
 - (#92) Print music as part of the composition summary.
 - (#92) Remove fixed tenors from part heads (e.g. `1342567890ET` is now be just `1342`).
