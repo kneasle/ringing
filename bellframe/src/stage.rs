@@ -3,6 +3,7 @@
 use std::{
     convert::TryFrom,
     fmt::{Debug, Display, Formatter},
+    ops::{Add, Sub},
 };
 
 #[cfg(feature = "serde")]
@@ -11,6 +12,7 @@ use serde_crate::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
+use crate::RowBuf;
 // Imports used solely by doc comments
 #[allow(unused_imports)]
 use crate::{Bell, Method, Row};
@@ -179,6 +181,15 @@ impl Stage {
             _ => return None,
         })
     }
+
+    pub fn checked_add(self, rhs: u8) -> Option<Self> {
+        self.0.checked_add(rhs).map(Self)
+    }
+
+    pub fn checked_sub(self, rhs: u8) -> Option<Self> {
+        let new_num_bells = self.0.checked_sub(rhs)?;
+        (new_num_bells > 0).then(|| Self(new_num_bells))
+    }
 }
 
 /// User-friendly constants for commonly used `Stage`s.
@@ -299,6 +310,28 @@ impl Display for ZeroStageError {
     }
 }
 
+impl Add<u8> for Stage {
+    type Output = Stage;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        self.checked_add(rhs)
+            .expect("`u8` overflowed whilst adding to a `Stage`")
+    }
+}
+
+impl Sub<u8> for Stage {
+    type Output = Stage;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        self.checked_sub(rhs)
+            .expect("`u8` underflowed whilst adding to a `Stage`")
+    }
+}
+
+//////////////////////////
+// `IncompatibleStages` //
+//////////////////////////
+
 /// An error created when a [`Row`] was used to permute something with the wrong length
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct IncompatibleStages {
@@ -361,6 +394,10 @@ impl Serialize for Stage {
         serializer.serialize_u64(self.0 as u64)
     }
 }
+
+///////////
+// SERDE //
+///////////
 
 // Stage by default will deserialise from either a name (i.e. a string) or a non-negative number.
 // If types are not known (e.g. when using Bincode), it will deserialise as a u64 to make sure that

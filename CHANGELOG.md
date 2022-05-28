@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### BellFrame
+- (#96) Allow addition/subtraction between `Stage`s and `u8`s with `+`/`-`, panicking on overflow or
+    a `Stage` of 0.  `checked_add` and `checked_sub` are the non-panicking versions.
 - (#96) Add conversions from `Row`/`RowBuf` to `Mask` and `Regex` (via the `From` trait)
 
 ---
