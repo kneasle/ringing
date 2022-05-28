@@ -6,7 +6,7 @@ use std::{
 use factorial::Factorial;
 use itertools::Itertools;
 
-use crate::{utils, Bell, Row, Stage};
+use crate::{utils, Bell, Row, RowBuf, Stage};
 
 /// A regex over sequences of [`Bell`]s (i.e. [`Row`]s).
 ///
@@ -27,7 +27,6 @@ pub struct Regex {
     ///
     /// Therefore, after a glob we can only have either a bell or the end of the regex.
     elems: Vec<RegexElem>,
-    //
     stage: Stage,
 }
 
@@ -528,6 +527,21 @@ impl Display for RegexElem {
             Self::Any => write!(f, "x"),
             Self::Glob => write!(f, "*"),
         }
+    }
+}
+
+impl From<&Row> for Regex {
+    fn from(r: &Row) -> Self {
+        Self {
+            elems: r.bell_iter().map(RegexElem::Bell).collect_vec(),
+            stage: r.stage(),
+        }
+    }
+}
+
+impl From<RowBuf> for Regex {
+    fn from(r: RowBuf) -> Self {
+        Self::from(r.as_row())
     }
 }
 

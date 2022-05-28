@@ -424,6 +424,20 @@ impl Mul<&Mask> for &Row {
 
 /* ===== CONVERSIONS ===== */
 
+impl From<&Row> for Mask {
+    fn from(r: &Row) -> Self {
+        Self {
+            bells: r.bell_iter().map(Some).collect_vec(),
+        }
+    }
+}
+
+impl From<RowBuf> for Mask {
+    fn from(r: RowBuf) -> Self {
+        Self::from(r.as_row())
+    }
+}
+
 impl From<Mask> for Regex {
     fn from(mask: Mask) -> Regex {
         Regex::from_elems(

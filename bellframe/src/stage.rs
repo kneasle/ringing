@@ -3,6 +3,7 @@
 use std::{
     convert::TryFrom,
     fmt::{Debug, Display, Formatter},
+    ops::{Add, Sub},
 };
 
 #[cfg(feature = "serde")]
@@ -11,6 +12,7 @@ use serde_crate::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
+use crate::{RowBuf, SameStageVec};
 // Imports used solely by doc comments
 #[allow(unused_imports)]
 use crate::{Bell, Method, Row};
@@ -179,6 +181,45 @@ impl Stage {
             _ => return None,
         })
     }
+
+    pub fn checked_add(self, rhs: u8) -> Option<Self> {
+        self.0.checked_add(rhs).map(Self)
+    }
+
+    pub fn checked_sub(self, rhs: u8) -> Option<Self> {
+        let new_num_bells = self.0.checked_sub(rhs)?;
+        (new_num_bells > 0).then(|| Self(new_num_bells))
+    }
+
+    /// Returns a [`SameStageVec`] containing one copy of every [`Row`] possible in this [`Stage`]
+    /// in some arbitrary order.
+    // TODO: Make this an iterator
+    pub fn extent(self) -> SameStageVec {
+        let self_minus_one = match self.checked_sub(1) {
+            Some(self_minus_one) => self_minus_one,
+            // Base case: if stage is one, then there's only one possible row
+            None => return SameStageVec::from_row_buf(RowBuf::rounds(self)),
+        };
+
+        // Construct this extent recursively by taking every row of one stage lower and inserting
+        // the new tenor into every position.  So, for example, converting 2 bells -> 3 bells:
+        // ```
+        // prev_row = 12 -> [3]12, 1[3]2, 12[3] -> 312, 132, 123
+        // prev_row = 21 -> [3]21, 2[3]1, 21[3] -> 321, 231, 213
+        // ```
+        let mut new_extent_bell_vec = Vec::new();
+        for prev_row in &self_minus_one.extent() {
+            for split_idx in 0..self.num_bells() {
+                let (bells_before, bells_after) = prev_row.slice().split_at(split_idx);
+                new_extent_bell_vec.extend_from_slice(bells_before);
+                new_extent_bell_vec.push(self.tenor());
+                new_extent_bell_vec.extend_from_slice(bells_after)
+            }
+        }
+        // Unsafety is OK because we generated the rows by inserting the new tenor into an already
+        // known-good row.
+        unsafe { SameStageVec::from_bell_vec_unchecked(new_extent_bell_vec, self) }
+    }
 }
 
 /// User-friendly constants for commonly used `Stage`s.
@@ -299,6 +340,28 @@ impl Display for ZeroStageError {
     }
 }
 
+impl Add<u8> for Stage {
+    type Output = Stage;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        self.checked_add(rhs)
+            .expect("`u8` overflowed whilst adding to a `Stage`")
+    }
+}
+
+impl Sub<u8> for Stage {
+    type Output = Stage;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        self.checked_sub(rhs)
+            .expect("`u8` underflowed whilst adding to a `Stage`")
+    }
+}
+
+//////////////////////////
+// `IncompatibleStages` //
+//////////////////////////
+
 /// An error created when a [`Row`] was used to permute something with the wrong length
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct IncompatibleStages {
@@ -361,6 +424,10 @@ impl Serialize for Stage {
         serializer.serialize_u64(self.0 as u64)
     }
 }
+
+///////////
+// SERDE //
+///////////
 
 // Stage by default will deserialise from either a name (i.e. a string) or a non-negative number.
 // If types are not known (e.g. when using Bincode), it will deserialise as a u64 to make sure that
@@ -484,5 +551,41 @@ impl Arbitrary for Stage {
         // test cases.
         let num_bells = num_bells.max(1);
         Self::new(num_bells)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+
+    use crate::{Row, RowBuf};
+
+    use super::Stage;
+
+    #[test]
+    #[rustfmt::skip]
+    fn extent() {
+        #[track_caller]
+        fn check(stage: Stage, exp_extent: &[&str]) {
+            let mut extent = stage.extent().iter().map(Row::to_owned).collect_vec();
+            let mut expected_extent = exp_extent.iter().map(|s| RowBuf::parse(s).unwrap()).collect_vec();
+            // Sort both extents so that we guarantee they'll be in the same order
+            extent.sort();
+            expected_extent.sort();
+            assert_eq!(extent, expected_extent);
+        }
+
+        check(Stage::ONE, &["1"]);
+        check(Stage::TWO, &["12", "21"]);
+        check(Stage::SINGLES, &["123", "132", "213", "231", "312", "321"]);
+        check(
+            Stage::MINIMUS,
+            &[
+                "1234", "1243", "1324", "1342", "1423", "1432",
+                "2134", "2143", "2314", "2341", "2413", "2431",
+                "3124", "3142", "3214", "3241", "3412", "3421",
+                "4123", "4132", "4213", "4231", "4312", "4321",
+            ]
+        );
     }
 }

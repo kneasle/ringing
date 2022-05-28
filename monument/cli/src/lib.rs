@@ -7,7 +7,9 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod calls;
+pub mod music;
 pub mod spec;
+pub mod utils;
 
 use std::{
     fmt::Write,
@@ -163,11 +165,11 @@ impl QueryResult {
         println!("{}", self.comp_printer.ruleoff());
         println!("{}", self.comp_printer.header());
         println!(
-            "{} compositions generated.  Search {} {}",
+            "{} compositions generated{} {}",
             self.comps.len(),
             match self.aborted {
-                true => "aborted after",
-                false => "completed in",
+                true => ", aborted after",
+                false => " in",
             },
             PrettyDuration(self.duration)
         );

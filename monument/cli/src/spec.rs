@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     fmt::Write,
     ops::{self, Deref},
-    path::{Path, PathBuf},
+    path::PathBuf,
     time::Duration,
 };
 
@@ -22,13 +22,15 @@ use monument::{
         new::{Call, CourseHeadMaskPreset},
         Layout,
     },
-    music::{MusicType, StrokeSet},
+    music::MusicType,
     CallType, CallVec, MusicTypeVec, OptRange, Query, SpliceStyle,
 };
 use serde::Deserialize;
 
 use crate::{
     calls::{BaseCalls, SpecificCall},
+    music::{BaseMusic, MusicSpec},
+    utils::OptRangeInclusive,
     Source,
 };
 
@@ -104,7 +106,7 @@ pub struct Spec {
     #[serde(default)]
     music: Vec<MusicSpec>,
     /// The [`Stroke`] of the first row of the composition
-    #[serde(default = "backstroke")]
+    #[serde(default = "crate::utils::backstroke")]
     start_stroke: Stroke,
     /// The value for `non_duffer` given to music types when none is explicitly given
     // TODO: Uncomment these when implementing non-duffers
@@ -157,12 +159,12 @@ impl Spec {
         let toml_buf;
         let toml_string: &str = match source {
             Source::Path(p) => {
-                toml_buf = read_file_to_string(p)?;
+                toml_buf = crate::utils::read_file_to_string(p)?;
                 &toml_buf
             }
             Source::Str { spec, .. } => spec,
         };
-        parse_toml(toml_string)
+        crate::utils::parse_toml(toml_string)
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`]
@@ -278,62 +280,33 @@ impl Spec {
         source: &Source,
         stage: Stage,
     ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>)> {
-        // Compute the explicitly mentioned music types
-        let mut music_types = self
-            .music
-            .iter()
-            .flat_map(|spec| spec.to_music_types(stage))
-            .collect::<MusicTypeVec<_>>();
-
-        /// Load the music from the `music_file`.  This has to be a macro, since a closure would
-        /// have to capture `&mut music_types` (thus preventing us from borrowing it again to check
-        /// `music_types.is_empty()`)
-        macro_rules! add_music_toml {
-            ($toml_str: expr) => {{
-                // Parse the TOML
-                let music_file: MusicFile = parse_toml($toml_str)?;
-                // Add the music types
-                music_types.extend(
-                    music_file
-                        .music
-                        .iter()
-                        .flat_map(|spec| spec.to_music_types(stage)),
-                );
-            }};
-        }
-
-        // Add music from music file
-        if let Some(relative_music_path) = &self.music_file {
-            let toml_buf;
-            let music_file_toml_string: &str = match source {
-                Source::Path(spec_path) => {
-                    // If `self` was loaded from a file (as would be the case when using the CLI in
-                    // the wild), then we also load the music file from a file
-                    let mut music_path = spec_path
-                        .parent()
-                        .expect("files should always have a parent")
-                        .to_owned();
-                    music_path.push(relative_music_path);
-                    toml_buf = read_file_to_string(&music_path)?;
-                    &toml_buf
-                }
-                Source::Str { music_file, .. } => music_file.ok_or_else(|| {
+        // Load TOML for the music file
+        let music_file_buffer;
+        let music_file_str = match (&self.music_file, source) {
+            (Some(relative_music_path), Source::Path(spec_path)) => {
+                // If `self` was loaded from a file (as would be the case when using the CLI in
+                // the wild), then we also load the music file from a file
+                let mut music_path = spec_path
+                    .parent()
+                    .expect("files should always have a parent")
+                    .to_owned();
+                music_path.push(relative_music_path);
+                music_file_buffer = crate::utils::read_file_to_string(&music_path)?;
+                Some(music_file_buffer.as_str())
+            }
+            (Some(_), Source::Str { music_file, .. }) => {
+                let music_file_str = music_file.ok_or_else(|| {
                     anyhow::Error::msg(
                         "Spec string requires `music_file`, but no music file string was given",
                     )
-                })?,
-            };
-
-            add_music_toml!(music_file_toml_string);
-        }
-
-        // Add music from base_music
-        if let Some(base_music_toml) = self.base_music.toml(stage) {
-            add_music_toml!(base_music_toml);
-        }
+                })?;
+                Some(music_file_str)
+            }
+            (None, _) => None,
+        };
 
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
-        Ok(compute_music_displays(music_types))
+        crate::music::generate_music(&self.music, self.base_music, music_file_str, stage)
     }
 
     fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<Call>> {
@@ -790,610 +763,16 @@ fn mask_parse_error(
     anyhow::Error::msg(s)
 }
 
-///////////
-// MUSIC //
-///////////
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BaseMusic {
-    /// No music specified
-    None,
-    /// A default music profile is used
-    Default,
-    // TODO: Other music profiles, e.g. CompLib's
-}
-
-impl BaseMusic {
-    fn toml(self, stage: Stage) -> Option<&'static str> {
-        match self {
-            BaseMusic::None => None,
-            BaseMusic::Default => {
-                let toml = default_music_toml(stage);
-                match toml {
-                    Some(_) => log::warn!(
-                        r#"Using default music.  If you want no music, set `base_music = "none"`."#
-                    ),
-                    None => log::warn!(
-                        "No default music profile for {}.  No music will be scored.",
-                        stage
-                    ),
-                }
-                toml
-            }
-        }
-    }
-}
-
-#[rustfmt::skip] // So the `=>`s can line up
-fn default_music_toml(stage: Stage) -> Option<&'static str> {
-    match stage {
-        Stage::MINOR   => Some(include_str!("default-music-minor.toml")),
-        Stage::TRIPLES => Some(include_str!("default-music-triples.toml")),
-        Stage::MAJOR   => Some(include_str!("default-music-major.toml")),
-        Stage::ROYAL   => Some(include_str!("default-music-royal.toml")),
-        Stage::MAXIMUS => Some(include_str!("default-music-maximus.toml")),
-        _ => None,
-    }
-}
-
-impl Default for BaseMusic {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-/// The specification for a music file
-#[derive(Debug, Clone, Deserialize)]
-pub struct MusicFile {
-    music: Vec<MusicSpec>,
-}
-
-/// The specification for one type of music
-// TODO: Find a way to get good deserialization without duplicating fields in every enum variant.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-pub enum MusicSpec {
-    RunLength {
-        #[serde(rename = "run_length")]
-        length: u8,
-        #[serde(default)]
-        internal: bool,
-        #[serde(flatten)]
-        common: MusicCommon,
-    },
-    RunLengths {
-        #[serde(rename = "run_lengths")]
-        lengths: Vec<u8>,
-        #[serde(default)]
-        internal: bool,
-        #[serde(flatten)]
-        common: MusicCommon,
-    },
-    Pattern {
-        pattern: String,
-        /// For each pattern, which music counts are allowed
-        #[serde(default)]
-        count_each: OptRangeInclusive,
-        #[serde(flatten)]
-        common: MusicCommon,
-    },
-    Patterns {
-        patterns: Vec<String>,
-        /// For each pattern, which music counts are allowed
-        #[serde(default)]
-        count_each: OptRangeInclusive,
-        #[serde(flatten)]
-        common: MusicCommon,
-    },
-}
-
-/// Values common to all enum variants of [`MusicSpec`]
-#[derive(Debug, Clone, Deserialize)]
-pub struct MusicCommon {
-    #[serde(default = "get_one")]
-    weight: f32,
-    /// Possibly unbounded range of counts which are allowed in this music type
-    #[serde(rename = "count", default)]
-    count_range: OptRangeInclusive,
-    /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
-    // TODO: Uncomment when implementing non-duffers
-    // non_duffer: Option<bool>,
-    /// Which strokes this music can apply to
-    #[serde(rename = "stroke", default)]
-    strokes: StrokeSet,
-
-    /// If `true`, the count of this will be displayed in the composition summary line.  Defaults
-    /// to `true`.
-    #[serde(default = "get_true")]
-    show: bool,
-    /// If `show = true` and `name = Some(n)`, this will override the default name with a custom
-    /// one.
-    name: Option<String>,
-}
-
-impl Default for MusicCommon {
-    fn default() -> Self {
-        Self {
-            weight: 1.0,
-            count_range: OptRangeInclusive::default(),
-            strokes: StrokeSet::Both,
-
-            show: false,
-            name: None,
-        }
-    }
-}
-
-impl MusicSpec {
-    /// Generates a [`MusicType`] representing `self`.
-    fn to_music_types(&self, stage: Stage) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
-        match self {
-            Self::RunLength {
-                length,
-                internal,
-                common,
-            } => music_type_runs(std::slice::from_ref(length), *internal, common, stage),
-            Self::RunLengths {
-                lengths,
-                internal,
-                common,
-            } => music_type_runs(lengths, *internal, common, stage),
-            Self::Pattern {
-                pattern,
-                count_each,
-                common,
-            } => music_type_patterns(std::slice::from_ref(pattern), *count_each, common, stage),
-            Self::Patterns {
-                patterns,
-                count_each,
-                common,
-            } => music_type_patterns(patterns, *count_each, common, stage),
-        }
-    }
-}
-
-fn music_type_runs(
-    lengths: &[u8],
-    internal: bool,
-    common: &MusicCommon,
-    stage: Stage,
-) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
-    let mut music_types = Vec::new();
-
-    // Create individual `MusicType`s if needed for the breakdown.  The breakdown will be displayed
-    // per run-length
-    if common.show && common.name.is_none() {
-        for &len in lengths {
-            let pattern_name = format!("{}-bell run", len);
-            let mut all_regexes = Vec::new(); // Used to create the `MusicType` for the total
-
-            // Closure to add a `MusicType` for runs in some position
-            let mut push_runs = |position: PatternPosition| {
-                let regexes = match position {
-                    PatternPosition::Front => Regex::runs_front(stage, len),
-                    PatternPosition::Internal => Regex::runs_internal(stage, len),
-                    PatternPosition::Back => Regex::runs_back(stage, len),
-                    PatternPosition::Anywhere => unreachable!(),
-                };
-                // Add `MusicType` for the front/back/internal count
-                music_types.push((
-                    MusicType::new(regexes.clone(), common.strokes, 0.0, OptRange::default()),
-                    Some(MusicTypeDisplay {
-                        full_name: String::new(),
-                        pattern: Some((pattern_name.clone(), position)),
-                    }),
-                ));
-                // Make sure that the regexes get included in the total
-                all_regexes.extend(regexes);
-            };
-            // Add front/internal/back regexes
-            push_runs(PatternPosition::Front);
-            if internal {
-                push_runs(PatternPosition::Internal);
-            }
-            push_runs(PatternPosition::Back);
-            // Add a single `MusicType` for all the positions, which contributes both the total and
-            // the scoring weight
-            music_types.push((
-                MusicType::new(
-                    all_regexes,
-                    common.strokes,
-                    common.weight,
-                    OptRange::default(),
-                ),
-                Some(MusicTypeDisplay {
-                    full_name: String::new(),
-                    pattern: Some((pattern_name, PatternPosition::Anywhere)),
-                }),
-            ));
-        }
-    }
-
-    // If we need to enforce a count, create a single `MusicType` containing all run lengths
-    let count_range = OptRange::from(common.count_range);
-    let need_to_add_weight = music_types.is_empty();
-    if count_range.is_set() || need_to_add_weight {
-        let regexes = lengths
-            .iter()
-            .flat_map(|length| Regex::runs(stage, *length, internal))
-            .collect_vec();
-        let weight = if need_to_add_weight {
-            common.weight
-        } else {
-            0.0
-        };
-        // Runs can't take the `count_each` parameter, so can all be grouped into one
-        // `MusicType`
-        music_types.push((
-            MusicType::new(regexes, common.strokes, weight, count_range),
-            None,
-        ));
-    }
-
-    music_types
-}
-
-fn music_type_patterns(
-    patterns: &[String],
-    count_each: OptRangeInclusive,
-    common: &MusicCommon,
-    stage: Stage,
-) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
-    let regexes = patterns.iter().map(|s| Regex::parse(s, stage));
-    let individual_count = OptRange::from(count_each);
-    let combined_count = OptRange::from(common.count_range);
-
-    let mut types = Vec::new();
-
-    // Create music types for the individual groups
-    if individual_count.is_set() || (common.show && common.name.is_none()) {
-        types.extend(regexes.clone().map(|regex| {
-            let name = match (common.show, &common.name) {
-                (true, None) => Some(MusicTypeDisplay::from_regex(&regex)),
-                // If `show = true` and `name` is set, then this group *as a whole* will be named
-                (true, Some(_)) => None,
-                (false, _) => None, // If `show = false`, then no names are generated
-            };
-
-            (
-                MusicType::new(vec![regex], common.strokes, common.weight, individual_count),
-                name,
-            )
-        }));
-    }
-    // Create a single music type for the whole group
-    if types.is_empty() || combined_count.is_set() || (common.show && common.name.is_some()) {
-        let name = match (common.show, &common.name) {
-            (true, Some(name)) => Some(MusicTypeDisplay::with_custom_name(name)),
-            // If `common.show = true` but `common.name` is not set, then the regexes will be named
-            // individually
-            (true, None) => None,
-            (false, _) => None, // If `common.show = false`, then no name is given
-        };
-        types.push((
-            MusicType::new(
-                regexes.collect_vec(),
-                common.strokes,
-                // If individual `MusicType`s have already been created, then give the combined
-                // `MusicType` a weight of 0 so everything isn't counted twice
-                if types.is_empty() { common.weight } else { 0.0 },
-                combined_count,
-            ),
-            name,
-        ));
-    }
-
-    types
-}
-
-/// The way a [`MusicType`] should be displayed
-#[derive(Debug, Clone)]
-struct MusicTypeDisplay {
-    /// A specific full name given to this [`MusicType`], used when this row isn't part of a
-    /// combined pattern.  Usually this is the compressed regex (e.g. `*5678`) or a specific name,
-    /// like `"87s at back"` or `"Queens"`.
-    full_name: String,
-    /// The [`MusicType`] is a pattern applied to one end of the [`Row`].  For example:
-    /// - `5678*`    will be given `Some(("5678", PatternPosition::Front))`
-    /// - `*x5678x*` will be given `Some(("5678", PatternPosition::Internal))`
-    /// - `*5678`    will be given `Some(("5678", PatternPosition::Back))`
-    /// These would then be combined into a single count, like `5678s: 24f,80i,24b`
-    pattern: Option<(String, PatternPosition)>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum PatternPosition {
-    Front,
-    Internal,
-    Back,
-    Anywhere,
-}
-
-impl MusicTypeDisplay {
-    fn with_custom_name(name: &str) -> Self {
-        Self {
-            full_name: name.to_owned(),
-            pattern: None,
-        }
-    }
-
-    fn from_regex(regex: &Regex) -> Self {
-        Self {
-            full_name: regex.to_string(),
-            pattern: Self::pattern(regex),
-        }
-    }
-
-    /// Given a [`Regex`], try to determine the underlying pattern, as well as its
-    /// [`PatternPosition`] within a [`Row`].
-    fn pattern(regex: &Regex) -> Option<(String, PatternPosition)> {
-        // If a row is all wildcards, then no pattern is possible
-        if regex.elems().iter().all(|elem| elem.is_wildcard()) {
-            return None;
-        }
-
-        // Split the `Regex` into 3 sections:
-        // 1. A prefix of wildcards
-        // 2. A centre chunk, starting and ending with a specific bell, which is used to name the
-        //    pattern
-        // 3. A suffix of wildcards
-        let wildcard_prefix_len = regex
-            .elems()
-            .iter()
-            .find_position(|elem| elem.is_bell())
-            .unwrap() // This will only panic if the regex contains no bells (which is checked)
-            .0; // `find_position(_).unwrap()` returns `(index, element)`, but we just want the index
-        let wildcard_suffix_len = regex
-            .elems()
-            .iter()
-            .rev()
-            .find_position(|elem| elem.is_bell())
-            .unwrap() // This will only panic if the regex contains no bells (which is checked)
-            .0; // `find_position(_).unwrap()` returns `(index, element)`, but we just want the index
-        let wildcard_suffix_start = regex.elems().len() - wildcard_suffix_len;
-        let (head, wildcard_suffix) = regex.elems().split_at(wildcard_suffix_start);
-        let (wildcard_prefix, pattern_elems) = head.split_at(wildcard_prefix_len);
-
-        // Check each section for `*`s.  Regex normalisation tells us that the prefix and suffix
-        // can contain at most one glob each
-        let star_in_prefix = wildcard_prefix.contains(&RegexElem::Glob);
-        let star_in_pattern = pattern_elems.contains(&RegexElem::Glob);
-        let star_in_suffix = wildcard_suffix.contains(&RegexElem::Glob);
-        // Count the number of `x`s in the suffix or prefix
-        let xs_in_prefix = wildcard_prefix.iter().filter(|e| e.is_x()).count();
-        let xs_in_suffix = wildcard_suffix.iter().filter(|e| e.is_x()).count();
-
-        // If the internal pattern contains a `*`, then the regex can't have a position
-        if star_in_pattern {
-            return None;
-        }
-
-        let (xs_front, xs_back, position) = if star_in_prefix && star_in_suffix {
-            if xs_in_prefix >= 1 && xs_in_suffix >= 1 {
-                // If both prefix and suffix have at least 1 `x`, then the pattern is considered
-                // internal (e.g. `*x78x*` is considered an internal `78` and `*xx78xx*` is
-                // considered an internal `x78x`).  Note how one `x` is taken off the front and
-                // back to exclude the front/back of the row.
-                (
-                    xs_in_prefix - 1,
-                    xs_in_suffix - 1,
-                    PatternPosition::Internal,
-                )
-            } else {
-                // If one of the ends doesn't have any `xs`, then the pattern is considered
-                // anywhere
-                (xs_in_prefix, xs_in_suffix, PatternPosition::Anywhere)
-            }
-        } else {
-            // At this point, we know that `regex` contains at most one `*`, and that it is in one of
-            // the suffix or prefix
-            let num_stars = regex.elems().iter().filter(|e| e.is_star()).count();
-            assert!(num_stars <= 1);
-            assert!(!star_in_pattern);
-
-            // Since there can be at most one `*`, we can expand that single `*` into a series of `x`s,
-            // and use that to compute the exact lengths of the suffix and prefix.
-            //
-            // The length of the star is the number of bells missing once every other element in the
-            // regex is accounted for.
-            let star_len = regex.stage().num_bells() - (regex.elems().len() - num_stars);
-            let prefix_len = xs_in_prefix + if star_in_prefix { star_len } else { 0 };
-            let suffix_len = xs_in_suffix + if star_in_suffix { star_len } else { 0 };
-
-            match prefix_len.cmp(&suffix_len) {
-                // If the central pattern is equally far from the front and back, then we can't give it a
-                // position
-                Ordering::Equal => return None,
-                // Otherwise, we assume that the pattern is attached to the closer end of the row, so we
-                // assign those `x`s to be part of the pattern.
-                //
-                // Prefix is shorter, and is included in the pattern
-                Ordering::Less => (prefix_len, 0, PatternPosition::Front),
-                // Suffix is shorter, and is included in the pattern
-                Ordering::Greater => (0, suffix_len, PatternPosition::Back),
-            }
-        };
-
-        // pattern string is `{xs_in_prefix * 'x'}{pattern}{xs_in_suffix * 'x'}`
-        let mut pattern_string = String::new();
-        pattern_string.extend(std::iter::repeat('x').take(xs_front));
-        for elem in pattern_elems {
-            write!(pattern_string, "{}", elem).unwrap();
-        }
-        pattern_string.extend(std::iter::repeat('x').take(xs_back));
-        Some((pattern_string, position))
-    }
-}
-
-/// Given a list of [`MusicType`]s annotated with how to display each of them (i.e. a
-/// [`MusicTypeDisplay`]), provide an independent list of [`monument::music::MusicDisplay`]s, which
-/// describe how to display **all** the [`MusicType`]s.
-///
-/// This generates a more compact output by combining the same pattern in different locations (e.g.
-/// 4-bell runs/5678s/6578s can be either front/internal/back).
-fn compute_music_displays(
-    annot_music_types: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
-) -> (MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>) {
-    use monument::music::MusicDisplay;
-
-    let num_music_types = annot_music_types.len();
-
-    // Create an initial set of `MusicDisplay`s by grouping equivalent patterns into the same
-    // `MusicDisplay`
-    let mut music_types = MusicTypeVec::new();
-    let mut music_displays = Vec::<MusicDisplay>::new();
-    for (music_type_idx, (music_type, music_type_display)) in
-        annot_music_types.into_iter_enumerated()
-    {
-        if let Some(MusicTypeDisplay { full_name, pattern }) = music_type_display {
-            match pattern {
-                Some((pattern_name, position)) => {
-                    // Display this pattern as `{pattern_name}s` (e.g. a pattern of "5678" will be
-                    // displayed as "5678s").
-                    let mut display_name = pattern_name;
-                    display_name.push('s');
-                    // Find or create a `MusicDisplay` with this `pattern_name`
-                    let music_display_idx = music_displays
-                        .iter()
-                        .position(|d| d.name == display_name)
-                        .unwrap_or_else(|| {
-                            music_displays.push(MusicDisplay::empty(display_name.clone()));
-                            music_displays.len() - 1 // Index of the new `MusicDisplay`
-                        });
-                    let music_display = &mut music_displays[music_display_idx];
-                    assert_eq!(music_display.name, display_name);
-                    // Depending on this pattern's position in the row, set this `MusicType` to
-                    // contribute the corresponding total
-                    let source = match position {
-                        PatternPosition::Front => &mut music_display.source_front,
-                        PatternPosition::Internal => &mut music_display.source_internal,
-                        PatternPosition::Back => &mut music_display.source_back,
-                        PatternPosition::Anywhere => &mut music_display.source_total,
-                    };
-                    *source = Some(music_type_idx);
-                }
-                // If this pattern has no position, we always create a new [`MusicDisplay`] with
-                // this [`MusicType`] as the total
-                None => music_displays.push(MusicDisplay {
-                    name: full_name,
-                    source_total: Some(music_type_idx),
-                    source_front: None,
-                    source_internal: None,
-                    source_back: None,
-                }),
-            }
-        }
-
-        // Add every music type, even if it's not displayed
-        music_types.push(music_type);
-    }
-
-    assert_eq!(music_types.len(), num_music_types); // Check that no `MusicType`s got missed
-
-    // These music types may contain degenerate cases, like patterns which only appear in one
-    // position within the row.  Here, we filter those out and replace them with an equivalent
-    // `MusicDisplay` with just a total
-    for music_display in &mut music_displays {
-        if music_display.source_total.is_some() {
-            continue; // Skip any music displays which already have a total
-        }
-
-        // Decide which (if any) of the front/internal/back sources need to be replaced
-        let (source, position) = match (
-            &mut music_display.source_front,
-            &mut music_display.source_internal,
-            &mut music_display.source_back,
-        ) {
-            (Some(source), None, None) => (source, PatternPosition::Front),
-            (None, Some(source), None) => (source, PatternPosition::Internal),
-            (None, None, Some(source)) => (source, PatternPosition::Back),
-            _ => continue,
-        };
-
-        // Move this front/internal/back source to become the total
-        music_display.source_total = Some(*source);
-        // Clear all the other sources (including the one we took the source from)
-        music_display.source_back = None;
-        music_display.source_internal = None;
-        music_display.source_back = None;
-        // Modify the name
-        let mut pattern = std::mem::take(&mut music_display.name);
-        assert_eq!(pattern.pop(), Some('s')); // The name was the pattern with 's' at the end
-        music_display.name = match position {
-            PatternPosition::Front => format!("{pattern}*"),
-            PatternPosition::Internal => format!("x*{pattern}*x"),
-            PatternPosition::Back => format!("*{pattern}"),
-            PatternPosition::Anywhere => unreachable!(),
-        };
-    }
-
-    (music_types, music_displays)
-}
-
 /////////////
 // HELPERS //
 /////////////
-
-/// A version of [`OptRange`] which allows for convenient deserialisation from a single number
-/// (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-pub enum OptRangeInclusive {
-    SingleNumber(usize),
-    Range {
-        min: Option<usize>,
-        max: Option<usize>,
-    },
-}
-
-impl Default for OptRangeInclusive {
-    fn default() -> Self {
-        Self::Range {
-            min: None,
-            max: None,
-        }
-    }
-}
-
-impl From<OptRangeInclusive> for OptRange {
-    fn from(r: OptRangeInclusive) -> Self {
-        let (min, max) = match r {
-            OptRangeInclusive::SingleNumber(n) => (Some(n), Some(n)),
-            OptRangeInclusive::Range { min, max } => (min, max),
-        };
-        OptRange { min, max }
-    }
-}
-
-/// Attempt to read a file as a [`String`], returning a helpful error message on failure
-fn read_file_to_string(path: &Path) -> anyhow::Result<String> {
-    std::fs::read_to_string(path)
-        .map_err(|e| anyhow::Error::msg(format!("Can't open {:?}: {}", path, e)))
-}
-
-/// Attempt to read a file as a [`String`], returning a helpful error message on failure
-fn parse_toml<'de, T: Deserialize<'de>>(s: &'de str) -> anyhow::Result<T> {
-    toml::from_str(s).map_err(|e| anyhow::Error::msg(format!("Error parsing spec file: {}", e)))
-}
-
-fn get_one() -> f32 {
-    1.0
-}
 
 fn default_num_comps() -> usize {
     100
 }
 
-fn get_true() -> bool {
-    true
-}
-
-fn backstroke() -> Stroke {
-    Stroke::Back
-}
-
-/// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats).
+/// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats,
+/// usually the lead end).
 fn default_lead_labels() -> HashMap<String, LeadLocations> {
     let mut labels = HashMap::new();
     labels.insert(LABEL_LEAD_END.to_owned(), LeadLocations::JustOne(0));
@@ -1559,67 +938,5 @@ mod length {
         {
             deserializer.deserialize_any(LengthVisitor)
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use bellframe::{music::Regex, Stage};
-
-    use super::{MusicTypeDisplay, PatternPosition};
-
-    #[test]
-    fn extract_regex_pattern() {
-        #[track_caller]
-        fn check(
-            regex_str: &str,
-            stage: Stage,
-            expected_pattern: &str,
-            expected_position: PatternPosition,
-        ) {
-            let regex = Regex::parse(regex_str, stage);
-            let (actual_pattern, actual_position) = MusicTypeDisplay::pattern(&regex).unwrap();
-            assert_eq!(actual_pattern, expected_pattern);
-            assert_eq!(actual_position, expected_position);
-        }
-
-        use PatternPosition::*;
-
-        check("5678*", Stage::MAJOR, "5678", Front);
-        check("5678xxx*", Stage::MAJOR, "5678", Front);
-        check("5678x*x", Stage::MAJOR, "5678", Front);
-        check("5678xxxx", Stage::MAJOR, "5678", Front);
-        check("5678xxxx*", Stage::MAJOR, "5678", Front);
-        check("x78x*", Stage::MAJOR, "x78", Front);
-        check("x78xxxxx", Stage::MAJOR, "x78", Front);
-
-        check("*x5678x*", Stage::MAJOR, "5678", Internal);
-        check("*xx5678x*", Stage::MAJOR, "x5678", Internal);
-
-        check("*5678*", Stage::MAJOR, "5678", Anywhere);
-        check("*xx5678*", Stage::MAJOR, "xx5678", Anywhere);
-        check("*5678xx*", Stage::MAJOR, "5678xx", Anywhere);
-
-        check("*5678", Stage::MAJOR, "5678", Back);
-        check("*xxxx5678", Stage::MAJOR, "5678", Back);
-        check("xxxx5678", Stage::MAJOR, "5678", Back);
-        check("x*x5678", Stage::MAJOR, "5678", Back);
-        check("*x78x", Stage::MAJOR, "78x", Back);
-        check("xxxxx78x", Stage::MAJOR, "78x", Back);
-    }
-
-    #[test]
-    fn extract_regex_no_pattern() {
-        #[track_caller]
-        fn check_no_pattern(regex_str: &str, stage: Stage) {
-            assert_eq!(
-                MusicTypeDisplay::pattern(&Regex::parse(regex_str, stage)),
-                None
-            );
-        }
-
-        check_no_pattern("x2*3x", Stage::MAJOR);
-        check_no_pattern("*2*3*", Stage::MAJOR);
-        check_no_pattern("x23x", Stage::MINIMUS);
     }
 }
