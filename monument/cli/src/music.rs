@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt::Write};
 
 use bellframe::{
     music::{Regex, RegexElem},
-    Stage,
+    Bell, RowBuf, Stage,
 };
 use itertools::Itertools;
 use monument::{
@@ -25,7 +25,7 @@ pub enum BaseMusic {
 
 /// The specification for a music file
 #[derive(Debug, Clone, Deserialize)]
-pub struct MusicFile {
+struct MusicFile {
     music: Vec<MusicSpec>,
 }
 
@@ -65,6 +65,11 @@ pub enum MusicSpec {
         #[serde(flatten)]
         common: MusicCommon,
     },
+    Preset {
+        preset: MusicPreset,
+        #[serde(flatten)]
+        common: MusicCommon,
+    },
 }
 
 /// Values common to all enum variants of [`MusicSpec`]
@@ -91,8 +96,8 @@ pub struct MusicCommon {
     name: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-enum MusicPreset {
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub enum MusicPreset {
     #[serde(rename = "5678 combinations")]
     Combinations5678s,
     #[serde(rename = "near misses")]
@@ -101,9 +106,9 @@ enum MusicPreset {
     Crus,
 }
 
-////////////////////////////////////
-// CONVERSION TO MONUMENT'S MUSIC //
-////////////////////////////////////
+////////////////////////////////////////////////
+// DETERMINING WHICH `MusicSpec`S TO GENERATE //
+////////////////////////////////////////////////
 
 pub fn generate_music(
     music_specs: &[MusicSpec],
@@ -122,7 +127,7 @@ pub fn generate_music(
         music_builder.add_music_toml(music_file_toml)?;
     }
     // Explicit music types
-    music_builder.add_specs(music_specs);
+    music_builder.add_specs(music_specs)?;
 
     // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
     Ok(music_builder.finish())
@@ -143,16 +148,17 @@ impl MusicTypeBuilder {
 
     fn add_music_toml(&mut self, toml_str: &str) -> anyhow::Result<()> {
         let music_file: MusicFile = crate::utils::parse_toml(toml_str)?;
-        self.add_specs(&music_file.music);
-        Ok(())
+        self.add_specs(&music_file.music)
     }
 
-    fn add_specs<'a>(&mut self, specs: impl IntoIterator<Item = &'a MusicSpec>) {
-        self.annot_music_types.extend(
-            specs
-                .into_iter()
-                .flat_map(|spec| spec.to_music_types(self.stage)),
-        );
+    fn add_specs<'a>(
+        &mut self,
+        specs: impl IntoIterator<Item = &'a MusicSpec>,
+    ) -> anyhow::Result<()> {
+        for s in specs {
+            self.annot_music_types.extend(s.to_music_types(self.stage)?);
+        }
+        Ok(())
     }
 
     fn finish(self) -> (MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>) {
@@ -206,7 +212,7 @@ impl Default for MusicCommon {
             count_range: OptRangeInclusive::default(),
             strokes: StrokeSet::Both,
 
-            show: false,
+            show: true,
             name: None,
         }
     }
@@ -218,28 +224,41 @@ impl Default for MusicCommon {
 
 impl MusicSpec {
     /// Generates a [`MusicType`] representing `self`.
-    fn to_music_types(&self, stage: Stage) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
+    fn to_music_types(
+        &self,
+        stage: Stage,
+    ) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
+        // This function just delegates the work to one of `music_type_runs`,
+        // `music_type_patterns` or `music_type_preset`.
+
+        use std::slice::from_ref;
         match self {
             Self::RunLength {
                 length,
                 internal,
                 common,
-            } => music_type_runs(std::slice::from_ref(length), *internal, common, stage),
+            } => Ok(music_type_runs(from_ref(length), *internal, common, stage)),
             Self::RunLengths {
                 lengths,
                 internal,
                 common,
-            } => music_type_runs(lengths, *internal, common, stage),
+            } => Ok(music_type_runs(lengths, *internal, common, stage)),
             Self::Pattern {
                 pattern,
                 count_each,
                 common,
-            } => music_type_patterns(std::slice::from_ref(pattern), *count_each, common, stage),
+            } => Ok(music_type_patterns(
+                from_ref(pattern),
+                *count_each,
+                common,
+                stage,
+            )),
             Self::Patterns {
                 patterns,
                 count_each,
                 common,
-            } => music_type_patterns(patterns, *count_each, common, stage),
+            } => Ok(music_type_patterns(patterns, *count_each, common, stage)),
+            Self::Preset { preset, common } => music_type_preset(*preset, common, stage),
         }
     }
 }
@@ -265,7 +284,7 @@ fn music_type_runs(
                     PatternPosition::Front => Regex::runs_front(stage, len),
                     PatternPosition::Internal => Regex::runs_internal(stage, len),
                     PatternPosition::Back => Regex::runs_back(stage, len),
-                    PatternPosition::Anywhere => unreachable!(),
+                    PatternPosition::Total => unreachable!(),
                 };
                 // Add `MusicType` for the front/back/internal count
                 music_types.push((
@@ -295,7 +314,7 @@ fn music_type_runs(
                 ),
                 Some(MusicTypeDisplay {
                     full_name: String::new(),
-                    pattern: Some((pattern_name, PatternPosition::Anywhere)),
+                    pattern: Some((pattern_name, PatternPosition::Total)),
                 }),
             ));
         }
@@ -378,6 +397,139 @@ fn music_type_patterns(
     types
 }
 
+fn music_type_preset(
+    preset: MusicPreset,
+    common: &MusicCommon,
+    stage: Stage,
+) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
+    // Determine the regex types
+    let (combined_patterns, front_back_patterns, default_name) = match preset {
+        MusicPreset::Combinations5678s => match stage {
+            // For Triples, `8` is always at the back, so `5678` combinations are any point where
+            // `567` are at the back together
+            Stage::TRIPLES => {
+                let mut patterns = Vec::new();
+                for singles_row in &Stage::SINGLES.extent() {
+                    let mut pattern = vec![RegexElem::Glob];
+                    // Map `123` into `567` by adding 4 to each `Bell`
+                    pattern.extend(singles_row.bell_iter().map(|b| b + 4).map(RegexElem::Bell));
+                    patterns.push(Regex::from_vec(pattern, stage));
+                }
+                (patterns, None, "5678 comb")
+            }
+            // For Major, a 5678 combination can happen at the front or back of a row
+            Stage::MAJOR => {
+                let mut patterns_front = Vec::new();
+                let mut patterns_back = Vec::new();
+                for minimus_row in &Stage::MINIMUS.extent() {
+                    // Map `1234` to `5678` by adding 4 to each `Bell`
+                    let bells_5678 = minimus_row.bell_iter().map(|b| b + 4).map(RegexElem::Bell);
+                    patterns_front.push({
+                        let mut pat = bells_5678.clone().collect_vec();
+                        pat.push(RegexElem::Glob);
+                        Regex::from_vec(pat, stage)
+                    });
+                    patterns_back.push({
+                        let mut pat = vec![RegexElem::Glob];
+                        pat.extend(bells_5678.clone());
+                        Regex::from_vec(pat, stage)
+                    });
+                }
+                // Combine front/back to create `patterns_both`
+                let mut patterns_both = patterns_front.clone();
+                patterns_both.extend(patterns_back.iter().cloned());
+                (
+                    patterns_both,
+                    Some((patterns_front, patterns_back)),
+                    "5678 comb",
+                )
+            }
+            // 5678 combinations don't make sense for any stage other than Triples and Major
+            _ => {
+                return Err(anyhow::Error::msg(
+                    "5678 combinations only make sense for Triples and Major",
+                ));
+            }
+        },
+        MusicPreset::NearMisses => {
+            let patterns = (0..stage.num_bells() - 1)
+                .map(|swap_idx| {
+                    let mut pattern_row = RowBuf::rounds(stage);
+                    pattern_row.swap(swap_idx, swap_idx + 1);
+                    Regex::from(pattern_row)
+                })
+                .collect_vec();
+            (patterns, None, "NM")
+        }
+        MusicPreset::Crus => {
+            if stage < Stage::TRIPLES {
+                return Err(anyhow::Error::msg("Can't have CRUs on less than 7 bells"));
+            }
+            // Generate a pattern `*{b1}{b2}7890...` for b1 != b2 in {4,5,6}
+            let pat_456 = [(4, 5), (5, 4), (4, 6), (6, 4), (5, 6), (6, 5)];
+            let patterns = pat_456
+                .into_iter()
+                .map(|(b1, b2)| {
+                    // "*{b1}{b2}"
+                    let mut cru = vec![
+                        RegexElem::Glob,
+                        RegexElem::Bell(Bell::from_number(b1).unwrap()),
+                        RegexElem::Bell(Bell::from_number(b2).unwrap()),
+                    ];
+                    // "7890..."
+                    cru.extend(stage.bells().skip(6).map(RegexElem::Bell));
+                    Regex::from_vec(cru, stage)
+                })
+                .collect_vec();
+            (patterns, None, "CRU")
+        }
+    };
+
+    // Determines the `music_type_display` for this position
+    let music_type_display = |position: PatternPosition| -> Option<MusicTypeDisplay> {
+        let name = common.name.as_deref().unwrap_or(default_name);
+        // Only create `MusicTypeDisplay`s if this music_type is being displayed
+        common.show.then(|| MusicTypeDisplay {
+            full_name: name.to_owned(),
+            pattern: Some((name.to_owned(), position)),
+        })
+    };
+
+    // Combined `MusicType`
+    let mut music_types = vec![(
+        MusicType::new(
+            combined_patterns,
+            common.strokes,
+            common.weight, // Add weight only to the combined `MusicType`
+            OptRange::from(common.count_range),
+        ),
+        music_type_display(PatternPosition::Total),
+    )];
+    // Front/back `MusicType`s
+    if let Some((front_patterns, back_patterns)) = front_back_patterns {
+        music_types.push((
+            MusicType::new(
+                front_patterns,
+                common.strokes,
+                0.0, // Weight is accounted for by the combined `MusicType`
+                OptRange::default(),
+            ),
+            music_type_display(PatternPosition::Front),
+        ));
+        music_types.push((
+            MusicType::new(
+                back_patterns,
+                common.strokes,
+                0.0, // Weight is accounted for by the combined `MusicType`
+                OptRange::default(),
+            ),
+            music_type_display(PatternPosition::Back),
+        ));
+    }
+
+    Ok(music_types) // TODO: Actually generate music
+}
+
 //////////////////////////////////////
 // DETERMINING HOW TO DISPLAY MUSIC //
 //////////////////////////////////////
@@ -402,7 +554,7 @@ enum PatternPosition {
     Front,
     Internal,
     Back,
-    Anywhere,
+    Total,
 }
 
 impl MusicTypeDisplay {
@@ -478,7 +630,7 @@ impl MusicTypeDisplay {
             } else {
                 // If one of the ends doesn't have any `xs`, then the pattern is considered
                 // anywhere
-                (xs_in_prefix, xs_in_suffix, PatternPosition::Anywhere)
+                (xs_in_prefix, xs_in_suffix, PatternPosition::Total)
             }
         } else {
             // At this point, we know that `regex` contains at most one `*`, and that it is in one of
@@ -564,7 +716,7 @@ fn compute_music_displays(
                         PatternPosition::Front => &mut music_display.source_front,
                         PatternPosition::Internal => &mut music_display.source_internal,
                         PatternPosition::Back => &mut music_display.source_back,
-                        PatternPosition::Anywhere => &mut music_display.source_total,
+                        PatternPosition::Total => &mut music_display.source_total,
                     };
                     *source = Some(music_type_idx);
                 }
@@ -619,7 +771,7 @@ fn compute_music_displays(
             PatternPosition::Front => format!("{pattern}*"),
             PatternPosition::Internal => format!("x*{pattern}*x"),
             PatternPosition::Back => format!("*{pattern}"),
-            PatternPosition::Anywhere => unreachable!(),
+            PatternPosition::Total => unreachable!(),
         };
     }
 
@@ -660,9 +812,9 @@ mod tests {
         check("*x5678x*", Stage::MAJOR, "5678", Internal);
         check("*xx5678x*", Stage::MAJOR, "x5678", Internal);
 
-        check("*5678*", Stage::MAJOR, "5678", Anywhere);
-        check("*xx5678*", Stage::MAJOR, "xx5678", Anywhere);
-        check("*5678xx*", Stage::MAJOR, "5678xx", Anywhere);
+        check("*5678*", Stage::MAJOR, "5678", Total);
+        check("*xx5678*", Stage::MAJOR, "xx5678", Total);
+        check("*5678xx*", Stage::MAJOR, "5678xx", Total);
 
         check("*5678", Stage::MAJOR, "5678", Back);
         check("*xxxx5678", Stage::MAJOR, "5678", Back);

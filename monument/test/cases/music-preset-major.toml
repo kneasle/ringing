@@ -1,0 +1,10 @@
+length = "practice"
+method = "Double Coslany Court Bob Major"
+num_comps = 400 # 385 comps are possible
+
+base_music = "none"
+music = [
+    { preset = "near misses" },
+    { preset = "crus" },
+    { preset = "5678 combinations" },
+]

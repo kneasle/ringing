@@ -1,5 +1,21 @@
 ## Unreleased
 
+### Monument
+- (#96) Add music presets for:
+    - Near misses (for any stage)
+    - CRUs (for >= Triples)
+    - 5678 combinations (for Triples and Major)
+
+    Load them with, e.g.:
+
+    ```toml
+    music = [
+        { preset = "5678 combinations" },
+        { preset = "near misses" },
+        { preset = "crus" },
+    ]
+    ```
+
 ### BellFrame
 - (#96) Add `Stage::extent`, which returns a `SameStageVec` containing every possible `Row` of that
     `Stage` _in an arbitrary order_.

@@ -269,9 +269,9 @@ impl MusicDisplay {
 fn max_count_len(music_type: &MusicType) -> usize {
     // Determine how to display the music summary
     let max_music_count = music_type.max_count().unwrap_or(usize::MAX);
-    // `min(3)` because we don't expect more than 999 instances of a music type, even
+    // `min(4)` because we don't expect more than 9999 instances of a music type, even
     // if more theoretically exist
-    max_music_count.to_string().len().min(3)
+    max_music_count.to_string().len().min(4)
 }
 
 ////////////////

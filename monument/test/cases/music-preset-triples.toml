@@ -1,0 +1,10 @@
+length = { min = 100, max = 150 }
+method = "Plain Bob Triples"
+num_comps = 120 # 115 comps should be generated
+
+base_music = "none"
+music = [
+    { preset = "near misses" },
+    { preset = "crus" },
+    { preset = "5678 combinations" },
+]

@@ -303,3 +303,26 @@ method = "Bristol Surprise Major"
 part_head = "134265"
 course_heads = ["*78", "*7856"] # `*7856` becomes `*7865` in other parts
 ```
+
+## music-presets
+
+### 5678-wrong-stage-1
+```toml
+length = "practice"
+method = "Bristol Surprise Royal"
+music = [{ preset = "5678 combinations" }] # Don't make sense for Royal
+```
+
+### 5678-wrong-stage-2
+```toml
+length = "practice"
+method = "Cambridge Surprise Minor"
+music = [{ preset = "5678 combinations" }] # Don't make sense for Minor
+```
+
+### crus-on-small-stage
+```toml
+length = "practice"
+method = "Cambridge Surprise Minor"
+music = [{ preset = "crus" }] # Don't make sense for Minor
+```
