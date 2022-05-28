@@ -1,3 +1,12 @@
+## Unreleased
+
+### BellFrame
+- (#96) Add conversions from `Row`/`RowBuf` to `Mask` and `Regex` (via the `From` trait)
+
+---
+
+
+
 ## 25th May 2022
 
 ### Monument v0.9.0
