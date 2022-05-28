@@ -7,7 +7,9 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod calls;
+pub mod music;
 pub mod spec;
+pub mod utils;
 
 use std::{
     fmt::Write,
