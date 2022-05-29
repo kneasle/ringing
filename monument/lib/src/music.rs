@@ -87,7 +87,9 @@ impl Breakdown {
                 if ty.strokes.contains(start_stroke.offset(idx)) {
                     // ... count the number of instances of that type of music
                     for pattern in &ty.patterns {
-                        if pattern.matches(&temp_row) {
+                        // Unwrap is safe because `pattern` must have the same `Stage` as the rest
+                        // of the rows
+                        if pattern.matches(&temp_row).unwrap() {
                             *num_instances += 1;
                         }
                     }

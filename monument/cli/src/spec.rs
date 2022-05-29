@@ -1,5 +1,4 @@
 use std::{
-    cmp::Ordering,
     collections::HashMap,
     fmt::Write,
     ops::{self, Deref},
@@ -451,9 +450,10 @@ impl Spec {
                 // For every handbell pair, we need patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
                     let pattern =
-                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage);
+                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage)
+                            .expect("Handbell patterns should always be valid regexes");
                     let mask = Mask::from_pattern(&pattern)
-                        .expect("Handbell patterns should always be valid");
+                        .expect("Handbell patterns should only have one `*`");
                     add_ch_pattern(&mask, self.handbell_coursing_weight);
                 }
             }
@@ -727,38 +727,7 @@ fn mask_parse_error(
     string: &str,
     e: bellframe::mask::ParseError,
 ) -> anyhow::Error {
-    use bellframe::mask::ParseError as PE;
-    let mut s = format!("Can't parse {} {:?}: ", mask_kind, string);
-    match e {
-        PE::MultipleStars => {
-            s.push_str("too many `*`s.  Masks can only have one region with `x` or `*`.");
-        }
-        PE::BellExceedsStage(bell, stage) => {
-            write!(s, "bell {} is out of stage {}", bell, stage).unwrap();
-        }
-        PE::MismatchedLength(len, stage) => match len.cmp(&stage.num_bells()) {
-            Ordering::Less => write!(
-                s,
-                "mask is too short; did you mean `{}*` or `{}{}`?",
-                string,
-                string,
-                stage
-                    .bells()
-                    .skip(len)
-                    .map(|b| b.to_char().unwrap())
-                    .collect::<String>()
-            )
-            .unwrap(),
-            Ordering::Equal => unreachable!(),
-            Ordering::Greater => write!(
-                s,
-                "mask is too long, needing at least {} bells (too many for {})",
-                len, stage
-            )
-            .unwrap(),
-        },
-    }
-    anyhow::Error::msg(s)
+    anyhow::Error::msg(format!("Can't parse {} {:?}: {}", mask_kind, string, e))
 }
 
 /////////////

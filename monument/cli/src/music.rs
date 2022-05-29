@@ -120,7 +120,9 @@ pub fn generate_music(
 
     // Base music
     if let Some(base_music_toml) = base_music.toml(stage) {
-        music_builder.add_music_toml(base_music_toml)?;
+        music_builder
+            .add_music_toml(base_music_toml)
+            .expect("Loading base music should not cause errors");
     }
     // Music file
     if let Some(music_file_toml) = music_file_str {
@@ -247,17 +249,12 @@ impl MusicSpec {
                 pattern,
                 count_each,
                 common,
-            } => Ok(music_type_patterns(
-                from_ref(pattern),
-                *count_each,
-                common,
-                stage,
-            )),
+            } => music_type_patterns(from_ref(pattern), *count_each, common, stage),
             Self::Patterns {
                 patterns,
                 count_each,
                 common,
-            } => Ok(music_type_patterns(patterns, *count_each, common, stage)),
+            } => music_type_patterns(patterns, *count_each, common, stage),
             Self::Preset { preset, common } => music_type_preset(*preset, common, stage),
         }
     }
@@ -345,20 +342,24 @@ fn music_type_runs(
 }
 
 fn music_type_patterns(
-    patterns: &[String],
+    pattern_strings: &[String],
     count_each: OptRangeInclusive,
     common: &MusicCommon,
     stage: Stage,
-) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
-    let patterns = patterns.iter().map(|s| Pattern::parse(s, stage));
+) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
     let individual_count = OptRange::from(count_each);
     let combined_count = OptRange::from(common.count_range);
+    // Parse patterns
+    let mut patterns = Vec::new();
+    for pattern_string in pattern_strings {
+        let pattern = Pattern::parse(pattern_string, stage)?;
+        patterns.push(pattern);
+    }
 
     let mut types = Vec::new();
-
     // Create music types for the individual groups
     if individual_count.is_set() || (common.show && common.name.is_none()) {
-        types.extend(patterns.clone().map(|pattern| {
+        types.extend(patterns.iter().cloned().map(|pattern| {
             let name = match (common.show, &common.name) {
                 (true, None) => Some(MusicTypeDisplay::from_pattern(&pattern)),
                 // If `show = true` and `name` is set, then this group *as a whole* will be named
@@ -388,7 +389,7 @@ fn music_type_patterns(
         };
         types.push((
             MusicType::new(
-                patterns.collect_vec(),
+                patterns,
                 common.strokes,
                 // If individual `MusicType`s have already been created, then give the combined
                 // `MusicType` a weight of 0 so everything isn't counted twice
@@ -399,7 +400,7 @@ fn music_type_patterns(
         ));
     }
 
-    types
+    Ok(types)
 }
 
 fn music_type_preset(
@@ -418,7 +419,10 @@ fn music_type_preset(
                     let mut pattern = vec![Elem::Star];
                     // Map `123` into `567` by adding 4 to each `Bell`
                     pattern.extend(singles_row.bell_iter().map(|b| b + 4).map(Elem::Bell));
-                    patterns.push(Pattern::from_vec(pattern, stage));
+                    patterns.push(
+                        Pattern::from_vec(pattern, stage)
+                            .expect("567 combination pattern should always be valid"),
+                    );
                 }
                 (patterns, None, "5678 comb")
             }
@@ -433,11 +437,13 @@ fn music_type_preset(
                         let mut pat = bells_5678.clone().collect_vec();
                         pat.push(Elem::Star);
                         Pattern::from_vec(pat, stage)
+                            .expect("5678 combination pattern should be valid")
                     });
                     patterns_back.push({
                         let mut pat = vec![Elem::Star];
                         pat.extend(bells_5678.clone());
                         Pattern::from_vec(pat, stage)
+                            .expect("5678 combination pattern should be valid")
                     });
                 }
                 // Combine front/back to create `patterns_both`
@@ -483,7 +489,7 @@ fn music_type_preset(
                     ];
                     // "7890..."
                     cru.extend(stage.bells().skip(6).map(Elem::Bell));
-                    Pattern::from_vec(cru, stage)
+                    Pattern::from_vec(cru, stage).expect("CRU pattern should be valid")
                 })
                 .collect_vec();
             (patterns, None, "CRU")
@@ -798,7 +804,7 @@ mod tests {
             expected_pattern: &str,
             expected_position: PatternPosition,
         ) {
-            let pattern = Pattern::parse(pattern_str, stage);
+            let pattern = Pattern::parse(pattern_str, stage).unwrap();
             let (actual_pattern, actual_position) = MusicTypeDisplay::pattern(&pattern).unwrap();
             assert_eq!(actual_pattern, expected_pattern);
             assert_eq!(actual_position, expected_position);
@@ -834,7 +840,7 @@ mod tests {
         #[track_caller]
         fn check_no_pattern(pattern_str: &str, stage: Stage) {
             assert_eq!(
-                MusicTypeDisplay::pattern(&Pattern::parse(pattern_str, stage)),
+                MusicTypeDisplay::pattern(&Pattern::parse(pattern_str, stage).unwrap()),
                 None
             );
         }

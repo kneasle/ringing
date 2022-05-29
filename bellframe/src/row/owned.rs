@@ -168,26 +168,7 @@ impl RowBuf {
     /// ```
     pub fn from_vec(bells: Vec<Bell>) -> Result<RowBuf, InvalidRowError> {
         let stage = Stage::try_from(bells.len() as u8)?;
-        // We check validity by keeping a checklist of which `Bell`s we've seen, and checking off
-        // each bell as we go.  PERF: use a bitmap here
-        let mut checklist = vec![false; bells.len()];
-        // Loop over all the bells to check them off in the checklist.  We do not need to check for
-        // empty spaces in the checklist once we've done because (by the Pigeon Hole Principle),
-        // fitting `n` bells into `n` slots with some gaps will always require that a bell is
-        // either out of range or two bells share a slot.
-        for &b in &bells {
-            match checklist.get_mut(b.index()) {
-                // If the `Bell` is out of range of the checklist, it can't belong within the
-                // `Stage` of this `Row`
-                None => return Err(InvalidRowError::BellOutOfStage(b, stage)),
-                // If the `Bell` has already been seen before, then it must be a duplicate
-                Some(&mut true) => return Err(InvalidRowError::DuplicateBell(b)),
-                // If the `Bell` has not been seen before, check off the checklist entry and
-                // continue
-                Some(x) => *x = true,
-            }
-        }
-        // If none of the `Bell`s caused errors, the row must be valid
+        crate::utils::check_duplicate_or_out_of_stage(bells.iter().copied(), stage)?;
         Ok(Self { bell_vec: bells })
     }
 
@@ -511,7 +492,52 @@ mod tests {
     }
 
     #[test]
+    fn parse_ok() {
+        #[track_caller]
+        fn check(inp_str: &str) {
+            let row = RowBuf::parse(inp_str).unwrap();
+            assert_eq!(&row.to_string(), inp_str);
+        }
+
+        check("1");
+        check("12");
+        check("21");
+        check("164589237");
+    }
+
+    #[test]
+    fn parse_err() {
+        #[track_caller]
+        fn check_dup_bell(inp_str: &str, dup_bell: u8) {
+            let dup_bell = Bell::from_number(dup_bell).unwrap();
+            assert_eq!(
+                RowBuf::parse(inp_str),
+                Err(InvalidRowError::DuplicateBell(dup_bell))
+            );
+        }
+
+        #[track_caller]
+        fn check_out_of_stage(inp_str: &str, bell: u8, stage: u8) {
+            let bell = Bell::from_number(bell).unwrap();
+            let stage = Stage::new(stage);
+            assert_eq!(
+                RowBuf::parse(inp_str),
+                Err(InvalidRowError::BellOutOfStage(bell, stage))
+            );
+        }
+
+        assert_eq!(RowBuf::parse(""), Err(InvalidRowError::NoBells));
+        check_dup_bell("11", 1);
+        check_dup_bell("124523", 2);
+        check_out_of_stage("124", 4, 3);
+        check_out_of_stage("5234", 5, 4);
+        check_out_of_stage("21A65", 13, 5);
+        // `InvalidRowError::MissingBell` isn't possible for `RowBuf::parse`
+    }
+
+    #[test]
     fn parse_with_stage_ok() {
+        #[track_caller]
         fn check(inp_str: &str, stage: Stage, exp_row: &str) {
             assert_eq!(
                 RowBuf::parse_with_stage(inp_str, stage).unwrap(),
