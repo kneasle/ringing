@@ -78,7 +78,7 @@ fn add_fixed_bells_to_method(method: &mut super::Method, fixed_bells: &[Bell]) {
     'mask_loop: for mut ch_mask in method.ch_masks.iter().cloned() {
         // Attempt to add the fixed bells to this mask
         for &b in fixed_bells {
-            if let Err(BellAlreadySet) = ch_mask.mask.fix(b) {
+            if let Err(BellAlreadySet(_)) = ch_mask.mask.fix(b) {
                 // If a bell is known to be fixed in its home position but a mask requires it to be
                 // outside of its home position, then that mask will never be satisfied and can be
                 // removed.  For example, this would remove `x1xxx...` as a course head in Surprise

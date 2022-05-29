@@ -7,7 +7,7 @@ use crate::{
     utils::{Counts, OptRange},
     MusicTypeIdx, MusicTypeVec,
 };
-use bellframe::{music::Regex, Row, RowBuf, Stage, Stroke};
+use bellframe::{music::Pattern, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use serde::Deserialize;
@@ -17,7 +17,7 @@ pub type Score = OrderedFloat<f32>;
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
 pub struct MusicType {
-    pub regexes: Vec<Regex>,
+    pub patterns: Vec<Pattern>,
     pub strokes: StrokeSet,
 
     pub weight: Score,
@@ -27,13 +27,13 @@ pub struct MusicType {
 
 impl MusicType {
     pub fn new(
-        regexes: Vec<Regex>,
+        patterns: Vec<Pattern>,
         stroke_set: StrokeSet,
         weight: f32,
         count_range: OptRange,
     ) -> Self {
         Self {
-            regexes,
+            patterns,
             weight: OrderedFloat(weight),
             count_range,
             non_duffer: false, // TODO: Implement non-duffers properly
@@ -45,7 +45,7 @@ impl MusicType {
     /// computation caused `usize` to overflow.
     pub fn max_count(&self) -> Option<usize> {
         let mut sum = 0;
-        for r in &self.regexes {
+        for r in &self.patterns {
             sum += r.num_matching_rows()?;
         }
         Some(sum)
@@ -86,8 +86,10 @@ impl Breakdown {
             for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
                 if ty.strokes.contains(start_stroke.offset(idx)) {
                     // ... count the number of instances of that type of music
-                    for regex in &ty.regexes {
-                        if regex.matches(&temp_row) {
+                    for pattern in &ty.patterns {
+                        // Unwrap is safe because `pattern` must have the same `Stage` as the rest
+                        // of the rows
+                        if pattern.matches(&temp_row).unwrap() {
                             *num_instances += 1;
                         }
                     }

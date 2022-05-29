@@ -41,5 +41,5 @@ operation is a bottleneck - it's just so much easier to know that simple code is
 #### Other Useful Types:
   - `Mask`: Like a `RowBuf`, except that bells can be missing (denoted by `x`).  For example,
     `1xxx5678` is a `Mask`, where 2,3,4 can go in any order.
-  - `Regex`: Default way of representing music patterns - like a `Mask`, except that `*` matches any
-    number of bells.  For example, `*x7x8x*` is a `Regex`.
+  - `Pattern`: Default way of representing music patterns - like a `Mask`, except that `*` matches any
+    number of bells.  For example, `*x7x8x*` is a `Pattern`.

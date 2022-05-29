@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Write};
 
 use bellframe::{
-    music::{Regex, RegexElem},
+    music::{Elem, Pattern},
     Bell, RowBuf, Stage,
 };
 use itertools::Itertools;
@@ -120,7 +120,9 @@ pub fn generate_music(
 
     // Base music
     if let Some(base_music_toml) = base_music.toml(stage) {
-        music_builder.add_music_toml(base_music_toml)?;
+        music_builder
+            .add_music_toml(base_music_toml)
+            .expect("Loading base music should not cause errors");
     }
     // Music file
     if let Some(music_file_toml) = music_file_str {
@@ -247,17 +249,12 @@ impl MusicSpec {
                 pattern,
                 count_each,
                 common,
-            } => Ok(music_type_patterns(
-                from_ref(pattern),
-                *count_each,
-                common,
-                stage,
-            )),
+            } => music_type_patterns(from_ref(pattern), *count_each, common, stage),
             Self::Patterns {
                 patterns,
                 count_each,
                 common,
-            } => Ok(music_type_patterns(patterns, *count_each, common, stage)),
+            } => music_type_patterns(patterns, *count_each, common, stage),
             Self::Preset { preset, common } => music_type_preset(*preset, common, stage),
         }
     }
@@ -276,28 +273,28 @@ fn music_type_runs(
     if common.show && common.name.is_none() {
         for &len in lengths {
             let pattern_name = format!("{}-bell run", len);
-            let mut all_regexes = Vec::new(); // Used to create the `MusicType` for the total
+            let mut all_patterns = Vec::new(); // Used to create the `MusicType` for the total
 
             // Closure to add a `MusicType` for runs in some position
             let mut push_runs = |position: PatternPosition| {
-                let regexes = match position {
-                    PatternPosition::Front => Regex::runs_front(stage, len),
-                    PatternPosition::Internal => Regex::runs_internal(stage, len),
-                    PatternPosition::Back => Regex::runs_back(stage, len),
+                let patterns = match position {
+                    PatternPosition::Front => Pattern::runs_front(stage, len),
+                    PatternPosition::Internal => Pattern::runs_internal(stage, len),
+                    PatternPosition::Back => Pattern::runs_back(stage, len),
                     PatternPosition::Total => unreachable!(),
                 };
                 // Add `MusicType` for the front/back/internal count
                 music_types.push((
-                    MusicType::new(regexes.clone(), common.strokes, 0.0, OptRange::default()),
+                    MusicType::new(patterns.clone(), common.strokes, 0.0, OptRange::default()),
                     Some(MusicTypeDisplay {
                         full_name: String::new(),
                         pattern: Some((pattern_name.clone(), position)),
                     }),
                 ));
-                // Make sure that the regexes get included in the total
-                all_regexes.extend(regexes);
+                // Make sure that the patterns get included in the total
+                all_patterns.extend(patterns);
             };
-            // Add front/internal/back regexes
+            // Add front/internal/back patterns
             push_runs(PatternPosition::Front);
             if internal {
                 push_runs(PatternPosition::Internal);
@@ -307,7 +304,7 @@ fn music_type_runs(
             // the scoring weight
             music_types.push((
                 MusicType::new(
-                    all_regexes,
+                    all_patterns,
                     common.strokes,
                     common.weight,
                     OptRange::default(),
@@ -324,9 +321,9 @@ fn music_type_runs(
     let count_range = OptRange::from(common.count_range);
     let need_to_add_weight = music_types.is_empty();
     if count_range.is_set() || need_to_add_weight {
-        let regexes = lengths
+        let patterns = lengths
             .iter()
-            .flat_map(|length| Regex::runs(stage, *length, internal))
+            .flat_map(|length| Pattern::runs(stage, *length, internal))
             .collect_vec();
         let weight = if need_to_add_weight {
             common.weight
@@ -336,7 +333,7 @@ fn music_type_runs(
         // Runs can't take the `count_each` parameter, so can all be grouped into one
         // `MusicType`
         music_types.push((
-            MusicType::new(regexes, common.strokes, weight, count_range),
+            MusicType::new(patterns, common.strokes, weight, count_range),
             None,
         ));
     }
@@ -345,29 +342,38 @@ fn music_type_runs(
 }
 
 fn music_type_patterns(
-    patterns: &[String],
+    pattern_strings: &[String],
     count_each: OptRangeInclusive,
     common: &MusicCommon,
     stage: Stage,
-) -> Vec<(MusicType, Option<MusicTypeDisplay>)> {
-    let regexes = patterns.iter().map(|s| Regex::parse(s, stage));
+) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
     let individual_count = OptRange::from(count_each);
     let combined_count = OptRange::from(common.count_range);
+    // Parse patterns
+    let mut patterns = Vec::new();
+    for pattern_string in pattern_strings {
+        let pattern = Pattern::parse(pattern_string, stage)?;
+        patterns.push(pattern);
+    }
 
     let mut types = Vec::new();
-
     // Create music types for the individual groups
     if individual_count.is_set() || (common.show && common.name.is_none()) {
-        types.extend(regexes.clone().map(|regex| {
+        types.extend(patterns.iter().cloned().map(|pattern| {
             let name = match (common.show, &common.name) {
-                (true, None) => Some(MusicTypeDisplay::from_regex(&regex)),
+                (true, None) => Some(MusicTypeDisplay::from_pattern(&pattern)),
                 // If `show = true` and `name` is set, then this group *as a whole* will be named
                 (true, Some(_)) => None,
                 (false, _) => None, // If `show = false`, then no names are generated
             };
 
             (
-                MusicType::new(vec![regex], common.strokes, common.weight, individual_count),
+                MusicType::new(
+                    vec![pattern],
+                    common.strokes,
+                    common.weight,
+                    individual_count,
+                ),
                 name,
             )
         }));
@@ -376,14 +382,14 @@ fn music_type_patterns(
     if types.is_empty() || combined_count.is_set() || (common.show && common.name.is_some()) {
         let name = match (common.show, &common.name) {
             (true, Some(name)) => Some(MusicTypeDisplay::with_custom_name(name)),
-            // If `common.show = true` but `common.name` is not set, then the regexes will be named
+            // If `common.show = true` but `common.name` is not set, then the patterns will be named
             // individually
             (true, None) => None,
             (false, _) => None, // If `common.show = false`, then no name is given
         };
         types.push((
             MusicType::new(
-                regexes.collect_vec(),
+                patterns,
                 common.strokes,
                 // If individual `MusicType`s have already been created, then give the combined
                 // `MusicType` a weight of 0 so everything isn't counted twice
@@ -394,7 +400,7 @@ fn music_type_patterns(
         ));
     }
 
-    types
+    Ok(types)
 }
 
 fn music_type_preset(
@@ -402,7 +408,7 @@ fn music_type_preset(
     common: &MusicCommon,
     stage: Stage,
 ) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
-    // Determine the regex types
+    // Determine the pattern types
     let (combined_patterns, front_back_patterns, default_name) = match preset {
         MusicPreset::Combinations5678s => match stage {
             // For Triples, `8` is always at the back, so `5678` combinations are any point where
@@ -410,10 +416,13 @@ fn music_type_preset(
             Stage::TRIPLES => {
                 let mut patterns = Vec::new();
                 for singles_row in &Stage::SINGLES.extent() {
-                    let mut pattern = vec![RegexElem::Glob];
+                    let mut pattern = vec![Elem::Star];
                     // Map `123` into `567` by adding 4 to each `Bell`
-                    pattern.extend(singles_row.bell_iter().map(|b| b + 4).map(RegexElem::Bell));
-                    patterns.push(Regex::from_vec(pattern, stage));
+                    pattern.extend(singles_row.bell_iter().map(|b| b + 4).map(Elem::Bell));
+                    patterns.push(
+                        Pattern::from_vec(pattern, stage)
+                            .expect("567 combination pattern should always be valid"),
+                    );
                 }
                 (patterns, None, "5678 comb")
             }
@@ -423,16 +432,18 @@ fn music_type_preset(
                 let mut patterns_back = Vec::new();
                 for minimus_row in &Stage::MINIMUS.extent() {
                     // Map `1234` to `5678` by adding 4 to each `Bell`
-                    let bells_5678 = minimus_row.bell_iter().map(|b| b + 4).map(RegexElem::Bell);
+                    let bells_5678 = minimus_row.bell_iter().map(|b| b + 4).map(Elem::Bell);
                     patterns_front.push({
                         let mut pat = bells_5678.clone().collect_vec();
-                        pat.push(RegexElem::Glob);
-                        Regex::from_vec(pat, stage)
+                        pat.push(Elem::Star);
+                        Pattern::from_vec(pat, stage)
+                            .expect("5678 combination pattern should be valid")
                     });
                     patterns_back.push({
-                        let mut pat = vec![RegexElem::Glob];
+                        let mut pat = vec![Elem::Star];
                         pat.extend(bells_5678.clone());
-                        Regex::from_vec(pat, stage)
+                        Pattern::from_vec(pat, stage)
+                            .expect("5678 combination pattern should be valid")
                     });
                 }
                 // Combine front/back to create `patterns_both`
@@ -456,7 +467,7 @@ fn music_type_preset(
                 .map(|swap_idx| {
                     let mut pattern_row = RowBuf::rounds(stage);
                     pattern_row.swap(swap_idx, swap_idx + 1);
-                    Regex::from(pattern_row)
+                    Pattern::from(pattern_row)
                 })
                 .collect_vec();
             (patterns, None, "NM")
@@ -472,13 +483,13 @@ fn music_type_preset(
                 .map(|(b1, b2)| {
                     // "*{b1}{b2}"
                     let mut cru = vec![
-                        RegexElem::Glob,
-                        RegexElem::Bell(Bell::from_number(b1).unwrap()),
-                        RegexElem::Bell(Bell::from_number(b2).unwrap()),
+                        Elem::Star,
+                        Elem::Bell(Bell::from_number(b1).unwrap()),
+                        Elem::Bell(Bell::from_number(b2).unwrap()),
                     ];
                     // "7890..."
-                    cru.extend(stage.bells().skip(6).map(RegexElem::Bell));
-                    Regex::from_vec(cru, stage)
+                    cru.extend(stage.bells().skip(6).map(Elem::Bell));
+                    Pattern::from_vec(cru, stage).expect("CRU pattern should be valid")
                 })
                 .collect_vec();
             (patterns, None, "CRU")
@@ -538,7 +549,7 @@ fn music_type_preset(
 #[derive(Debug, Clone)]
 struct MusicTypeDisplay {
     /// A specific full name given to this [`MusicType`], used when this row isn't part of a
-    /// combined pattern.  Usually this is the compressed regex (e.g. `*5678`) or a specific name,
+    /// combined pattern.  Usually this is the compressed pattern (e.g. `*5678`) or a specific name,
     /// like `"87s at back"` or `"Queens"`.
     full_name: String,
     /// The [`MusicType`] is a pattern applied to one end of the [`Row`].  For example:
@@ -565,53 +576,53 @@ impl MusicTypeDisplay {
         }
     }
 
-    fn from_regex(regex: &Regex) -> Self {
+    fn from_pattern(pattern: &Pattern) -> Self {
         Self {
-            full_name: regex.to_string(),
-            pattern: Self::pattern(regex),
+            full_name: pattern.to_string(),
+            pattern: Self::pattern(pattern),
         }
     }
 
-    /// Given a [`Regex`], try to determine the underlying pattern, as well as its
+    /// Given a [`Pattern`], try to determine the underlying pattern, as well as its
     /// [`PatternPosition`] within a [`Row`].
-    fn pattern(regex: &Regex) -> Option<(String, PatternPosition)> {
+    fn pattern(pattern: &Pattern) -> Option<(String, PatternPosition)> {
         // If a row is all wildcards, then no pattern is possible
-        if regex.elems().iter().all(|elem| elem.is_wildcard()) {
+        if pattern.elems().iter().all(|elem| elem.is_wildcard()) {
             return None;
         }
 
-        // Split the `Regex` into 3 sections:
+        // Split the `Pattern` into 3 sections:
         // 1. A prefix of wildcards
         // 2. A centre chunk, starting and ending with a specific bell, which is used to name the
         //    pattern
         // 3. A suffix of wildcards
-        let wildcard_prefix_len = regex
+        let wildcard_prefix_len = pattern
             .elems()
             .iter()
             .find_position(|elem| elem.is_bell())
-            .unwrap() // This will only panic if the regex contains no bells (which is checked)
+            .unwrap() // This will only panic if the pattern contains no bells (which is checked)
             .0; // `find_position(_).unwrap()` returns `(index, element)`, but we just want the index
-        let wildcard_suffix_len = regex
+        let wildcard_suffix_len = pattern
             .elems()
             .iter()
             .rev()
             .find_position(|elem| elem.is_bell())
-            .unwrap() // This will only panic if the regex contains no bells (which is checked)
+            .unwrap() // This will only panic if the pattern contains no bells (which is checked)
             .0; // `find_position(_).unwrap()` returns `(index, element)`, but we just want the index
-        let wildcard_suffix_start = regex.elems().len() - wildcard_suffix_len;
-        let (head, wildcard_suffix) = regex.elems().split_at(wildcard_suffix_start);
+        let wildcard_suffix_start = pattern.elems().len() - wildcard_suffix_len;
+        let (head, wildcard_suffix) = pattern.elems().split_at(wildcard_suffix_start);
         let (wildcard_prefix, pattern_elems) = head.split_at(wildcard_prefix_len);
 
-        // Check each section for `*`s.  Regex normalisation tells us that the prefix and suffix
-        // can contain at most one glob each
-        let star_in_prefix = wildcard_prefix.contains(&RegexElem::Glob);
-        let star_in_pattern = pattern_elems.contains(&RegexElem::Glob);
-        let star_in_suffix = wildcard_suffix.contains(&RegexElem::Glob);
+        // Check each section for `*`s.  Pattern normalisation tells us that the prefix and suffix
+        // can contain at most one star each
+        let star_in_prefix = wildcard_prefix.contains(&Elem::Star);
+        let star_in_pattern = pattern_elems.contains(&Elem::Star);
+        let star_in_suffix = wildcard_suffix.contains(&Elem::Star);
         // Count the number of `x`s in the suffix or prefix
         let xs_in_prefix = wildcard_prefix.iter().filter(|e| e.is_x()).count();
         let xs_in_suffix = wildcard_suffix.iter().filter(|e| e.is_x()).count();
 
-        // If the internal pattern contains a `*`, then the regex can't have a position
+        // If the internal pattern contains a `*`, then the pattern can't have a position
         if star_in_pattern {
             return None;
         }
@@ -633,9 +644,9 @@ impl MusicTypeDisplay {
                 (xs_in_prefix, xs_in_suffix, PatternPosition::Total)
             }
         } else {
-            // At this point, we know that `regex` contains at most one `*`, and that it is in one of
+            // At this point, we know that `pattern` contains at most one `*`, and that it is in one of
             // the suffix or prefix
-            let num_stars = regex.elems().iter().filter(|e| e.is_star()).count();
+            let num_stars = pattern.elems().iter().filter(|e| e.is_star()).count();
             assert!(num_stars <= 1);
             assert!(!star_in_pattern);
 
@@ -643,8 +654,8 @@ impl MusicTypeDisplay {
             // and use that to compute the exact lengths of the suffix and prefix.
             //
             // The length of the star is the number of bells missing once every other element in the
-            // regex is accounted for.
-            let star_len = regex.stage().num_bells() - (regex.elems().len() - num_stars);
+            // pattern is accounted for.
+            let star_len = pattern.stage().num_bells() - (pattern.elems().len() - num_stars);
             let prefix_len = xs_in_prefix + if star_in_prefix { star_len } else { 0 };
             let suffix_len = xs_in_suffix + if star_in_suffix { star_len } else { 0 };
 
@@ -780,21 +791,21 @@ fn compute_music_displays(
 
 #[cfg(test)]
 mod tests {
-    use bellframe::{music::Regex, Stage};
+    use bellframe::{music::Pattern, Stage};
 
     use super::{MusicTypeDisplay, PatternPosition};
 
     #[test]
-    fn extract_regex_pattern() {
+    fn extract_pattern_pattern() {
         #[track_caller]
         fn check(
-            regex_str: &str,
+            pattern_str: &str,
             stage: Stage,
             expected_pattern: &str,
             expected_position: PatternPosition,
         ) {
-            let regex = Regex::parse(regex_str, stage);
-            let (actual_pattern, actual_position) = MusicTypeDisplay::pattern(&regex).unwrap();
+            let pattern = Pattern::parse(pattern_str, stage).unwrap();
+            let (actual_pattern, actual_position) = MusicTypeDisplay::pattern(&pattern).unwrap();
             assert_eq!(actual_pattern, expected_pattern);
             assert_eq!(actual_position, expected_position);
         }
@@ -825,11 +836,11 @@ mod tests {
     }
 
     #[test]
-    fn extract_regex_no_pattern() {
+    fn extract_pattern_no_pattern() {
         #[track_caller]
-        fn check_no_pattern(regex_str: &str, stage: Stage) {
+        fn check_no_pattern(pattern_str: &str, stage: Stage) {
             assert_eq!(
-                MusicTypeDisplay::pattern(&Regex::parse(regex_str, stage)),
+                MusicTypeDisplay::pattern(&Pattern::parse(pattern_str, stage).unwrap()),
                 None
             );
         }

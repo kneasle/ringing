@@ -12,7 +12,7 @@ show = false
 
 # Queens and Kings
 [[music]]
-patterns = ["13572468", "75312468"]
+patterns = ["1357246", "7531246"]
 weight = 3
 show = false
 
