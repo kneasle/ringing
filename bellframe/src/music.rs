@@ -8,141 +8,148 @@ use itertools::Itertools;
 
 use crate::{utils, Bell, Row, RowBuf, Stage};
 
-/// A regex over sequences of [`Bell`]s (i.e. [`Row`]s).
+/// A `Pattern` over sequences of [`Bell`]s (usually over [`Row`]s).
 ///
-/// Wild-cards in `Regex`es are normalised according to two rules:
-/// - Consecutive globs are reduced to a single glob (because `**` is equivalent to `*`)
-/// - If there is a sequence of consecutive 'any's and globs (e.g. `*x*x***`) then the 'any's
-///   will always come first, followed by the globs (in this example `xx*****`).
+/// A `Pattern` is a sequence of [`Elem`]ents, which can be one of three types:
+/// - An [`Elem::Bell`], written as the corresponding [`Bell`] name (e.g. `'1'`)
+/// - An [`Elem::X`] which matches exactly one of any [`Bell`], written as `'x'`
+/// - An [`Elem::Star`] which matches any number (including zero) of any [`Bell`], written as `'*'`
+///
+/// For example, `"*x5678x*"` matches at least one of any [`Bell`] (`"*x"`), followed by `"5678"`,
+/// followed by at least one of any [`Bell`] (`"x*"`).  In other words, `"*x5678x*` matches
+/// _internal 5678s_.
+///
+/// `x`s and `*`s are known as 'wildcards', since they aren't bound to a specific [`Bell`].
+///
+/// Wildcards in `Pattern`s are normalised according to two rules:
+/// 1. If there is a sequence of consecutive `x`s and `*`s (e.g. `*x*x***`) then the `x`s
+///    will always come first, followed by the `*`s (this example would get reordered to
+///    `xx*****`).
+/// 2. Consecutive `*`s are reduced to a single `*` (this example would get fully normalised from
+///    `*x*x***` to `xx*****` then to `xx*`).
 #[derive(Clone, Eq, PartialEq, Hash)]
-pub struct Regex {
-    /// The pattern which represents this `Regex`.  This is normalised with the following
+pub struct Pattern {
+    /// The pattern which represents this `Pattern`.  This is normalised with the following
     /// invariants:
-    /// - There are never more than two globs in a row (because `**` is equivalent to `*`)
-    /// - If there is a sequence of consecutive 'any's and globs (e.g. `*x*`) then the 'any's
-    ///   will always come first, followed by the globs.
+    /// - There are never more than two stars in a row (because `**` is equivalent to `*`)
+    /// - If there is a sequence of consecutive 'any's and stars (e.g. `*x*`) then the 'any's
+    ///   will always come first, followed by the stars.
     ///
     /// These two rules feed into each other, so `*x*x` would be normalised to `xx**` (second rule:
-    /// reorder 'any's and globs) and then to `xx*` (first rule: compress consecutive globs).
+    /// reorder 'any's and stars) and then to `xx*` (first rule: compress consecutive stars).
     ///
-    /// Therefore, after a glob we can only have either a bell or the end of the regex.
-    elems: Vec<RegexElem>,
+    /// Therefore, after a star we can only have either a bell or the end of the pattern.
+    elems: Vec<Elem>,
     stage: Stage,
 }
 
-/// A single element of a [`Regex`] expression.
+/// A single `Elem`ent of a music [`Pattern`].
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum RegexElem {
-    /// One single specific [`Bell`].  Only matched by that exact [`Bell`].
+pub enum Elem {
+    /// Matches one specific [`Bell`].  Written as that [`Bell`]'s name (e.g. `'5'`)
     Bell(Bell),
-    /// A single wild-card usually written as `x` or `.`.  Matches one of any [`Bell`].
-    Any,
-    /// A wild-card usually written as `*`.  Matches any number of any [`Bell`]s.
-    Glob,
+    /// Matches one of any [`Bell`].  Written as `x` or `X`.
+    X,
+    /// Matches any number (including zero) of any [`Bell`]s.  Written as `*`.
+    Star,
 }
 
-impl Regex {
-    /// Parses a `Regex` from a string.  A [`Bell`] name matches only that [`Bell`], `'x'` matches
+impl Pattern {
+    /// Parses a `Pattern` from a string.  A [`Bell`] name matches only that [`Bell`], `'x'` matches
     /// precisely one of any [`Bell`] whereas `'*'` matches zero or more of any [`Bell`].  For
     /// example, `"xxxx5678" and `"*5678"` both correspond to 56s on 8 bells.
     pub fn parse(s: &str, stage: Stage) -> Self {
         Self::from_elems(
             s.chars().filter_map(|c| match c {
-                'x' | '.' => Some(RegexElem::Any),
-                '*' => Some(RegexElem::Glob),
-                _ => Bell::from_name(c).map(RegexElem::Bell),
+                'x' | 'X' => Some(Elem::X),
+                '*' => Some(Elem::Star),
+                _ => Bell::from_name(c).map(Elem::Bell),
             }),
             stage,
         )
     }
 
-    /// Gets the [`Stage`] of [`Row`]s that are matched by this [`Regex`]
+    /// Gets the [`Stage`] of [`Row`]s that are matched by this [`Pattern`]
     pub fn stage(&self) -> Stage {
         self.stage
     }
 
-    /// Creates a normalised `Regex` from an [`Iterator`] of [`RegexElem`]s
-    pub fn from_elems(iter: impl IntoIterator<Item = RegexElem>, stage: Stage) -> Self {
+    /// Creates a normalised `Pattern` from an [`Iterator`] of [`Elem`]s
+    pub fn from_elems(iter: impl IntoIterator<Item = Elem>, stage: Stage) -> Self {
         Self::from_vec(iter.into_iter().collect_vec(), stage)
     }
 
-    /// Creates a `Regex` from an [`Iterator`] of [`RegexElem`]s, without normalising.
+    /// Creates a `Pattern` from an [`Iterator`] of [`Elem`]s, without normalising.
     ///
     /// # Safety
     ///
     /// This is safe if the incoming [`Iterator`] satisfies the wildcard normalisation rules.
-    pub unsafe fn from_elems_unchecked(
-        iter: impl IntoIterator<Item = RegexElem>,
-        stage: Stage,
-    ) -> Self {
+    pub unsafe fn from_elems_unchecked(iter: impl IntoIterator<Item = Elem>, stage: Stage) -> Self {
         Self::from_vec_unchecked(iter.into_iter().collect_vec(), stage)
     }
 
-    /// Creates a normalised `Regex` from a [`Vec`] of [`RegexElem`]s.
+    /// Creates a normalised `Pattern` from a [`Vec`] of [`Elem`]s.
     #[inline(always)]
-    pub fn from_vec(elems: Vec<RegexElem>, stage: Stage) -> Self {
-        // This unsafety is OK because the only operation we perform on the un-normalised Regex is
+    pub fn from_vec(elems: Vec<Elem>, stage: Stage) -> Self {
+        // This unsafety is OK because the only operation we perform on the un-normalised Pattern is
         // to normalise it (thus making it safe for other operations).
         let mut r = unsafe { Self::from_vec_unchecked(elems, stage) };
         r.normalise();
         r
     }
 
-    /// Creates a `Regex` from a [`Vec`] of [`RegexElem`]s, without normalising.
+    /// Creates a `Pattern` from a [`Vec`] of [`Elem`]s, without normalising.
     ///
     /// # Safety
     ///
     /// This is safe if the [`Vec`] satisfies the wildcard normalisation rules.
     #[inline(always)]
-    pub unsafe fn from_vec_unchecked(elems: Vec<RegexElem>, stage: Stage) -> Self {
+    pub unsafe fn from_vec_unchecked(elems: Vec<Elem>, stage: Stage) -> Self {
         Self { elems, stage }
     }
 
-    /// Normalises wildcards and globs in a `Regex`.  This should only in combination with `unsafe`
+    /// Normalises wildcards and stars in a `Pattern`.  This should only in combination with `unsafe`
     /// - if only safe code is used, `self` will already be normalised.  This is the only operation
-    /// on `Regex`es which doesn't rely on the input being normalised.
+    /// on `Pattern`s which doesn't rely on the input being normalised.
     pub fn normalise(&mut self) {
         // TODO: Perform stricter validity checks based on stage
 
-        let mut normalised_elems = Vec::<RegexElem>::with_capacity(self.elems.len());
+        let mut normalised_elems = Vec::<Elem>::with_capacity(self.elems.len());
 
         // Insert a rogue bell to the end `self.elems` so that all runs of consecutive
-        // wildcards/globs end in a bell
-        self.elems.push(RegexElem::Bell(Bell::TREBLE));
-        // Split the elements into chunks of 0 or more wildcards/globs, each of which finishes with
+        // wildcards/stars end in a bell
+        self.elems.push(Elem::Bell(Bell::TREBLE));
+        // Split the elements into chunks of 0 or more wildcards/stars, each of which finishes with
         // a bell.
-        for slice in self
-            .elems
-            .split_inclusive(|e| matches!(e, RegexElem::Bell(_)))
-        {
+        for slice in self.elems.split_inclusive(|e| matches!(e, Elem::Bell(_))) {
             // The slice should contain at least one element (the bell that matched the pattern)
             assert!(!slice.is_empty());
             let wildcards_pattern = &slice[..slice.len() - 1];
             let bell_elem = slice[slice.len() - 1];
             // Normalise the wildcard pattern, and push it.  To normalise it, we move all the 'x's
-            // to the start of the pattern and then add a single glob (if the pattern contains any
-            // globs).
+            // to the start of the pattern and then add a single star (if the pattern contains any
+            // stars).
             let num_wildcards = wildcards_pattern
                 .iter()
-                .filter(|e| matches!(e, RegexElem::Any))
+                .filter(|e| matches!(e, Elem::X))
                 .count();
-            normalised_elems.extend(std::iter::repeat(RegexElem::Any).take(num_wildcards));
-            if wildcards_pattern.contains(&RegexElem::Glob) {
-                normalised_elems.push(RegexElem::Glob);
+            normalised_elems.extend(std::iter::repeat(Elem::X).take(num_wildcards));
+            if wildcards_pattern.contains(&Elem::Star) {
+                normalised_elems.push(Elem::Star);
             }
             // Push the bell that terminates this wildcard pattern
             normalised_elems.push(bell_elem);
         }
 
-        // Overwrite this regex with the normalised element list
+        // Overwrite this pattern with the normalised element list
         self.elems = normalised_elems;
         // Pop the rogue bell off the end of the pattern (we added it before the loop to make the
         // code cleaner).
-        assert_eq!(self.elems.pop(), Some(RegexElem::Bell(Bell::TREBLE)));
+        assert_eq!(self.elems.pop(), Some(Elem::Bell(Bell::TREBLE)));
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
-    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length off the **front** of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_front(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
         if num_bells < len {
@@ -153,28 +160,28 @@ impl Regex {
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
-            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+            let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
             // This unsafety is OK because all of the input patterns must be normalised because
             // they contain only one wildcard
-            let descending_regex = unsafe {
+            let descending_pattern = unsafe {
                 // Descending runs on the front (e.g. `1234*`)
-                Self::from_elems_unchecked(run_iterator.clone().chain(once(RegexElem::Glob)), stage)
+                Self::from_elems_unchecked(run_iterator.clone().chain(once(Elem::Star)), stage)
             };
-            let ascending_regex = unsafe {
+            let ascending_pattern = unsafe {
                 // Ascending runs on the front (e.g. `4321*`)
-                Self::from_elems_unchecked(run_iterator.rev().chain(once(RegexElem::Glob)), stage)
+                Self::from_elems_unchecked(run_iterator.rev().chain(once(Elem::Star)), stage)
             };
 
-            runs.push(descending_regex);
-            runs.push(ascending_regex);
+            runs.push(descending_pattern);
+            runs.push(ascending_pattern);
         }
 
         runs
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the **front** of a
-    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length off the **front** of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_internal(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
         if num_bells < len {
@@ -185,27 +192,27 @@ impl Regex {
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
-            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+            let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
             // The unsafety is OK because all the input patterns are normalised
 
             // Descending runs (e.g. `x*1234x*`)
-            let mut desc_elems = vec![RegexElem::Any, RegexElem::Glob];
+            let mut desc_elems = vec![Elem::X, Elem::Star];
             desc_elems.extend(run_iterator.clone());
-            desc_elems.extend([RegexElem::Any, RegexElem::Glob]);
+            desc_elems.extend([Elem::X, Elem::Star]);
             runs.push(unsafe { Self::from_vec_unchecked(desc_elems, stage) });
             // Ascending runs (e.g. `x*4321x*`)
-            let mut asc_elems = vec![RegexElem::Any, RegexElem::Glob];
+            let mut asc_elems = vec![Elem::X, Elem::Star];
             asc_elems.extend(run_iterator.rev());
-            asc_elems.extend([RegexElem::Any, RegexElem::Glob]);
+            asc_elems.extend([Elem::X, Elem::Star]);
             runs.push(unsafe { Self::from_vec_unchecked(asc_elems, stage) });
         }
 
         runs
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the **back** of a
-    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length off the **back** of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_back(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
         if num_bells < len {
@@ -216,31 +223,31 @@ impl Regex {
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
-            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+            let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
             // This unsafety is OK because all of the input patterns must be normalised because
             // they contain only one wildcard
-            let descending_regex = unsafe {
+            let descending_pattern = unsafe {
                 // Descending runs on the back (e.g. `*1234`)
-                Self::from_elems_unchecked(once(RegexElem::Glob).chain(run_iterator.clone()), stage)
+                Self::from_elems_unchecked(once(Elem::Star).chain(run_iterator.clone()), stage)
             };
-            let ascending_regex = unsafe {
+            let ascending_pattern = unsafe {
                 // Ascending runs on the back (e.g. `*4321`)
                 Self::from_elems_unchecked(
-                    once(RegexElem::Glob).chain(run_iterator.clone().rev()),
+                    once(Elem::Star).chain(run_iterator.clone().rev()),
                     stage,
                 )
             };
 
-            runs.push(descending_regex);
-            runs.push(ascending_regex);
+            runs.push(descending_pattern);
+            runs.push(ascending_pattern);
         }
 
         runs
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length anywhere in a [`Row`].  If
-    /// the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length anywhere in a [`Row`].  If
+    /// the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn all_runs(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
         if num_bells < len {
@@ -251,37 +258,37 @@ impl Regex {
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
-            let run_iterator = (i..i + len).map(Bell::from_index).map(RegexElem::Bell);
+            let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
             // This unsafety is OK because all of the input patterns must be normalised because
             // they contain only one wildcard
-            let descending_regex = unsafe {
+            let descending_pattern = unsafe {
                 // Descending runs (e.g. `*1234*`)
                 Self::from_elems_unchecked(
-                    once(RegexElem::Glob)
+                    once(Elem::Star)
                         .chain(run_iterator.clone())
-                        .chain(once(RegexElem::Glob)),
+                        .chain(once(Elem::Star)),
                     stage,
                 )
             };
-            let ascending_regex = unsafe {
+            let ascending_pattern = unsafe {
                 // Ascending runs (e.g. `*4321*`)
                 Self::from_elems_unchecked(
-                    once(RegexElem::Glob)
+                    once(Elem::Star)
                         .chain(run_iterator.clone().rev())
-                        .chain(once(RegexElem::Glob)),
+                        .chain(once(Elem::Star)),
                     stage,
                 )
             };
 
-            runs.push(descending_regex);
-            runs.push(ascending_regex);
+            runs.push(descending_pattern);
+            runs.push(ascending_pattern);
         }
         runs
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
-    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length off the front or back of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_front_or_back(stage: Stage, len: u8) -> Vec<Self> {
         let mut runs = Vec::new();
         runs.extend(Self::runs_front(stage, len));
@@ -289,8 +296,8 @@ impl Regex {
         runs
     }
 
-    /// Creates a set of `Regex`es which match runs of a given length off the front or back of a
-    /// [`Row`].  If the run length is longer than the stage, then no `Regex`es are returned.
+    /// Creates a set of `Pattern`s which match runs of a given length off the front or back of a
+    /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs(stage: Stage, len: u8, internal: bool) -> Vec<Self> {
         if internal {
             Self::all_runs(stage, len)
@@ -299,17 +306,17 @@ impl Regex {
         }
     }
 
-    /// Gets a slice over the [`RegexElem`]s making up this `Regex`
+    /// Gets a slice over the [`Elem`]ents making up this `Pattern`
     #[inline(always)]
-    pub fn elems(&self) -> &[RegexElem] {
+    pub fn elems(&self) -> &[Elem] {
         &self.elems
     }
 
     /// Returns the number of [`Row`]s with a given [`Stage`] which would match `self`.  Returns
     /// `None` if the any part of the computation causes integer overflow.
     pub fn num_matching_rows(&self) -> Option<usize> {
-        // Each regex has some (possibly empty) set of 'unfixed' bells: i.e. those which don't
-        // appear in the regex.  For example, the regex `*1x*56*78` on Major has `{2,3,4}` as its
+        // Each pattern has some (possibly empty) set of 'unfixed' bells: i.e. those which don't
+        // appear in the pattern.  For example, the pattern `*1x*56*78` on Major has `{2,3,4}` as its
         // unfixed bells.  These unfixed bells can either be placed in `x`s (i.e. exactly one bell
         // per `x`) or into `*`s (i.e. any non-negative number of bells per `*`).  All bells must
         // appear exactly once in the resulting row, so we must _partition_ the 'unfixed' bells
@@ -339,40 +346,40 @@ impl Regex {
         //
         // Multiplying both of these terms will give the total number of matching `Row`s
 
-        // Compute the values of `n` (num_unfixed), `i` (num_wildcards) and `j` (num_globs) by
-        // iterating over the regex and counting.
+        // Compute the values of `n` (num_unfixed), `i` (num_wildcards) and `j` (num_stars) by
+        // iterating over the pattern and counting.
         let mut num_unfixed = self.stage.num_bells(); // `n`, decremented for each fixed bell
         let mut num_wildcards = 0usize; // `i`
-        let mut num_globs = 0usize; // `j`
+        let mut num_stars = 0usize; // `j`
         for e in &self.elems {
             match e {
-                RegexElem::Bell(_) => num_unfixed -= 1,
-                RegexElem::Any => num_wildcards += 1,
-                RegexElem::Glob => num_globs += 1,
+                Elem::Bell(_) => num_unfixed -= 1,
+                Elem::X => num_wildcards += 1,
+                Elem::Star => num_stars += 1,
             }
         }
 
         let ways_to_fill_wildcards = utils::choice(num_unfixed, num_wildcards)?;
 
         // TODO: Compute the fraction directly to limit potential for overflow
-        let num_bells_in_globs = num_unfixed - num_wildcards;
-        let ways_to_fill_globs_numerator =
-            (num_bells_in_globs + num_wildcards.saturating_sub(1)).checked_factorial()?;
-        let ways_to_fill_globs_denominator = num_globs.saturating_sub(1).checked_factorial()?;
-        let ways_to_fill_globs = ways_to_fill_globs_numerator / ways_to_fill_globs_denominator;
+        let num_bells_in_stars = num_unfixed - num_wildcards;
+        let ways_to_fill_stars_numerator =
+            (num_bells_in_stars + num_wildcards.saturating_sub(1)).checked_factorial()?;
+        let ways_to_fill_stars_denominator = num_stars.saturating_sub(1).checked_factorial()?;
+        let ways_to_fill_stars = ways_to_fill_stars_numerator / ways_to_fill_stars_denominator;
 
-        Some(ways_to_fill_wildcards * ways_to_fill_globs)
+        Some(ways_to_fill_wildcards * ways_to_fill_stars)
     }
 
-    /// Returns `true` if a given [`Row`] satisfies this `Regex`, and `false` otherwise.  If the
-    /// normalised `Regex` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
+    /// Returns `true` if a given [`Row`] satisfies this `Pattern`, and `false` otherwise.  If the
+    /// normalised `Pattern` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
     /// runtime is `O(n + m)`.
     pub fn matches(&self, r: &Row) -> bool {
         // Run a match, ignoring the indices which are a match
         self.run_match(r, |_i| ())
     }
 
-    /// Returns the **0-indexed** places of the [`Bell`]s which match this `Regex` (or `None` if
+    /// Returns the **0-indexed** places of the [`Bell`]s which match this `Pattern` (or `None` if
     /// the [`Row`] doesn't match).  The places will always be sorted in ascending order.  If the
     /// [`Row`] isn't matched, `None` is returned.
     pub fn match_pattern(&self, r: &Row) -> Option<Vec<usize>> {
@@ -389,10 +396,10 @@ impl Regex {
         }
     }
 
-    /// Helper function to test a match between a [`Row`] and this `Regex`, calling some function
+    /// Helper function to test a match between a [`Row`] and this `Pattern`, calling some function
     /// every time a [`Bell`] is matched.
     ///
-    /// If the normalised `Regex` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
+    /// If the normalised `Pattern` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
     /// runtime is `O(n + m)`.
     #[inline(always)]
     fn run_match(&self, r: &Row, mut match_fn: impl FnMut(usize)) -> bool {
@@ -400,14 +407,14 @@ impl Regex {
          * on arbitrary iterators of bells */
 
         let mut bells = r.bell_iter().enumerate();
-        let mut regex_elems = self.elems.iter().copied();
+        let mut pattern_elems = self.elems.iter().copied();
 
-        // This loop must terminate because `regex_elems` gets shorter every iteration
+        // This loop must terminate because `pattern_elems` gets shorter every iteration
         loop {
-            // If we haven't run out of regex elements, then test the patterns
-            match regex_elems.next() {
+            // If we haven't run out of pattern elements, then test the patterns
+            match pattern_elems.next() {
                 // If the next element is a specific bell, then the next bell must be the same
-                Some(RegexElem::Bell(exp_bell)) => {
+                Some(Elem::Bell(exp_bell)) => {
                     match bells.next() {
                         Some((i, b)) => {
                             if b == exp_bell {
@@ -420,29 +427,29 @@ impl Regex {
                                 return false;
                             }
                         }
-                        // If the regex expected a bell but the row finished, then the row doesn't
+                        // If the pattern expected a bell but the row finished, then the row doesn't
                         // match
                         None => return false,
                     }
                 }
-                // If the regex is 'Any', then the row matches if it has more bells left
-                Some(RegexElem::Any) => {
+                // If the pattern is 'Any', then the row matches if it has more bells left
+                Some(Elem::X) => {
                     if bells.next().is_none() {
                         return false;
                     }
                 }
-                // If the next element is a glob, then we need to look ahead at the next expected
+                // If the next element is a star, then we need to look ahead at the next expected
                 // element
-                Some(RegexElem::Glob) => match regex_elems.next() {
+                Some(Elem::Star) => match pattern_elems.next() {
                     // We've encountered `<...>*b<...>` where b is a bell name.  To match this, we
                     // repeatedly consume bells until either:
-                    // - we find a matching bell, in which case continue with the regex
-                    // - we run out of bells, in which case the regex does not match because
-                    Some(RegexElem::Bell(exp_bell)) => {
+                    // - we find a matching bell, in which case continue with the pattern
+                    // - we run out of bells, in which case the pattern does not match because
+                    Some(Elem::Bell(exp_bell)) => {
                         loop {
                             match bells.next() {
                                 // If we find a matching bell, then report the match and continue
-                                // reading the regex
+                                // reading the pattern
                                 Some((i, b)) => {
                                     if b == exp_bell {
                                         match_fn(i);
@@ -450,19 +457,19 @@ impl Regex {
                                     }
                                 }
                                 // If we consume the entire row without finding the wanted bell,
-                                // the regex doesn't match
+                                // the pattern doesn't match
                                 None => return false,
                             }
                         }
                     }
-                    // If the regex ends with a glob, then any extension of the row matches
+                    // If the pattern ends with a star, then any extension of the row matches
                     None => return true,
-                    // Because of normalisation, a glob cannot be followed by anything other than a
-                    // bell (or the end of the regex).  This branch should only be reachable with
+                    // Because of normalisation, a star cannot be followed by anything other than a
+                    // bell (or the end of the pattern).  This branch should only be reachable with
                     // `unsafe`
                     _ => unreachable!(),
                 },
-                // If we've run out of regex elements, then the row matches iff we also run out of
+                // If we've run out of pattern elements, then the row matches iff we also run out of
                 // bells at the same time
                 None => return bells.next().is_none(),
             }
@@ -470,7 +477,7 @@ impl Regex {
     }
 }
 
-impl Display for Regex {
+impl Display for Pattern {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for elem in &self.elems {
             write!(f, "{}", elem)?;
@@ -479,14 +486,14 @@ impl Display for Regex {
     }
 }
 
-impl Debug for Regex {
+impl Debug for Pattern {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Regex({})", self)
+        write!(f, "Pattern({})", self)
     }
 }
 
-impl RegexElem {
-    /// If this is a [`RegexElem::Bell`], this returns the contained [`Bell`], otherwise `None`
+impl Elem {
+    /// If this is a [`Elem::Bell`], this returns the contained [`Bell`], otherwise `None`
     #[inline]
     pub fn bell(self) -> Option<Bell> {
         match self {
@@ -495,51 +502,51 @@ impl RegexElem {
         }
     }
 
-    /// `true` if `self` requires a specific [`Bell`].  Equivalent to `self.bell().is_some()`
+    /// `true` if `self` is [`Elem::Bell`].  Equivalent to `self.bell().is_some()`
     #[inline]
     pub fn is_bell(self) -> bool {
-        self.bell().is_some()
+        matches!(self, Self::Bell(_))
     }
 
     /// `true` if `self` is a wildcard (i.e. `*` or `x`).
     #[inline]
     pub fn is_wildcard(self) -> bool {
-        matches!(self, Self::Any | Self::Glob)
+        matches!(self, Self::X | Self::Star)
     }
 
     /// `true` if `self` is an `x` (i.e. `Self::Any`)
     #[inline]
     pub fn is_x(self) -> bool {
-        matches!(self, Self::Any)
+        matches!(self, Self::X)
     }
 
     /// `true` if `self` is an `x` (i.e. `Self::Any`)
     #[inline]
     pub fn is_star(self) -> bool {
-        matches!(self, Self::Glob)
+        matches!(self, Self::Star)
     }
 }
 
-impl Display for RegexElem {
+impl Display for Elem {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Bell(b) => write!(f, "{}", b),
-            Self::Any => write!(f, "x"),
-            Self::Glob => write!(f, "*"),
+            Self::X => write!(f, "x"),
+            Self::Star => write!(f, "*"),
         }
     }
 }
 
-impl From<&Row> for Regex {
+impl From<&Row> for Pattern {
     fn from(r: &Row) -> Self {
         Self {
-            elems: r.bell_iter().map(RegexElem::Bell).collect_vec(),
+            elems: r.bell_iter().map(Elem::Bell).collect_vec(),
             stage: r.stage(),
         }
     }
 }
 
-impl From<RowBuf> for Regex {
+impl From<RowBuf> for Pattern {
     fn from(r: RowBuf) -> Self {
         Self::from(r.as_row())
     }
@@ -549,14 +556,14 @@ impl From<RowBuf> for Regex {
 mod tests {
     use crate::{RowBuf, Stage};
 
-    use super::Regex;
+    use super::Pattern;
 
     #[test]
-    fn regex_normalise() {
+    fn pattern_normalise() {
         #[track_caller]
         fn check(inp_str: &str, exp_str: &str) {
             println!("Testing {:?}", inp_str);
-            assert_eq!(Regex::parse(inp_str, Stage::MAJOR).to_string(), exp_str);
+            assert_eq!(Pattern::parse(inp_str, Stage::MAJOR).to_string(), exp_str);
         }
 
         check("", "");
@@ -576,37 +583,37 @@ mod tests {
     }
 
     #[test]
-    fn regex_is_match() {
+    fn pattern_is_match() {
         #[track_caller]
-        fn check(regex_str: &str, row_str: &str, expected_match: bool) {
-            println!("Testing row {} against regex {}", row_str, regex_str);
+        fn check(pattern_str: &str, row_str: &str, expected_match: bool) {
+            println!("Testing row {} against pattern {}", row_str, pattern_str);
 
             let row = &RowBuf::parse(row_str).unwrap();
-            let regex = Regex::parse(regex_str, row.stage());
-            let is_match = regex.matches(&row);
+            let pattern = Pattern::parse(pattern_str, row.stage());
+            let is_match = pattern.matches(&row);
 
             match (expected_match, is_match) {
                 (true, false) => {
-                    panic!("Expected '{}' to match '{}', but it did not.", row, regex);
+                    panic!("Expected '{}' to match '{}', but it did not.", row, pattern);
                 }
                 (false, true) => {
-                    panic!("Expected '{}' not to match '{}', but it did.", row, regex);
+                    panic!("Expected '{}' not to match '{}', but it did.", row, pattern);
                 }
                 // If the matches lined up, then the test passes
                 _ => {}
             }
         }
 
-        // Regex with only 'x's
+        // Pattern with only 'x's
         check("xxxx", "3412", true);
         check("xxxx", "4321", true);
         check("xxxx", "54321", false);
-        // Regex with only 'x's and numbers
+        // Pattern with only 'x's and numbers
         check("x1xx", "2134", true);
         check("x1xx", "2134", true);
         check("x1xx", "4321", false);
         check("x1", "21345", false);
-        // Regex with globs
+        // Pattern with stars
         check("*1234", "1234", true);
         check("*1234", "51234", true);
         check("*1234", "123", false);
@@ -614,7 +621,7 @@ mod tests {
         check("*65*78", "12346578", true);
         check("*65*78", "12653478", true);
         check("*65*78", "12657834", false);
-        // Regex with everything
+        // Pattern with everything
         check("x*12*34", "61257834", true);
         check("x*12*34", "12657834", false);
         check("x*12*34", "51234", true);
@@ -623,26 +630,26 @@ mod tests {
     }
 
     #[test]
-    fn regex_match_pattern() {
+    fn pattern_match_pattern() {
         #[track_caller]
-        fn check(regex_str: &str, row_str: &str, expected_pattern: Option<Vec<usize>>) {
-            println!("Testing row {} against regex {}", row_str, regex_str);
+        fn check(pattern_str: &str, row_str: &str, expected_pattern: Option<Vec<usize>>) {
+            println!("Testing row {} against pattern {}", row_str, pattern_str);
 
             let row = &RowBuf::parse(row_str).unwrap();
-            let regex = Regex::parse(regex_str, row.stage());
-            assert_eq!(regex.match_pattern(&row), expected_pattern);
+            let pattern = Pattern::parse(pattern_str, row.stage());
+            assert_eq!(pattern.match_pattern(&row), expected_pattern);
         }
 
-        // Regex with only 'x's
+        // Patterns with only 'x's
         check("xxxx", "3412", Some(vec![]));
-        check("xxxx", "4321", Some(vec![]));
-        check("xxxx", "54321", None);
-        // Regex with only 'x's and numbers
+        check("xxXx", "4321", Some(vec![]));
+        check("XXXX", "54321", None);
+        // Patterns with only 'x's and numbers
         check("x1xx", "2134", Some(vec![1]));
         check("x1xx", "2134", Some(vec![1]));
         check("x1xx", "4321", None);
         check("x1", "21345", None);
-        // Regex with globs
+        // Patterns with stars
         check("*1234", "1234", Some(vec![0, 1, 2, 3]));
         check("*1234", "51234", Some(vec![1, 2, 3, 4]));
         check("*1234", "123", None);
@@ -650,7 +657,7 @@ mod tests {
         check("*65*78", "12346578", Some(vec![4, 5, 6, 7]));
         check("*65*78", "12653478", Some(vec![2, 3, 6, 7]));
         check("*65*78", "12657834", None);
-        // Regex with everything
+        // Patterns with everything
         check("x*12*34", "61257834", Some(vec![1, 2, 6, 7]));
         check("x*12*34", "12657834", None);
         check("x*12*34", "51234", Some(vec![1, 2, 3, 4]));

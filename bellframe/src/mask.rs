@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    music::{Regex, RegexElem},
+    music::{self, Pattern},
     Bell, Row, RowBuf, Stage,
 };
 use itertools::Itertools;
@@ -12,7 +12,7 @@ use itertools::Itertools;
 /// A mask which fixes the location of some [`Bell`]s.  Unfilled positions are usually denoted by
 /// `'x'` (`X` is not a valid [`Bell`] name).
 ///
-/// This can also be thought of as a [`Regex`] with no `*`s.
+/// This can also be thought of as a music [`Pattern`] with no `*`s.
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Mask {
     bells: Vec<Option<Bell>>,
@@ -36,47 +36,47 @@ impl Mask {
     }
 
     pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, ParseError> {
-        Self::from_regex(&Regex::parse(s, stage))
+        Self::from_pattern(&Pattern::parse(s, stage))
     }
 
-    /// Convert a [`Regex`] into a `Mask`, expanding one `*` if it exists.
-    pub fn from_regex(regex: &Regex) -> Result<Self, RegexToMaskError> {
-        let stage = regex.stage();
+    /// Convert a [`Pattern`] into a `Mask`, expanding one `*` if it exists.
+    pub fn from_pattern(pattern: &Pattern) -> Result<Self, PatternToMaskError> {
+        let stage = pattern.stage();
 
-        // Validate the regex
-        let num_elems = regex.elems().len();
-        let num_globs = regex
+        // Validate the pattern
+        let num_elems = pattern.elems().len();
+        let num_stars = pattern
             .elems()
             .iter()
-            .filter(|elem| **elem == RegexElem::Glob)
+            .filter(|elem| **elem == music::Elem::Star)
             .count();
-        let glob_length = match num_globs {
+        let star_length = match num_stars {
             0 => {
                 if num_elems != stage.num_bells() {
-                    return Err(RegexToMaskError::MismatchedLength(num_elems, stage));
+                    return Err(PatternToMaskError::MismatchedLength(num_elems, stage));
                 }
                 0
             }
-            1 => stage.num_bells().checked_sub(num_elems - num_globs).ok_or(
-                RegexToMaskError::MismatchedLength(num_elems - num_globs, stage),
+            1 => stage.num_bells().checked_sub(num_elems - num_stars).ok_or(
+                PatternToMaskError::MismatchedLength(num_elems - num_stars, stage),
             )?,
-            _ => return Err(RegexToMaskError::MultipleGlobs),
+            _ => return Err(PatternToMaskError::MultipleStars),
         };
         // Construct mask
         let mut bells = Vec::new();
-        for &elem in regex.elems() {
+        for &elem in pattern.elems() {
             match elem {
                 // Explicit bells are preserved, provided they fit into the stage
-                RegexElem::Bell(b) => {
+                music::Elem::Bell(b) => {
                     if !stage.contains(b) {
-                        return Err(RegexToMaskError::BellExceedsStage(b, stage));
+                        return Err(PatternToMaskError::BellExceedsStage(b, stage));
                     }
                     bells.push(Some(b));
                 }
                 // 'x's are always preserved
-                RegexElem::Any => bells.push(None),
-                // If the glob exists, replace it with `glob_length` 'x's
-                RegexElem::Glob => bells.extend(std::iter::repeat(None).take(glob_length)),
+                music::Elem::X => bells.push(None),
+                // If the star exists, replace it with `star_length` 'x's
+                music::Elem::Star => bells.extend(std::iter::repeat(None).take(star_length)),
             }
         }
         Ok(Self { bells })
@@ -319,16 +319,16 @@ impl Mask {
 #[derive(Debug, Clone, Copy)]
 pub struct BellAlreadySet;
 
-/// The different ways that [`Mask::from_regex`] could fail
+/// The different ways that [`Mask::from_pattern`] could fail
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RegexToMaskError {
-    MultipleGlobs,
+pub enum PatternToMaskError {
+    MultipleStars,
     BellExceedsStage(Bell, Stage),
     MismatchedLength(usize, Stage),
 }
 
 /// The different ways that [`Mask::parse_with_stage`] can fail
-pub type ParseError = RegexToMaskError;
+pub type ParseError = PatternToMaskError;
 
 /* ===== FORMATTING ===== */
 
@@ -438,12 +438,12 @@ impl From<RowBuf> for Mask {
     }
 }
 
-impl From<Mask> for Regex {
-    fn from(mask: Mask) -> Regex {
-        Regex::from_elems(
+impl From<Mask> for Pattern {
+    fn from(mask: Mask) -> Pattern {
+        Pattern::from_elems(
             mask.bells
                 .iter()
-                .map(|b| b.map_or(RegexElem::Any, RegexElem::Bell)),
+                .map(|b| b.map_or(music::Elem::X, music::Elem::Bell)),
             mask.stage(),
         )
     }
@@ -454,39 +454,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn from_regex() {
+    fn from_pattern() {
         #[track_caller]
-        fn check_ok(regex: &str, num_bells: u8, mask: &str) {
+        fn check_ok(pattern: &str, num_bells: u8, mask: &str) {
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex, Stage::new(num_bells))),
+                Mask::from_pattern(&Pattern::parse(pattern, Stage::new(num_bells))),
                 Ok(Mask::parse(mask))
             );
         }
         #[track_caller]
-        fn check_err_exceeds_stage(regex: &str, num_bells: u8, bell: char) {
+        fn check_err_exceeds_stage(pattern: &str, num_bells: u8, bell: char) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex, stage)),
-                Err(RegexToMaskError::BellExceedsStage(
+                Mask::from_pattern(&Pattern::parse(pattern, stage)),
+                Err(PatternToMaskError::BellExceedsStage(
                     Bell::from_name(bell).unwrap(),
                     stage
                 ))
             );
         }
         #[track_caller]
-        fn check_err_multiple_globs(regex: &str, num_bells: u8) {
+        fn check_err_multiple_stars(pattern: &str, num_bells: u8) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex, stage)),
-                Err(RegexToMaskError::MultipleGlobs)
+                Mask::from_pattern(&Pattern::parse(pattern, stage)),
+                Err(PatternToMaskError::MultipleStars)
             );
         }
         #[track_caller]
-        fn check_err_mismatched_length(regex: &str, num_bells: u8, length: usize) {
+        fn check_err_mismatched_length(pattern: &str, num_bells: u8, length: usize) {
             let stage = Stage::new(num_bells);
             assert_eq!(
-                Mask::from_regex(&Regex::parse(regex, stage)),
-                Err(RegexToMaskError::MismatchedLength(length, stage))
+                Mask::from_pattern(&Pattern::parse(pattern, stage)),
+                Err(PatternToMaskError::MismatchedLength(length, stage))
             );
         }
 
@@ -495,8 +495,8 @@ mod tests {
         check_ok("3*", 4, "3xxx");
         check_ok("3*", 6, "3xxxxx");
         check_ok("3*x", 6, "3xxxxx");
-        check_ok("3**x", 6, "3xxxxx"); // Doesn't error because globs are normalised
-        check_ok("3*xx*", 6, "3xxxxx"); // Doesn't error because globs are normalised
+        check_ok("3**x", 6, "3xxxxx"); // Doesn't error because stars are normalised
+        check_ok("3*xx*", 6, "3xxxxx"); // Doesn't error because stars are normalised
         check_ok("3*4", 6, "3xxxx4");
         check_ok("3*x4", 6, "3xxxx4");
         check_ok("*78", 8, "xxxxxx78");
@@ -504,8 +504,8 @@ mod tests {
         check_err_exceeds_stage("xxx5", 4, '5');
         check_err_exceeds_stage("*5", 4, '5');
         check_err_exceeds_stage("5*", 4, '5');
-        check_err_multiple_globs("5*3*8", 8);
-        check_err_multiple_globs("*5*", 8);
+        check_err_multiple_stars("5*3*8", 8);
+        check_err_multiple_stars("*5*", 8);
         check_err_mismatched_length("xx3", 4, 3);
         check_err_mismatched_length("xxxx3x", 4, 6);
         check_err_mismatched_length("xxxx3*", 4, 5);

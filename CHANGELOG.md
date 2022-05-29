@@ -17,6 +17,8 @@
     ```
 
 ### BellFrame
+- (#97) Rename `music::Regex` to `music::Pattern` (it wasn't anywhere near as powerful as true
+    regexes).
 - (#96) Add `Stage::extent`, which returns a `SameStageVec` containing every possible `Row` of that
     `Stage` _in an arbitrary order_.
 - (#96) Allow addition/subtraction between `Stage`s and `u8`s with `+`/`-`, panicking on overflow or
