@@ -1,18 +1,15 @@
-use std::{
-    fmt::{Debug, Display, Formatter},
-    hash::Hash,
-    ops::Range,
-    sync::Arc,
-};
+use std::{fmt::Debug, hash::Hash, ops::Range};
 
-use bellframe::{Block, IncompatibleStages, Mask, Row, RowBuf, Stage, Truth};
-use chunk_range::PerPartLength;
+use bellframe::{Block, Mask, Row, RowBuf, Stage, Truth};
 use itertools::Itertools;
 
 pub mod chunk_range;
 pub mod new;
 
-use crate::CallIdx;
+use crate::{
+    graph::{RowIdx, RowRange},
+    CallIdx,
+};
 // Imports only used for doc comments
 #[allow(unused_imports)]
 use crate::graph::{Chunk, Graph};
@@ -165,23 +162,6 @@ impl Link {
     }
 }
 
-/// The unique index of a [`Row`] within a [`Layout`].  This is essentially a `(block_idx,
-/// row_idx)` pair.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RowIdx {
-    pub block: BlockIdx,
-    pub row: usize,
-}
-
-impl RowIdx {
-    pub fn new(block_idx: BlockIdx, row_idx: usize) -> Self {
-        Self {
-            block: block_idx,
-            row: row_idx,
-        }
-    }
-}
-
 /// A point where the composition can start or stop.  This is usually the location of rounds within
 /// the composition graph.
 #[derive(Debug, Clone)]
@@ -194,167 +174,6 @@ pub struct StartOrEnd {
 impl StartOrEnd {
     fn ch_and_row_idx(&self) -> (&Row, RowIdx) {
         (&self.course_head, self.row_idx)
-    }
-}
-
-//////////////////////
-// INTERNAL STRUCTS //
-//////////////////////
-
-/// The unique identifier for a single chunk (i.e. an instantiated course segment) in the
-/// composition.  This chunk is assumed to end at the closest [`Link`] where the course head matches
-/// one of the supplied [course head masks](Link::ch_mask).
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum ChunkId {
-    /// The ID of any [`Chunk`] which comes round instantly.  All such chunks are considered
-    /// equivalent, regardless of what method is spliced to.  These are all given the empty string
-    /// as a label.
-    ZeroLengthEnd,
-    Standard(StandardChunkId),
-}
-
-impl ChunkId {
-    pub fn new_standard(course_head: Arc<Row>, row_idx: RowIdx, is_start: bool) -> Self {
-        Self::Standard(StandardChunkId {
-            course_head,
-            row_idx,
-            is_start,
-        })
-    }
-
-    pub fn is_standard(&self) -> bool {
-        self.standard().is_some()
-    }
-
-    pub fn standard(&self) -> Option<&StandardChunkId> {
-        match self {
-            ChunkId::Standard(s) => Some(s),
-            ChunkId::ZeroLengthEnd => None,
-        }
-    }
-
-    pub fn std_id(&self) -> Option<&StandardChunkId> {
-        match self {
-            Self::ZeroLengthEnd => None,
-            Self::Standard(std_id) => Some(std_id),
-        }
-    }
-
-    pub fn into_std_id(self) -> Option<StandardChunkId> {
-        match self {
-            Self::ZeroLengthEnd => None,
-            Self::Standard(std_id) => Some(std_id),
-        }
-    }
-
-    pub fn row_idx(&self) -> Option<RowIdx> {
-        self.std_id().map(|std_id| std_id.row_idx)
-    }
-
-    pub fn course_head_arc(&self) -> Option<&Arc<Row>> {
-        self.std_id().map(|std_id| &std_id.course_head)
-    }
-
-    pub fn course_head(&self) -> Option<&Row> {
-        self.course_head_arc().map(Arc::as_ref)
-    }
-
-    pub fn pre_multiply(&self, r: &Row) -> Result<Self, IncompatibleStages> {
-        match self {
-            Self::ZeroLengthEnd => Ok(Self::ZeroLengthEnd),
-            Self::Standard(s) => s.pre_multiply(r).map(Self::Standard),
-        }
-    }
-
-    pub fn is_start(&self) -> bool {
-        self.std_id().map_or(false, |std_id| std_id.is_start)
-    }
-
-    pub fn set_start(&mut self, new_start: bool) {
-        if let Self::Standard(StandardChunkId { is_start, .. }) = self {
-            *is_start = new_start;
-        }
-    }
-}
-
-/// The ID of a chunk which isn't a 0-length end
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct StandardChunkId {
-    pub course_head: Arc<Row>, // `Arc` is used to make cloning cheaper
-    pub row_idx: RowIdx,
-    // Start chunks have to be treated separately in the case where the rounds can appear as the
-    // first [`Row`] of a segment.  In this case, the start segment is full-length whereas any
-    // non-start segments become 0-length end segments (because the composition comes round
-    // instantly).
-    pub is_start: bool,
-}
-
-impl StandardChunkId {
-    pub fn new(course_head: RowBuf, row_idx: RowIdx, is_start: bool) -> Self {
-        Self {
-            course_head: course_head.to_arc(),
-            row_idx,
-            is_start,
-        }
-    }
-
-    pub fn ch_and_row_idx(&self) -> (&Row, RowIdx) {
-        (&self.course_head, self.row_idx)
-    }
-
-    pub fn pre_multiply(&self, r: &Row) -> Result<Self, IncompatibleStages> {
-        Ok(Self {
-            course_head: r.mul_result(&self.course_head)?.to_arc(),
-            row_idx: self.row_idx,
-            is_start: self.is_start,
-        })
-    }
-}
-
-impl Debug for ChunkId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ZeroLengthEnd => write!(f, "ChunkId::ZeroLengthEnd"),
-            Self::Standard(std_id) => write!(f, "ChunkId({})", std_id),
-        }
-    }
-}
-
-impl Debug for StandardChunkId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Std({})", self)
-    }
-}
-
-impl Display for StandardChunkId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{},{:?}:{}",
-            self.course_head, self.row_idx.block, self.row_idx.row,
-        )?;
-        if self.is_start {
-            write!(f, ",is_start")?;
-        }
-        Ok(())
-    }
-}
-
-impl From<StandardChunkId> for ChunkId {
-    fn from(std_id: StandardChunkId) -> ChunkId {
-        ChunkId::Standard(std_id)
-    }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct RowRange {
-    pub start: RowIdx,
-    pub len: PerPartLength,
-}
-
-impl RowRange {
-    pub fn new(start: RowIdx, len: PerPartLength) -> Self {
-        Self { start, len }
     }
 }
 

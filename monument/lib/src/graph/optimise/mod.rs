@@ -8,9 +8,9 @@ use std::{
     ops::Not,
 };
 
-use crate::{layout::ChunkId, utils::FrontierItem, Query};
+use crate::{utils::FrontierItem, Query};
 
-use super::{Chunk, Graph, Link, LinkId};
+use super::{Chunk, ChunkId, Graph, Link, LinkId};
 
 use self::Direction::{Backward, Forward};
 
@@ -263,7 +263,10 @@ pub mod passes {
 
     use itertools::Itertools;
 
-    use crate::{graph::Graph, layout::ChunkId, Query};
+    use crate::{
+        graph::{ChunkId, Graph},
+        Query,
+    };
 
     use super::{DirectionalView, Pass};
 

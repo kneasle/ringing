@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    layout::{chunk_range::End, ChunkId, LinkIdx, StartIdx},
+    graph::ChunkId,
+    layout::{chunk_range::End, LinkIdx, StartIdx},
     music::Score,
     utils::{Counts, Rotation},
     Query,

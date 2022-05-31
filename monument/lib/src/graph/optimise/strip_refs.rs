@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::{graph::Graph, layout::ChunkId, Query};
+use crate::{
+    graph::{ChunkId, Graph},
+    Query,
+};
 
 /// Removes chunk references which point to non-existent chunks.  This cannot fail.
 pub(super) fn strip_refs(graph: &mut Graph, _query: &Query) {

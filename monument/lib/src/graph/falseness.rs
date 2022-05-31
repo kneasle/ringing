@@ -12,7 +12,8 @@ use std::{
 use bellframe::{Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
-use crate::layout::{chunk_range::PerPartLength, ChunkId, Layout, RowIdx, RowRange};
+use super::{ChunkId, RowIdx, RowRange};
+use crate::layout::{chunk_range::PerPartLength, Layout};
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).

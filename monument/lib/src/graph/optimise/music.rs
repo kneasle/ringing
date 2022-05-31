@@ -4,8 +4,7 @@ use itertools::Itertools;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    graph::{Chunk, Graph},
-    layout::{ChunkId, StandardChunkId},
+    graph::{Chunk, ChunkId, Graph, StandardChunkId},
     music::Breakdown,
     Query,
 };

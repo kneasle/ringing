@@ -4,7 +4,8 @@ use bellframe::{Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    layout::{ChunkId, EndIdx, Layout, Link, LinkIdx, StandardChunkId, StartIdx},
+    graph::{ChunkId, StandardChunkId},
+    layout::{EndIdx, Layout, Link, LinkIdx, StartIdx},
     utils::{Counts, Rotation},
 };
 
