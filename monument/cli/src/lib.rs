@@ -67,12 +67,11 @@ pub fn run(
     log::debug!("Generating query");
     let query = Arc::new(spec.lower(&source)?);
     debug_print!(Query, query);
-    debug_print!(Layout, &query.layout);
 
     // Optimise the graph(s)
     let graph = query
         .unoptimised_graph(config)
-        .map_err(|e| anyhow::Error::msg(graph_build_err_msg(e)))?;
+        .map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
     let optimised_graphs = query.optimise_graph(graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -102,7 +101,7 @@ pub fn run(
         }
     };
     Query::search(
-        query,
+        query.clone(),
         optimised_graphs,
         config,
         on_find_comp,
@@ -112,9 +111,10 @@ pub fn run(
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
     use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.avg_score)));
+    comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.avg_score)));
     Ok(Some(QueryResult {
         comps,
+        query,
         comp_printer,
         duration: start_time.elapsed(),
         aborted: abort_flag.load(Ordering::SeqCst),
@@ -150,6 +150,7 @@ pub enum CtrlCBehaviour {
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     pub comps: Vec<Comp>,
+    pub query: Arc<Query>,
     pub duration: Duration,
     pub aborted: bool,
 
@@ -181,7 +182,6 @@ impl QueryResult {
 pub enum DebugOption {
     Spec,
     Query,
-    Layout,
     Graph,
     /// Stop just before the search starts, to let the user see what's been printed out without
     /// scrolling
@@ -195,7 +195,6 @@ impl FromStr for DebugOption {
         Ok(match v.to_lowercase().as_str() {
             "spec" => Self::Spec,
             "query" => Self::Query,
-            "layout" => Self::Layout,
             "graph" => Self::Graph,
             "no-search" => Self::StopBeforeSearch,
             #[rustfmt::skip] // See https://github.com/rust-lang/rustfmt/issues/5204
@@ -204,20 +203,6 @@ impl FromStr for DebugOption {
                 v
             )),
         })
-    }
-}
-
-////////////////////
-// ERROR MESSAGES //
-////////////////////
-
-fn graph_build_err_msg(e: monument::graph::BuildError) -> String {
-    use monument::graph::BuildError as BE;
-    match e {
-        BE::SizeLimit(limit) => format!(
-            "Graph size limit of {} nodes reached.  You can set it higher with `--graph-size-limit <n>`.",
-            limit
-        )
     }
 }
 
@@ -380,16 +365,16 @@ impl CompPrinter {
         Self {
             length_width: query.len_range.end.saturating_sub(1).to_string().len(),
             method_counts: query
-                .layout
-                .method_blocks
+                .methods
                 .iter()
-                .map(|mb| {
+                .map(|method| {
                     // `-1` converts from exclusive to inclusive range
                     //
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = mb.count_range.end.saturating_sub(1).to_string().len();
-                    let max_width = max_count_width.max(mb.shorthand.len());
-                    (max_width, mb.shorthand.clone())
+                    let max_count_width =
+                        method.count_range.end.saturating_sub(1).to_string().len();
+                    let max_width = max_count_width.max(method.shorthand.len());
+                    (max_width, method.shorthand.clone())
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
@@ -453,6 +438,8 @@ impl CompPrinter {
     }
 
     fn comp_string(&self, comp: &Comp) -> String {
+        let query = &self.query;
+
         // Length
         let mut s = format!("{:>width$} ", comp.length, width = self.length_width);
         // Method counts (for spliced)
@@ -465,10 +452,10 @@ impl CompPrinter {
         s.push('|');
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
-            write!(s, " {} |", ShortRow(&comp.part_head())).unwrap();
+            write!(s, " {} |", ShortRow(&comp.part_head(query))).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();
         if !self.query.music_displays.is_empty() {
             s.push(':');
         }
@@ -478,14 +465,13 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display
-                    .display_counts(&self.query.music_types, comp.music_counts.as_slice()),
+                &music_display.display_counts(&query.music_types, comp.music_counts.as_slice()),
                 *col_width,
             );
             s.push(' ');
         }
         // avg score, call string
-        write!(s, "| {:>9.6} | {}", comp.avg_score, comp.call_string()).unwrap();
+        write!(s, "| {:>9.6} | {}", comp.avg_score, comp.call_string(query)).unwrap();
         s
     }
 }

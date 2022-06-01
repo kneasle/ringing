@@ -113,3 +113,26 @@ impl<T> Ord for FrontierItem<T> {
         self.distance.cmp(&other.distance)
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum Boundary {
+    Start,
+    End,
+}
+
+/// Integer division, but rounding up instead of down
+pub fn div_rounding_up(lhs: usize, rhs: usize) -> usize {
+    (lhs + rhs - 1) / rhs
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn div_rounding_up() {
+        assert_eq!(super::div_rounding_up(0, 1), 0);
+        assert_eq!(super::div_rounding_up(1, 1), 1);
+        assert_eq!(super::div_rounding_up(1, 2), 1);
+        assert_eq!(super::div_rounding_up(3, 2), 2);
+        assert_eq!(super::div_rounding_up(6, 2), 3);
+    }
+}

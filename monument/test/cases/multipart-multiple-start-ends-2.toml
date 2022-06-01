@@ -1,0 +1,10 @@
+length = { min = 0, max = 700 }
+methods = ["Yorkshire Surprise Major", "Bristol Surprise Major"]
+method_count = { min = 0, max = 700 }
+
+# Allow both snap starts and finishes (explicitly).  Monuments shouldn't mix them but should allow
+# both
+start_indices = [0, 2]
+end_indices = [0, 2]
+
+part_head = "1342"

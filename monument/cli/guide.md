@@ -286,13 +286,14 @@ Determines how methods can be spliced.  Has no effect for single-method composit
 ```toml
 splice_style = "leads"          # (default; change method at every defined lead location)
 # or
-splice_style = "call locations" # only change method whenever a call _could_ happen
-# or
 splice_style = "calls"          # only change method when a call does happen
 ```
 
-Note that, for versions before `v0.8.0`, `splice_style = "call locations"` and `splice_style =
-"calls"` will both allow splices over part heads.  This is fixed in `v0.8.0` and later.
+Before `v0.10.0`, `splice_style = "call locations"` was possible and would only add splices where a
+call _could have_ been made (even if it wasn't).
+
+(Note that, for versions before `v0.8.0`, `splice_style = "call locations"` and `splice_style =
+"calls"` will both allow splices over part heads.  This is fixed in `v0.8.0` and later)
 
 #### `method_count`
 

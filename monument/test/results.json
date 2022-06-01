@@ -91,6 +91,61 @@
       { "length": 1344, "string": "#B[x]DD[x]B[x]YS[-]", "avg_score": 0.036468506, "part_head": "17823456" }
     ]
   },
+  "test/cases/ch-in-cyclic-1.toml": {
+    "comps": [
+      { "length": 5104, "string": "#SMZZAAAMMMA", "avg_score": 0.22451782, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SAMMMAAAZZM", "avg_score": 0.22747803, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SZMZAMMMAAA", "avg_score": 0.24822998, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SAAAMMMAZMZ", "avg_score": 0.2501831, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SMZAMMMAAAZ", "avg_score": 0.2680359, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SZAAAMMMAZM", "avg_score": 0.26901245, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SMAMAAMAMZZ", "avg_score": 0.28585815, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SZZMAMAAMAM", "avg_score": 0.286438, "part_head": "167890ET2345" },
+      { "length": 5104, "string": "#SZMAMAAMAMZ", "avg_score": 0.29171753, "part_head": "167890ET2345" }
+    ]
+  },
+  "test/cases/ch-in-cyclic-2.toml": {
+    "comps": [
+      { "length": 1344, "string": "#B[s]C[s]B[-]B[s]C[s]D", "avg_score": 0.025299072, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[-]BDDC[-]C[-]", "avg_score": 0.044799805, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[s]C[s]DC[-]DB[-]", "avg_score": 0.049560547, "part_head": "17823456" },
+      { "length": 1344, "string": "#CC[-]BD[-]DB[-]", "avg_score": 0.049987793, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[s]C[s]DC[-]BD[-]", "avg_score": 0.05923462, "part_head": "17823456" },
+      { "length": 1344, "string": "#B[-]D[-]BC[s]C[s]D", "avg_score": 0.05996704, "part_head": "17823456" },
+      { "length": 1344, "string": "#B[-]D[-]CB[s]C[s]D", "avg_score": 0.060699463, "part_head": "17823456" },
+      { "length": 1344, "string": "#B[s]C[s]BC[-]D[-]D", "avg_score": 0.061462402, "part_head": "17823456" },
+      { "length": 1344, "string": "#CCD[-]D[-]BB[-]", "avg_score": 0.06338501, "part_head": "15678234" },
+      { "length": 1344, "string": "#D[-]C[-]BBC[-]D", "avg_score": 0.06338501, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[-]B[-]BB[s]C[s]D", "avg_score": 0.06442261, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[s]C[s]CB[-]D[-]D", "avg_score": 0.06442261, "part_head": "17823456" },
+      { "length": 1344, "string": "#CC[-]BB[-]D[-]D", "avg_score": 0.067108154, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[-]CC[-]BDD[-]", "avg_score": 0.067871094, "part_head": "15678234" },
+      { "length": 1344, "string": "#DD[-]CBB[-]C[-]", "avg_score": 0.068603516, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[s]C[s]BB[-]B[-]D", "avg_score": 0.071136475, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[-]DD[-]C[s]C[s]D", "avg_score": 0.072631836, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[-]B[-]C[s]BB[s]D", "avg_score": 0.07336426, "part_head": "14567823" },
+      { "length": 1344, "string": "#D[-]C[-]BCB[-]D", "avg_score": 0.07455444, "part_head": "15678234" },
+      { "length": 1344, "string": "#DD[-]BCB[-]C[-]", "avg_score": 0.075286865, "part_head": "15678234" },
+      { "length": 1344, "string": "#BBC[-]C[-]D[-]D", "avg_score": 0.076049805, "part_head": "15678234" },
+      { "length": 1344, "string": "#B[s]BB[s]C[-]B[-]D", "avg_score": 0.07632446, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[s]B[-]B[s]C[s]C[s]D", "avg_score": 0.07662964, "part_head": "14567823" },
+      { "length": 1344, "string": "#D[s]CD[-]DBB[s]", "avg_score": 0.07745361, "part_head": "13456782" },
+      { "length": 1344, "string": "#B[s]C[s]C[s]B[-]B[s]D", "avg_score": 0.078125, "part_head": "14567823" },
+      { "length": 1344, "string": "#DD[-]B[-]C[s]C[s]D", "avg_score": 0.07858276, "part_head": "14567823" },
+      { "length": 1344, "string": "#B[s]C[s]C[-]DD[-]D", "avg_score": 0.08004761, "part_head": "14567823" },
+      { "length": 1344, "string": "#D[s]CD[-]BDB[s]", "avg_score": 0.08065796, "part_head": "13456782" },
+      { "length": 1344, "string": "#DD[s]C[s]C[-]B[-]D", "avg_score": 0.08303833, "part_head": "14567823" },
+      { "length": 1344, "string": "#CBBD[-]D[-]C[-]", "avg_score": 0.083496094, "part_head": "15678234" },
+      { "length": 1344, "string": "#D[-]DB[-]CCB[-]", "avg_score": 0.0864563, "part_head": "15678234" },
+      { "length": 1344, "string": "#D[-]BCC[-]BD[-]", "avg_score": 0.08718872, "part_head": "15678234" },
+      { "length": 1344, "string": "#D[s]BBD[-]DC[s]", "avg_score": 0.08862305, "part_head": "13456782" },
+      { "length": 1344, "string": "#D[-]C[-]D[-]CBB", "avg_score": 0.090911865, "part_head": "15678234" },
+      { "length": 1344, "string": "#D[s]BDB[-]DC[s]", "avg_score": 0.09286499, "part_head": "13456782" },
+      { "length": 1344, "string": "#D[-]BB[-]D[-]CC", "avg_score": 0.09390259, "part_head": "15678234" },
+      { "length": 1344, "string": "#DCC[-]D[-]BB[-]", "avg_score": 0.09463501, "part_head": "15678234" },
+      { "length": 1344, "string": "#DBBC[-]D[-]C[-]", "avg_score": 0.099121094, "part_head": "15678234" }
+    ]
+  },
   "test/cases/custom-method-count-1.toml": {
     "comps": [
       { "length": 224, "string": "CCCCCCC", "avg_score": 0.0 },
@@ -685,17 +740,18 @@
       { "length": 84, "string": "", "avg_score": 0.51190186 }
     ]
   },
-  "test/cases/error-messages.md: ambiguous-course-heads": {
-    "error_message": "The same course could be given two different course heads:\n     1x5x6x78, satisfying 1xxxxx78\n  or 1xx8x756, satisfying 1xxxxx56"
-  },
+  "test/cases/end-row.toml": { "comps": [{ "length": 130, "string": ">", "avg_score": 0.0 }] },
   "test/cases/error-messages.md: bobs-and-singles-only": {
     "error_message": "Can't be both `bobs_only` and `singles_only`"
   },
   "test/cases/error-messages.md: call-pn-parse": {
     "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
   },
+  "test/cases/error-messages.md: calling-positions-too-long": {
+    "error_message": "Call \"x\" only specifies 9 calling positions, but the stage has 8 bells"
+  },
   "test/cases/error-messages.md: calling-positions-too-short": {
-    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage is Major"
+    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage has 8 bells"
   },
   "test/cases/error-messages.md: ch-mask::bell-out-of-stage": {
     "error_message": "Can't parse course head mask \"1234*9\": bell 9 is out of stage Major"
@@ -722,7 +778,7 @@
     "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
   },
   "test/cases/error-messages.md: chs-not-in-other-parts": {
-    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
+    "error_message": "course head `xxxx7856` becomes `xxxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `xxxx7865` to `course_heads`"
   },
   "test/cases/error-messages.md: duplicate-calls::debug-symbol": {
     "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
@@ -748,17 +804,7 @@
     "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1678"
   },
   "test/cases/error-messages.md: duplicate-calls::same-pn": {
-    "comps": [
-      { "length": 64, "string": "sHsH", "avg_score": -0.09375 },
-      { "length": 128, "string": "HsHHsH", "avg_score": -0.07501221 },
-      { "length": 128, "string": "sHHsHH", "avg_score": -0.07501221 },
-      { "length": 192, "string": "HHsHHHsH", "avg_score": -0.0687561 },
-      { "length": 192, "string": "HsHHHsHH", "avg_score": -0.0687561 },
-      { "length": 192, "string": "sHHHsHHH", "avg_score": -0.0687561 },
-      { "length": 96, "string": "HHH", "avg_score": -0.056243896 },
-      { "length": 288, "string": "MBW", "avg_score": -0.018737793 },
-      { "length": 224, "string": "", "avg_score": 0.0 }
-    ]
+    "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1234"
   },
   "test/cases/error-messages.md: duplicate-shorthand": {
     "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
@@ -786,6 +832,9 @@
   },
   "test/cases/error-messages.md: method-pn-parsing::repeated-place": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.585x4x1,+9\"\n                       ^^^ Place '5' is duplicated"
+  },
+  "test/cases/error-messages.md: multiple-strokes-for-chunk": {
+    "error_message": "The same chunk of ringing can be at multiple strokes, probably because you're using a method with odd-length leads"
   },
   "test/cases/error-messages.md: music-presets::5678-wrong-stage-1": {
     "error_message": "5678 combinations only make sense for Triples and Major"
@@ -2188,75 +2237,6 @@
   "test/cases/inclusive-method-count.toml": {
     "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }]
   },
-  "test/cases/leadwise-no-calls.toml": {
-    "comps": [
-      { "length": 224, "string": "#SESYSES", "avg_score": 0.10714722 },
-      { "length": 224, "string": "#YSESSES", "avg_score": 0.11160278 },
-      { "length": 192, "string": "#SESYSY", "avg_score": 0.125 },
-      { "length": 192, "string": "#SESYYS", "avg_score": 0.125 },
-      { "length": 192, "string": "#YSESSY", "avg_score": 0.1302185 },
-      { "length": 192, "string": "#YSESYS", "avg_score": 0.1302185 },
-      { "length": 192, "string": "#YSYSES", "avg_score": 0.1302185 },
-      { "length": 192, "string": "#SYYSES", "avg_score": 0.1354065 },
-      { "length": 160, "string": "#SSSES", "avg_score": 0.1375122 },
-      { "length": 224, "string": "#SESYYYY", "avg_score": 0.13839722 },
-      { "length": 224, "string": "#YSESYYY", "avg_score": 0.14285278 },
-      { "length": 224, "string": "#YYYYSES", "avg_score": 0.14285278 },
-      { "length": 192, "string": "#YYSSES", "avg_score": 0.1458435 },
-      { "length": 224, "string": "#SESSESY", "avg_score": 0.14730835 },
-      { "length": 160, "string": "#SESSS", "avg_score": 0.1499939 },
-      { "length": 96, "string": "#EES", "avg_score": 0.15625 },
-      { "length": 160, "string": "#YSYSY", "avg_score": 0.15625 },
-      { "length": 160, "string": "#YSYYS", "avg_score": 0.15625 },
-      { "length": 224, "string": "#EEEEEEE", "avg_score": 0.16070557 },
-      { "length": 192, "string": "#SESSYY", "avg_score": 0.1614685 },
-      { "length": 160, "string": "#SYYSY", "avg_score": 0.1625061 },
-      { "length": 160, "string": "#SYYYS", "avg_score": 0.1625061 },
-      { "length": 224, "string": "#ESSESYS", "avg_score": 0.16519165 },
-      { "length": 192, "string": "#YSYYYY", "avg_score": 0.1666565 },
-      { "length": 192, "string": "#YYYYSY", "avg_score": 0.1666565 },
-      { "length": 192, "string": "#YYYYYS", "avg_score": 0.1666565 },
-      { "length": 128, "string": "#SSSY", "avg_score": 0.171875 },
-      { "length": 128, "string": "#SSYS", "avg_score": 0.171875 },
-      { "length": 192, "string": "#SYYYYY", "avg_score": 0.171875 },
-      { "length": 224, "string": "#YYYYYYY", "avg_score": 0.17410278 },
-      { "length": 160, "string": "#YYSSY", "avg_score": 0.1749878 },
-      { "length": 160, "string": "#YYSYS", "avg_score": 0.1749878 },
-      { "length": 192, "string": "#YSSESY", "avg_score": 0.1770935 },
-      { "length": 160, "string": "#SSYYY", "avg_score": 0.1812439 },
-      { "length": 192, "string": "#SYSESY", "avg_score": 0.1822815 },
-      { "length": 192, "string": "#YYSYYY", "avg_score": 0.1822815 },
-      { "length": 224, "string": "#YYYSESY", "avg_score": 0.18304443 },
-      { "length": 192, "string": "#ESSYYS", "avg_score": 0.1927185 },
-      { "length": 128, "string": "#YSSS", "avg_score": 0.1953125 },
-      { "length": 224, "string": "#ESYYYYS", "avg_score": 0.19644165 },
-      { "length": 224, "string": "#SSSSSSS", "avg_score": 0.19644165 },
-      { "length": 160, "string": "#YSSYY", "avg_score": 0.2000122 },
-      { "length": 160, "string": "#YYYSS", "avg_score": 0.2000122 },
-      { "length": 128, "string": "#SYSS", "avg_score": 0.203125 },
-      { "length": 192, "string": "#YYYSYY", "avg_score": 0.203125 },
-      { "length": 160, "string": "#SYSYY", "avg_score": 0.2062378 },
-      { "length": 192, "string": "#ESYSYS", "avg_score": 0.2083435 },
-      { "length": 192, "string": "#YYSESS", "avg_score": 0.2083435 },
-      { "length": 224, "string": "#YYSESYY", "avg_score": 0.20980835 },
-      { "length": 160, "string": "#SSESS", "avg_score": 0.2124939 },
-      { "length": 192, "string": "#SSESYY", "avg_score": 0.2135315 },
-      { "length": 192, "string": "#ESYYSS", "avg_score": 0.2291565 },
-      { "length": 96, "string": "#SEE", "avg_score": 0.2291565 },
-      { "length": 160, "string": "#ESSSS", "avg_score": 0.2312622 },
-      { "length": 224, "string": "#ESYSESS", "avg_score": 0.23214722 },
-      { "length": 64, "string": "#EY", "avg_score": 0.234375 },
-      { "length": 224, "string": "#SYYYYSE", "avg_score": 0.23660278 },
-      { "length": 192, "string": "#SYYSSE", "avg_score": 0.2395935 },
-      { "length": 224, "string": "#SYSESSE", "avg_score": 0.24554443 },
-      { "length": 192, "string": "#SSYYSE", "avg_score": 0.2552185 },
-      { "length": 160, "string": "#SSSSE", "avg_score": 0.2625122 },
-      { "length": 224, "string": "#SSESYSE", "avg_score": 0.27230835 },
-      { "length": 192, "string": "#SYSYSE", "avg_score": 0.2760315 },
-      { "length": 64, "string": "#YE", "avg_score": 0.359375 },
-      { "length": 96, "string": "#ESE", "avg_score": 0.3645935 }
-    ]
-  },
   "test/cases/little-bob-shorthand.toml": {
     "comps": [
       { "length": 48, "string": "LLLPL", "avg_score": 0.5 },
@@ -2289,6 +2269,54 @@
       { "length": 1440, "string": "sVsVBI", "avg_score": 0.13626099, "part_head": "1452367890" },
       { "length": 1440, "string": "VBIV", "avg_score": 0.17791748, "part_head": "1452367890" },
       { "length": 720, "string": "BI", "avg_score": 0.22415161, "part_head": "1452367890" }
+    ]
+  },
+  "test/cases/multipart-multiple-start-ends-1.toml": {
+    "comps": [
+      {
+        "length": 672,
+        "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>",
+        "avg_score": 0.034240723,
+        "part_head": "14235678"
+      },
+      { "length": 576, "string": "<BB[H]BB[sM]B[M]Y[sW]B>", "avg_score": 0.045837402, "part_head": "14235678" },
+      { "length": 672, "string": "BB[M]B[M]B[sM]Y[W]B[sW]B", "avg_score": 0.05505371, "part_head": "13425678" },
+      { "length": 672, "string": "BB[sM]B[M]Y[sW]B[W]B[W]B", "avg_score": 0.059509277, "part_head": "13425678" },
+      { "length": 480, "string": "BB[sM]B[M]BY[sH]", "avg_score": 0.07040405, "part_head": "14235678" },
+      { "length": 576, "string": "BB[sM]B[M]Y[W]B[sW]B", "avg_score": 0.0736084, "part_head": "13425678" },
+      { "length": 480, "string": "<BB[sH]B[H]BY[sW]B>", "avg_score": 0.07458496, "part_head": "14235678" },
+      { "length": 672, "string": "<YYY[H]YYYYY>", "avg_score": 0.106536865, "part_head": "13425678" },
+      { "length": 672, "string": "YYYYYYY[H]", "avg_score": 0.13778687, "part_head": "14235678" },
+      { "length": 576, "string": "B[sH]BY[sW]B[W]B[W]B", "avg_score": 0.1378479, "part_head": "14235678" },
+      { "length": 576, "string": "BY[sW]B[W]B[W]BB[sH]", "avg_score": 0.1517334, "part_head": "13425678" },
+      { "length": 480, "string": "B[sH]BY[W]B[sW]B", "avg_score": 0.17041016, "part_head": "14235678" },
+      { "length": 480, "string": "BY[W]B[sW]BB[sH]", "avg_score": 0.18499756, "part_head": "13425678" },
+      { "length": 96, "string": "<B[W]B>", "avg_score": 0.3500061, "part_head": "14235678" },
+      { "length": 96, "string": "B[H]", "avg_score": 0.4020691, "part_head": "14235678" }
+    ]
+  },
+  "test/cases/multipart-multiple-start-ends-2.toml": {
+    "comps": [
+      {
+        "length": 672,
+        "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>",
+        "avg_score": 0.034240723,
+        "part_head": "14235678"
+      },
+      { "length": 576, "string": "<BB[H]BB[sM]B[M]Y[sW]B>", "avg_score": 0.045837402, "part_head": "14235678" },
+      { "length": 672, "string": "BB[M]B[M]B[sM]Y[W]B[sW]B", "avg_score": 0.05505371, "part_head": "13425678" },
+      { "length": 672, "string": "BB[sM]B[M]Y[sW]B[W]B[W]B", "avg_score": 0.059509277, "part_head": "13425678" },
+      { "length": 480, "string": "BB[sM]B[M]BY[sH]", "avg_score": 0.07040405, "part_head": "14235678" },
+      { "length": 576, "string": "BB[sM]B[M]Y[W]B[sW]B", "avg_score": 0.0736084, "part_head": "13425678" },
+      { "length": 480, "string": "<BB[sH]B[H]BY[sW]B>", "avg_score": 0.07458496, "part_head": "14235678" },
+      { "length": 672, "string": "<YYY[H]YYYYY>", "avg_score": 0.106536865, "part_head": "13425678" },
+      { "length": 672, "string": "YYYYYYY[H]", "avg_score": 0.13778687, "part_head": "14235678" },
+      { "length": 576, "string": "B[sH]BY[sW]B[W]B[W]B", "avg_score": 0.1378479, "part_head": "14235678" },
+      { "length": 576, "string": "BY[sW]B[W]B[W]BB[sH]", "avg_score": 0.1517334, "part_head": "13425678" },
+      { "length": 480, "string": "B[sH]BY[W]B[sW]B", "avg_score": 0.17041016, "part_head": "14235678" },
+      { "length": 480, "string": "BY[W]B[sW]BB[sH]", "avg_score": 0.18499756, "part_head": "13425678" },
+      { "length": 96, "string": "<B[W]B>", "avg_score": 0.3500061, "part_head": "14235678" },
+      { "length": 96, "string": "B[H]", "avg_score": 0.4020691, "part_head": "14235678" }
     ]
   },
   "test/cases/multipart-self-false.toml": { "comps": [] },
@@ -3016,42 +3044,42 @@
   },
   "test/cases/per-method-start-ends-3.toml": {
     "comps": [
-      { "length": 64, "string": "<[sW]B[sW]B>", "avg_score": -0.0718689 },
+      { "length": 64, "string": "<B[sW]B[sW]B>", "avg_score": -0.0718689 },
       { "length": 64, "string": "B[sH]B[sH]", "avg_score": -0.0718689 },
-      { "length": 128, "string": "<[W]B[sW]B[W]B[sW]B>", "avg_score": -0.0640564 },
-      { "length": 128, "string": "<[sW]B[W]B[sW]B[W]B>", "avg_score": -0.0640564 },
+      { "length": 128, "string": "<B[W]B[sW]B[W]B[sW]B>", "avg_score": -0.0640564 },
+      { "length": 128, "string": "<B[sW]B[W]B[sW]B[W]B>", "avg_score": -0.0640564 },
       { "length": 128, "string": "B[H]B[sH]B[H]B[sH]", "avg_score": -0.0640564 },
       { "length": 128, "string": "B[sH]B[H]B[sH]B[H]", "avg_score": -0.0640564 },
-      { "length": 192, "string": "<[W]B[W]B[sW]B[W]B[W]B[sW]B>", "avg_score": -0.061462402 },
-      { "length": 192, "string": "<[W]B[sW]B[W]B[W]B[sW]B[W]B>", "avg_score": -0.061462402 },
-      { "length": 192, "string": "<[sW]B[W]B[W]B[sW]B[W]B[W]B>", "avg_score": -0.061462402 },
+      { "length": 192, "string": "<B[W]B[W]B[sW]B[W]B[W]B[sW]B>", "avg_score": -0.061462402 },
+      { "length": 192, "string": "<B[W]B[sW]B[W]B[W]B[sW]B[W]B>", "avg_score": -0.061462402 },
+      { "length": 192, "string": "<B[sW]B[W]B[W]B[sW]B[W]B[W]B>", "avg_score": -0.061462402 },
       { "length": 192, "string": "B[H]B[H]B[sH]B[H]B[H]B[sH]", "avg_score": -0.061462402 },
       { "length": 192, "string": "B[H]B[sH]B[H]B[H]B[sH]B[H]", "avg_score": -0.061462402 },
       { "length": 192, "string": "B[sH]B[H]B[H]B[sH]B[H]B[H]", "avg_score": -0.061462402 },
-      { "length": 96, "string": "<[W]B[W]B[W]B>", "avg_score": -0.056243896 },
+      { "length": 96, "string": "<B[W]B[W]B[W]B>", "avg_score": -0.056243896 },
       { "length": 96, "string": "B[H]B[H]B[H]", "avg_score": -0.056243896 },
       { "length": 194, "string": "B[H]B[sH]B[H]B[H]BYY>", "avg_score": -0.03970337 },
       { "length": 162, "string": "B[H]B[H]B[sH]BYY>", "avg_score": -0.03640747 },
       { "length": 130, "string": "B[sH]B[H]BYY>", "avg_score": -0.03152466 },
       { "length": 194, "string": "B[sH]B[H]YYYYY>", "avg_score": -0.021148682 },
       { "length": 290, "string": "B[H]B[H]B[sH]BBBBBBY>", "avg_score": -0.020355225 },
-      { "length": 288, "string": "<[W]B[W]YYYYYYY[W]B>", "avg_score": -0.018737793 },
-      { "length": 288, "string": "<[W]YYYYYYY[W]B[W]B>", "avg_score": -0.018737793 },
+      { "length": 288, "string": "<B[W]B[W]YYYYYYY[W]B>", "avg_score": -0.018737793 },
+      { "length": 288, "string": "<B[W]YYYYYYY[W]B[W]B>", "avg_score": -0.018737793 },
       { "length": 288, "string": "B[H]B[H]YYYYYYY[H]", "avg_score": -0.018737793 },
       { "length": 288, "string": "B[H]YYYYYYY[H]B[H]", "avg_score": -0.018737793 },
       { "length": 288, "string": "YYYYYYY[H]B[H]B[H]", "avg_score": -0.018737793 },
-      { "length": 256, "string": "<[sW]YYYYYYY[sW]B>", "avg_score": -0.017974854 },
+      { "length": 256, "string": "<B[sW]YYYYYYY[sW]B>", "avg_score": -0.017974854 },
       { "length": 256, "string": "B[sH]YYYYYYY[sH]", "avg_score": -0.017974854 },
       { "length": 256, "string": "YYYYYYY[sH]B[sH]", "avg_score": -0.017974854 },
       { "length": 258, "string": "B[sH]B[H]BBBBBBY>", "avg_score": -0.015899658 },
-      { "length": 224, "string": "<BBBBBBB>", "avg_score": 0.0 },
+      { "length": 224, "string": "<BBBBBBBB>", "avg_score": 0.0 },
       { "length": 224, "string": "BBBBBBB", "avg_score": 0.0 },
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.0 }
     ]
   },
   "test/cases/per-method-start-ends.toml": {
     "comps": [
-      { "length": 224, "string": "<BBBBBBB>", "avg_score": 0.0 },
+      { "length": 224, "string": "<BBBBBBBB>", "avg_score": 0.0 },
       { "length": 224, "string": "BBBBBBB", "avg_score": 0.0 },
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.0 }
     ]
@@ -3126,138 +3154,6 @@
     ]
   },
   "test/cases/splice-weight-1.toml": {
-    "comps": [
-      { "length": 224, "string": "#CCCCCCC", "avg_score": 0.0 },
-      { "length": 224, "string": "#YYYYYYY", "avg_score": 0.0 },
-      { "length": 224, "string": "#CCCCCCY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CCCCCYY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CCCCYYY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CCCYYYY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CCYYYYY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CYYYYYY", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YCCCCCC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YYCCCCC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YYYCCCC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YYYYCCC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YYYYYCC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#YYYYYYC", "avg_score": 0.0044555664 },
-      { "length": 224, "string": "#CCCCCYC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCCYCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCCYYC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCYCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCYYCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCYYYC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCYCCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCYYCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCYYYCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCYYYYC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CYCCCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CYYCCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CYYYCCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CYYYYCC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CYYYYYC", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YCCCCCY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YCCCCYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YCCCYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YCCYYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YCYYYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYCCCCY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYCCCYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYCCYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYCYYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYCCCY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYCCYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYCYYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYYCCY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYYCYY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#YYYYYCY", "avg_score": 0.00894165 },
-      { "length": 224, "string": "#CCCCYCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCCYCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCCYCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCCYYCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYCCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYCCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYCYYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYYCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYYCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCYYYCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYCCCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYCCCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYCCYYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYCYYYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYCCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYCCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYCYYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYYCCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYYCYY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CYYYYCY", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCCCYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCCYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCCYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCYCCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCYYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCCYYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCYCCCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCYYCCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCYYYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YCYYYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCCCYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCCYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCCYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCYCCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCYYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYCYYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYYCCYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYYCYCC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYYCYYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#YYYYCYC", "avg_score": 0.013397217 },
-      { "length": 224, "string": "#CCCYCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CCYCCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CCYCYCC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CCYCYYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CCYYCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCCCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCCYCC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCCYYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCYCCC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCYYCC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYCYYYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYYCCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYYCYCC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYYCYYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CYYYCYC", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCCCYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCCYCCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCCYCYY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCCYYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYCCCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYCCYY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYCYYY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYYCCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYYCYY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YCYYYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YYCCYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YYCYCCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YYCYCYY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YYCYYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#YYYCYCY", "avg_score": 0.017852783 },
-      { "length": 224, "string": "#CCYCYCY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYCCYCY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYCYCCY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYCYCYY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYCYYCY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYYCYCY", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YCCYCYC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YCYCCYC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YCYCYCC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YCYCYYC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YCYYCYC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#YYCYCYC", "avg_score": 0.02230835 },
-      { "length": 224, "string": "#CYCYCYC", "avg_score": 0.026794434 },
-      { "length": 224, "string": "#YCYCYCY", "avg_score": 0.026794434 }
-    ]
-  },
-  "test/cases/splice-weight-2.toml": {
     "comps": [
       { "length": 224, "string": "CCCCCCC", "avg_score": 0.0 },
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.0 },
@@ -3388,5 +3284,6 @@
       { "length": 224, "string": "CYCYCYC", "avg_score": 0.026794434 },
       { "length": 224, "string": "YCYCYCY", "avg_score": 0.026794434 }
     ]
-  }
+  },
+  "test/cases/start-row.toml": { "comps": [{ "length": 130, "string": ">", "avg_score": 0.0 }] }
 }

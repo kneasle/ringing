@@ -1,0 +1,29 @@
+length = "peal"
+methods = [
+    { title = "Slinky Differential Little Treble Place Maximus", count.max = 176 },
+    "Zanussi Surprise Maximus",
+    "Ariel Surprise Maximus",
+    "Maypole Alliance Maximus",
+]
+method_count = { min = 0, max = 5000 }
+
+part_head = "1T234567890E" # cyclic
+course_heads = [
+    "1234567890ET",
+    "134567890ET2",
+    "14567890ET23",
+    "1567890ET234",
+    "167890ET2345",
+    "17890ET23456",
+    "1890ET234567",
+    "190ET2345678",
+    "10ET23456789",
+    "1ET234567890",
+    "1T234567890E",
+]
+
+base_music = "none"
+music = [
+    { run_lengths = [4,  6,  8,          ] },
+    { run_lengths = [  5,  7,  9,10,11,12], show = false },
+]

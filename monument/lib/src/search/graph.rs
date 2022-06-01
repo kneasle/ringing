@@ -1,31 +1,30 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph::ChunkId,
-    layout::{chunk_range::End, LinkIdx, StartIdx},
+    graph::LinkSide,
     music::Score,
     utils::{Counts, Rotation},
-    Query,
+    CallIdx, Query,
 };
 use bit_vec::BitVec;
-use itertools::Itertools;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub starts: Vec<(ChunkIdx, StartIdx, Rotation)>,
+    pub starts: StartVec<(ChunkIdx, crate::graph::LinkId, Rotation)>,
     pub chunks: ChunkVec<Chunk>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Chunk {
-    pub id: ChunkId,
+    pub id: crate::graph::ChunkId,
 
     pub score: Score,
     pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
 
-    pub length: u32,
+    pub per_part_length: u32,
+    pub total_length: u32,
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub dist_to_rounds: u32,
@@ -35,22 +34,20 @@ pub struct Chunk {
     pub dist_to_non_duffer: u32,
 
     // Indices must be aligned with those from the source graph
-    pub succs: Vec<Link>,
+    pub succs: SuccVec<SuccLink>,
     // If this chunk is added to a composition, these bits denote the set of chunks will be marked
     // as unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
     // itself.
     pub falseness: BitVec,
-
-    pub end: Option<End>,
 }
 
 /// A link between a chunk and its successor
 #[derive(Debug, Clone)]
-pub struct Link {
+pub struct SuccLink {
+    pub call: Option<CallIdx>,
+    pub next: LinkSide<ChunkIdx>,
     pub score: Score,
-    pub source_idx: LinkIdx,
-    pub next_chunk: ChunkIdx,
-    pub rot: Rotation,
+    pub rotation: Rotation,
 }
 
 ///////////////////////////////////////////
@@ -64,8 +61,8 @@ impl Graph {
         // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
         // the set of chunks with numbers that can be used to index into a BitVec for falseness
         // computation.
-        let mut index_to_id = ChunkVec::<(ChunkId, &crate::graph::Chunk)>::new();
-        let mut id_to_index = HashMap::<ChunkId, ChunkIdx>::new();
+        let mut index_to_id = ChunkVec::<(crate::graph::ChunkId, &crate::graph::Chunk)>::new();
+        let mut id_to_index = HashMap::<crate::graph::ChunkId, ChunkIdx>::new();
         for (id, chunk) in source_graph.chunks() {
             let index = index_to_id.push((id.to_owned(), chunk));
             id_to_index.insert(id.to_owned(), index);
@@ -80,9 +77,8 @@ impl Graph {
 
                 // Generate a BitVec with a 1 for every chunk which is false against this chunk
                 let mut falseness = BitVec::from_elem(num_chunks, false);
-                for false_std_id in source_chunk.false_chunks() {
-                    let false_id = ChunkId::Standard(false_std_id.clone());
-                    let false_chunk_idx = id_to_index[&false_id];
+                for false_id in source_chunk.false_chunks() {
+                    let false_chunk_idx = id_to_index[false_id];
                     falseness.set(false_chunk_idx.index(), true);
                 }
 
@@ -91,16 +87,18 @@ impl Graph {
                     .iter()
                     .filter_map(|link_id| {
                         let link = source_graph.get_link(*link_id)?;
-                        let score =
-                            link.weight_per_part(&from_id, query) * source_graph.num_parts() as f32;
-                        Some(Link {
-                            score: Score::from(score),
-                            source_idx: link.source_idx,
-                            next_chunk: *id_to_index.get(&link.to)?,
-                            rot: link.rotation,
+                        let next = match &link.to {
+                            LinkSide::Chunk(ch_id) => LinkSide::Chunk(*id_to_index.get(ch_id)?),
+                            LinkSide::StartOrEnd => LinkSide::StartOrEnd,
+                        };
+                        Some(SuccLink {
+                            call: link.call,
+                            score: link_score(source_chunk, link, query),
+                            next,
+                            rotation: link.rotation,
                         })
                     })
-                    .collect_vec();
+                    .collect();
 
                 Chunk {
                     id: from_id,
@@ -108,11 +106,11 @@ impl Graph {
                     score: source_chunk.score(),
                     music_counts: source_chunk.music().counts.clone(),
 
-                    length: source_chunk.length() as u32,
+                    per_part_length: source_chunk.per_part_length() as u32,
+                    total_length: source_chunk.total_length() as u32,
                     method_counts: source_chunk.method_counts().clone(),
                     dist_to_rounds: source_chunk.lb_distance_to_rounds as u32,
                     label: source_chunk.label().to_owned(),
-                    end: source_chunk.end(),
 
                     duffer: source_chunk.duffer(),
                     dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer as u32,
@@ -124,11 +122,18 @@ impl Graph {
             .collect();
 
         // Compute the list of start chunks and their labels
-        let mut starts = Vec::new();
-        for (start_id, start_idx, rotation) in source_graph.start_chunks() {
-            if source_graph.get_chunk(start_id).is_some() {
-                let chunk_idx = id_to_index[start_id];
-                starts.push((chunk_idx, *start_idx, *rotation));
+        let mut starts = StartVec::new();
+        for (start_link_id, start_chunk_id) in source_graph.starts() {
+            let start_link = match source_graph.get_link(*start_link_id) {
+                Some(l) => l,
+                None => continue, // Skip any dangling start `LinkId`s
+            };
+            if source_graph.get_chunk(start_chunk_id).is_some() {
+                starts.push((
+                    id_to_index[start_chunk_id],
+                    *start_link_id,
+                    start_link.rotation,
+                ));
             }
         }
 
@@ -136,5 +141,42 @@ impl Graph {
     }
 }
 
+/// Gets the total [`Score`] generated by a given [`Link`].  For end links, this **doesn't**
+/// include the [`Score`] from splices over the part end.
+fn link_score(
+    source_chunk: &crate::graph::Chunk,
+    link: &crate::graph::Link,
+    query: &Query,
+) -> Score {
+    let is_splice = match (&link.from, &link.to) {
+        // A link between chunks is a splice iff c2's RowIdx directly
+        // follows from c1's (i.e. it's the same method and is one row
+        // later).  For example:
+        // - (Bristol, 16) -> (Bristol, 17)   isn't a splice
+        // - (Bristol, 31) -> (Bristol, 0)    isn't a splice (it wraps round the lead end)
+        // - (Bristol, 31) -> (Cambridge, 0)  **is** a splice (method changes)
+        // - (Bristol, 17) -> (Bristol, 0)    **is** a splice (it skips half a lead)
+        (LinkSide::Chunk(c1), LinkSide::Chunk(c2)) => {
+            let sub_lead_idx_after_prev_chunk = (c1.sub_lead_idx + source_chunk.per_part_length())
+                % query.methods[c1.method].lead_len();
+            let is_continuation =
+                c1.method == c2.method && sub_lead_idx_after_prev_chunk == c2.sub_lead_idx;
+            !is_continuation
+        }
+        // If either side is a start/end, then no splice occurs
+        _ => false,
+    };
+    let call_weight = match link.call {
+        Some(idx) => query.calls[idx].weight,
+        None => 0.0, // Plain leads have no weight
+    };
+    let splice_weight = if is_splice { query.splice_weight } else { 0.0 };
+    Score::from((call_weight + splice_weight) * query.num_parts() as f32)
+}
+
 index_vec::define_index_type! { pub struct ChunkIdx = usize; }
+index_vec::define_index_type! { pub struct StartIdx = usize; }
+index_vec::define_index_type! { pub struct SuccIdx = usize; }
 type ChunkVec<T> = index_vec::IndexVec<ChunkIdx, T>;
+type StartVec<T> = index_vec::IndexVec<StartIdx, T>;
+type SuccVec<T> = index_vec::IndexVec<SuccIdx, T>;

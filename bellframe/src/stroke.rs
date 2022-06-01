@@ -19,7 +19,8 @@ pub enum Stroke {
 }
 
 impl Stroke {
-    /// Returns the `Stroke` which happens `offset` [`Row`](crate::Row)s after a given `start` `Stroke`.
+    /// Returns the `Stroke` which happens `offset` [`Row`](crate::Row)s after a given `start`
+    /// `Stroke`.
     ///
     /// # Example
     ///

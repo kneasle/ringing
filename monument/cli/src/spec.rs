@@ -16,18 +16,13 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    layout::{
-        self,
-        new::{Call, CourseHeadMaskPreset},
-        Layout,
-    },
-    music::MusicType,
-    CallType, CallVec, MusicTypeVec, OptRange, Query, SpliceStyle,
+    music::MusicType, Call, CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptRange, Query,
+    SpliceStyle,
 };
 use serde::Deserialize;
 
 use crate::{
-    calls::{BaseCalls, SpecificCall},
+    calls::{check_for_duplicate_call_names, BaseCalls, SpecificCall},
     music::{BaseMusic, MusicSpec},
     utils::OptRangeInclusive,
     Source,
@@ -105,7 +100,7 @@ pub struct Spec {
     #[serde(default)]
     music: Vec<MusicSpec>,
     /// The [`Stroke`] of the first row of the composition
-    #[serde(default = "crate::utils::backstroke")]
+    #[serde(default = "crate::utils::handstroke")]
     start_stroke: Stroke,
     /// The value for `non_duffer` given to music types when none is explicitly given
     // TODO: Uncomment these when implementing non-duffers
@@ -115,6 +110,15 @@ pub struct Spec {
     max_duffer_rows: Option<usize>,
 
     /* COURSES */
+    /// The [`Row`] which starts the composition.  When computing falseness and music, this **is**
+    /// considered included in the composition.
+    #[serde(default)] // The default/empty string parses to rounds on any stage
+    start_row: String,
+    /// The [`Row`] which ends the composition.  When computing falseness and music, this is
+    /// **not** considered part of the composition; the composition stops just before this is
+    /// reached.
+    #[serde(default)] // The default/empty string parses to rounds on any stage
+    end_row: String,
     /// A [`Row`] which generates the part heads of this composition
     #[serde(default)]
     part_head: String,
@@ -130,12 +134,6 @@ pub struct Spec {
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
-    /// If `true`, generate compositions lead-wise, rather than course-wise.  This is useful for
-    /// cases like cyclic comps where no course heads are preserved across parts.
-    ///
-    /// If left unset, Monument will determine the best value - i.e. leadwise iff the part head
-    /// affects the tenor
-    leadwise: Option<bool>,
 
     /* STARTS/ENDS */
     /// Set to `true` to allow comps to not start at the lead head.
@@ -144,7 +142,6 @@ pub struct Spec {
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
     /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
     /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
-    #[serde(default = "default_start_indices")]
     start_indices: Option<Vec<isize>>,
     /// Which indices within a lead should the composition be allowed to start.  If unspecified,
     /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
@@ -196,14 +193,11 @@ impl Spec {
 
         // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
         // `layout::new::Method`s
-        let ch_masks = self.ch_mask_preset(stage)?.into_masks(stage);
+        let part_head = parse_row("part head", &self.part_head, stage)?;
+        let ch_masks = self.ch_masks(stage, calling_bell, &part_head)?;
         let calls = self.calls(stage)?;
-        let part_head = RowBuf::parse_with_stage(&self.part_head, stage).map_err(|e| {
-            anyhow::Error::msg(format!("Can't parse part head {:?}: {}", self.part_head, e))
-        })?;
-        let (start_indices, end_indices) = self.start_end_indices(&part_head);
 
-        // Convert the methods
+        // Generate extra method data
         let is_spliced = loaded_methods.len() > 1;
         let shorthands = monument::utils::default_shorthands(
             loaded_methods
@@ -217,52 +211,67 @@ impl Spec {
         if is_spliced {
             log::info!("method count range: {:?}", method_count);
         }
-        let mut methods = Vec::new();
-        #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_deref()` is really cheap
-        for ((method, common), shorthand) in loaded_methods.into_iter().zip(shorthands) {
+        // Combine method data
+        let mut methods = MethodVec::new();
+        #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
+        for ((method, common), shorthand) in loaded_methods.into_iter().zip_eq(shorthands) {
             let override_ch_masks = common
                 .course_heads
                 .map(|chs| parse_ch_masks(&chs, stage))
-                .transpose()?;
+                .transpose()?; // Maps `Option<Result<T, E>>` to `Option<T>`
             let explicit_count_range = OptRange::from(common.count_range);
             let count_range = explicit_count_range.or_range(&method_count);
             if is_spliced && explicit_count_range.is_set() {
                 log::info!("count range for {:<2}: {:?}", shorthand, count_range);
             }
-            methods.push(layout::new::Method::new(
-                method,
-                override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
-                calling_bell,
+            // Determine the start_indices
+            let custom_start_indices = common
+                .start_indices
+                .as_ref()
+                .or(self.start_indices.as_ref());
+            let start_indices = match custom_start_indices {
+                Some(custom) => custom.clone(),
+                None if self.snap_start => vec![2],
+                None => vec![0],
+            };
+
+            methods.push(monument::Method {
+                inner: method,
+                ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
                 count_range,
-                common.start_indices.as_deref().or(start_indices.as_deref()),
-                common.end_indices.as_deref().or(end_indices.as_deref()),
-            ));
+                start_indices,
+                end_indices: common
+                    .end_indices
+                    .as_ref()
+                    .or(self.end_indices.as_ref())
+                    .cloned(),
+            });
         }
 
         let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
-
-        // Generate the `Layout`
-        let layout = Layout::new(
-            methods,
-            &calls,
-            calling_bell,
-            self.splice_style,
-            &part_head,
-            self.leadwise,
-        )?;
-
         let (music_types, music_displays) = self.music(source, stage)?;
+        // TODO: Make this configurable
+        let call_display_style = if part_head.is_fixed(calling_bell) {
+            CallDisplayStyle::CallingPositions(calling_bell)
+        } else {
+            CallDisplayStyle::Positional
+        };
 
         // Build this layout into a `Graph`
         Ok(Query {
-            layout,
             len_range: self.length.range.clone(),
             num_comps: self.num_comps,
             allow_false: self.allow_false,
+            stage,
+
+            methods,
+            call_display_style,
+            calls: calls.into_iter().map(Call::from).collect(),
             splice_style: self.splice_style,
 
-            calls: calls.into_iter().map(CallType::from).collect(),
+            start_row: parse_row("start row", &self.start_row, stage)?,
+            end_row: parse_row("end row", &self.end_row, stage)?,
             part_head,
             ch_weights,
             splice_weight: self.splice_weight,
@@ -310,7 +319,7 @@ impl Spec {
 
     fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<Call>> {
         // Generate a full set of calls
-        let mut call_specs = self.base_calls.to_call_specs(
+        let mut call_specs = self.base_calls.create_calls(
             stage,
             self.bobs_only,
             self.singles_only,
@@ -318,92 +327,32 @@ impl Spec {
             self.single_weight,
         )?;
         for specific_call in &self.calls {
-            call_specs.push(specific_call.to_call_spec(stage)?);
+            call_specs.push(specific_call.create_call(stage)?);
         }
         // Check for duplicate debug or display symbols
-        Self::check_for_duplicate_call_names(&call_specs, "display", |call| &call.display_symbol)?;
-        Self::check_for_duplicate_call_names(&call_specs, "debug", |call| &call.debug_symbol)?;
-        Ok(CallVec::from(call_specs))
+        check_for_duplicate_call_names(&call_specs, "display", |call| &call.display_symbol)?;
+        check_for_duplicate_call_names(&call_specs, "debug", |call| &call.debug_symbol)?;
+        Ok(call_specs)
     }
 
-    /// Check for duplicate calls.  Calls are a 'duplicate' if assign the same symbol at the same
-    /// lead location but to **different** place notations.  If they're the same, then Monument
-    /// will de-duplicate them.
-    fn check_for_duplicate_call_names<'calls>(
-        call_specs: &'calls [layout::new::Call],
-        symbol_name: &str,
-        get_symbol: impl Fn(&'calls layout::new::Call) -> &'calls str,
-    ) -> anyhow::Result<()> {
-        let sorted_calls = call_specs
-            .iter()
-            .map(|call| (get_symbol(call), &call.lead_location_from, &call.place_not))
-            .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
-        for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in
-            sorted_calls.tuple_windows()
-        {
-            if sym1 == sym2 && lead_location1 == lead_location2 && pn1 != pn2 {
-                return Err(anyhow::Error::msg(format!(
-                    "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
-                    symbol_name, sym1, lead_location1, pn1, pn2
-                )));
-            }
-        }
-        Ok(())
-    }
-
-    fn ch_mask_preset(&self, stage: Stage) -> anyhow::Result<CourseHeadMaskPreset> {
+    fn ch_masks(
+        &self,
+        stage: Stage,
+        calling_bell: Bell,
+        part_head: &Row,
+    ) -> anyhow::Result<Vec<Mask>> {
         Ok(if let Some(ch_mask_strings) = &self.course_heads {
-            // If masks are specified, parse all the course head mask strings into `Mask`s,
-            // defaulting to the tenor as calling bell
-            CourseHeadMaskPreset::Custom(parse_ch_masks(ch_mask_strings, stage)?)
-        } else if self.split_tenors {
-            CourseHeadMaskPreset::SplitTenors
+            // Always use custom masks if set
+            parse_ch_masks(ch_mask_strings, stage)?
+        } else if self.split_tenors || !part_head.is_fixed(calling_bell) {
+            // If either the part head doesn't preserve the calling bell (e.g. in cyclic spliced) or
+            // `split_tenors = true`, then allow any course
+            vec![Mask::empty(stage)]
         } else {
-            CourseHeadMaskPreset::TenorsTogether // Default to tenors together
+            // If `split_tenors = false` and no custom masks are set, then default to
+            // tenors-together
+            vec![tenors_together_mask(stage)]
         })
-    }
-
-    fn start_end_indices(&self, part_head: &Row) -> (Option<Vec<isize>>, Option<Vec<isize>>) {
-        let mut start_indices = self.start_indices.clone().or_else(|| {
-            if self.snap_start {
-                None // If just `snap_start`, then allow any start
-            } else {
-                Some(vec![0]) // If nothings specified, only search standard starts
-            }
-        });
-        let mut end_indices = self.end_indices.clone();
-
-        // If this is a multi-part, then we require that `start_indices` and `end_indices` must be
-        // the same.
-        //
-        // TODO: This is not quite correct.  More specifically, we need to create separate graphs
-        // for each of the possible start/end indices.  This is because most of Monument can't tell
-        // the difference between multi- and single-part comps, and therefore assumes that any pair
-        // of starts/finishes are allowed.  In a multi-part this is not true, because we really
-        // want the part-head to randomly cause a lead to re-start.  For the time being, we just
-        // panic if we'd generate a multi-part graph with more than one start index.
-        if !part_head.is_rounds() {
-            let idx_union = match (start_indices, end_indices) {
-                (Some(starts), Some(ends)) => {
-                    let union_vec = starts
-                        .iter()
-                        .copied()
-                        .filter(|i| ends.contains(i))
-                        .collect_vec();
-                    Some(union_vec)
-                }
-                (Some(idxs), None) | (None, Some(idxs)) => Some(idxs),
-                (None, None) => None,
-            };
-            // Check that we only have one start/end index.  If we don't, Monument will try to
-            // mix-and-match, usually causing things like reaching part heads at the snap
-            assert!(idx_union.as_ref().map_or(false, |idxs| idxs.len() == 1));
-            // Set both starts and ends to the same value
-            start_indices = idx_union.clone();
-            end_indices = idx_union;
-        }
-
-        (start_indices, end_indices)
     }
 
     fn ch_weights<'m>(
@@ -462,6 +411,11 @@ impl Spec {
     }
 }
 
+fn parse_row(name: &str, s: &str, stage: Stage) -> Result<RowBuf, anyhow::Error> {
+    RowBuf::parse_with_stage(s, stage)
+        .map_err(|e| anyhow::Error::msg(format!("Can't parse {} {:?}: {}", name, s, e)))
+}
+
 fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
     ch_mask_strings
         .iter()
@@ -469,6 +423,20 @@ fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Ve
             Mask::parse_with_stage(s, stage).map_err(|e| mask_parse_error("course head mask", s, e))
         })
         .collect()
+}
+
+/// Generate the course head mask representing the tenors together.  This corresponds to
+/// `xxxxxx7890ET...` (or just the tenor for [`Stage`]s below Triples).
+fn tenors_together_mask(stage: Stage) -> Mask {
+    let mut fixed_bells = vec![];
+    if stage <= Stage::MINOR {
+        // On Minor or below, only fix the tenor
+        fixed_bells.push(stage.tenor());
+    } else {
+        // On Triples and above, fix >=7 (i.e. skip the first 6 bells)
+        fixed_bells.extend(stage.bells().skip(6));
+    }
+    Mask::fix_bells(stage, fixed_bells)
 }
 
 /// Determine a suitable default range in which method counts must lie, thus enforcing decent
@@ -744,10 +712,6 @@ fn default_lead_labels() -> HashMap<String, LeadLocations> {
     let mut labels = HashMap::new();
     labels.insert(LABEL_LEAD_END.to_owned(), LeadLocations::JustOne(0));
     labels
-}
-
-fn default_start_indices() -> Option<Vec<isize>> {
-    Some(vec![0]) // Just normal starts
 }
 
 ////////////

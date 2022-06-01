@@ -1,7 +1,11 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
-use monument::layout::new::{default_calling_positions, Call};
+use monument::{Call, CallVec};
 use serde::Deserialize;
+
+const DEFAULT_BOB_WEIGHT: f32 = -1.8;
+const DEFAULT_SINGLE_WEIGHT: f32 = -2.3;
+const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
 
 /// The values of the `base_calls` attribute
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
@@ -13,36 +17,36 @@ pub enum BaseCalls {
 }
 
 impl BaseCalls {
-    pub fn to_call_specs(
+    pub fn create_calls(
         self,
         stage: Stage,
         bobs_only: bool,
         singles_only: bool,
         bob_weight: Option<f32>,
         single_weight: Option<f32>,
-    ) -> anyhow::Result<Vec<Call>> {
+    ) -> anyhow::Result<CallVec<Call>> {
         // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
         // generate comps on fewer than 8 bells, but we should still check because otherwise the
         // `unsafe` code causes undefined behaviour
         assert!(stage >= Stage::MINIMUS);
 
         let (mut bob, mut single) = match self {
-            BaseCalls::None => return Ok(vec![]),
+            BaseCalls::None => return Ok(CallVec::new()),
             BaseCalls::Near => (
-                Call::lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
-                Call::lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
+                lead_end_bob(PlaceNot::parse("14", stage).unwrap()),
+                lead_end_single(PlaceNot::parse("1234", stage).unwrap()),
             ),
             BaseCalls::Far => {
                 let n = stage.num_bells_u8();
                 (
                     // The unsafety here is OK, because the slice is always sorted (unless stage <
                     // MINIMUS, in which case the assert trips)
-                    Call::lead_end_bob(unsafe {
+                    lead_end_bob(unsafe {
                         PlaceNot::from_sorted_slice(&[0, n - 3], stage).unwrap()
                     }),
                     // The unsafety here is OK, because the slice is always sorted (unless stage <
                     // MINIMUS, in which case the assert trips)
-                    Call::lead_end_single(unsafe {
+                    lead_end_single(unsafe {
                         PlaceNot::from_sorted_slice(&[0, n - 3, n - 2, n - 1], stage).unwrap()
                     }),
                 )
@@ -66,7 +70,7 @@ impl BaseCalls {
             single.weight = w;
         }
 
-        Ok(match (bobs_only, singles_only) {
+        let calls = match (bobs_only, singles_only) {
             (false, false) => vec![bob, single],
             (true, false) => vec![bob],
             (false, true) => vec![single],
@@ -75,7 +79,8 @@ impl BaseCalls {
                     "Can't be both `bobs_only` and `singles_only`",
                 ))
             }
-        })
+        };
+        Ok(CallVec::from(calls))
     }
 }
 
@@ -95,7 +100,7 @@ pub struct SpecificCall {
     #[serde(default = "lead_end")]
     lead_location: LeadLocation,
     calling_positions: Option<CallingPositions>,
-    #[serde(default = "default_call_score")]
+    #[serde(default = "default_misc_call_score")]
     weight: f32,
 }
 
@@ -120,7 +125,7 @@ enum CallingPositions {
 }
 
 impl SpecificCall {
-    pub(crate) fn to_call_spec(&self, stage: Stage) -> anyhow::Result<Call> {
+    pub(crate) fn create_call(&self, stage: Stage) -> anyhow::Result<Call> {
         let place_not = PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
             anyhow::Error::msg(format!(
                 "Can't parse place notation {:?} for call {:?}: {}",
@@ -150,10 +155,171 @@ impl SpecificCall {
     }
 }
 
+/// Check for duplicate calls.  Calls are a 'duplicate' if assign the same symbol at the same
+/// lead location but to **different** place notations.  If they're the same, then Monument
+/// will de-duplicate them.
+pub fn check_for_duplicate_call_names<'calls>(
+    call_specs: &'calls CallVec<Call>,
+    symbol_name: &str,
+    get_symbol: impl Fn(&'calls Call) -> &'calls str,
+) -> anyhow::Result<()> {
+    let sorted_calls = call_specs
+        .iter()
+        .map(|call| (get_symbol(call), &call.lead_location_from, &call.place_not))
+        .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
+    for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in sorted_calls.tuple_windows() {
+        if sym1 == sym2 && lead_location1 == lead_location2 {
+            return Err(anyhow::Error::msg(format!(
+                "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
+                symbol_name, sym1, lead_location1, pn1, pn2
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Create a bob which replaces the lead end with a given [`PlaceNot`]
+fn lead_end_bob(place_not: PlaceNot) -> Call {
+    Call {
+        display_symbol: String::new(),
+        debug_symbol: "-".to_owned(),
+        calling_positions: default_calling_positions(&place_not),
+        lead_location_from: LABEL_LEAD_END.to_owned(),
+        lead_location_to: LABEL_LEAD_END.to_owned(),
+        place_not,
+        weight: DEFAULT_BOB_WEIGHT,
+    }
+}
+
+/// Create a bob which replaces the lead end with a given [`PlaceNot`]
+fn lead_end_single(place_not: PlaceNot) -> Call {
+    Call {
+        display_symbol: "s".to_owned(),
+        debug_symbol: "s".to_owned(),
+        calling_positions: default_calling_positions(&place_not),
+        lead_location_from: LABEL_LEAD_END.to_owned(),
+        lead_location_to: LABEL_LEAD_END.to_owned(),
+        place_not,
+        weight: DEFAULT_SINGLE_WEIGHT,
+    }
+}
+
+#[allow(clippy::branches_sharing_code)]
+fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
+
+    // Generate calling positions that aren't M, W or H
+    let mut positions =
+        // Start off with the single-char position names
+        named_positions
+        .chars()
+        .map(|c| c.to_string())
+        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
+        // calling positions)
+        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
+        // But we consume one value per place in the Stage
+        .take(place_not.stage().num_bells())
+        .collect_vec();
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a given (0-indexed) place
+    macro_rules! replace_pos {
+        ($idx: expr, $new_val: expr) => {
+            if let Some(v) = positions.get_mut($idx) {
+                v.clear();
+                v.push($new_val);
+            }
+        };
+    }
+
+    // Edge case: if 2nds are made in `place_not`, then I/B are replaced with B/T.  Note that
+    // places are 0-indexed
+    if place_not.contains(1) {
+        replace_pos!(1, 'B');
+        replace_pos!(2, 'T');
+    }
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a place indexed from the end of the stage (so 0 is the highest place)
+    macro_rules! replace_mwh {
+        ($ind: expr, $new_val: expr) => {
+            if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
+                if place >= 4 {
+                    if let Some(v) = positions.get_mut(place) {
+                        v.clear();
+                        v.push($new_val);
+                    }
+                }
+            }
+        };
+    }
+
+    // Add MWH (M and W are swapped round for odd stages)
+    if place_not.stage().is_even() {
+        replace_mwh!(2, 'M');
+        replace_mwh!(1, 'W');
+        replace_mwh!(0, 'H');
+    } else {
+        replace_mwh!(2, 'W');
+        replace_mwh!(1, 'M');
+        replace_mwh!(0, 'H');
+    }
+
+    positions
+}
+
 fn lead_end() -> LeadLocation {
     LeadLocation::Same(LABEL_LEAD_END.to_owned())
 }
 
-fn default_call_score() -> f32 {
-    -3.0
+fn default_misc_call_score() -> f32 {
+    DEFAULT_MISC_CALL_WEIGHT
+}
+
+#[cfg(test)]
+mod tests {
+    use bellframe::{PlaceNot, Stage};
+    use itertools::Itertools;
+
+    fn char_vec(string: &str) -> Vec<String> {
+        string.chars().map(|c| c.to_string()).collect_vec()
+    }
+
+    #[test]
+    fn default_calling_positions() {
+        #[rustfmt::skip]
+        let cases = &[
+            ("145", Stage::DOUBLES, char_vec("LIBFH")),
+            ("125", Stage::DOUBLES, char_vec("LBTFH")),
+            ("1", Stage::DOUBLES, char_vec("LIBFH")),
+
+            ("14", Stage::MINOR, char_vec("LIBFWH")),
+            ("1234", Stage::MINOR, char_vec("LBTFWH")),
+            ("1456", Stage::MINOR, char_vec("LIBFWH")),
+
+            ("147", Stage::TRIPLES, char_vec("LIBFWMH")),
+            ("12347", Stage::TRIPLES, char_vec("LBTFWMH")),
+
+            ("14", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1234", Stage::MAJOR, char_vec("LBTFVMWH")),
+            ("16", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1678", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1256", Stage::MAJOR, char_vec("LBTFVMWH")),
+            ("123456", Stage::MAJOR, char_vec("LBTFVMWH")),
+
+            ("14", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("16", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("18", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("1890", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+
+            ("14", Stage::MAXIMUS, char_vec("LIBFVXSENMWH")),
+            ("1234", Stage::MAXIMUS, char_vec("LBTFVXSENMWH")),
+        ];
+
+        for (pn_str, stage, exp_positions) in cases {
+            let positions =
+                super::default_calling_positions(&PlaceNot::parse(pn_str, *stage).unwrap());
+            assert_eq!(positions, *exp_positions);
+        }
+    }
 }

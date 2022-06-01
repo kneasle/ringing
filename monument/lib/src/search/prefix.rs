@@ -3,17 +3,20 @@ use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref, rc::Rc};
 use bit_vec::BitVec;
 
 use crate::{
-    layout::{BlockIdx, LinkIdx, StartIdx},
+    graph::{LinkSide, PerPartLength},
     music::Score,
     utils::{Counts, Rotation},
-    Comp, CompInner, Query, SpliceStyle,
+    Comp, PathElem, SpliceStyle,
 };
 
-use super::{graph::ChunkIdx, Graph, SearchData};
+use super::{
+    graph::{ChunkIdx, StartIdx, SuccIdx},
+    Graph, SearchData,
+};
 
 /// The prefix of a composition.  These are ordered by average score per row.
 #[derive(Debug, Clone)]
-pub struct CompPrefix {
+pub(super) struct CompPrefix {
     /// Data for this prefix which isn't accessed as much as `avg_score` or `length`.  We store it
     /// in a [`Box`] because the frontier spends a lot of time swapping elements, and copying a
     /// 128-bit struct is much much faster than copying an inlined [`PrefixInner`].  `avg_score`
@@ -27,12 +30,13 @@ pub struct CompPrefix {
 }
 
 #[derive(Debug, Clone)]
-// TODO: Not pub
-pub struct PrefixInner {
+pub(super) struct PrefixInner {
     /// The path traced to this chunk
     path: CompPath,
 
-    chunk_idx: ChunkIdx,
+    /// The next [`LinkSide`] after chunk selection.  All other fields refer to the prefix up to
+    /// **but not including** `next_link_side`.
+    next_link_side: LinkSide<ChunkIdx>,
     /// For every [`ChunkIdx`], this contains `1` if that chunk is unringable (i.e. false against
     /// something in the prefix so far) and `0` otherwise
     unringable_chunks: BitVec,
@@ -48,23 +52,25 @@ pub struct PrefixInner {
 }
 
 impl CompPrefix {
-    /// Given a index-based [`Graph`], return [`CompPrefix`]es representing each of the start
-    /// chunks.
+    /// Given a index-based [`Graph`], return [`CompPrefix`]es representing each of the possible
+    /// start links.
     pub fn starts(graph: &Graph) -> BinaryHeap<Self> {
+        // `BitVec` that marks every `Chunk` as ringable
+        let all_chunks_ringable = BitVec::from_elem(graph.chunks.len(), false);
+
         graph
             .starts
-            .iter()
-            .copied()
-            .map(|(chunk_idx, start_idx, rotation)| {
+            .iter_enumerated()
+            .map(|(start_idx, &(chunk_idx, _link_id, rotation))| {
                 let chunk = &graph.chunks[chunk_idx];
                 Self::new(
                     CompPath::Start(start_idx),
-                    chunk_idx,
-                    chunk.falseness.clone(),
+                    LinkSide::Chunk(chunk_idx),
                     rotation,
-                    chunk.score,
-                    chunk.length,
-                    chunk.method_counts.clone(),
+                    all_chunks_ringable.clone(),
+                    Score::from(0.0), // Start links can't have any score
+                    0,
+                    Counts::zeros(chunk.method_counts.len()),
                 )
             })
             .collect()
@@ -73,9 +79,9 @@ impl CompPrefix {
     #[allow(clippy::too_many_arguments)]
     fn new(
         path: CompPath,
-        chunk_idx: ChunkIdx,
-        unringable_chunks: BitVec,
+        next_link_side: LinkSide<ChunkIdx>,
         rotation: Rotation,
+        unringable_chunks: BitVec,
         score: Score,
         length: u32,
         method_counts: Counts,
@@ -83,7 +89,7 @@ impl CompPrefix {
         Self {
             inner: Box::new(PrefixInner {
                 path,
-                chunk_idx,
+                next_link_side,
                 unringable_chunks,
                 rotation,
                 score,
@@ -94,7 +100,6 @@ impl CompPrefix {
         }
     }
 
-    #[must_use]
     pub fn length(&self) -> u32 {
         self.length
     }
@@ -128,33 +133,96 @@ impl Deref for CompPrefix {
     }
 }
 
+//////////////////////
+// PREFIX EXPANSION //
+//////////////////////
+
+impl CompPrefix {
+    /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
+    pub(super) fn expand(self, data: &SearchData, frontier: &mut BinaryHeap<Self>) -> Option<Comp> {
+        // Determine the chunk being expanded (or if it's an end, complete the composition)
+        let chunk_idx = match self.next_link_side {
+            LinkSide::Chunk(chunk_idx) => chunk_idx,
+            LinkSide::StartOrEnd => return self.check_comp(data),
+        };
+        let chunk = &data.graph.chunks[chunk_idx];
+
+        /* From now on, we know we're expanding a chunk, not finishing a comp */
+
+        let CompPrefix {
+            inner,
+            avg_score: _,
+            mut length,
+        } = self;
+        let PrefixInner {
+            path,
+            next_link_side: _,
+            mut unringable_chunks,
+            mut score,
+            mut method_counts,
+            rotation, // Don't make this `mut` because it gets updated in every loop iteration
+        } = *inner;
+
+        // Compute the values for after `chunk`
+        let path = Rc::new(path);
+        length += chunk.total_length;
+        score += chunk.score;
+        method_counts += &chunk.method_counts;
+        unringable_chunks.or(&chunk.falseness);
+
+        let max_length = data.query.len_range.end;
+        for (succ_idx, link) in chunk.succs.iter_enumerated() {
+            let rotation = (rotation + link.rotation) % data.num_parts;
+            let score = score + link.score;
+
+            // If this `link` would add a new `Chunk`, check if that `Chunk` would make the comps
+            // obviously impossible to complete
+            if let LinkSide::Chunk(succ_idx) = link.next {
+                let succ_chunk = &data.graph.chunks[succ_idx];
+                let length_after_succ = length + succ_chunk.total_length;
+                let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
+
+                if length_after_succ + succ_chunk.dist_to_rounds >= max_length as u32 {
+                    continue; // Chunk would make comp too long
+                }
+                if unringable_chunks.get(succ_idx.index()).unwrap() {
+                    continue; // Something already in the comp has made this unringable (i.e. false)
+                }
+                if !method_counts_after_chunk.is_feasible(
+                    max_length - length_after_succ as usize,
+                    &data.method_count_ranges,
+                ) {
+                    continue; // Can't recover the method balance before running out of rows
+                }
+            }
+
+            frontier.push(CompPrefix::new(
+                CompPath::Cons(path.clone(), succ_idx),
+                link.next,
+                rotation,
+                unringable_chunks.clone(), // PERF: Share these to save memory
+                score,
+                length,
+                method_counts.clone(),
+            ));
+        }
+
+        None
+    }
+}
+
 ///////////////////
 // COMP CHECKING //
 ///////////////////
 
-pub enum CompCheckResult {
-    /// This prefix isn't a complete composition, and should be expanded
-    Incomplete,
-    /// This prefix is a composition which satisfies the requirements
-    Valid(Comp),
-    /// This prefix is a composition, which doesn't satisfy the requirements.  Therefore, this
-    /// branch should be pruned
-    Invalid,
-}
-
 impl CompPrefix {
-    pub(super) fn check_for_comp(&self, data: &SearchData) -> CompCheckResult {
-        let chunk = &data.graph.chunks[self.chunk_idx];
-
-        let end = match chunk.end {
-            Some(end) => end,
-            None => return CompCheckResult::Incomplete, // Prefix doesn't end in rounds
-        };
-
-        // At this point, we know the prefix is a valid composition, so check it's valid
+    /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
+    /// composition satisfies the user's requirements.
+    fn check_comp(&self, data: &SearchData) -> Option<Comp> {
+        assert!(self.next_link_side.is_start_or_end());
 
         if !data.query.len_range.contains(&(self.length as usize)) {
-            return CompCheckResult::Invalid; // Comp is either too long or too short
+            return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
         // check is performed when expanding, because the check on expansion checks
@@ -162,207 +230,137 @@ impl CompPrefix {
         // range.  However, the composition is likely to be _shorter_ than this range and
         // removing those extra rows could make the method count infeasible.
         if !self.method_counts.is_feasible(0, &data.method_count_ranges) {
-            return CompCheckResult::Invalid; // Comp doesn't have the required method balance
+            return None; // Comp doesn't have the required method balance
         }
         if data.rotation_bitmap & (1 << self.rotation) == 0 {
-            return CompCheckResult::Invalid; // The part head reached wouldn't generate all the parts
+            return None; // The part head reached wouldn't generate all the parts
         }
 
-        let FlattenOutput {
-            start_idx,
-            start_chunk_label,
-            links,
-            music_counts,
-            splice_over_part_head,
-        } = self.path.flatten(&data.graph, &data.query);
+        /* At this point, all checks on the composition have passed and we know it satisfies the
+         * user's query */
+
+        let (path, music_counts) = self.flattened_path(data);
+        let first_elem = path.first().expect("Must have at least one chunk");
+        let last_elem = path.last().expect("Must have at least one chunk");
 
         // Handle splices over the part head
         let mut score = self.score;
+        let is_splice = first_elem.method != last_elem.method
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
+        let splice_over_part_head = data.num_parts > 1 && is_splice;
         if splice_over_part_head {
+            // Check if this splice is actually allowed under the composition (i.e. there must be a
+            // common lead_location between the start and end of the composition)
+            let start_labels = data.query.methods[first_elem.method]
+                .first_lead()
+                .get_annot(first_elem.start_sub_lead_idx)
+                .unwrap();
+            let end_labels = data.query.methods[last_elem.method]
+                .first_lead()
+                .get_annot(last_elem.end_sub_lead_idx(&data.query))
+                .unwrap();
+            let is_valid_splice = start_labels.iter().any(|label| end_labels.contains(label));
+            if !is_valid_splice {
+                return None;
+            }
+            // Don't generate comp if it would violate the splice style over the part head
+            if data.query.splice_style == SpliceStyle::Calls && last_elem.ends_with_plain() {
+                return None;
+            }
             // Add/subtract weights from the splices over the part head
             score += (data.num_parts - 1) as f32 * data.query.splice_weight;
-
-            let finishes_with_plain = if chunk.id.is_standard() {
-                true // If we don't finish with a 0-length end then there can't be a call
-            } else if let Some((link_idx, _s)) = links.last() {
-                // If the last link is explicitly plain, then we finish with a plain
-                data.query.layout.links[*link_idx].call_idx.is_none()
-            } else {
-                // If there were no links, then there can't be any calls either
-                true
-            };
-            if data.query.splice_style == SpliceStyle::Calls && finishes_with_plain {
-                return CompCheckResult::Invalid; // Don't generate comp if it would violate the splice style
-            }
         }
 
         // Now we know the composition is valid, construct it and return
         let comp = Comp {
-            query: data.query.clone(),
+            path,
 
-            inner: CompInner {
-                start_idx,
-                start_chunk_label,
-                links,
-                end,
-
-                rotation: self.rotation,
-                length: self.length as usize,
-                method_counts: self.method_counts.clone(),
-                music_counts,
-                total_score: score,
-                avg_score: score / self.length as f32,
-            },
+            rotation: self.rotation,
+            length: self.length as usize,
+            method_counts: self.method_counts.clone(),
+            music_counts,
+            total_score: score,
+            avg_score: score / self.length as f32,
         };
-        CompCheckResult::Valid(comp)
+        Some(comp)
     }
-}
 
-//////////////////////
-// PREFIX EXPANSION //
-//////////////////////
+    /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
+    /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
+    fn flattened_path(&self, data: &SearchData) -> (Vec<PathElem>, Counts) {
+        let part_heads = data.query.part_head.closure_from_rounds();
 
-impl CompPrefix {
-    /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
-    pub(super) fn expand(&self, data: &SearchData, frontier: &mut BinaryHeap<Self>) {
-        let max_length = data.query.len_range.end;
-        let chunk = &data.graph.chunks[self.chunk_idx];
-        let path = Rc::new(self.path.clone());
+        // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
+        let (start_idx, succ_idxs) = self.path.flatten();
 
-        for link in &chunk.succs {
-            let next_idx = link.next_chunk;
-            let succ_chunk = &data.graph.chunks[next_idx];
+        let mut music_counts = Counts::zeros(data.query.music_types.len());
+        let mut path = Vec::<PathElem>::new();
 
-            let rotation = (self.rotation + link.rot) % data.num_parts;
-            let length = self.length + succ_chunk.length;
-            let score = self.score + succ_chunk.score + link.score;
-            let method_counts = &self.method_counts + &succ_chunk.method_counts;
+        // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
+        // Also compute music counts as we go.
+        let (start_chunk_idx, _start_link, mut rotation) = data.graph.starts[start_idx];
+        let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
+        for succ_idx in succ_idxs {
+            let next_chunk_idx = match next_link_side {
+                LinkSide::Chunk(idx) => idx,
+                LinkSide::StartOrEnd => unreachable!(),
+            };
+            // Load the chunk at the end of the previous link
+            let chunk = &data.graph.chunks[next_chunk_idx];
+            let succ_link = &chunk.succs[succ_idx];
+            music_counts += &chunk.music_counts;
 
-            if length + succ_chunk.dist_to_rounds >= max_length as u32 {
-                continue; // Chunk would make comp too long
-            }
-            if self.unringable_chunks.get(next_idx.index()).unwrap() {
-                continue; // Chunk is false against something already in the comp
-            }
-            if !method_counts.is_feasible(max_length - length as usize, &data.method_count_ranges) {
-                continue; // Can't recover the method balance before running out of rows
-            }
-
-            // Compute which chunks are unreachable after this chunk has been added
-            let mut new_unringable_chunks = self.unringable_chunks.clone();
-            new_unringable_chunks.or(&succ_chunk.falseness);
-
-            frontier.push(CompPrefix::new(
-                CompPath::Cons(path.clone(), link.source_idx, next_idx),
-                next_idx,
-                new_unringable_chunks,
-                rotation,
-                score,
-                length,
-                method_counts,
-            ));
+            let method_idx = chunk.id.row_idx.method;
+            let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
+            path.push(PathElem {
+                start_row: &part_heads[rotation as usize]
+                    * chunk.id.lead_head.as_ref()
+                    * data.query.methods[method_idx].row_in_plain_lead(sub_lead_idx),
+                method: method_idx,
+                start_sub_lead_idx: sub_lead_idx,
+                length: PerPartLength(chunk.per_part_length as usize),
+                call: succ_link.call,
+            });
+            // Follow the link to the next chunk in the path
+            next_link_side = succ_link.next;
+            rotation = (rotation + succ_link.rotation) % data.num_parts;
         }
+        (path, music_counts)
     }
 }
 
 //////////////////////
-// PATH LINKED-LIST //
+// LINKED-LIST PATH //
 //////////////////////
 
 /// A route through the composition graph, stored as a 'reversed' linked list (i.e. one where each
-/// node stores a reference to its _predecessor_ rather than its _successor_).  This allows for
+/// chunk stores a reference to its _predecessor_ rather than its _successor_).  This allows for
 /// multiple compositions with the same prefix to share the data for that prefix.
 #[derive(Debug, Clone)]
 enum CompPath {
-    /// The start of a composition, along with the index within `Graph::start_chunks` of this
+    /// The start of a composition, along with the index within [`Graph::start_chunks`] of this
     /// specific start
     Start(StartIdx),
     /// The composition follows the path in the [`Rc`], then follows the given link to reach the
     /// given [`ChunkIdx`]
-    Cons(Rc<Self>, LinkIdx, ChunkIdx),
-}
-
-struct FlattenOutput {
-    start_idx: StartIdx,
-    start_chunk_label: String,
-    links: Vec<(LinkIdx, String)>,
-    music_counts: Counts,
-    /// `true` if a single part of the composition finishes on a different method to which it
-    /// started (i.e. there would possibly be a splice over the part-head).
-    splice_over_part_head: bool,
-}
-
-/// Data passed back up the call stack from `flatten_recursive`
-struct RecursiveFlattenOutput {
-    start_idx: StartIdx,
-    start_chunk_label: String,
-    first_block_idx: BlockIdx,
-    last_block_idx: BlockIdx,
+    Cons(Rc<Self>, SuccIdx),
 }
 
 impl CompPath {
-    fn flatten(&self, graph: &Graph, query: &Query) -> FlattenOutput {
-        let mut links = Vec::new();
-        let mut music_counts = Counts::zeros(query.music_types.len());
-        let flatten_output = self.flatten_recursive(graph, query, &mut links, &mut music_counts);
-        FlattenOutput {
-            start_idx: flatten_output.start_idx,
-            start_chunk_label: flatten_output.start_chunk_label,
-            links,
-            music_counts,
-            splice_over_part_head: flatten_output.first_block_idx != flatten_output.last_block_idx,
-        }
+    fn flatten(&self) -> (StartIdx, Vec<SuccIdx>) {
+        let mut path = Vec::new();
+        let start_idx = self.flatten_recursive(&mut path);
+        (start_idx, path)
     }
 
-    /// Recursively flatten `self`, returning
-    /// ```text
-    /// (
-    ///     index of start chunk,
-    ///     string of the start chunk,
-    ///     BlockIdx of first chunk,
-    ///     BlockIdx of last chunk,
-    /// )
-    /// ```
-    fn flatten_recursive(
-        &self,
-        graph: &Graph,
-        query: &Query,
-        link_vec: &mut Vec<(LinkIdx, String)>,
-        music_counts: &mut Counts,
-    ) -> RecursiveFlattenOutput {
+    /// Flatten `self` into `path`, returning the [`StartIdx`] encoding how this comp started
+    fn flatten_recursive(&self, path: &mut Vec<SuccIdx>) -> StartIdx {
         match self {
-            Self::Start(start_idx) => {
-                let (start_chunk_idx, _, _) = graph
-                    .starts
-                    .iter()
-                    .find(|(_, start_idx_2, _)| start_idx == start_idx_2)
-                    .unwrap();
-                let start_chunk = &graph.chunks[*start_chunk_idx];
-                *music_counts += &start_chunk.music_counts;
-                let start_block_idx = start_chunk
-                    .id
-                    .row_idx()
-                    .expect("Can't start with a 0-length end chunk")
-                    .block;
-                RecursiveFlattenOutput {
-                    start_idx: *start_idx,
-                    start_chunk_label: start_chunk.label.clone(),
-                    first_block_idx: start_block_idx,
-                    last_block_idx: start_block_idx,
-                }
-            }
-            Self::Cons(lhs, link, chunk_idx) => {
-                // Recursively flatten all previous links in the list
-                let mut output = lhs.flatten_recursive(graph, query, link_vec, music_counts);
-                // Update music counts and list the links used
-                let chunk = &graph.chunks[*chunk_idx];
-                *music_counts += &chunk.music_counts;
-                link_vec.push((*link, chunk.label.clone()));
-                // Update the `last_block_idx` and propagate the output
-                if let Some(row_idx) = chunk.id.row_idx() {
-                    output.last_block_idx = row_idx.block;
-                }
-                output
+            Self::Start(start_link_id) => *start_link_id,
+            Self::Cons(lhs, succ_idx) => {
+                let start_link_id = lhs.flatten_recursive(path);
+                path.push(*succ_idx);
+                start_link_id
             }
         }
     }

@@ -54,6 +54,6 @@ pub fn get_true() -> bool {
     true
 }
 
-pub fn backstroke() -> Stroke {
-    Stroke::Back
+pub fn handstroke() -> Stroke {
+    Stroke::Hand
 }
