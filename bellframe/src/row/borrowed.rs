@@ -917,32 +917,14 @@ impl Not for &Row {
     }
 }
 
-impl Mul for &RowBuf {
+impl Not for RowBuf {
     type Output = RowBuf;
 
-    /// Uses the RHS to permute the LHS without consuming either argument.
-    fn mul(self, rhs: &RowBuf) -> Self::Output {
-        self * rhs.as_row()
-    }
-}
-
-impl Mul<&Row> for &RowBuf {
-    type Output = RowBuf;
-
-    /// Uses the RHS to permute the LHS without consuming either argument.
-    #[inline]
-    fn mul(self, rhs: &Row) -> Self::Output {
-        self.as_row() * rhs
-    }
-}
-
-impl Mul<&RowBuf> for &Row {
-    type Output = RowBuf;
-
-    /// Uses the RHS to permute the LHS without consuming either argument.
-    #[inline]
-    fn mul(self, rhs: &RowBuf) -> Self::Output {
-        self * rhs.as_row()
+    /// Find the inverse of a [`Row`].  If `X` is the input [`Row`], and `Y = !X`, then
+    /// `XY = YX = I` where `I` is the identity on the same stage as `X` (i.e. rounds).  This
+    /// operation cannot fail, since valid [`Row`]s are guaruteed to have an inverse.
+    fn not(self) -> Self::Output {
+        self.inv()
     }
 }
 
@@ -976,6 +958,33 @@ impl Mul for &Row {
         self.mul_result(rhs).unwrap()
     }
 }
+
+macro_rules! mul_impl {
+    ($lhs: ty, $rhs: ty) => {
+        impl Mul<$rhs> for $lhs {
+            type Output = RowBuf;
+
+            /// Uses the RHS to permute the LHS without consuming either argument.
+            #[inline]
+            fn mul(self, rhs: $rhs) -> Self::Output {
+                self.mul_result(&rhs).unwrap()
+            }
+        }
+    };
+}
+
+// Add impl for every pair within `RowBuf`, `&RowBuf` and `&Row` (except `&Row * &Row`, which we've
+// explicitly implemented)
+mul_impl!(RowBuf, RowBuf);
+mul_impl!(RowBuf, &RowBuf);
+mul_impl!(RowBuf, &Row);
+mul_impl!(&RowBuf, RowBuf);
+mul_impl!(&RowBuf, &RowBuf);
+mul_impl!(&RowBuf, &Row);
+mul_impl!(&Row, RowBuf);
+mul_impl!(&Row, &RowBuf);
+// NOTE: Intentionally commented, because `&Row, &Row` is the one explicit implementation
+// mul_impl!(&Row, &Row);
 
 impl<'row> IntoIterator for &'row Row {
     type Item = Bell;

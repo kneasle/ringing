@@ -371,21 +371,6 @@ impl Display for Mask {
 
 /* ===== ARITHMETIC ===== */
 
-impl Mul<&RowBuf> for &Mask {
-    type Output = Mask;
-
-    /// Use a [`RowBuf`] to permute the required [`Bell`]s in a [`Mask`].  Mathematically, if `r`
-    /// is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `m * r`
-    /// matches `s * r`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
-    fn mul(self, rhs: &RowBuf) -> Self::Output {
-        self * rhs.as_row()
-    }
-}
-
 impl Mul<&Row> for &Mask {
     type Output = Mask;
 
@@ -404,18 +389,33 @@ impl Mul<&Row> for &Mask {
     }
 }
 
-impl Mul<&Mask> for &RowBuf {
+impl Mul<&RowBuf> for &Mask {
     type Output = Mask;
 
-    /// Use a [`RowBuf`] to transfigure the required [`Bell`]s in a [`Mask`].  Mathematically, if
-    /// `r` is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `r * m`
-    /// matches `r * s`.
+    /// Use a [`RowBuf`] to permute the required [`Bell`]s in a [`Mask`].  Mathematically, if `r`
+    /// is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `m * r`
+    /// matches `s * r`.
     ///
     /// # Panics
     ///
     /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
-    fn mul(self, rhs: &Mask) -> Self::Output {
-        self.as_row() * rhs
+    fn mul(self, rhs: &RowBuf) -> Self::Output {
+        self * rhs.as_row()
+    }
+}
+
+impl Mul<RowBuf> for &Mask {
+    type Output = Mask;
+
+    /// Use a [`RowBuf`] to permute the required [`Bell`]s in a [`Mask`].  Mathematically, if `r`
+    /// is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `m * r`
+    /// matches `s * r`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
+    fn mul(self, rhs: RowBuf) -> Self::Output {
+        self * rhs.as_row()
     }
 }
 
@@ -438,6 +438,36 @@ impl Mul<&Mask> for &Row {
                 .map(|maybe_bell| maybe_bell.map(|b| self[b.index()]))
                 .collect_vec(),
         }
+    }
+}
+
+impl Mul<&Mask> for &RowBuf {
+    type Output = Mask;
+
+    /// Use a [`RowBuf`] to transfigure the required [`Bell`]s in a [`Mask`].  Mathematically, if
+    /// `r` is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `r * m`
+    /// matches `r * s`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
+    fn mul(self, rhs: &Mask) -> Self::Output {
+        self.as_row() * rhs
+    }
+}
+
+impl Mul<&Mask> for RowBuf {
+    type Output = Mask;
+
+    /// Use a [`RowBuf`] to transfigure the required [`Bell`]s in a [`Mask`].  Mathematically, if
+    /// `r` is a [`RowBuf`] and `m` is a [`Mask`] and `m` matches some [`RowBuf`] `s`, then `r * m`
+    /// matches `r * s`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the [`Stage`]s of the [`Row`] and [`Mask`] don't match.
+    fn mul(self, rhs: &Mask) -> Self::Output {
+        self.as_row() * rhs
     }
 }
 

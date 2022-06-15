@@ -62,7 +62,7 @@ pub fn coursewise(
 fn check_chs_in_other_parts(chs: &[CourseHeadMask], part_head: &Row) -> Result<()> {
     for part_head in part_head.closure() {
         'ch_loop: for mask in chs {
-            let mask_in_other_part = part_head.mul(mask.mask());
+            let mask_in_other_part = &part_head * mask.mask();
             // Check if there's an entry in `chs` which matches the `mask_in_other_part`
             for mask2 in chs {
                 if mask_in_other_part.is_subset_of(mask2.mask()) {
