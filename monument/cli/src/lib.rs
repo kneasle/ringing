@@ -359,6 +359,8 @@ impl SingleLineProgressLogger {
 struct CompPrinter {
     query: Arc<Query>,
 
+    /// The maximum width of a composition's (total) length
+    length_width: usize,
     /// For each method in the composition:
     /// ```text
     /// (
@@ -376,11 +378,7 @@ struct CompPrinter {
 impl CompPrinter {
     fn new(query: Arc<Query>) -> Self {
         Self {
-            music_widths: query
-                .music_displays
-                .iter()
-                .map(|d| d.col_width(&query.music_types))
-                .collect_vec(),
+            length_width: query.len_range.end.saturating_sub(1).to_string().len(),
             method_counts: query
                 .layout
                 .method_blocks
@@ -389,13 +387,18 @@ impl CompPrinter {
                     // `-1` converts from exclusive to inclusive range
                     //
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = format!("{:?}", mb.count_range.end - 1).len();
+                    let max_count_width = mb.count_range.end.saturating_sub(1).to_string().len();
                     let max_width = max_count_width.max(mb.shorthand.len());
                     (max_width, mb.shorthand.clone())
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
                 .then(|| query.part_head.effective_stage().num_bells()),
+            music_widths: query
+                .music_displays
+                .iter()
+                .map(|d| d.col_width(&query.music_types))
+                .collect_vec(),
 
             query,
         }
@@ -413,7 +416,10 @@ impl CompPrinter {
     }
 
     fn header(&self) -> String {
-        let mut s = " len ".to_owned();
+        let mut s = String::new();
+        // Length
+        write_centered_text(&mut s, "len", self.length_width);
+        s.push(' ');
         // Method shorthands (for counts)
         if self.method_counts.len() > 1 {
             s.push_str("  ");
@@ -448,7 +454,7 @@ impl CompPrinter {
 
     fn comp_string(&self, comp: &Comp) -> String {
         // Length
-        let mut s = format!("{:>4} ", comp.length);
+        let mut s = format!("{:>width$} ", comp.length, width = self.length_width);
         // Method counts (for spliced)
         if self.method_counts.len() > 1 {
             s.push_str(": ");
@@ -479,7 +485,7 @@ impl CompPrinter {
             s.push(' ');
         }
         // avg score, call string
-        write!(s, "| {:>9.7} | {}", comp.avg_score, comp.call_string()).unwrap();
+        write!(s, "| {:>9.6} | {}", comp.avg_score, comp.call_string()).unwrap();
         s
     }
 }
