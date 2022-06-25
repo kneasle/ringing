@@ -17,7 +17,7 @@ use ordered_float::OrderedFloat;
 use path_slash::PathExt;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 // NOTE: All paths are relative to the `monument` directory.  Cargo runs custom test code in the
 // same directory as the `Cargo.toml` for that crate (in our case `monument/cli/Cargo.toml`), so
@@ -809,6 +809,7 @@ impl CaseOutcome<'_> {
 struct Comp {
     length: usize,
     string: String,
+    #[serde(deserialize_with = "de_avg_score")]
     avg_score: OrderedFloat<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     part_head: Option<String>, // Part head for multi-part compositions
@@ -822,6 +823,16 @@ impl Comp {
             comps.iter().map(Self::to_string).join("\n")
         }
     }
+
+    /// Round an `f32` to 15 significant binary decimal places.  This is almost always enough to
+    /// remove any floating-point rounding errors, but not enough that obviously different scores
+    /// become the same.
+    fn round_score(score: f32) -> OrderedFloat<f32> {
+        // The least significant 4 bits of the mantissa will be set to 0s
+        let rounding_factor = f32::powi(2.0, 15);
+        let rounded_score = (score * rounding_factor).round() / rounding_factor;
+        OrderedFloat(rounded_score)
+    }
 }
 
 impl From<&monument::Comp> for Comp {
@@ -829,7 +840,7 @@ impl From<&monument::Comp> for Comp {
         Self {
             length: source.length,
             string: source.call_string(),
-            avg_score: source.avg_score,
+            avg_score: Self::round_score(source.avg_score.0),
             // Only store part heads for multi-part strings
             part_head: source
                 .query
@@ -847,6 +858,10 @@ impl Display for Comp {
         }
         write!(f, ": {}", self.string)
     }
+}
+
+fn de_avg_score<'de, D: Deserializer<'de>>(de: D) -> Result<OrderedFloat<f32>, D::Error> {
+    f32::deserialize(de).map(Comp::round_score)
 }
 
 //////////////

@@ -23,7 +23,7 @@ method = "Bristol Surprise Major"
 
 ## royal
 ```toml
-length = "QP"
+length = { min = 600, max = 800 } # 84 compositions within this length range
 method = "Yorkshire Surprise Royal"
 
 [[calls]]
