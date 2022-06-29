@@ -861,6 +861,7 @@
     "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
   },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },
+  "test/cases/false-comp.toml": { "comps": [] },
   "test/cases/false-course-1.toml": { "comps": [] },
   "test/cases/false-course-2.toml": {
     "comps": [
