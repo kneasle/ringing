@@ -112,7 +112,7 @@ impl FalsenessTable {
             let plain_course = &method_datas[range.start.method].plain_course;
 
             // The chunks with the same `range` are either all self-false or all self-true
-            if self_false_ranges.contains(&range) {
+            if self_false_ranges.contains(range) {
                 continue;
             }
 
