@@ -105,10 +105,6 @@ pub struct Chunk {
     pub lb_distance_to_rounds: Distance,
 }
 
-//////////
-// LINK //
-//////////
-
 /// A link between two [`Chunk`]s in a [`Graph`]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Link {
@@ -126,6 +122,16 @@ pub struct Link {
 pub enum LinkSide<Id> {
     StartOrEnd,
     Chunk(Id),
+}
+
+// ------------------------------------------------------------------------------------------
+
+impl Graph {
+    /// Generate a graph of all chunks which are reachable within a given length constraint.
+    // TODO: Move this wholesale into the `build` submodule
+    pub fn new(query: &Query, config: &Config) -> Result<Self, BuildError> {
+        build::build(query, config)
+    }
 }
 
 impl<Id> LinkSide<Id> {
@@ -149,84 +155,6 @@ impl<Id> LinkSide<Id> {
             Self::StartOrEnd => LinkSide::StartOrEnd,
             Self::Chunk(t) => LinkSide::Chunk(f(t)),
         }
-    }
-}
-
-//////////////
-// LINK SET //
-//////////////
-
-/// Unique identifier for a [`Link`] within a [`Graph`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct LinkId(usize);
-
-/// A [`HashMap`] containing a set of [`Link`]s, all addressed by unique [`LinkId`]s
-#[derive(Debug, Clone, Default)]
-pub struct LinkSet {
-    next_id: usize,
-    map: HashMap<LinkId, Link>,
-}
-
-impl LinkSet {
-    /// Create a [`LinkSet`] containing no [`Link`]s
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a new [`Link`] to this set, returning its [`LinkId`]
-    pub fn add(&mut self, link: Link) -> LinkId {
-        let id = self.next_id();
-        self.map.insert(id, link);
-        id
-    }
-
-    pub fn get(&self, id: LinkId) -> Option<&Link> {
-        self.map.get(&id)
-    }
-
-    pub fn get_mut(&mut self, id: LinkId) -> Option<&mut Link> {
-        self.map.get_mut(&id)
-    }
-
-    pub fn iter(&self) -> std::collections::hash_map::Iter<LinkId, Link> {
-        self.map.iter()
-    }
-
-    pub fn keys(&self) -> std::iter::Copied<std::collections::hash_map::Keys<LinkId, Link>> {
-        self.map.keys().copied()
-    }
-
-    pub fn values(&self) -> std::collections::hash_map::Values<LinkId, Link> {
-        self.map.values()
-    }
-
-    /// Remove any [`Link`]s from `self` which don't satisfy a given predicate
-    pub fn retain(&mut self, mut pred: impl FnMut(LinkId, &mut Link) -> bool) {
-        self.map.retain(|id, link| pred(*id, link))
-    }
-
-    /// Get a new [`LinkId`], unique from all the others returned from `self`
-    fn next_id(&mut self) -> LinkId {
-        let id = LinkId(self.next_id);
-        self.next_id += 1;
-        id
-    }
-}
-
-impl Index<LinkId> for LinkSet {
-    type Output = Link;
-
-    #[track_caller]
-    fn index(&self, index: LinkId) -> &Self::Output {
-        &self.map[&index]
-    }
-}
-
-impl Graph {
-    /// Generate a graph of all chunks which are reachable within a given length constraint.
-    // TODO: Move this wholesale into the `build` submodule
-    pub fn new(query: &Query, config: &Config) -> Result<Self, BuildError> {
-        build::build(query, config)
     }
 }
 
@@ -498,19 +426,6 @@ impl Chunk {
         self.duffer
     }
 
-    // STARTS/ENDS //
-
-    /*
-    TODO: Remove this if unused
-    pub fn is_start(&self) -> bool {
-        self.is_start
-    }
-
-    pub fn is_end(&self) -> bool {
-        self.end.is_some()
-    }
-    */
-
     // CROSS-CHUNK REFERENCES //
 
     pub fn successors(&self) -> &[LinkId] {
@@ -606,3 +521,73 @@ pub struct PerPartLength(pub usize);
 /// compiler to disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TotalLength(pub usize);
+
+//////////////
+// LINK SET //
+//////////////
+
+/// Unique identifier for a [`Link`] within a [`Graph`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LinkId(usize);
+
+/// A [`HashMap`] containing a set of [`Link`]s, all addressed by unique [`LinkId`]s
+#[derive(Debug, Clone, Default)]
+pub struct LinkSet {
+    next_id: usize,
+    map: HashMap<LinkId, Link>,
+}
+
+impl LinkSet {
+    /// Create a [`LinkSet`] containing no [`Link`]s
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a new [`Link`] to this set, returning its [`LinkId`]
+    pub fn add(&mut self, link: Link) -> LinkId {
+        let id = self.next_id();
+        self.map.insert(id, link);
+        id
+    }
+
+    pub fn get(&self, id: LinkId) -> Option<&Link> {
+        self.map.get(&id)
+    }
+
+    pub fn get_mut(&mut self, id: LinkId) -> Option<&mut Link> {
+        self.map.get_mut(&id)
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<LinkId, Link> {
+        self.map.iter()
+    }
+
+    pub fn keys(&self) -> std::iter::Copied<std::collections::hash_map::Keys<LinkId, Link>> {
+        self.map.keys().copied()
+    }
+
+    pub fn values(&self) -> std::collections::hash_map::Values<LinkId, Link> {
+        self.map.values()
+    }
+
+    /// Remove any [`Link`]s from `self` which don't satisfy a given predicate
+    pub fn retain(&mut self, mut pred: impl FnMut(LinkId, &mut Link) -> bool) {
+        self.map.retain(|id, link| pred(*id, link))
+    }
+
+    /// Get a new [`LinkId`], unique from all the others returned from `self`
+    fn next_id(&mut self) -> LinkId {
+        let id = LinkId(self.next_id);
+        self.next_id += 1;
+        id
+    }
+}
+
+impl Index<LinkId> for LinkSet {
+    type Output = Link;
+
+    #[track_caller]
+    fn index(&self, index: LinkId) -> &Self::Output {
+        &self.map[&index]
+    }
+}
