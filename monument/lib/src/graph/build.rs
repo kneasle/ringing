@@ -739,6 +739,7 @@ impl LinkLookupTable {
                                 Some(call_idx),
                                 &row_after_call,
                                 &call.lead_location_to,
+                                method_data,
                                 &link_ends_by_label,
                                 method_datas,
                                 &mut link_positions,
@@ -759,6 +760,7 @@ impl LinkLookupTable {
                             None,
                             row_after_plain,
                             label,
+                            method_data,
                             &link_ends_by_label,
                             method_datas,
                             &mut link_positions,
@@ -869,15 +871,17 @@ impl LinkLookupTable {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn create_links(
     dist_from_lead_head: usize,
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
+    method_data_from: &MethodData,
 
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
     method_datas: &index_vec::IndexVec<MethodIdx, MethodData>,
-    link_lookup: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
+    link_lookup_for_method: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
 ) {
     let link_ends = link_ends_by_label
         .get(label_to)
@@ -894,18 +898,29 @@ fn create_links(
             //     `lh_from * lh_transposition` satisfies `lh_mask_to`
             // iff `lh_from` satisfies `lh_mask_to * lh_transposition.inv()`
             let lead_head_mask_from = lead_head_mask_to * lead_head_transposition.inv();
-            let link_lookup_entry = LinkLookupEntry {
-                call,
-                lead_head_transposition: lead_head_transposition.clone(),
-                row_idx_to: *row_idx_to,
-            };
+            // Check if `lead_head_mask_from` can actually be reached (i.e. is there some LH mask
+            // which is compatible with it?).  This doesn't change the results, but has a massive
+            // performance benefit since chunk expansion is linear in the size of
+            // `link_lookup_for_method`.  For example, this simple pruning causes a ~4x speedup for
+            // tenors-together comps.
+            let is_mask_reachable = method_data_from
+                .lead_head_masks
+                .iter()
+                .any(|lh_mask| lh_mask.is_compatible_with(&lead_head_mask_from));
+            if !is_mask_reachable {
+                continue;
+            }
             // Add mapping from `(lead_head_mask_from, dist_from_lead_head)` to `link_lookup`
-            link_lookup
+            link_lookup_for_method
                 .entry(lead_head_mask_from)
                 .or_insert_with(HashMap::new)
                 .entry(dist_from_lead_head)
                 .or_insert_with(Vec::new)
-                .push(link_lookup_entry);
+                .push(LinkLookupEntry {
+                    call,
+                    lead_head_transposition: lead_head_transposition.clone(),
+                    row_idx_to: *row_idx_to,
+                });
         }
     }
 }
