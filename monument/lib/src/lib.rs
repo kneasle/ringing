@@ -25,7 +25,7 @@ use std::{
     },
 };
 
-use bellframe::{Bell, Mask, PlaceNot, RowBuf, Stage, Stroke};
+use bellframe::{Bell, Block, Mask, PlaceNot, RowBuf, Stage, Stroke};
 use graph::{optimise::Pass, Graph, PerPartLength};
 
 /// Information provided to Monument which specifies what compositions are generated.
@@ -292,6 +292,59 @@ impl Comp {
             .zip_eq(&query.music_types)
             .map(|(count, music_type)| f32::from(music_type.weight) * *count as f32)
             .sum::<f32>()
+    }
+
+    pub fn rows(&self, query: &Query) -> Block<(MethodIdx, usize)> {
+        // Generate plain courses for each method
+        let plain_courses = query
+            .methods
+            .iter_enumerated()
+            .map(|(idx, m)| m.plain_course().map_annots(|a| (idx, a.sub_lead_idx)))
+            .collect::<MethodVec<_>>();
+
+        // Generate the first part
+        let mut first_part = Block::with_leftover_row(query.start_row.clone());
+        for elem in &self.path {
+            assert_eq!(first_part.leftover_row(), elem.start_row.as_row());
+            let plain_course = &plain_courses[elem.method];
+            // Add this elem to the first part
+            let start_idx = elem.start_sub_lead_idx;
+            let end_idx = start_idx + elem.length.0;
+            if end_idx > plain_course.len() {
+                // `elem` wraps over the course head, so copy it in two pieces
+                first_part
+                    .extend_range(plain_course, start_idx..)
+                    .expect("All path elems should have the same stage");
+                first_part
+                    .extend_range(plain_course, ..end_idx - plain_course.len())
+                    .expect("All path elems should have the same stage");
+            } else {
+                // `elem` doesn't wrap over the course head, so copy it in one piece
+                first_part
+                    .extend_range(plain_course, start_idx..end_idx)
+                    .expect("All path elems should have the same stage");
+            }
+            // If this PathElem ends in a call, then change the `leftover_row` to suit
+            if let Some(call_idx) = elem.call {
+                let last_non_leftover_row = first_part.rows().next_back().unwrap();
+                let new_leftover_row =
+                    last_non_leftover_row * query.calls[call_idx].place_not.transposition();
+                first_part
+                    .leftover_row_mut()
+                    .copy_from(&new_leftover_row)
+                    .unwrap();
+            }
+        }
+
+        // Generate the other parts from the first
+        let part_len = first_part.len();
+        let mut comp = first_part;
+        for _ in 0..query.num_parts() - 1 {
+            comp.extend_from_within(..part_len);
+        }
+        assert_eq!(comp.len(), self.length);
+        assert_eq!(comp.leftover_row(), query.end_row.as_row());
+        comp
     }
 }
 
