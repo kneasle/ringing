@@ -56,7 +56,7 @@ pub type BellIter<'a> = std::iter::Cloned<std::slice::Iter<'a, Bell>>;
 /// # Ok::<(), InvalidRowError>(())
 /// ```
 #[derive(Eq, PartialEq, PartialOrd, Ord, Hash)]
-#[repr(transparent)] // Required so we can cast between &[Bell] and &Row in a memory-safe way
+#[repr(transparent)] // Required so we can safely cast between &[Bell] and &Row
 pub struct Row {
     /// The [`Bell`]s in the order that they would be rung.  Because of the 'valid row' invariant,
     /// this can't contain duplicate [`Bell`]s or any [`Bell`]s with number greater than the
@@ -244,6 +244,14 @@ impl Row {
     #[inline]
     pub fn swap(&mut self, a: usize, b: usize) {
         self.bell_slice.swap(a, b);
+    }
+
+    /// Overwrite `self` in-place with the contents of another [`Row`].  Returns an
+    /// [`IncompatibleStages`] error if `other` has a different stage.
+    pub fn copy_from(&mut self, other: &Row) -> Result<(), IncompatibleStages> {
+        IncompatibleStages::test_err(self.stage(), other.stage())?;
+        self.bell_slice.copy_from_slice(&other.bell_slice);
+        Ok(())
     }
 
     /* PERMUTATION ARITHMETIC */
