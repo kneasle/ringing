@@ -1,5 +1,11 @@
-use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref, rc::Rc};
+use std::{
+    cmp::Ordering,
+    collections::{BinaryHeap, HashSet},
+    ops::Deref,
+    rc::Rc,
+};
 
+use bellframe::Row;
 use bit_vec::BitVec;
 
 use crate::{
@@ -282,6 +288,19 @@ impl CompPrefix {
             total_score: score,
             avg_score: score / self.length as f32,
         };
+        // Sanity check that the composition is true
+        if !data.query.allow_false {
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length);
+            for row in comp.rows(&data.query).rows() {
+                if !rows_so_far.insert(row) {
+                    panic!(
+                        "Generated false composition ({})",
+                        comp.call_string(&data.query)
+                    );
+                }
+            }
+        }
+        // Finally, return the comp
         Some(comp)
     }
 
