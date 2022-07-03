@@ -340,7 +340,7 @@ impl<A> Block<A> {
                        // first statement would prevent this code from being executed
 
         // Add the annotations to `self`
-        self.annots.extend(other.annots.iter().cloned());
+        self.annots.extend_from_slice(&other.annots[range]);
 
         Ok(())
     }
