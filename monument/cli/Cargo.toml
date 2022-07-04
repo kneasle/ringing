@@ -1,6 +1,6 @@
 [package]
 name = "monument_cli"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
@@ -11,13 +11,13 @@ repository = "https://github.com/kneasle/ringing-monorepo"
 
 [dependencies]
 anyhow = "1.0"
-bellframe = { version = "0.8.0", path = "../../bellframe/", features = ["serde"] }
+bellframe = { version = "0.9.0", path = "../../bellframe/", features = ["serde"] }
 colored = "2.0"
 ctrlc = "3.2"
 difference = "2.0"
 itertools = "0.10"
 log = "0.4"
-monument = { version = "0.9.0", path = "../lib/" }
+monument = { version = "0.10.0", path = "../lib/" }
 ordered-float = "3.0"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
