@@ -1,6 +1,10 @@
 ## Unreleased
 
 ### Monument
+- (#104) Fix column alignments for (a) negative scores and (b) long (i.e. at least 5-digit) lengths.
+- (#104) Make all test cases deterministic by (a) rounding the composition scores and (b) making
+    sure that all test cases are exhaustive searches (to negate Monument's non-deterministic search
+    order).
 - (#96) Add music presets for:
     - Near misses (for any stage)
     - CRUs (for >= Triples)
@@ -17,6 +21,15 @@
     ```
 
 ### BellFrame
+- (#104) Implement `Ord` for `Stroke`.
+- (#104) Add `Mul` implementations for every combination of `&Row`/`&RowBuf`/`RowBuf` versus
+    anything from `&Row`/`&RowBuf`/`RowBuf` or `&Mask`/`&Mask`.
+- (#104) Fix bug in `Block::extend_range`, where too many annotations would be copied.
+- (#104) Add new methods:
+    - `Row::copy_from`: in-place write to an `&mut Row` (i.e. requiring the stages to match),
+        analogous to `<[T]>::copy_from_slice`.
+    - `Block::with_leftover_row`: create a new `Block` with only the specified leftover row.
+    - `Block::leftover_row_mut`: to mutably borrow the leftover row of a `Block`.
 - (#97) Enforce extra invariants for `music::Pattern` (making it much more robust, at the cost of
     needing to handle some errors that should have been handled anyway).
 - (#97) Rename `music::Regex` to `music::Pattern` (it isn't anywhere near as powerful as true
