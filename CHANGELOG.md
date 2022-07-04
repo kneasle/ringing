@@ -1,30 +1,23 @@
-## Unreleased
+## 4th July 2022
 
-### Monument
-- (#105) Fix bug where Monument would, in obscure situations, produce false compositions (found by
-    David Thomas - thanks!).
-- (#105) Incompatible course heads no longer cause an error.  You can now do things like
-    `course_heads = ["*78", "12345*"]` and it will Just Work™.
-- (#105) Specifying multiple start/end indices now Just Works™ in multi-parts - i.e. snap
-    start/finishes are allowed, but Monument won't mix them or put a random splice over the part
-    head.  This would previously cause a crash (found by Jadd Virji - thanks!).
-- (#105) `course_heads` always Just Works™, even in e.g. cyclic multi-parts.
-- (#105) `start_stroke` now refers to the row _after_ `start_row` (i.e. the first non-rounds row).
-- (#105) Add `start_row` and `end_row` for making compositions start/stop at a row other than
-    rounds.  Useful for using Monument to extend 720s to get QPs of Minor.
-- (#105) Remove `splice_style = "call locations"` (which would allow splices only where a call
-    _could_ have been made).
-- (#104) Fix column alignments for (a) negative scores and (b) long (i.e. at least 5-digit) lengths.
-- (#104) Make all test cases deterministic by (a) rounding the composition scores and (b) making
-    sure that all test cases are exhaustive searches (to negate Monument's non-deterministic search
-    order).
+### Monument v0.10.0
+
+#### Headline Features
+- (#105) Completely rewrite and simplify the graph building code.  Lots of things relating to
+    `course_heads` and multi-parts should now Just Work™:
+    - Incompatible course heads are no longer a thing.  You can now do things like
+        `course_heads = ["*78", "12345*"]` and it will Just Work™.  Previously this would error
+        because `12345867` could be given two different course heads.
+    - `course_heads` always Just Works™, even in e.g. cyclic multi-parts.  Previously cyclic comps
+        would simply ignore `course_heads`.
+    - Specifying multiple start/end indices now Just Works™ in multi-parts - i.e. snap
+        start/finishes are allowed, but Monument won't mix them or put an illegal splice over the
+        part head.  This would previously cause a crash (found by Jadd Virji - thanks!).
 - (#96) Add music presets for:
     - Near misses (for any stage)
     - CRUs (for >= Triples)
-    - 5678 combinations (for Triples and Major)
-
+    - 5678 combinations (for both Triples and Major)
     Load them with, e.g.:
-
     ```toml
     music = [
         { preset = "5678 combinations" },
@@ -33,10 +26,30 @@
     ]
     ```
 
-### BellFrame
+#### Smaller Features
+- (#105) Add `start_row` and `end_row` for making compositions start/stop at a row other than
+    rounds.  Useful for using Monument to extend 720s to get QPs of Minor.
+- (#105) Remove `splice_style = "call locations"` (which would allow splices only where a call
+    _could_ have been made).
+- (#105) `start_stroke` now refers to the row _after_ `start_row` (i.e. the first non-rounds row).
+- (#104) Fix column alignments for (a) negative scores and (b) long (i.e. at least 5-digit) lengths.
+
+#### Bug Fixes
+- (#105) Fix bug where Monument would, in obscure situations, produce false compositions (found by
+    David Thomas - thanks!).  Monument now expands the rows of each composition generated and
+    explicitly checks for truth - so if falseness bugs do creep in, you'll know about it (and
+    hopefully the large test suite will catch it before it reaches you).
+
+#### Internal Improvements
+- (#105) Remove `monument::Layout` and add `Method`s and `Call`s explicitly to a `Query`.
+- (#104) Make all test cases deterministic by (a) rounding the composition scores and (b) making
+    sure that all test cases are exhaustive searches (to negate Monument's non-deterministic search
+    order).
+
+### BellFrame v0.9.0
 - (#104) Implement `Ord` for `Stroke`.
 - (#104) Add `Mul` implementations for every combination of `&Row`/`&RowBuf`/`RowBuf` versus
-    anything from `&Row`/`&RowBuf`/`RowBuf` or `&Mask`/`&Mask`.
+    anything from `&Row`/`&RowBuf`/`RowBuf` or `&Mask`/`Mask`.
 - (#104) Fix bug in `Block::extend_range`, where too many annotations would be copied.
 - (#104) Add new methods:
     - `Row::copy_from`: in-place write to an `&mut Row` (i.e. requiring the stages to match),
