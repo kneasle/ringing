@@ -5,8 +5,6 @@ Each section in this file corresponds to one test case and must include:
   `### repeated-place` will be named `method-pn-parsing/repeated-place`)
 - A fenced code region with type `toml` (this is the input file).  Optionally may include a second
   `toml` region, which is interpreted as a music file.
-- A fenced plain-text region with no type (i.e. type `text`).  This contains the expected output
-  with any ANSI escape sequences removed.
 
 Using a markdown file allows us to conveniently embed many small files in one larger file, whilst
 still allowing syntax highlighting to work correctly.  Markdown can still be parsed easily and
@@ -133,13 +131,6 @@ place_notation = "16"
 lead_location = "poo" # poo isn't defined anywhere
 ```
 
-## ambiguous-course-heads
-```toml
-length = "QP"
-method = "Bristol Surprise Major"
-course_heads = ["*56", "*78"]
-```
-
 ## calling-positions-too-short
 ```toml
 length = "QP"
@@ -148,6 +139,16 @@ method = "Bristol Surprise Major"
 symbol = "x"
 place_notation = "16"
 calling_positions = "LIOFVMW" # No 'H'
+```
+
+## calling-positions-too-long
+```toml
+length = "QP"
+method = "Bristol Surprise Major"
+[[calls]]
+symbol = "x"
+place_notation = "16"
+calling_positions = "LIOFVMWHN" # 9 calling positions
 ```
 
 ## bobs-and-singles-only
@@ -243,16 +244,13 @@ weight = 0.1
 
 ### same-pn
 
-This doesn't actually produce an error message, because there are two definitions of the same call
-(1234 LE single) which Monument will deduplicate:
-
 ```toml
 length = "practice"
 method = "Bristol Surprise Major"
 base_music = "none"
 
 [[calls]]
-symbol = "s" # Not a clash, because this is an identical definition
+symbol = "s" # Not technically a clash, but is likely to be a mistake
 place_notation = "1234"
 ```
 
@@ -304,6 +302,8 @@ part_head = "134265"
 course_heads = ["*78", "*7856"] # `*7856` becomes `*7865` in other parts
 ```
 
+
+
 ## music-presets
 
 ### 5678-wrong-stage-1
@@ -325,4 +325,15 @@ music = [{ preset = "5678 combinations" }] # Don't make sense for Minor
 length = "practice"
 method = "Cambridge Surprise Minor"
 music = [{ preset = "crus" }] # Don't make sense for Minor
+```
+
+
+
+## multiple-strokes-for-chunk
+```toml
+length = "practice"
+method = "Woolly Jumper Alliance Major"
+
+base_music = "none"
+music = [{ pattern = "*87", stroke = "back" }]
 ```

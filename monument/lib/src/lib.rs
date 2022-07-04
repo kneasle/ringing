@@ -4,7 +4,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod graph;
-pub mod layout;
 pub mod music;
 mod search;
 pub mod utils;
@@ -13,13 +12,12 @@ use serde::Deserialize;
 pub use utils::OptRange;
 
 use itertools::Itertools;
-use layout::{chunk_range::End, LinkIdx, StartIdx};
 use music::Score;
 use utils::{Counts, Rotation};
 
 use std::{
     hash::Hash,
-    ops::{Deref, Range},
+    ops::Range,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::sync_channel,
@@ -27,8 +25,8 @@ use std::{
     },
 };
 
-use bellframe::{Mask, RowBuf, Stroke};
-use graph::{optimise::Pass, Graph};
+use bellframe::{Bell, Block, Mask, PlaceNot, RowBuf, Stage, Stroke};
+use graph::{optimise::Pass, Graph, PerPartLength};
 
 /// Information provided to Monument which specifies what compositions are generated.
 ///
@@ -36,21 +34,34 @@ use graph::{optimise::Pass, Graph};
 /// therefore determines how quickly the results are generated).
 #[derive(Debug, Clone)]
 pub struct Query {
-    pub layout: layout::Layout,
-
+    // GENERAL
     pub len_range: Range<usize>,
     pub num_comps: usize,
     pub allow_false: bool,
-    pub splice_style: SpliceStyle,
+    pub stage: Stage,
 
-    pub calls: CallVec<CallType>,
+    // METHODS & CALLING
+    pub methods: MethodVec<Method>,
+    pub calls: CallVec<Call>,
+    // TODO: Make this defined per-method?  Or per-stage?
+    pub call_display_style: CallDisplayStyle,
+    pub splice_style: SpliceStyle,
+    pub splice_weight: f32,
+
+    // COURSES
+    //
+    // (CH masks are defined on each `Method`)
+    pub start_row: RowBuf,
+    pub end_row: RowBuf,
     pub part_head: RowBuf,
     /// The `f32` is the weight given to every row in any course matching the given [`Mask`]
     pub ch_weights: Vec<(Mask, f32)>,
-    pub splice_weight: f32,
 
+    // MUSIC
     pub music_types: MusicTypeVec<music::MusicType>,
     pub music_displays: Vec<music::MusicDisplay>,
+    /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
+    /// `self.start_row`
     pub start_stroke: Stroke,
     pub max_duffer_rows: Option<usize>,
 }
@@ -60,9 +71,67 @@ impl Query {
         !self.part_head.is_rounds()
     }
 
+    pub fn is_spliced(&self) -> bool {
+        self.methods.len() > 1
+    }
+
+    pub fn positional_calls(&self) -> bool {
+        self.call_display_style == CallDisplayStyle::Positional
+    }
+
     pub fn num_parts(&self) -> usize {
         self.part_head.order()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Method {
+    pub inner: bellframe::Method,
+    pub shorthand: String,
+
+    /// The number of rows of this method must fit within this [`Range`]
+    pub count_range: Range<usize>,
+    /// The indices in which we can start a composition during this `Method`.  `None` means any
+    /// index is allowed (provided the CH masks are satisfied).  These are interpreted modulo the
+    /// lead length of the method.
+    pub start_indices: Vec<isize>,
+    /// The indices in which we can end a composition during this `Method`.  `None` means any index
+    /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
+    /// length of the method.
+    pub end_indices: Option<Vec<isize>>,
+    pub ch_masks: Vec<Mask>,
+}
+
+impl std::ops::Deref for Method {
+    type Target = bellframe::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+/// A type of call (e.g. bob or single)
+#[derive(Debug, Clone)]
+pub struct Call {
+    pub display_symbol: String,
+    pub debug_symbol: String,
+    pub calling_positions: Vec<String>,
+
+    pub lead_location_from: String,
+    pub lead_location_to: String,
+    // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
+    pub place_not: PlaceNot,
+
+    pub weight: f32,
+}
+
+/// How the calls in a given composition should be displayed
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallDisplayStyle {
+    /// Calls should be displayed as a count since the last course head
+    Positional,
+    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`]
+    CallingPositions(Bell),
 }
 
 /// The different styles of spliced that can be generated
@@ -71,10 +140,7 @@ pub enum SpliceStyle {
     /// Splices could happen at any lead label
     #[serde(rename = "leads")]
     LeadLabels,
-    /// Splice only happen whenever a call _could_ have happened
-    #[serde(rename = "call locations")]
-    CallLocations,
-    /// Splices only happen when calls are actually made
+    /// Splices only happen at calls
     #[serde(rename = "calls")]
     Calls,
 }
@@ -85,37 +151,18 @@ impl Default for SpliceStyle {
     }
 }
 
-/// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
-pub struct CallType {
-    pub debug_symbol: String,
-    pub display_symbol: String,
-    pub weight: f32,
-}
-
-impl From<layout::new::Call> for CallType {
-    fn from(c: layout::new::Call) -> Self {
-        Self {
-            debug_symbol: c.debug_symbol,
-            display_symbol: c.display_symbol,
-            weight: c.weight,
-        }
-    }
-}
-
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
 pub struct Config {
     /* General */
     /// Number of threads used to generate compositions.  If `None`, this uses the number of
     /// **physical** CPU cores (i.e. ignoring hyper-threading).
-    pub num_threads: Option<usize>,
+    pub thread_limit: Option<usize>,
 
     /* Graph Generation */
     pub optimisation_passes: Vec<Mutex<Pass>>,
-    /// The maximum graph size, in nodes.  If a search would produce a graph bigger than this, it
+    /// The maximum graph size, in chunks.  If a search would produce a graph bigger than this, it
     /// is aborted.
     pub graph_size_limit: usize,
-    pub split_by_start_chunk: bool,
 
     /* Search */
     pub queue_limit: usize,
@@ -129,11 +176,10 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            num_threads: None,
+            thread_limit: None,
 
             graph_size_limit: 100_000,
             optimisation_passes: graph::optimise::passes::default(),
-            split_by_start_chunk: false,
 
             queue_limit: 10_000_000,
             mem_forget_search_data: false,
@@ -142,24 +188,9 @@ impl Default for Config {
 }
 
 /// A `Comp`osition generated by Monument.
-#[derive(Debug, Clone)]
-pub struct Comp {
-    /// The [`Query`] from which this `Comp` was generated.  This is ignored when computing
-    /// [`Eq`]uality and when [`Hash`]ing.
-    // TODO: Remove this
-    pub query: Arc<Query>,
-    pub inner: CompInner,
-}
-
-/// The parts of `Comp` which can be easily `Hash`ed/`Eq`ed.
-// TODO: find a cleaner way to implement `Hash`/`Eq`/etc. for `Comp`, making sure that `query` is
-// calculated by memory location
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CompInner {
-    pub start_idx: StartIdx,
-    pub start_chunk_label: String,
-    pub links: Vec<(LinkIdx, String)>,
-    pub end: End,
+pub struct Comp {
+    pub path: Vec<PathElem>,
 
     pub rotation: Rotation,
     pub length: usize,
@@ -175,89 +206,182 @@ pub struct CompInner {
     pub avg_score: Score,
 }
 
-impl Comp {
-    pub fn call_string(&self) -> String {
-        let layout = &self.query.layout;
-        let needs_brackets = layout.is_spliced() || layout.leadwise;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PathElem {
+    start_row: RowBuf,
+    method: MethodIdx,
+    start_sub_lead_idx: usize,
+    length: PerPartLength,
+    call: Option<CallIdx>,
+}
 
-        let mut s = String::new();
-        // Start
-        s.push_str(&layout.starts[self.start_idx].label);
-        // Chunks & links
-        s.push_str(&self.start_chunk_label);
-        for (link_idx, chunk_label) in &self.links {
-            let link = &layout.links[*link_idx];
-            if let Some(call_idx) = link.call_idx {
-                let call = &self.query.calls[call_idx];
-                s.push_str(if needs_brackets { "[" } else { "" });
-                s.push_str(match layout.leadwise {
-                    true => &call.debug_symbol, // use debug symbols for leadwise
-                    false => &call.display_symbol,
-                });
-                s.push_str(&link.calling_position);
-                s.push_str(if needs_brackets { "]" } else { "" });
-            }
-            s.push_str(chunk_label);
-        }
-        // End
-        s.push_str(self.end.label(layout));
-        s
+impl PathElem {
+    pub fn ends_with_plain(&self) -> bool {
+        self.call.is_none()
     }
 
-    pub fn part_head(&self) -> RowBuf {
-        self.query.part_head.pow_u(self.rotation as usize)
-    }
-
-    pub fn music_score(&self) -> f32 {
-        self.music_counts
-            .iter()
-            .zip_eq(&self.query.music_types)
-            .map(|(count, music_type)| f32::from(music_type.weight) * *count as f32)
-            .sum::<f32>()
+    pub fn end_sub_lead_idx(&self, query: &Query) -> usize {
+        (self.start_sub_lead_idx + self.length.0) % query.methods[self.method].lead_len()
     }
 }
 
-impl std::fmt::Display for Comp {
+impl Comp {
+    pub fn call_string(&self, query: &Query) -> String {
+        let needs_brackets = query.is_spliced() || query.positional_calls();
+        let is_snap_start = self.path[0].start_sub_lead_idx > 0;
+        let is_snap_finish = self.path.last().unwrap().end_sub_lead_idx(query) > 0;
+        let part_head = self.part_head(query);
+
+        let mut path_iter = self.path.iter().peekable();
+
+        let mut s = String::new();
+        if query.call_display_style == CallDisplayStyle::Positional {
+            s.push('#');
+        }
+        s.push_str(if is_snap_start { "<" } else { "" });
+        while let Some(path_elem) = path_iter.next() {
+            // Method text
+            if query.is_spliced() {
+                // Add one shorthand for every lead *covered* (not number of lead heads reached)
+                //
+                // TODO: Deal with half-lead spliced
+                let method = &query.methods[path_elem.method];
+                let num_leads_covered = num_leads_covered(
+                    method.lead_len(),
+                    path_elem.start_sub_lead_idx,
+                    path_elem.length.0,
+                );
+                for _ in 0..num_leads_covered {
+                    s.push_str(&method.shorthand);
+                }
+            }
+            // Call text
+            if let Some(call_idx) = path_elem.call {
+                let call = &query.calls[call_idx];
+
+                s.push_str(if needs_brackets { "[" } else { "" });
+                // Call position
+                match query.call_display_style {
+                    CallDisplayStyle::CallingPositions(calling_bell) => {
+                        let row_after_call = path_iter
+                            .peek()
+                            .map_or(&part_head, |path_elem| &path_elem.start_row);
+                        let place_of_calling_bell = row_after_call.place_of(calling_bell).unwrap();
+                        let calling_position = &call.calling_positions[place_of_calling_bell];
+                        s.push_str(&call.display_symbol);
+                        s.push_str(calling_position);
+                    }
+                    // TODO: Compute actual counts for positional calls
+                    CallDisplayStyle::Positional => s.push_str(&call.debug_symbol),
+                }
+                s.push_str(if needs_brackets { "]" } else { "" });
+            }
+        }
+        s.push_str(if is_snap_finish { ">" } else { "" });
+
+        s
+    }
+
+    pub fn part_head(&self, query: &Query) -> RowBuf {
+        query.part_head.pow_u(self.rotation as usize)
+    }
+
+    pub fn music_score(&self, query: &Query) -> f32 {
+        self.music_counts
+            .iter()
+            .zip_eq(&query.music_types)
+            .map(|(count, music_type)| f32::from(music_type.weight) * *count as f32)
+            .sum::<f32>()
+    }
+
+    pub fn rows(&self, query: &Query) -> Block<(MethodIdx, usize)> {
+        // Generate plain courses for each method
+        let plain_courses = query
+            .methods
+            .iter_enumerated()
+            .map(|(idx, m)| m.plain_course().map_annots(|a| (idx, a.sub_lead_idx)))
+            .collect::<MethodVec<_>>();
+
+        // Generate the first part
+        let mut first_part = Block::with_leftover_row(query.start_row.clone());
+        for elem in &self.path {
+            assert_eq!(first_part.leftover_row(), elem.start_row.as_row());
+            let plain_course = &plain_courses[elem.method];
+            // Add this elem to the first part
+            let start_idx = elem.start_sub_lead_idx;
+            let end_idx = start_idx + elem.length.0;
+            if end_idx > plain_course.len() {
+                // `elem` wraps over the course head, so copy it in two pieces
+                first_part
+                    .extend_range(plain_course, start_idx..)
+                    .expect("All path elems should have the same stage");
+                first_part
+                    .extend_range(plain_course, ..end_idx - plain_course.len())
+                    .expect("All path elems should have the same stage");
+            } else {
+                // `elem` doesn't wrap over the course head, so copy it in one piece
+                first_part
+                    .extend_range(plain_course, start_idx..end_idx)
+                    .expect("All path elems should have the same stage");
+            }
+            // If this PathElem ends in a call, then change the `leftover_row` to suit
+            if let Some(call_idx) = elem.call {
+                let last_non_leftover_row = first_part.rows().next_back().unwrap();
+                let new_leftover_row =
+                    last_non_leftover_row * query.calls[call_idx].place_not.transposition();
+                first_part
+                    .leftover_row_mut()
+                    .copy_from(&new_leftover_row)
+                    .unwrap();
+            }
+        }
+
+        // Generate the other parts from the first
+        let part_len = first_part.len();
+        let mut comp = first_part;
+        for _ in 0..query.num_parts() - 1 {
+            comp.extend_from_within(..part_len);
+        }
+        assert_eq!(comp.len(), self.length);
+        assert_eq!(comp.leftover_row(), query.end_row.as_row());
+        comp
+    }
+}
+
+/// Return the number of leads covered by some [`Chunk`]
+fn num_leads_covered(lead_len: usize, start_sub_lead_idx: usize, length: usize) -> usize {
+    assert_ne!(length, 0); // 0-length chunks shouldn't exist
+    let dist_to_end_of_first_lead = lead_len - start_sub_lead_idx;
+    let rows_after_end_of_first_lead = length.saturating_sub(dist_to_end_of_first_lead);
+    // `+ 1` for the first lead
+    utils::div_rounding_up(rows_after_end_of_first_lead, lead_len) + 1
+}
+
+/// A way to display a [`Comp`] by pairing it with a [`Query`]
+#[derive(Debug, Clone, Copy)]
+struct DisplayComp<'a>(pub &'a Comp, pub &'a Query);
+
+impl std::fmt::Display for DisplayComp<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "len: {}, ", self.length)?;
+        let DisplayComp(comp, query) = self;
+
+        write!(f, "len: {}, ", comp.length)?;
         // Method counts for spliced
-        if self.query.layout.is_spliced() {
-            write!(f, "ms: {:>3?}, ", self.method_counts.as_slice())?;
+        if query.is_spliced() {
+            write!(f, "ms: {:>3?}, ", comp.method_counts.as_slice())?;
         }
         // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
         // head)
-        if self.query.num_parts() > 2 {
-            write!(f, "PH: {}, ", self.part_head())?;
+        if query.num_parts() > 2 {
+            write!(f, "PH: {}, ", comp.part_head(query))?;
         }
         write!(
             f,
             "music: {:>6.2?}, avg score: {:.6}, str: {}",
-            self.music_score(),
-            self.avg_score,
-            self.call_string()
+            comp.music_score(query),
+            comp.avg_score,
+            comp.call_string(query)
         )
-    }
-}
-
-impl Deref for Comp {
-    type Target = CompInner;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl PartialEq for Comp {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner == other.inner
-    }
-}
-
-impl Eq for Comp {}
-
-impl Hash for Comp {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.hash(state);
     }
 }
 
@@ -267,28 +391,14 @@ impl Hash for Comp {
 
 impl Query {
     pub fn unoptimised_graph(&self, config: &Config) -> Result<Graph, graph::BuildError> {
-        graph::Graph::new_unoptimised(self, config)
+        graph::Graph::new(self, config)
     }
 
     /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
     /// generate the same overall set of compositions.
-    pub fn optimise_graph(&self, graph: Graph, config: &Config) -> Vec<Graph> {
-        log::debug!("Optimising graph(s)");
-        let mut graphs = if config.split_by_start_chunk {
-            graph.split_by_start_chunk()
-        } else {
-            vec![graph]
-        };
-        for g in &mut graphs {
-            g.optimise(&config.optimisation_passes, self);
-            log::debug!(
-                "Optimised graph has {} chunks, {} starts, {} ends",
-                g.chunk_map().len(),
-                g.start_chunks().len(),
-                g.end_chunks().len()
-            );
-        }
-        graphs
+    pub fn optimise_graph(&self, mut graph: Graph, config: &Config) -> Vec<Graph> {
+        graph.optimise(&config.optimisation_passes, self);
+        vec![graph]
     }
 
     /// Given a set of (optimised) graphs, run multi-threaded tree search to generate compositions.
@@ -393,7 +503,21 @@ impl Default for Progress {
     }
 }
 
+index_vec::define_index_type! { pub struct MethodIdx = usize; }
 index_vec::define_index_type! { pub struct CallIdx = usize; }
 index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
+pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
 pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
 pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn num_leads_covered() {
+        assert_eq!(super::num_leads_covered(32, 0, 32), 1);
+        assert_eq!(super::num_leads_covered(32, 2, 32), 2);
+        assert_eq!(super::num_leads_covered(32, 2, 30), 1);
+        assert_eq!(super::num_leads_covered(32, 0, 2), 1);
+        assert_eq!(super::num_leads_covered(32, 16, 24), 2);
+    }
+}

@@ -8,5 +8,5 @@ place_notation = "58"
 symbol = ""
 debug_symbol = "-"
 lead_location = "HL"
-calling_positions = ["h", "w", "m", "v", "f", "b", "i", "_"]
+calling_positions = "hwmvfbi_"
 weight = -1

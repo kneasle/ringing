@@ -1,0 +1,18 @@
+length = "QP"
+methods = [
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+    "Bristol Surprise Major",
+]
+method_count = { min = 200, max = 1000 }
+
+part_head = "18234567"
+course_heads = [
+    "1xxx5678", "12345xxx",
+    "1xxx6782", "13456xxx",
+    "1xxx7823", "14567xxx",
+    "1xxx8234", "15678xxx",
+    "1xxx2345", "16782xxx",
+    "1xxx3456", "17823xxx",
+    "1xxx4567", "18234xxx",
+]

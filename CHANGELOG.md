@@ -1,6 +1,19 @@
 ## Unreleased
 
 ### Monument
+- (#105) Fix bug where Monument would, in obscure situations, produce false compositions (found by
+    David Thomas - thanks!).
+- (#105) Incompatible course heads no longer cause an error.  You can now do things like
+    `course_heads = ["*78", "12345*"]` and it will Just Work™.
+- (#105) Specifying multiple start/end indices now Just Works™ in multi-parts - i.e. snap
+    start/finishes are allowed, but Monument won't mix them or put a random splice over the part
+    head.  This would previously cause a crash (found by Jadd Virji - thanks!).
+- (#105) `course_heads` always Just Works™, even in e.g. cyclic multi-parts.
+- (#105) `start_stroke` now refers to the row _after_ `start_row` (i.e. the first non-rounds row).
+- (#105) Add `start_row` and `end_row` for making compositions start/stop at a row other than
+    rounds.  Useful for using Monument to extend 720s to get QPs of Minor.
+- (#105) Remove `splice_style = "call locations"` (which would allow splices only where a call
+    _could_ have been made).
 - (#104) Fix column alignments for (a) negative scores and (b) long (i.e. at least 5-digit) lengths.
 - (#104) Make all test cases deterministic by (a) rounding the composition scores and (b) making
     sure that all test cases are exhaustive searches (to negate Monument's non-deterministic search

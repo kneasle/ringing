@@ -408,7 +408,7 @@ fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
 fn run_and_print_test(unrun_case: UnrunTestCase, run_type: RunType) -> RunTestCase {
     let config = Config {
         queue_limit: QUEUE_LIMIT,
-        num_threads: match run_type {
+        thread_limit: match run_type {
             RunType::Test => Some(1), // For tests, we run cases in parallel - one thread each
             RunType::Bench => None,   // For bench, we run cases sequentially so no thread limit
         },
@@ -464,7 +464,11 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
             assert!(!no_search);
             // Convert compositions and sort them by score, resolving tiebreaks using the comp string.
             // This guarantees a consistent ordering even if Monument's output order is non-deterministic
-            let mut comps = result.comps.iter().map(Comp::from).collect_vec();
+            let mut comps = result
+                .comps
+                .iter()
+                .map(|c| Comp::new(c, &result.query))
+                .collect_vec();
             comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
             ActualResult::Comps(comps)
         }
@@ -835,17 +839,16 @@ impl Comp {
     }
 }
 
-impl From<&monument::Comp> for Comp {
-    fn from(source: &monument::Comp) -> Self {
+impl Comp {
+    fn new(source: &monument::Comp, query: &monument::Query) -> Self {
         Self {
             length: source.length,
-            string: source.call_string(),
+            string: source.call_string(query),
             avg_score: Self::round_score(source.avg_score.0),
             // Only store part heads for multi-part strings
-            part_head: source
-                .query
+            part_head: query
                 .is_multipart()
-                .then(|| source.part_head().to_string()),
+                .then(|| source.part_head(query).to_string()),
         }
     }
 }

@@ -1,7 +1,11 @@
 use std::{
     collections::BinaryHeap,
     ops::Range,
-    sync::{atomic::AtomicBool, mpsc::SyncSender, Arc},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::SyncSender,
+        Arc,
+    },
 };
 
 use itertools::Itertools;
@@ -16,7 +20,7 @@ mod prefix;
 
 pub use graph::Graph;
 
-use self::prefix::{CompCheckResult, CompPrefix};
+use self::prefix::CompPrefix;
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
@@ -40,21 +44,16 @@ pub(crate) fn search(
     let mut iter_count = 0;
     let mut num_comps = 0;
     while let Some(prefix) = frontier.pop() {
-        // Check if the comp has come round
-        match prefix.check_for_comp(&search_data) {
-            CompCheckResult::Valid(comp) => {
-                update_channel.send(QueryUpdate::Comp(comp)).unwrap();
-                num_comps += 1;
+        let maybe_comp = prefix.expand(&search_data, &mut frontier);
 
-                if num_comps == search_data.query.num_comps {
-                    break; // Stop the search once we've got enough comps
-                }
+        // Submit new compositions when they're generated
+        if let Some(comp) = maybe_comp {
+            update_channel.send(QueryUpdate::Comp(comp)).unwrap();
+            num_comps += 1;
+
+            if num_comps == search_data.query.num_comps {
+                break; // Stop the search once we've got enough comps
             }
-            // Expand incomplete prefixes
-            CompCheckResult::Incomplete => prefix.expand(&search_data, &mut frontier),
-            // Just ignore invalid compositions (they can't be made longer because they've come
-            // round, and they aren't valid so can't be emitted).
-            CompCheckResult::Invalid => {}
         }
 
         // If the queue gets too long, then halve its size
@@ -66,21 +65,19 @@ pub(crate) fn search(
         iter_count += 1;
 
         // Check for abort every so often
-        if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0
-            && abort_flag.load(std::sync::atomic::Ordering::Relaxed)
-        {
+        if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
             update_channel.send(QueryUpdate::Aborting).unwrap();
             break;
         }
 
         // Send stats every so often
         if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
-            send_update(&frontier, &update_channel, iter_count, num_comps);
+            send_progress_update(&frontier, &update_channel, iter_count, num_comps);
         }
     }
 
     // Always send a final update before finishing
-    send_update(&frontier, &update_channel, iter_count, num_comps);
+    send_progress_update(&frontier, &update_channel, iter_count, num_comps);
 
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
@@ -91,7 +88,7 @@ pub(crate) fn search(
     }
 }
 
-fn send_update(
+fn send_progress_update(
     frontier: &BinaryHeap<CompPrefix>,
     update_channel: &SyncSender<QueryUpdate>,
     iter_count: usize,
@@ -140,10 +137,9 @@ impl SearchData {
             graph: self::graph::Graph::new(graph, &query),
             num_parts,
             method_count_ranges: query
-                .layout
-                .method_blocks
+                .methods
                 .iter()
-                .map(|b| b.count_range.clone())
+                .map(|m| m.count_range.clone())
                 .collect_vec(),
             rotation_bitmap: coprime_bitmap(num_parts),
             query,

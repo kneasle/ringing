@@ -1,7 +1,7 @@
 length = "practice"
 method = "Bristol Surprise Major"
 part_head = "1243"
-course_heads = ["xxxx5678"]
+course_heads = ["*5678"]
 
 base_music = "none"
 music_file = "../music/8.toml"

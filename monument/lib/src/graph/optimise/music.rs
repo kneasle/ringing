@@ -4,8 +4,7 @@ use itertools::Itertools;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    graph::{Chunk, Graph},
-    layout::{ChunkId, StandardChunkId},
+    graph::{Chunk, ChunkId, Graph},
     music::Breakdown,
     Query,
 };
@@ -37,7 +36,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
                 .iter()
                 .any(|(ty_idx, _)| chunk.music().counts[*ty_idx] > 0)
         })
-        .map(|(id, chunk)| (id.standard().unwrap(), chunk))
+        .map(|(id, chunk)| (id, chunk))
         .partition::<Vec<_>, _>(|(_id, chunk)| chunk.required);
 
     // Determine how much music is contributed by required chunks.
@@ -79,10 +78,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     let no_required_chunks = new_required_chunks.is_empty();
     log::debug!("required: {:?}", new_required_chunks);
     for required_id in new_required_chunks {
-        graph
-            .get_chunk_mut(&ChunkId::Standard(required_id))
-            .unwrap()
-            .required = true;
+        graph.get_chunk_mut(&required_id).unwrap().required = true;
     }
 
     // If there aren't any chunks to mark as required, then we can pick a chunk to condition on and
@@ -127,10 +123,10 @@ pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query
 // TODO: Why is this returning duplicates?
 fn search_chunk_combinations<'gr>(
     counts_needed_from_non_required_chunks: &Breakdown,
-    non_required_chunks: &[(&'gr StandardChunkId, &'gr Chunk)],
-) -> Vec<HashSet<&'gr StandardChunkId>> {
-    let mut chunk_patterns = Vec::<HashSet<&StandardChunkId>>::new();
-    let mut chunks_used = HashSet::<&StandardChunkId>::new();
+    non_required_chunks: &[(&'gr ChunkId, &'gr Chunk)],
+) -> Vec<HashSet<&'gr ChunkId>> {
+    let mut chunk_patterns = Vec::<HashSet<&ChunkId>>::new();
+    let mut chunks_used = HashSet::<&ChunkId>::new();
     let mut iter_count_down = ITERATION_LIMIT;
     search_chunks(
         non_required_chunks.iter(),
@@ -146,13 +142,13 @@ fn search_chunk_combinations<'gr>(
 /// Recursively attempt to add any subset of [`ChunkId`]s taken from `chunks`, adding any working
 /// patterns to `chunk_patterns`.
 fn search_chunks<'iter, 'graph: 'iter>(
-    mut chunks: impl Iterator<Item = &'iter (&'graph StandardChunkId, &'graph Chunk)> + Clone,
+    mut chunks: impl Iterator<Item = &'iter (&'graph ChunkId, &'graph Chunk)> + Clone,
 
     counts_needed: &Breakdown,
-    non_required_chunks: &[(&'graph StandardChunkId, &'graph Chunk)],
+    non_required_chunks: &[(&'graph ChunkId, &'graph Chunk)],
 
-    chunks_used: &mut HashSet<&'graph StandardChunkId>,
-    chunk_patterns: &mut Vec<HashSet<&'graph StandardChunkId>>,
+    chunks_used: &mut HashSet<&'graph ChunkId>,
+    chunk_patterns: &mut Vec<HashSet<&'graph ChunkId>>,
     // Counter which is **decremented** every time this function is called, and the search is
     // terminated when this reaches 0.
     iters_left: &mut usize,

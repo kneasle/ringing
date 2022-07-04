@@ -8,9 +8,9 @@ use std::{
     ops::Not,
 };
 
-use crate::{layout::ChunkId, utils::FrontierItem, Query};
+use crate::{utils::FrontierItem, Query};
 
-use super::{Chunk, Graph, Link, LinkId};
+use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide};
 
 use self::Direction::{Backward, Forward};
 
@@ -100,18 +100,18 @@ impl<'graph> DirectionalView<'graph> {
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
-    pub fn start_chunks(&self) -> Box<dyn Iterator<Item = &ChunkId> + '_> {
+    pub fn starts(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
-            Forward => Box::new(self.graph.start_chunks().iter().map(|(id, _, _)| id)),
-            Backward => Box::new(self.graph.end_chunks().iter().map(|(id, _)| id)),
+            Forward => self.graph.starts(),
+            Backward => self.graph.ends(),
         }
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
-    pub fn end_chunks(&self) -> Box<dyn Iterator<Item = &ChunkId> + '_> {
+    pub fn ends(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
-            Forward => Box::new(self.graph.end_chunks().iter().map(|(id, _)| id)),
-            Backward => Box::new(self.graph.start_chunks().iter().map(|(id, _, _)| id)),
+            Forward => self.graph.ends(),
+            Backward => self.graph.starts(),
         }
     }
 
@@ -236,14 +236,14 @@ pub struct LinkView<'graph> {
 }
 
 impl<'graph> LinkView<'graph> {
-    pub fn from(&self) -> &'graph ChunkId {
+    pub fn from(&self) -> &'graph LinkSide<ChunkId> {
         match self.direction {
             Direction::Forward => &self.link.from,
             Direction::Backward => &self.link.to,
         }
     }
 
-    pub fn to(&self) -> &'graph ChunkId {
+    pub fn to(&self) -> &'graph LinkSide<ChunkId> {
         match self.direction {
             Direction::Forward => &self.link.to,
             Direction::Backward => &self.link.from,
@@ -263,7 +263,10 @@ pub mod passes {
 
     use itertools::Itertools;
 
-    use crate::{graph::Graph, layout::ChunkId, Query};
+    use crate::{
+        graph::{ChunkId, Graph},
+        Query,
+    };
 
     use super::{DirectionalView, Pass};
 
@@ -272,7 +275,7 @@ pub mod passes {
     pub fn default() -> Vec<Mutex<Pass>> {
         [
             // Misc optimisations
-            remove_links_between_false_nodes(),
+            remove_links_between_false_chunks(),
             // Distance-related optimisation
             compute_distances(),
             strip_long_chunks(),
@@ -284,7 +287,7 @@ pub mod passes {
             required_music(),
             remove_chunks_exceeding_max_count(),
             // Required chunk optimisation
-            single_start_or_end_required(),
+            mark_single_start_or_end_as_required(),
             remove_chunks_false_against_required(),
         ]
         .into_iter()
@@ -297,7 +300,7 @@ pub mod passes {
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
     /// removing any which can't reach rounds in either direction.
     pub fn strip_refs() -> Pass {
-        Pass::Single(Box::new(super::strip_refs::strip_refs))
+        Pass::Single(Box::new(super::strip_refs::remove_dangling_refs))
     }
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
@@ -312,10 +315,10 @@ pub mod passes {
         Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count))
     }
 
-    /// Creates a [`Pass`] which removes any links between two nodes which are mutually false.
-    pub fn remove_links_between_false_nodes() -> Pass {
+    /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
+    pub fn remove_links_between_false_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, _query: &Query| {
-            graph.retain_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
+            graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
                 chunk_from.truth_against(id_to).is_true()
             })
         }))
@@ -328,7 +331,9 @@ pub mod passes {
     pub fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(|mut view: DirectionalView, query: &Query| {
             let expanded_chunk_distances = super::compute_distances(
-                view.start_chunks().map(|id| (id, 0)),
+                view.starts()
+                    .iter()
+                    .map(|(_link_id, chunk_id)| (chunk_id, 0)),
                 &view,
                 query.len_range.end,
             );
@@ -364,9 +369,9 @@ pub mod passes {
                     .chunks()
                     .filter(|&(_id, chunk)| !chunk.duffer)
                     .map(|(id, _chunk)| (id, 0))
-                    .chain(view.start_chunks().filter_map(|id| {
-                        let chunk = view.graph.get_chunk(id)?;
-                        chunk.duffer.then(|| (id, chunk.length()))
+                    .chain(view.starts().iter().filter_map(|(_link_id, chunk_id)| {
+                        let chunk = view.graph.get_chunk(chunk_id)?;
+                        chunk.duffer.then(|| (chunk_id, chunk.total_length()))
                     })),
                 &view,
                 query.max_duffer_rows.unwrap_or(usize::MAX),
@@ -400,13 +405,13 @@ pub mod passes {
 
     /// A [`Pass`] which checks for a single start/end chunk and marks that chunk as required
     /// (because all compositions must start or end at that chunk).
-    pub fn single_start_or_end_required() -> Pass {
+    pub fn mark_single_start_or_end_as_required() -> Pass {
         Pass::BothDirections(Box::new(|view: DirectionalView, _| {
-            let single_start_id = match view.start_chunks().exactly_one() {
-                Ok(id) => id.clone(),
+            let single_chunk_id = match view.starts().iter().exactly_one() {
+                Ok((_link_id, chunk_id)) => chunk_id.clone(),
                 Err(_) => return,
             };
-            if let Some(chunk) = view.graph.get_chunk_mut(&single_start_id) {
+            if let Some(chunk) = view.graph.get_chunk_mut(&single_chunk_id) {
                 chunk.required = true;
             }
         }))
@@ -423,7 +428,7 @@ pub mod passes {
                     let other_false_chunk_ids = chunk
                         .false_chunks()
                         .iter()
-                        .map(|id| ChunkId::Standard(id.clone()))
+                        .cloned()
                         .filter(|false_id| false_id != id);
                     chunk_ids_to_remove.extend(other_false_chunk_ids);
                 }
@@ -474,15 +479,19 @@ fn compute_distances<'a>(
 
         // Skip this chunk if any chunk succeeding it would take longer to reach than the length of
         // the composition
-        let distance_after_chunk = distance + chunk_view.chunk.length();
+        let distance_after_chunk = distance + chunk_view.chunk.total_length();
         if distance_after_chunk > dist_limit {
             continue;
         }
 
         // Expand this chunk
         for succ_link in chunk_view.successors() {
+            let next_chunk_id = match succ_link.to() {
+                LinkSide::Chunk(id) => id.clone(),
+                LinkSide::StartOrEnd => continue,
+            };
             let new_frontier_item = FrontierItem {
-                item: succ_link.to().clone(),
+                item: next_chunk_id,
                 distance: distance_after_chunk,
             };
             frontier.push(Reverse(new_frontier_item));

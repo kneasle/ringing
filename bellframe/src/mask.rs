@@ -219,7 +219,8 @@ impl Mask {
     }
 
     /// Returns `true` if the set of [`Row`]s satisfying `self` is a subset of those satisfying
-    /// `other`.
+    /// `other`.  This implies that `self` is 'stricter' than `other`; for example, `xx3456` is a
+    /// subset of `xxxx56`.
     pub fn is_subset_of(&self, other: &Mask) -> bool {
         // Two rows which are of different stages can't have a superset/subset relation
         if self.stage() != other.stage() {
@@ -244,6 +245,12 @@ impl Mask {
 
         // If none of the bells caused a disagreement, then `self` is a subset of `other`
         true
+    }
+
+    /// Returns `true` if the set of [`Row`]s satisfying `self` is a **strict** subset of those
+    /// satisfying `other`.
+    pub fn is_strict_subset_of(&self, other: &Mask) -> bool {
+        self != other && self.is_subset_of(other)
     }
 
     /// Check if there exist any [`Row`]s which can satisfy both `Mask`s (i.e. the two `Mask`s are

@@ -20,6 +20,11 @@ impl Counts {
         cnts
     }
 
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     /// Returns the underlying count of slices
     pub fn as_slice(&self) -> &[usize] {
         &self.0
