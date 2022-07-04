@@ -67,8 +67,8 @@ pub struct PlaceNot {
     /// - The places are stored **in ascending order**.  So "4817" would be stored as
     ///   `vec![0, 3, 6, 7]`.
     ///
-    /// Enforcing these invariants improves the speed of permutation and equality tests at the cost
-    /// of (slightly) slower parsing.
+    /// Enforcing these invariants improves the speed and simplicity of permutation and equality
+    /// tests at the cost of (slightly) slower parsing.
     places: Vec<u8>,
     /// The [`Stage`] that this `PlaceNot` is intended to be used for.
     stage: Stage,
@@ -286,9 +286,7 @@ impl PlaceNot {
     pub fn transposition(&self) -> RowBuf {
         let mut row = RowBuf::rounds(self.stage());
         // This unsafety is OK because the `row` has the same stage as `self`
-        unsafe {
-            self.permute_unchecked(&mut row);
-        }
+        unsafe { self.permute_unchecked(&mut row) };
         row
     }
 
@@ -306,7 +304,7 @@ impl PlaceNot {
     ///
     /// # Safety
     ///
-    /// This function is safe to use only when `self.stage() == row.stage()`.
+    /// This is safe if `self.stage() == row.stage()`.
     pub unsafe fn permute_unchecked(&self, row: &mut Row) {
         let mut places = self.places.iter().copied().peekable();
         let mut i = 0;

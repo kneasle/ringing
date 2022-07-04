@@ -108,8 +108,13 @@ impl<A> Block<A> {
     /// Creates a new [`Block`] with no annotated [`Row`], and a leftover [`Row`] of
     /// [`RowBuf::rounds`].
     pub fn empty(stage: Stage) -> Self {
+        Self::with_leftover_row(RowBuf::rounds(stage))
+    }
+
+    /// Creates a new [`Block`] with no annotated [`Row`], and a given leftover [`Row`].
+    pub fn with_leftover_row(leftover_row: RowBuf) -> Self {
         Self {
-            rows: SameStageVec::from_row_buf(RowBuf::rounds(stage)),
+            rows: SameStageVec::from_row_buf(leftover_row),
             annots: vec![], // No annotations
         }
     }
@@ -204,12 +209,20 @@ impl<A> Block<A> {
         self.get_annot_row(0)
     }
 
-    /// Returns the 'left-over' [`Row`] of this `Block`.  This [`Row`] represents the overall
-    /// transposition of the `Block`, and should not be used when generating rows for truth
-    /// checking.
+    /// Returns an immutable reference to the 'left-over' [`Row`] of this `Block`.  This [`Row`]
+    /// represents the overall transposition of the `Block`, and should not be used when generating
+    /// rows for truth checking.
     #[inline]
     pub fn leftover_row(&self) -> &Row {
         self.rows.last().unwrap()
+    }
+
+    /// Returns a mutable reference to the 'left-over' [`Row`] of this `Block`.  This [`Row`]
+    /// represents the overall transposition of the `Block`, and should not be used when generating
+    /// rows for truth checking.
+    #[inline]
+    pub fn leftover_row_mut(&mut self) -> &mut Row {
+        self.rows.last_mut().unwrap()
     }
 
     //////////////////////////////
@@ -327,7 +340,7 @@ impl<A> Block<A> {
                        // first statement would prevent this code from being executed
 
         // Add the annotations to `self`
-        self.annots.extend(other.annots.iter().cloned());
+        self.annots.extend_from_slice(&other.annots[range]);
 
         Ok(())
     }

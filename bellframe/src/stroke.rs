@@ -7,7 +7,7 @@ use serde_crate::{Deserialize, Serialize};
 
 /// Stroke of a row, i.e. handstroke (`Stroke::Hand`) or backstroke (`Stroke::Back`).
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, Serialize),
