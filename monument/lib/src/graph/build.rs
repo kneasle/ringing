@@ -988,7 +988,9 @@ pub(super) struct MethodData<'source> {
 
 impl<'source> MethodData<'source> {
     fn new(method: &'source Method, fixed_bells: &[(Bell, usize)]) -> Self {
-        let mut lead_head_masks = Vec::new();
+        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
+        // user, but the whole graph is based on lead heads).
+        let mut lead_head_masks = HashSet::new();
         'mask_loop: for ch_mask in &method.ch_masks {
             let mut ch_masks_with_fixed_bells = ch_mask.to_owned();
             // Add the fixed bells to this CH mask
@@ -1004,14 +1006,28 @@ impl<'source> MethodData<'source> {
                 }
             }
             for lead_head in method.lead_head().closure() {
-                lead_head_masks.push(&ch_masks_with_fixed_bells * &lead_head);
+                lead_head_masks.insert(&ch_masks_with_fixed_bells * &lead_head);
             }
         }
-        // TODO: Remove redundant lead head masks
+        // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
+        // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
+        // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
+        // means that perfect duplicates have already been eliminated, so we only need to check for
+        // strict subset-ness.
+        let mut filtered_lead_head_masks = Vec::new();
+        for mask in &lead_head_masks {
+            let is_implied_by_another_mask = lead_head_masks
+                .iter()
+                .any(|mask2| mask.is_strict_subset_of(mask2));
+            if !is_implied_by_another_mask {
+                filtered_lead_head_masks.push(mask.clone());
+            }
+        }
+
         Self {
             method,
             plain_course: method.plain_course(),
-            lead_head_masks,
+            lead_head_masks: filtered_lead_head_masks,
         }
     }
 

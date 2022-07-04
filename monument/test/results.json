@@ -3010,6 +3010,19 @@
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.27230835 }
     ]
   },
+  "test/cases/overlapping-masks.toml": {
+    "comps": [
+      { "length": 288, "string": "MBW", "avg_score": 0.1166687 },
+      { "length": 224, "string": "", "avg_score": 0.25894165 },
+      { "length": 192, "string": "HHsHHHsH", "avg_score": 0.3447876 },
+      { "length": 192, "string": "HsHHHsHH", "avg_score": 0.3447876 },
+      { "length": 192, "string": "sHHHsHHH", "avg_score": 0.3447876 },
+      { "length": 128, "string": "HsHHsH", "avg_score": 0.3656311 },
+      { "length": 96, "string": "HHH", "avg_score": 0.4020691 },
+      { "length": 128, "string": "sHHsHH", "avg_score": 0.4203186 },
+      { "length": 64, "string": "sHsH", "avg_score": 0.5375061 }
+    ]
+  },
   "test/cases/per-method-chs.toml": {
     "comps": [
       { "length": 256, "string": "B[sH]YYYYYYY[sH]", "avg_score": -0.017974854 },
