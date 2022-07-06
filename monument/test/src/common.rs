@@ -725,7 +725,7 @@ impl CaseSource {
     /// (if the same file contains many test cases).
     fn name(&self) -> String {
         match &self {
-            Self::TomlFile(path) => path.to_slash_lossy(),
+            Self::TomlFile(path) => path.to_slash_lossy().into_owned(),
             Self::SectionOfFile {
                 file_path,
                 section_name,
