@@ -13,7 +13,10 @@ pub use utils::OptRange;
 
 use itertools::Itertools;
 use music::Score;
-use utils::{Counts, Rotation};
+use utils::{
+    group::{PartHead, PartHeadGroup},
+    Counts,
+};
 
 use std::{
     hash::Hash,
@@ -25,7 +28,7 @@ use std::{
     },
 };
 
-use bellframe::{Bell, Block, Mask, PlaceNot, RowBuf, Stage, Stroke};
+use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
 use graph::{optimise::Pass, Graph, PerPartLength};
 
 /// Information provided to Monument which specifies what compositions are generated.
@@ -53,7 +56,7 @@ pub struct Query {
     // (CH masks are defined on each `Method`)
     pub start_row: RowBuf,
     pub end_row: RowBuf,
-    pub part_head: RowBuf,
+    pub part_head_group: PartHeadGroup,
     /// The `f32` is the weight given to every row in any course matching the given [`Mask`]
     pub ch_weights: Vec<(Mask, f32)>,
 
@@ -67,8 +70,12 @@ pub struct Query {
 }
 
 impl Query {
+    pub fn num_parts(&self) -> usize {
+        self.part_head_group.size()
+    }
+
     pub fn is_multipart(&self) -> bool {
-        !self.part_head.is_rounds()
+        self.num_parts() > 1
     }
 
     pub fn is_spliced(&self) -> bool {
@@ -77,10 +84,6 @@ impl Query {
 
     pub fn positional_calls(&self) -> bool {
         self.call_display_style == CallDisplayStyle::Positional
-    }
-
-    pub fn num_parts(&self) -> usize {
-        self.part_head.order()
     }
 }
 
@@ -192,7 +195,7 @@ impl Default for Config {
 pub struct Comp {
     pub path: Vec<PathElem>,
 
-    pub rotation: Rotation,
+    pub part_head: PartHead,
     pub length: usize,
     /// The number of rows generated of each method
     pub method_counts: Counts,
@@ -265,7 +268,7 @@ impl Comp {
                     CallDisplayStyle::CallingPositions(calling_bell) => {
                         let row_after_call = path_iter
                             .peek()
-                            .map_or(&part_head, |path_elem| &path_elem.start_row);
+                            .map_or(part_head, |path_elem| &path_elem.start_row);
                         let place_of_calling_bell = row_after_call.place_of(calling_bell).unwrap();
                         let calling_position = &call.calling_positions[place_of_calling_bell];
                         s.push_str(&call.display_symbol);
@@ -282,8 +285,8 @@ impl Comp {
         s
     }
 
-    pub fn part_head(&self, query: &Query) -> RowBuf {
-        query.part_head.pow_u(self.rotation as usize)
+    pub fn part_head<'q>(&self, query: &'q Query) -> &'q Row {
+        query.part_head_group.get_row(self.part_head)
     }
 
     pub fn music_score(&self, query: &Query) -> f32 {

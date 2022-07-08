@@ -16,8 +16,8 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    music::MusicType, Call, CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptRange, Query,
-    SpliceStyle,
+    music::MusicType, utils::group::PartHeadGroup, Call, CallDisplayStyle, CallVec, MethodVec,
+    MusicTypeVec, OptRange, Query, SpliceStyle,
 };
 use serde::Deserialize;
 
@@ -272,7 +272,7 @@ impl Spec {
 
             start_row: parse_row("start row", &self.start_row, stage)?,
             end_row: parse_row("end row", &self.end_row, stage)?,
-            part_head,
+            part_head_group: PartHeadGroup::new(&part_head),
             ch_weights,
             splice_weight: self.splice_weight,
 

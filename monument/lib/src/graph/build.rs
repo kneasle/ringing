@@ -15,7 +15,10 @@ use itertools::Itertools;
 
 use crate::{
     music::{Breakdown, StrokeSet},
-    utils::{Boundary, Counts, FrontierItem, Rotation},
+    utils::{
+        group::{PartHeadGroup, PhRotation},
+        Boundary, Counts, FrontierItem,
+    },
     CallIdx, CallVec, Config, Method, MethodIdx, MethodVec, Query, SpliceStyle,
 };
 
@@ -156,7 +159,6 @@ pub(super) fn build(query: &Query, config: &Config) -> Result<Graph, BuildError>
 
         starts,
         ends,
-        num_parts: query.num_parts() as Rotation,
     })
 }
 
@@ -218,9 +220,9 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
     for method in &query.methods {
         for mask_in_first_part in &method.ch_masks {
             // ... for every part ...
-            for part_head in query.part_head.closure() {
+            for part_head in query.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some CH mask
-                let mask_in_other_part = &part_head * mask_in_first_part;
+                let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
                     .ch_masks
                     .iter()
@@ -228,7 +230,7 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
                 if !is_covered {
                     return Err(BuildError::NoCourseHeadInPart {
                         mask_in_first_part: mask_in_first_part.clone(),
-                        part_head,
+                        part_head: part_head.to_owned(),
                         mask_in_other_part,
                     });
                 }
@@ -378,7 +380,7 @@ fn count_scores(
     };
     let plain_course = &method_datas[id.method].plain_course;
 
-    for part_head in query.part_head.closure() {
+    for part_head in query.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
         let row_iter = (0..chunk.per_part_length.0).map(|offset| {
             let index = (id.sub_lead_idx + offset) % plain_course.len();
@@ -405,36 +407,34 @@ fn count_scores(
 // CHUNK LAYOUT //
 //////////////////
 
-fn generate_chunk_lengths(
-    query: &Query,
+fn generate_chunk_lengths<'q>(
+    query: &'q Query,
     method_datas: &MethodVec<MethodData>,
     config: &Config,
 ) -> Result<
     (
-        ChunkEquivalenceMap,
+        ChunkEquivalenceMap<'q>,
         HashMap<ChunkId, PerPartLength>,
         LinkSet,
     ),
     BuildError,
 > {
-    let num_parts = query.num_parts() as Rotation;
-
     let mut chunk_lengths = HashMap::new();
     let mut links = LinkSet::new();
 
     let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId>>>::new();
-    let mut chunk_equiv_map = ChunkEquivalenceMap::new(&query.part_head);
+    let mut chunk_equiv_map = ChunkEquivalenceMap::new(&query.part_head_group);
     let chunk_factory = ChunkFactory::new(query, method_datas);
 
     // Populate the frontier with start chunks, and add start links to `links`
     for start_id in find_locations_of_row(&query.start_row, method_datas, Boundary::Start) {
-        let (start_id, rotation) = chunk_equiv_map.normalise(&start_id);
+        let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             from: LinkSide::StartOrEnd,
             to: LinkSide::Chunk(start_id.clone()),
             call: None,
-            rotation,
-            rotation_back: (num_parts - rotation) % num_parts,
+            ph_rotation,
+            ph_rotation_back: !ph_rotation,
         });
         frontier.push(Reverse(FrontierItem::new(start_id, 0)));
     }
@@ -468,16 +468,17 @@ fn generate_chunk_lengths(
 
         chunk_lengths.insert(chunk_id.clone(), per_part_length);
         // Create the successor links and add the corresponding `ChunkId`s to the frontier
-        let mut links_so_far = HashSet::<(LinkSide<ChunkId>, Rotation)>::new();
+        let mut links_so_far = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
         for (id_to, call, is_end) in successors {
             // Add link to the graph
-            let (id_to, rotation) = chunk_equiv_map.normalise(&id_to);
+            let (id_to, ph_rotation) = chunk_equiv_map.normalise(&id_to);
             let link_side_to = match is_end {
                 true => LinkSide::StartOrEnd,
                 false => LinkSide::Chunk(id_to.clone()),
             };
             // Only store one link between every pair of `LinkSide`s
-            if !links_so_far.insert((link_side_to.clone(), rotation)) {
+            // TODO: Always preserve the links with the *highest* score
+            if !links_so_far.insert((link_side_to.clone(), ph_rotation)) {
                 continue; // Skip any link which already exists
             }
 
@@ -486,8 +487,8 @@ fn generate_chunk_lengths(
                 from: LinkSide::Chunk(chunk_id.clone()),
                 to: link_side_to,
                 call,
-                rotation,
-                rotation_back: (num_parts - rotation) % num_parts,
+                ph_rotation,
+                ph_rotation_back: !ph_rotation,
             });
             // If this isn't an end, add the new chunk to the frontier so it becomes part of the
             // graph
@@ -589,7 +590,7 @@ impl EndLookupTable {
     fn new(query: &Query, method_datas: &MethodVec<MethodData>) -> Self {
         // Create lookup table for ends
         let mut end_lookup = HashMap::new();
-        for part_head in query.part_head.closure() {
+        for part_head in query.part_head_group.rows() {
             let end_row = part_head * &query.end_row;
             for end_location in find_locations_of_row(&end_row, method_datas, Boundary::End) {
                 let method_idx = end_location.method;
@@ -947,29 +948,29 @@ impl Deref for ChunkIdInFirstPart {
 }
 
 #[derive(Debug)]
-pub(super) struct ChunkEquivalenceMap {
-    part_heads: Vec<RowBuf>,
-    normalisation: HashMap<RowBuf, (Arc<Row>, Rotation)>,
+pub(super) struct ChunkEquivalenceMap<'query> {
+    part_head_group: &'query PartHeadGroup,
+    // NOTE: The `PhRotation` represents what's required to go from the concrete part head to the
+    // `Arc<Row>` representing its equivalence class.
+    normalisation: HashMap<RowBuf, (Arc<Row>, PhRotation)>,
 }
 
-impl ChunkEquivalenceMap {
-    fn new(part_head: &Row) -> Self {
+impl<'query> ChunkEquivalenceMap<'query> {
+    fn new(part_head_group: &'query PartHeadGroup) -> Self {
         Self {
-            part_heads: part_head.closure_from_rounds(),
+            part_head_group,
             normalisation: HashMap::new(),
         }
     }
 
-    pub(super) fn normalise(&mut self, id: &ChunkIdInFirstPart) -> (ChunkId, Rotation) {
+    pub(super) fn normalise(&mut self, id: &ChunkIdInFirstPart) -> (ChunkId, PhRotation) {
         // If this lead head hasn't been normalised yet, add it and each of its equivalent copies
         // in other parts to the normalisation mapping.
         if !self.normalisation.contains_key(&id.lead_head) {
             let arc_lead_head = id.lead_head.to_arc();
-            for (rotation, part_head) in self.part_heads.iter().enumerate() {
-                self.normalisation.insert(
-                    part_head * &id.lead_head,
-                    (arc_lead_head.clone(), rotation as Rotation),
-                );
+            for (part_head, element) in self.part_head_group.rotations() {
+                self.normalisation
+                    .insert(part_head * &id.lead_head, (arc_lead_head.clone(), element));
             }
         }
         // Now normalise the ChunkId (by normalising its `lead_head` and preserving the row index)

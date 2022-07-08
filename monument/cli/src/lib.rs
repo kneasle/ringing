@@ -378,7 +378,7 @@ impl CompPrinter {
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
-                .then(|| query.part_head.effective_stage().num_bells()),
+                .then(|| query.part_head_group.effective_stage().num_bells()),
             music_widths: query
                 .music_displays
                 .iter()
@@ -452,7 +452,7 @@ impl CompPrinter {
         s.push('|');
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
-            write!(s, " {} |", ShortRow(&comp.part_head(query))).unwrap();
+            write!(s, " {} |", ShortRow(comp.part_head(query))).unwrap();
         }
         // Music
         write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();

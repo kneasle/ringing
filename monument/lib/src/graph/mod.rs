@@ -20,7 +20,7 @@ use bellframe::{Row, Truth};
 
 use crate::{
     music::{Breakdown, Score},
-    utils::{Boundary, Counts, Rotation},
+    utils::{group::PhRotation, Boundary, Counts},
     CallIdx, Config, MethodIdx, Query,
 };
 
@@ -55,9 +55,6 @@ pub struct Graph {
     /// - `self.links[link_id].from == LinkSide::Chunk(chunk_id)`
     /// - `self.links[link_id].to == LinkSide::StartOrEnd`
     ends: Vec<(LinkId, ChunkId)>,
-
-    /// The number of different parts
-    num_parts: Rotation,
 }
 
 /// A `Chunk` in a chunk [`Graph`].  This is an indivisible chunk of ringing which cannot be split
@@ -112,8 +109,9 @@ pub struct Link {
     pub to: LinkSide<ChunkId>,
     /// Indexes into [`Query::calls`]
     pub call: Option<CallIdx>,
-    pub rotation: Rotation,
-    pub rotation_back: Rotation,
+    pub ph_rotation: PhRotation,
+    // TODO: Remove this and compute it on the fly for `LinkView`?
+    pub ph_rotation_back: PhRotation,
 }
 
 /// What a `Link` points to.  This is either a [`StartOrEnd`](Self::StartOrEnd), or a specific
@@ -223,10 +221,6 @@ impl Graph {
             self.starts().len(),
             self.starts().len()
         );
-    }
-
-    pub fn num_parts(&self) -> Rotation {
-        self.num_parts
     }
 
     /// Return a value representing the 'size' of this graph.  Optimisation passes are
