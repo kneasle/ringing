@@ -5,7 +5,7 @@ use crate::{
     music::Score,
     utils::{
         group::{PartHead, PhRotation},
-        Counts,
+        Counts, PerPartLength, TotalLength,
     },
     CallIdx, Query,
 };
@@ -26,15 +26,15 @@ pub struct Chunk {
     pub score: Score,
     pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
 
-    pub per_part_length: u32,
-    pub total_length: u32,
+    pub per_part_length: PerPartLength,
+    pub total_length: TotalLength,
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
-    pub dist_to_rounds: u32,
+    pub min_len_to_rounds: TotalLength,
     pub label: String,
 
     pub duffer: bool,
-    pub dist_to_non_duffer: u32,
+    pub dist_to_non_duffer: TotalLength,
 
     // Indices must be aligned with those from the source graph
     pub succs: SuccVec<SuccLink>,
@@ -109,14 +109,14 @@ impl Graph {
                     score: source_chunk.score(),
                     music_counts: source_chunk.music().counts.clone(),
 
-                    per_part_length: source_chunk.per_part_length() as u32,
-                    total_length: source_chunk.total_length() as u32,
+                    per_part_length: source_chunk.per_part_length(),
+                    total_length: source_chunk.total_length(),
                     method_counts: source_chunk.method_counts().clone(),
-                    dist_to_rounds: source_chunk.lb_distance_to_rounds as u32,
+                    min_len_to_rounds: source_chunk.lb_distance_to_rounds,
                     label: source_chunk.label().to_owned(),
 
                     duffer: source_chunk.duffer(),
-                    dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer as u32,
+                    dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer,
 
                     succs,
                     falseness,
@@ -160,8 +160,8 @@ fn link_score(
         // - (Bristol, 31) -> (Cambridge, 0)  **is** a splice (method changes)
         // - (Bristol, 17) -> (Bristol, 0)    **is** a splice (it skips half a lead)
         (LinkSide::Chunk(c1), LinkSide::Chunk(c2)) => {
-            let sub_lead_idx_after_prev_chunk = (c1.sub_lead_idx + source_chunk.per_part_length())
-                % query.methods[c1.method].lead_len();
+            let sub_lead_idx_after_prev_chunk = query.methods[c1.method]
+                .add_sub_lead_idx(c1.sub_lead_idx, source_chunk.per_part_length());
             let is_continuation =
                 c1.method == c2.method && sub_lead_idx_after_prev_chunk == c2.sub_lead_idx;
             !is_continuation

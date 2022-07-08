@@ -363,7 +363,13 @@ struct CompPrinter {
 impl CompPrinter {
     fn new(query: Arc<Query>) -> Self {
         Self {
-            length_width: query.len_range.end.saturating_sub(1).to_string().len(),
+            length_width: query
+                .len_range
+                .end
+                .as_usize()
+                .saturating_sub(1)
+                .to_string()
+                .len(),
             method_counts: query
                 .methods
                 .iter()

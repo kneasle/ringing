@@ -20,14 +20,11 @@ use bellframe::{Row, Truth};
 
 use crate::{
     music::{Breakdown, Score},
-    utils::{group::PhRotation, Boundary, Counts},
+    utils::{group::PhRotation, Boundary, Counts, PerPartLength, TotalLength},
     CallIdx, Config, MethodIdx, Query,
 };
 
 use self::optimise::Pass;
-
-/// The number of rows required to get from a point in the graph to a start/end.
-type Distance = usize;
 
 /// A 'prototype' chunk graph that is (relatively) inefficient to traverse but easy to modify.  This
 /// is usually used to build and optimise the chunk graph before being converted into an efficient
@@ -86,20 +83,20 @@ pub struct Chunk {
     duffer: bool,
     /// A lower bound on the number of rows required to go from any non-duffer chunk to the first
     /// row of `self`
-    pub lb_distance_from_non_duffer: usize,
+    pub lb_distance_from_non_duffer: TotalLength,
     /// A lower bound on the number of rows required to go from the first row **after** `self` to
     /// any non-duffer chunk.
-    pub lb_distance_to_non_duffer: usize,
+    pub lb_distance_to_non_duffer: TotalLength,
 
     /* MUTABLE STATE FOR OPTIMISATION PASSES */
     /// Does this chunk need to be included in every composition in this search?
     pub required: bool,
     /// A lower bound on the number of rows required to go from any rounds to the first row of
     /// `self`
-    pub lb_distance_from_rounds: Distance,
+    pub lb_distance_from_rounds: TotalLength,
     /// A lower bound on the number of rows required to go from the first row **after** `self` to
     /// rounds.
-    pub lb_distance_to_rounds: Distance,
+    pub lb_distance_to_rounds: TotalLength,
 }
 
 /// A link between two [`Chunk`]s in a [`Graph`]
@@ -317,14 +314,14 @@ impl Chunk {
     }
 
     /// A lower bound on the length of a composition which passes through this chunk.
-    pub fn min_comp_length(&self) -> usize {
+    pub fn min_comp_length(&self) -> TotalLength {
         self.lb_distance_from_rounds + self.total_length() + self.lb_distance_to_rounds
     }
 
     /// A lower bound on the length of the run of duffers which passes through this chunk.
-    pub fn min_duffer_length(&self) -> usize {
+    pub fn min_duffer_length(&self) -> TotalLength {
         if self.duffer {
-            0 // Make sure that non-duffers are never pruned
+            TotalLength::ZERO // Make sure that non-duffers are never pruned
         } else {
             self.lb_distance_from_non_duffer + self.total_length() + self.lb_distance_to_non_duffer
         }
@@ -392,12 +389,12 @@ impl Graph {
 impl Chunk {
     //! Getters & Iterators
 
-    pub fn total_length(&self) -> usize {
-        self.total_length.0
+    pub fn total_length(&self) -> TotalLength {
+        self.total_length
     }
 
-    pub fn per_part_length(&self) -> usize {
-        self.per_part_length.0
+    pub fn per_part_length(&self) -> PerPartLength {
+        self.per_part_length
     }
 
     pub fn method_counts(&self) -> &Counts {
@@ -505,16 +502,6 @@ impl RowIdx {
         }
     }
 }
-
-/// The length of a [`Chunk`] **in one part**.  This and [`TotalLength`] allow the compiler to
-/// disallow mixing up the different definitions of 'length'.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PerPartLength(pub usize);
-
-/// The combined length of a [`Chunk`] **in all parts**.  This and [`PerPartLength`] allow the
-/// compiler to disallow mixing up the different definitions of 'length'.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TotalLength(pub usize);
 
 //////////////
 // LINK SET //

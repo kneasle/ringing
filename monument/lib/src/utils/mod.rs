@@ -5,8 +5,10 @@ use serde::Deserialize;
 
 mod counts;
 pub mod group;
+mod lengths;
 
 pub use counts::Counts;
+pub use lengths::{PerPartLength, TotalLength};
 
 /// An inclusive range where each side is optionally bounded.  This is essentially a combination of
 /// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),
@@ -62,32 +64,32 @@ pub fn default_shorthands<'s>(
 
 /// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]
-pub struct FrontierItem<T> {
-    pub item: T,
-    pub distance: usize,
+pub struct FrontierItem<Item, Dist> {
+    pub item: Item,
+    pub distance: Dist,
 }
 
-impl<T> FrontierItem<T> {
-    pub fn new(item: T, distance: usize) -> Self {
+impl<Item, Dist> FrontierItem<Item, Dist> {
+    pub fn new(item: Item, distance: Dist) -> Self {
         Self { item, distance }
     }
 }
 
-impl<T> PartialEq for FrontierItem<T> {
+impl<Item, Dist: PartialEq> PartialEq for FrontierItem<Item, Dist> {
     fn eq(&self, other: &Self) -> bool {
         self.distance == other.distance
     }
 }
 
-impl<T> Eq for FrontierItem<T> {}
+impl<Item, Dist: Eq> Eq for FrontierItem<Item, Dist> {}
 
-impl<T> PartialOrd for FrontierItem<T> {
+impl<Item, Dist: Ord> PartialOrd for FrontierItem<Item, Dist> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<T> Ord for FrontierItem<T> {
+impl<Item, Dist: Ord> Ord for FrontierItem<Item, Dist> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.distance.cmp(&other.distance)
     }

@@ -10,7 +10,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{Progress, Query, QueryUpdate};
+use crate::{utils::TotalLength, Progress, Query, QueryUpdate};
 
 mod graph;
 mod prefix;
@@ -91,10 +91,10 @@ fn send_progress_update(
     iter_count: usize,
     num_comps: usize,
 ) {
-    let mut total_len = 0;
-    let mut max_length = 0;
+    let mut total_len = TotalLength::ZERO;
+    let mut max_length = TotalLength::ZERO;
     frontier.iter().for_each(|n| {
-        total_len += n.length() as usize;
+        total_len += n.length();
         max_length = max_length.max(n.length());
     });
     update_channel
@@ -102,7 +102,7 @@ fn send_progress_update(
             iter_count,
             num_comps,
             queue_len: frontier.len(),
-            avg_length: total_len as f32 / frontier.len() as f32,
+            avg_length: total_len.as_usize() as f32 / frontier.len() as f32,
             max_length,
         }))
         .unwrap();
