@@ -15,7 +15,7 @@ use itertools::Itertools;
 use music::Score;
 use utils::{
     group::{PartHead, PartHeadGroup},
-    Counts,
+    Counts, PerPartLength, TotalLength,
 };
 
 use std::{
@@ -29,7 +29,7 @@ use std::{
 };
 
 use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
-use graph::{optimise::Pass, Graph, PerPartLength};
+use graph::{optimise::Pass, Graph};
 
 /// Information provided to Monument which specifies what compositions are generated.
 ///
@@ -38,7 +38,7 @@ use graph::{optimise::Pass, Graph, PerPartLength};
 #[derive(Debug, Clone)]
 pub struct Query {
     // GENERAL
-    pub len_range: Range<usize>,
+    pub len_range: Range<TotalLength>,
     pub num_comps: usize,
     pub allow_false: bool,
     pub stage: Stage,
@@ -66,7 +66,7 @@ pub struct Query {
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
     pub start_stroke: Stroke,
-    pub max_duffer_rows: Option<usize>,
+    pub max_duffer_rows: Option<TotalLength>,
 }
 
 impl Query {
@@ -103,6 +103,12 @@ pub struct Method {
     /// length of the method.
     pub end_indices: Option<Vec<isize>>,
     pub ch_masks: Vec<Mask>,
+}
+
+impl Method {
+    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+        (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
 }
 
 impl std::ops::Deref for Method {
@@ -196,7 +202,7 @@ pub struct Comp {
     pub path: Vec<PathElem>,
 
     pub part_head: PartHead,
-    pub length: usize,
+    pub length: TotalLength,
     /// The number of rows generated of each method
     pub method_counts: Counts,
     /// The number of counts generated of each [`MusicType`](music::MusicType)
@@ -224,7 +230,7 @@ impl PathElem {
     }
 
     pub fn end_sub_lead_idx(&self, query: &Query) -> usize {
-        (self.start_sub_lead_idx + self.length.0) % query.methods[self.method].lead_len()
+        query.methods[self.method].add_sub_lead_idx(self.start_sub_lead_idx, self.length)
     }
 }
 
@@ -252,7 +258,7 @@ impl Comp {
                 let num_leads_covered = num_leads_covered(
                     method.lead_len(),
                     path_elem.start_sub_lead_idx,
-                    path_elem.length.0,
+                    path_elem.length,
                 );
                 for _ in 0..num_leads_covered {
                     s.push_str(&method.shorthand);
@@ -312,7 +318,7 @@ impl Comp {
             let plain_course = &plain_courses[elem.method];
             // Add this elem to the first part
             let start_idx = elem.start_sub_lead_idx;
-            let end_idx = start_idx + elem.length.0;
+            let end_idx = start_idx + elem.length.as_usize();
             if end_idx > plain_course.len() {
                 // `elem` wraps over the course head, so copy it in two pieces
                 first_part
@@ -345,17 +351,17 @@ impl Comp {
         for _ in 0..query.num_parts() - 1 {
             comp.extend_from_within(..part_len);
         }
-        assert_eq!(comp.len(), self.length);
+        assert_eq!(comp.len(), self.length.as_usize());
         assert_eq!(comp.leftover_row(), query.end_row.as_row());
         comp
     }
 }
 
 /// Return the number of leads covered by some [`Chunk`]
-fn num_leads_covered(lead_len: usize, start_sub_lead_idx: usize, length: usize) -> usize {
-    assert_ne!(length, 0); // 0-length chunks shouldn't exist
+fn num_leads_covered(lead_len: usize, start_sub_lead_idx: usize, length: PerPartLength) -> usize {
+    assert_ne!(length, PerPartLength::ZERO); // 0-length chunks shouldn't exist
     let dist_to_end_of_first_lead = lead_len - start_sub_lead_idx;
-    let rows_after_end_of_first_lead = length.saturating_sub(dist_to_end_of_first_lead);
+    let rows_after_end_of_first_lead = length.as_usize().saturating_sub(dist_to_end_of_first_lead);
     // `+ 1` for the first lead
     utils::div_rounding_up(rows_after_end_of_first_lead, lead_len) + 1
 }
@@ -485,7 +491,7 @@ pub struct Progress {
     /// The average length of a composition in the queue
     pub avg_length: f32,
     /// The length of the longest composition in the queue
-    pub max_length: u32,
+    pub max_length: TotalLength,
 }
 
 impl Progress {
@@ -496,7 +502,7 @@ impl Progress {
 
         queue_len: 0,
         avg_length: 0.0,
-        max_length: 0,
+        max_length: TotalLength::ZERO,
     };
 }
 
@@ -515,12 +521,14 @@ pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::PerPartLength;
+
     #[test]
     fn num_leads_covered() {
-        assert_eq!(super::num_leads_covered(32, 0, 32), 1);
-        assert_eq!(super::num_leads_covered(32, 2, 32), 2);
-        assert_eq!(super::num_leads_covered(32, 2, 30), 1);
-        assert_eq!(super::num_leads_covered(32, 0, 2), 1);
-        assert_eq!(super::num_leads_covered(32, 16, 24), 2);
+        assert_eq!(super::num_leads_covered(32, 0, PerPartLength::new(32)), 1);
+        assert_eq!(super::num_leads_covered(32, 2, PerPartLength::new(32)), 2);
+        assert_eq!(super::num_leads_covered(32, 2, PerPartLength::new(30)), 1);
+        assert_eq!(super::num_leads_covered(32, 0, PerPartLength::new(2)), 1);
+        assert_eq!(super::num_leads_covered(32, 16, PerPartLength::new(24)), 2);
     }
 }

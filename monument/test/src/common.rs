@@ -842,7 +842,7 @@ impl Comp {
 impl Comp {
     fn new(source: &monument::Comp, query: &monument::Query) -> Self {
         Self {
-            length: source.length,
+            length: source.length.as_usize(),
             string: source.call_string(query),
             avg_score: Self::round_score(source.avg_score.0),
             // Only store part heads for multi-part strings

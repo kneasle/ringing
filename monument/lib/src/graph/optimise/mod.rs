@@ -10,7 +10,7 @@ use std::{
 
 use crate::{utils::FrontierItem, Query};
 
-use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide};
+use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide, TotalLength};
 
 use self::Direction::{Backward, Forward};
 
@@ -211,7 +211,7 @@ impl<'graph> ChunkViewMut<'graph> {
     }
 
     /// Mutable reference to the distance from rounds **to** the start of this chunk
-    pub fn distance_mut(&mut self) -> &mut usize {
+    pub fn distance_mut(&mut self) -> &mut TotalLength {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_rounds,
             Backward => &mut self.chunk.lb_distance_to_rounds,
@@ -219,7 +219,7 @@ impl<'graph> ChunkViewMut<'graph> {
     }
 
     /// Mutable reference to the distance from rounds **to** the start of this chunk
-    pub fn non_duffer_distance_mut(&mut self) -> &mut usize {
+    pub fn non_duffer_distance_mut(&mut self) -> &mut TotalLength {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_non_duffer,
             Backward => &mut self.chunk.lb_distance_to_non_duffer,
@@ -264,7 +264,7 @@ pub mod passes {
     use itertools::Itertools;
 
     use crate::{
-        graph::{ChunkId, Graph},
+        graph::{ChunkId, Graph, TotalLength},
         Query,
     };
 
@@ -333,9 +333,9 @@ pub mod passes {
             let expanded_chunk_distances = super::compute_distances(
                 view.starts()
                     .iter()
-                    .map(|(_link_id, chunk_id)| (chunk_id, 0)),
+                    .map(|(_link_id, chunk_id)| (chunk_id, TotalLength::ZERO)),
                 &view,
-                query.len_range.end,
+                Some(query.len_range.end),
             );
             // Set the chunk distances and strip out unreachable chunks
             view.retain_chunks(
@@ -345,7 +345,7 @@ pub mod passes {
                         *chunk_view.distance_mut() = new_distance;
                         true
                     }
-                    None => true, // Remove unreachable chunks
+                    None => false, // Remove unreachable chunks
                 },
             );
         }))
@@ -368,13 +368,13 @@ pub mod passes {
                 view.graph
                     .chunks()
                     .filter(|&(_id, chunk)| !chunk.duffer)
-                    .map(|(id, _chunk)| (id, 0))
+                    .map(|(id, _chunk)| (id, TotalLength::ZERO))
                     .chain(view.starts().iter().filter_map(|(_link_id, chunk_id)| {
                         let chunk = view.graph.get_chunk(chunk_id)?;
                         chunk.duffer.then(|| (chunk_id, chunk.total_length()))
                     })),
                 &view,
-                query.max_duffer_rows.unwrap_or(usize::MAX),
+                query.max_duffer_rows,
             );
             // Set the chunk distances and strip out unreachable chunks
             view.retain_chunks(|id, mut chunk_view| match duffer_distances.get(id) {
@@ -445,17 +445,17 @@ pub mod passes {
 /// Given a set of starting chunks (and their distances), compute the shortest distance to every
 /// reachable chunk.
 fn compute_distances<'a>(
-    start_chunks: impl IntoIterator<Item = (&'a ChunkId, usize)>,
+    start_chunks: impl IntoIterator<Item = (&'a ChunkId, TotalLength)>,
     view: &DirectionalView<'a>,
-    dist_limit: usize,
-) -> HashMap<ChunkId, usize> {
+    dist_limit: Option<TotalLength>,
+) -> HashMap<ChunkId, TotalLength> {
     // Set of chunks which are reachable within the range limit, mapped to their shortest distance
     // from a start chunk.  These are the chunks which will be kept in the graph.
-    let mut expanded_chunk_distances: HashMap<ChunkId, usize> = HashMap::new();
+    let mut expanded_chunk_distances: HashMap<ChunkId, TotalLength> = HashMap::new();
 
     // A priority queue of ChunkIds, sorted by distance with the nearest chunks at the front of the
     // queue.  Initialise this with just the start chunks.
-    let mut frontier: BinaryHeap<Reverse<FrontierItem<ChunkId>>> = start_chunks
+    let mut frontier: BinaryHeap<Reverse<FrontierItem<ChunkId, TotalLength>>> = start_chunks
         .into_iter()
         .map(|(id, dist)| FrontierItem::new(id.clone(), dist))
         .map(Reverse)
@@ -480,8 +480,10 @@ fn compute_distances<'a>(
         // Skip this chunk if any chunk succeeding it would take longer to reach than the length of
         // the composition
         let distance_after_chunk = distance + chunk_view.chunk.total_length();
-        if distance_after_chunk > dist_limit {
-            continue;
+        if let Some(l) = dist_limit {
+            if distance_after_chunk > l {
+                continue;
+            }
         }
 
         // Expand this chunk

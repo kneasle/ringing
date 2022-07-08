@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::Write,
-    ops::{self, Deref},
+    ops::{self, Deref, Range},
     path::PathBuf,
     time::Duration,
 };
@@ -16,8 +16,9 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    music::MusicType, utils::group::PartHeadGroup, Call, CallDisplayStyle, CallVec, MethodVec,
-    MusicTypeVec, OptRange, Query, SpliceStyle,
+    music::MusicType,
+    utils::{group::PartHeadGroup, TotalLength},
+    Call, CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptRange, Query, SpliceStyle,
 };
 use serde::Deserialize;
 
@@ -260,7 +261,10 @@ impl Spec {
 
         // Build this layout into a `Graph`
         Ok(Query {
-            len_range: self.length.range.clone(),
+            len_range: Range {
+                start: TotalLength::new(self.length.range.start),
+                end: TotalLength::new(self.length.range.end),
+            },
             num_comps: self.num_comps,
             allow_false: self.allow_false,
             stage,
@@ -279,7 +283,7 @@ impl Spec {
             music_types,
             music_displays,
             start_stroke: self.start_stroke,
-            max_duffer_rows: self.max_duffer_rows,
+            max_duffer_rows: self.max_duffer_rows.map(TotalLength::new),
         })
     }
 

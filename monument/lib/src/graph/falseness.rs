@@ -98,9 +98,9 @@ impl FalsenessTable {
         // This is useful because falseness can exist between two rows **only** if their 'group'
         // masks are compatible.  For example, any rows of the form `xx1xx8x7` can't be false
         // against a row of the form `x1xxx8x7` because the treble can't be in two places at once.
-        // false chunk transposition tables are quadratic in the sizes of the rows we have to
-        // cross-product together, so it is extremely worthwhile to split large groups of rows into
-        // many smaller groups which can be computed independently.
+        // The time needed to compute falseness tables is quadratic in the sizes of the rows we
+        // have to cross-product together, so it is extremely worthwhile to split large groups of
+        // rows into many smaller groups which can be computed independently.
         //
         // In this loop, we also check for `ChunkRange`s which are 'self-false' (i.e. include some
         // row multiple times).
@@ -117,7 +117,7 @@ impl FalsenessTable {
 
             let mut rows_so_far = HashSet::<&Row>::new();
             let mut row_groups_for_this_range: RowGroups = HashMap::new();
-            for offset in 0..range.len.0 {
+            for offset in 0..range.len.as_usize() {
                 let row_index = (range.start.sub_lead_idx + offset) % plain_course.len();
                 let row = plain_course.get_row(row_index).unwrap();
                 // Check for self-falseness.  I.e. if some row is repeated twice within a chunk,
@@ -278,7 +278,7 @@ impl Debug for ChunkRange {
         write!(
             f,
             "ChunkRange({:?},{}+{})",
-            self.start.method, self.start.sub_lead_idx, self.len.0
+            self.start.method, self.start.sub_lead_idx, self.len
         )
     }
 }

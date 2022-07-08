@@ -9,9 +9,9 @@ use bellframe::Row;
 use bit_vec::BitVec;
 
 use crate::{
-    graph::{LinkSide, PerPartLength},
+    graph::LinkSide,
     music::Score,
-    utils::{group::PartHead, Counts},
+    utils::{group::PartHead, Counts, TotalLength},
     Comp, PathElem, SpliceStyle,
 };
 
@@ -32,7 +32,7 @@ pub(super) struct CompPrefix {
     avg_score: Score,
     /// Length refers to the **end** of the current chunk.  We use `u32` because [`Score`] is also
     /// 32 bits long, making `CompPrefix` pack into 128 bits
-    length: u32,
+    length: TotalLength,
 }
 
 #[derive(Debug, Clone)]
@@ -76,7 +76,7 @@ impl CompPrefix {
                     rotation,
                     all_chunks_ringable.clone(),
                     Score::from(0.0), // Start links can't have any score
-                    0,
+                    TotalLength::ZERO,
                     Counts::zeros(chunk.method_counts.len()),
                 )
             })
@@ -90,7 +90,7 @@ impl CompPrefix {
         part_head: PartHead,
         unringable_chunks: BitVec,
         score: Score,
-        length: u32,
+        length: TotalLength,
         method_counts: Counts,
     ) -> Self {
         Self {
@@ -103,11 +103,11 @@ impl CompPrefix {
                 method_counts,
             }),
             length,
-            avg_score: score / length as f32,
+            avg_score: score / length.as_usize() as f32,
         }
     }
 
-    pub fn length(&self) -> u32 {
+    pub fn length(&self) -> TotalLength {
         self.length
     }
 }
@@ -189,14 +189,14 @@ impl CompPrefix {
                 let length_after_succ = length + succ_chunk.total_length;
                 let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
 
-                if length_after_succ + succ_chunk.dist_to_rounds >= max_length as u32 {
+                if length_after_succ + succ_chunk.min_len_to_rounds >= max_length {
                     continue; // Chunk would make comp too long
                 }
                 if unringable_chunks.get(succ_idx.index()).unwrap() {
                     continue; // Something already in the comp has made this unringable (i.e. false)
                 }
                 if !method_counts_after_chunk.is_feasible(
-                    max_length - length_after_succ as usize,
+                    (max_length - length_after_succ).as_usize(),
                     &data.method_count_ranges,
                 ) {
                     continue; // Can't recover the method balance before running out of rows
@@ -228,7 +228,7 @@ impl CompPrefix {
     fn check_comp(&self, data: &SearchData) -> Option<Comp> {
         assert!(self.next_link_side.is_start_or_end());
 
-        if !data.query.len_range.contains(&(self.length as usize)) {
+        if !data.query.len_range.contains(&self.length) {
             return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
@@ -283,15 +283,15 @@ impl CompPrefix {
             path,
 
             part_head: self.part_head,
-            length: self.length as usize,
+            length: self.length,
             method_counts: self.method_counts.clone(),
             music_counts,
             total_score: score,
-            avg_score: score / self.length as f32,
+            avg_score: score / self.length.as_usize() as f32,
         };
         // Sanity check that the composition is true
         if !data.query.allow_false {
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length);
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length.as_usize());
             for row in comp.rows(&data.query).rows() {
                 if !rows_so_far.insert(row) {
                     panic!(
@@ -336,7 +336,7 @@ impl CompPrefix {
                     * data.query.methods[method_idx].row_in_plain_lead(sub_lead_idx),
                 method: method_idx,
                 start_sub_lead_idx: sub_lead_idx,
-                length: PerPartLength(chunk.per_part_length as usize),
+                length: chunk.per_part_length,
                 call: succ_link.call,
             });
             // Follow the link to the next chunk in the path

@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### Monument
+- (#110) Exclusively use `{Total,PerPart}Length` to refer to lengths (as opposed to `usize`), thus
+    allowing the compiler to spot when we mix them up.
 - (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
 
 ---

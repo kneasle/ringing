@@ -243,14 +243,18 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
 
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
 fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
-    let total_length = per_part_length.0 * query.num_parts();
+    let total_length = per_part_length.as_total(&query.part_head_group);
     Chunk {
         label: String::new(),
 
         per_part_length,
-        total_length: TotalLength(total_length),
+        total_length,
         // All the length goes to the method rung in this chunk
-        method_counts: Counts::single_count(total_length, id.method.index(), query.methods.len()),
+        method_counts: Counts::single_count(
+            total_length.as_usize(),
+            id.method.index(),
+            query.methods.len(),
+        ),
 
         // Filled in separate graph build passes
         predecessors: Vec::new(),
@@ -260,11 +264,11 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         duffer: false,
 
         // Used by optimisation passes
-        lb_distance_from_non_duffer: 0,
-        lb_distance_to_non_duffer: 0,
+        lb_distance_from_non_duffer: TotalLength::ZERO,
+        lb_distance_to_non_duffer: TotalLength::ZERO,
         required: false,
-        lb_distance_from_rounds: 0,
-        lb_distance_to_rounds: 0,
+        lb_distance_from_rounds: TotalLength::ZERO,
+        lb_distance_to_rounds: TotalLength::ZERO,
     }
 }
 
@@ -334,7 +338,7 @@ fn get_start_strokes(
             None => {
                 // Chunk hasn't been expanded before, so continue the search
                 if let Some(chunk) = chunks.get(&id) {
-                    let stroke_after_chunk = new_stroke.offset(chunk.per_part_length.0);
+                    let stroke_after_chunk = new_stroke.offset(chunk.per_part_length.as_usize());
                     for succ_link_id in &chunk.successors {
                         let succ_link = &links[*succ_link_id];
                         assert_eq!(succ_link.from, LinkSide::Chunk(id.clone()));
@@ -382,7 +386,7 @@ fn count_scores(
 
     for part_head in query.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
-        let row_iter = (0..chunk.per_part_length.0).map(|offset| {
+        let row_iter = (0..chunk.per_part_length.as_usize()).map(|offset| {
             let index = (id.sub_lead_idx + offset) % plain_course.len();
             plain_course.get_row(index).unwrap()
         });
@@ -397,7 +401,7 @@ fn count_scores(
         for (mask, weight) in &query.ch_weights {
             if mask.matches(&lead_head_in_part) {
                 // Weight applies to each row
-                chunk.music.score += *weight * chunk.per_part_length.0 as f32;
+                chunk.music.score += *weight * chunk.per_part_length.as_usize() as f32;
             }
         }
     }
@@ -422,7 +426,7 @@ fn generate_chunk_lengths<'q>(
     let mut chunk_lengths = HashMap::new();
     let mut links = LinkSet::new();
 
-    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId>>>::new();
+    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId, TotalLength>>>::new();
     let mut chunk_equiv_map = ChunkEquivalenceMap::new(&query.part_head_group);
     let chunk_factory = ChunkFactory::new(query, method_datas);
 
@@ -436,7 +440,7 @@ fn generate_chunk_lengths<'q>(
             ph_rotation,
             ph_rotation_back: !ph_rotation,
         });
-        frontier.push(Reverse(FrontierItem::new(start_id, 0)));
+        frontier.push(Reverse(FrontierItem::new(start_id, TotalLength::ZERO)));
     }
 
     // Repeatedly expand `ChunkId`s in increasing order of distance (i.e. we're exploring the graph
@@ -458,7 +462,7 @@ fn generate_chunk_lengths<'q>(
         // Build the chunk
         let (per_part_length, successors) = chunk_factory.build_chunk(chunk_id.clone());
         let min_distance_after_chunk =
-            min_distance_from_start + per_part_length.0 * query.num_parts();
+            min_distance_from_start + per_part_length.as_total(&query.part_head_group);
 
         // Stop expanding if the shortest path from rounds to the end of the chunk takes longer
         // than the max comp length
@@ -533,27 +537,25 @@ impl<'a> ChunkFactory<'a> {
 
         // Determine the length of the `Chunk` by continually attempting to shorten it with calls
         // or ends
-        let mut shortest_per_part_length = course_len;
-        let mut links_at_shortest_length = Vec::new();
+        let mut shortest_len = PerPartLength::new(course_len);
+        let mut links_at_shortest_len = Vec::new();
         // Closure to add a new link, shortening the chunk if needed
-        let mut add_link = |per_part_length: usize,
-                            id: ChunkIdInFirstPart,
-                            call: Option<CallIdx>,
-                            is_end: bool| {
-            // If this link is strictly further away than some other link, then it'll never be
-            // reached
-            if per_part_length > shortest_per_part_length {
-                return;
-            }
-            // If this new link makes the chunk strictly shorter, then all previous links
-            // become irrelevant
-            if per_part_length < shortest_per_part_length {
-                shortest_per_part_length = per_part_length;
-                links_at_shortest_length.clear();
-            }
-            // Now that the chunk is exactly the same length as this link, we can add it as an end
-            links_at_shortest_length.push((id, call, is_end));
-        };
+        let mut add_link =
+            |len: PerPartLength, id: ChunkIdInFirstPart, call: Option<CallIdx>, is_end: bool| {
+                // If this link is strictly further away than some other link, then it'll never be
+                // reached
+                if len > shortest_len {
+                    return;
+                }
+                // If this new link makes the chunk strictly shorter, then all previous links
+                // become irrelevant
+                if len < shortest_len {
+                    shortest_len = len;
+                    links_at_shortest_len.clear();
+                }
+                // Now that the chunk is exactly the same length as this link, we can add it as an end
+                links_at_shortest_len.push((id, call, is_end));
+            };
 
         // Add links for ends and calls
         self.end_lookup_table
@@ -561,9 +563,9 @@ impl<'a> ChunkFactory<'a> {
         self.link_lookup_table
             .add_links(&chunk_id, self.method_datas, &mut add_link);
         // Take the final length/links as those that will be used for the chunk
-        assert!(shortest_per_part_length > 0);
-        let chunk_length = PerPartLength(shortest_per_part_length);
-        let mut links = links_at_shortest_length;
+        assert!(shortest_len > PerPartLength::ZERO);
+        let chunk_length = shortest_len;
+        let mut links = links_at_shortest_len;
         // Replace any links which go directly to a part-head with an end (for example calling a
         // home in coursing order `54326` will cause the composition to instantly come round rather
         // than leading to `ChunkId(12345678:#,0)` where `#` is any method)
@@ -607,7 +609,7 @@ impl EndLookupTable {
                     end_lookup
                         .entry((lead_head, method_idx))
                         .or_insert_with(Vec::new)
-                        .push((PerPartLength(distance_to_end), end_location.to_owned()));
+                        .push((PerPartLength::new(distance_to_end), end_location.to_owned()));
                 }
             }
         }
@@ -621,7 +623,7 @@ impl EndLookupTable {
         {
             Some(entries) => entries
                 .iter()
-                .any(|(len, _id)| len.0 == chunk_id.sub_lead_idx),
+                .any(|(len, _id)| len.as_usize() == chunk_id.sub_lead_idx),
             None => false,
         }
     }
@@ -630,7 +632,7 @@ impl EndLookupTable {
         &self,
         chunk_id: &ChunkId,
         method_datas: &MethodVec<MethodData>,
-        add_link: &mut impl FnMut(usize, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
         let method_data = &method_datas[method_idx];
@@ -644,8 +646,9 @@ impl EndLookupTable {
             // We have to take the result modulo `course_len` in case the end happens in the same
             // lead but before this chunk starts.  We also add `course_len` before subtracting to
             // avoid integer underflow.
-            let mut length =
-                (end_length_from_lead_head.0 + course_len - chunk_id.sub_lead_idx) % course_len;
+            let mut length = (end_length_from_lead_head.as_usize() + course_len
+                - chunk_id.sub_lead_idx)
+                % course_len;
             // 0-length ends (e.g. calling a `H` at the end of a composition to make it instantly
             // come round) are checked when links are being generated.  Therefore, if we _do_
             // generate a chunk that end immediately, it must be also be a start and we should
@@ -653,7 +656,7 @@ impl EndLookupTable {
             if length == 0 {
                 length += course_len;
             }
-            add_link(length, end_id.to_owned(), None, true);
+            add_link(PerPartLength::new(length), end_id.to_owned(), None, true);
         }
     }
 }
@@ -838,7 +841,7 @@ impl LinkLookupTable {
         &self,
         chunk_id: &ChunkId,
         method_datas: &MethodVec<MethodData>,
-        add_link: &mut impl FnMut(usize, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
             if mask.matches(&chunk_id.lead_head) {
@@ -864,7 +867,12 @@ impl LinkLookupTable {
                                 * &link_entry.lead_head_transposition,
                             row_idx: link_entry.row_idx_to,
                         };
-                        add_link(len, next_chunk_id, link_entry.call, false);
+                        add_link(
+                            PerPartLength::new(len),
+                            next_chunk_id,
+                            link_entry.call,
+                            false,
+                        );
                     }
                 }
             }
