@@ -1,3 +1,12 @@
+## Unreleased
+
+### Monument
+- (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
+
+---
+
+
+
 ## 4th July 2022
 
 ### Monument v0.10.0
