@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use crate::{
     graph::LinkSide,
     music::Score,
-    utils::{Counts, Rotation},
+    utils::{
+        group::{PartHead, PhRotation},
+        Counts,
+    },
     CallIdx, Query,
 };
 use bit_vec::BitVec;
@@ -12,7 +15,7 @@ use bit_vec::BitVec;
 /// lookups.
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub starts: StartVec<(ChunkIdx, crate::graph::LinkId, Rotation)>,
+    pub starts: StartVec<(ChunkIdx, crate::graph::LinkId, PartHead)>,
     pub chunks: ChunkVec<Chunk>,
 }
 
@@ -47,7 +50,7 @@ pub struct SuccLink {
     pub call: Option<CallIdx>,
     pub next: LinkSide<ChunkIdx>,
     pub score: Score,
-    pub rotation: Rotation,
+    pub ph_rotation: PhRotation,
 }
 
 ///////////////////////////////////////////
@@ -95,7 +98,7 @@ impl Graph {
                             call: link.call,
                             score: link_score(source_chunk, link, query),
                             next,
-                            rotation: link.rotation,
+                            ph_rotation: link.ph_rotation,
                         })
                     })
                     .collect();
@@ -132,7 +135,7 @@ impl Graph {
                 starts.push((
                     id_to_index[start_chunk_id],
                     *start_link_id,
-                    start_link.rotation,
+                    PartHead::rounds() * start_link.ph_rotation,
                 ));
             }
         }

@@ -10,10 +10,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{
-    utils::{coprime_bitmap, Rotation},
-    Progress, Query, QueryUpdate,
-};
+use crate::{Progress, Query, QueryUpdate};
 
 mod graph;
 mod prefix;
@@ -125,23 +122,18 @@ fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
 struct SearchData {
     graph: self::graph::Graph,
     query: Arc<Query>,
-    num_parts: Rotation,
     method_count_ranges: Vec<Range<usize>>,
-    rotation_bitmap: u64,
 }
 
 impl SearchData {
     fn new(graph: &crate::Graph, query: Arc<Query>) -> Self {
-        let num_parts = graph.num_parts() as Rotation;
         Self {
             graph: self::graph::Graph::new(graph, &query),
-            num_parts,
             method_count_ranges: query
                 .methods
                 .iter()
                 .map(|m| m.count_range.clone())
                 .collect_vec(),
-            rotation_bitmap: coprime_bitmap(num_parts),
             query,
         }
     }

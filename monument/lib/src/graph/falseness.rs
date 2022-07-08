@@ -75,10 +75,9 @@ impl FalsenessTable {
         // against the masks used **in every part** (not just the ones which are used in chunk
         // equivalence classes).  Therefore, we produce a new set of masks to be compared against
         // those in the graph.
-        let part_heads = query.part_head.closure();
         let masks_used_in_all_parts = masks_used
             .iter()
-            .cartesian_product(&part_heads)
+            .cartesian_product(query.part_head_group.rows())
             .map(|(&(range, mask), part_head)| (range, part_head * mask))
             .collect::<HashSet<_>>();
 
@@ -239,12 +238,12 @@ impl FalsenessTable {
                         lead_head: false_lead_head,
                         row_idx: false_range.start,
                     };
-                    let (equiv_false_id, rotation) = chunk_equiv_map.normalise(&false_id);
+                    let (equiv_false_id, ph_rotation) = chunk_equiv_map.normalise(&false_id);
 
                     // We need to check `rotation != 0` because all chunks are trivially false
                     // against themselves (in that if a chunk is rung, then it cannot be rung again
                     // without incurring falseness).
-                    if &equiv_false_id == id && rotation != 0 {
+                    if &equiv_false_id == id && !ph_rotation.is_identity() {
                         return Truth::False; // Remove chunk if it's false against itself in
                                              // another part
                     }

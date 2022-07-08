@@ -11,7 +11,7 @@ use bit_vec::BitVec;
 use crate::{
     graph::{LinkSide, PerPartLength},
     music::Score,
-    utils::{Counts, Rotation},
+    utils::{group::PartHead, Counts},
     Comp, PathElem, SpliceStyle,
 };
 
@@ -47,9 +47,10 @@ pub(super) struct PrefixInner {
     /// something in the prefix so far) and `0` otherwise
     unringable_chunks: BitVec,
 
-    /// The number of part heads through which we have rotated.  This is kept in the range
-    /// `0..graph.num_parts`
-    rotation: Rotation,
+    /// The [`group::Element`] representing the current part head.  For internal chunks, this value
+    /// is completely arbitrary, but once the composition ends this is guaranteed to hold the part
+    /// head we reached.
+    part_head: PartHead,
 
     /// Score refers to the **end** of the current chunk
     score: Score,
@@ -86,7 +87,7 @@ impl CompPrefix {
     fn new(
         path: CompPath,
         next_link_side: LinkSide<ChunkIdx>,
-        rotation: Rotation,
+        part_head: PartHead,
         unringable_chunks: BitVec,
         score: Score,
         length: u32,
@@ -97,7 +98,7 @@ impl CompPrefix {
                 path,
                 next_link_side,
                 unringable_chunks,
-                rotation,
+                part_head,
                 score,
                 method_counts,
             }),
@@ -166,7 +167,7 @@ impl CompPrefix {
             mut unringable_chunks,
             mut score,
             mut method_counts,
-            rotation, // Don't make this `mut` because it gets updated in every loop iteration
+            part_head, // Don't make this `mut` because it gets updated in every loop iteration
         } = *inner;
 
         // Compute the values for after `chunk`
@@ -178,7 +179,7 @@ impl CompPrefix {
 
         let max_length = data.query.len_range.end;
         for (succ_idx, link) in chunk.succs.iter_enumerated() {
-            let rotation = (rotation + link.rotation) % data.num_parts;
+            let rotation = part_head * link.ph_rotation;
             let score = score + link.score;
 
             // If this `link` would add a new `Chunk`, check if that `Chunk` would make the comps
@@ -238,7 +239,7 @@ impl CompPrefix {
         if !self.method_counts.is_feasible(0, &data.method_count_ranges) {
             return None; // Comp doesn't have the required method balance
         }
-        if data.rotation_bitmap & (1 << self.rotation) == 0 {
+        if !data.query.part_head_group.is_generator(self.part_head) {
             return None; // The part head reached wouldn't generate all the parts
         }
 
@@ -253,7 +254,7 @@ impl CompPrefix {
         let mut score = self.score;
         let is_splice = first_elem.method != last_elem.method
             || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
-        let splice_over_part_head = data.num_parts > 1 && is_splice;
+        let splice_over_part_head = data.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
             // common lead_location between the start and end of the composition)
@@ -274,14 +275,14 @@ impl CompPrefix {
                 return None;
             }
             // Add/subtract weights from the splices over the part head
-            score += (data.num_parts - 1) as f32 * data.query.splice_weight;
+            score += (data.query.num_parts() - 1) as f32 * data.query.splice_weight;
         }
 
         // Now we know the composition is valid, construct it and return
         let comp = Comp {
             path,
 
-            rotation: self.rotation,
+            part_head: self.part_head,
             length: self.length as usize,
             method_counts: self.method_counts.clone(),
             music_counts,
@@ -307,8 +308,6 @@ impl CompPrefix {
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
     fn flattened_path(&self, data: &SearchData) -> (Vec<PathElem>, Counts) {
-        let part_heads = data.query.part_head.closure_from_rounds();
-
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = self.path.flatten();
 
@@ -317,7 +316,7 @@ impl CompPrefix {
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
-        let (start_chunk_idx, _start_link, mut rotation) = data.graph.starts[start_idx];
+        let (start_chunk_idx, _start_link, mut part_head_elem) = data.graph.starts[start_idx];
         let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
         for succ_idx in succ_idxs {
             let next_chunk_idx = match next_link_side {
@@ -332,7 +331,7 @@ impl CompPrefix {
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
             path.push(PathElem {
-                start_row: &part_heads[rotation as usize]
+                start_row: data.query.part_head_group.get_row(part_head_elem)
                     * chunk.id.lead_head.as_ref()
                     * data.query.methods[method_idx].row_in_plain_lead(sub_lead_idx),
                 method: method_idx,
@@ -342,7 +341,7 @@ impl CompPrefix {
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
-            rotation = (rotation + succ_link.rotation) % data.num_parts;
+            part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
         (path, music_counts)
     }

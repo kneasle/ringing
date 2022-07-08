@@ -1,10 +1,10 @@
 use std::{cmp::Ordering, ops::Range};
 
-use gcd::Gcd;
 use itertools::Itertools;
 use serde::Deserialize;
 
 mod counts;
+pub mod group;
 
 pub use counts::Counts;
 
@@ -58,27 +58,6 @@ pub fn default_shorthands<'s>(
             shorthand.map_or_else(|| title.chars().next().unwrap().to_string(), str::to_owned)
         })
         .collect_vec()
-}
-
-/// Measure which determines which part head has been reached.  Each chunk link is given a
-/// `Rotation` which, when summed modulo [`Graph::num_parts`](crate::graph::Graph::num_parts), will
-/// determine which part head has been reached (and therefore whether the composition is valid).
-pub type Rotation = u16;
-
-/// Returns a bitmap where there's a `1` for every number that's co-prime to `n`
-pub fn coprime_bitmap(n: Rotation) -> u64 {
-    assert!(n <= 64);
-    assert!(n > 0);
-    if n == 1 {
-        return 1; // Finishing a part in rounds is only allowed in a 1-part
-    }
-    let mut mask = 0;
-    for i in 1..n {
-        if i.gcd(n) == 1 {
-            mask |= 1 << i;
-        }
-    }
-    mask
 }
 
 /// A container type which sorts its contents according to some given distance metric
