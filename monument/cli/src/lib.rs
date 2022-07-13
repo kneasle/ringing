@@ -69,11 +69,11 @@ pub fn run(
     debug_print!(Query, query);
 
     // Optimise the graph(s)
-    let graph = query
+    let mut graph = query
         .unoptimised_graph(config)
         .map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
-    let optimised_graphs = query.optimise_graph(graph, config);
+    query.optimise_graph(&mut graph, config);
     if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
@@ -89,10 +89,10 @@ pub fn run(
         let abort_flag = abort_flag.clone();
         let handler = move || abort_flag.store(true, Ordering::Relaxed);
         if let Err(e) = ctrlc::set_handler(handler) {
-            log::warn!("Error capturing ctrl-C: {}", e);
+            log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
-    let on_find_comp = {
+    let update_fn = {
         let comps = comps.clone();
         move |update| {
             if let Some(comp) = update_logger.log(update) {
@@ -100,13 +100,7 @@ pub fn run(
             }
         }
     };
-    Query::search(
-        query.clone(),
-        optimised_graphs,
-        config,
-        on_find_comp,
-        abort_flag.clone(),
-    );
+    Query::search(&query, graph, config, update_fn, &abort_flag);
 
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();

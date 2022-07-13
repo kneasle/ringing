@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### Monument
+- (#113) Remove unnecessary threading from the search code (which can currently only use one thread
+    anyway).
 - (#112) Refactor `FalsenessTable::new` into multiple helper functions
 - (#112) Massively speed up falseness generation when using custom CHs in cyclic comps, by computing
     all the false lead heads rather than computing falseness between all pairs of masks.
