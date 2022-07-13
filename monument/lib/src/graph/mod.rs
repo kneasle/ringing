@@ -5,8 +5,6 @@ mod build;
 mod falseness;
 pub mod optimise;
 
-pub use build::BuildError;
-
 use std::{
     cmp::{Ordering, Reverse},
     collections::HashMap,
@@ -21,7 +19,7 @@ use bellframe::{Row, Truth};
 use crate::{
     music::{Breakdown, Score},
     utils::{group::PhRotation, Boundary, Counts, PerPartLength, TotalLength},
-    CallIdx, Config, MethodIdx, Query,
+    CallIdx, MethodIdx, Query,
 };
 
 use self::optimise::Pass;
@@ -120,14 +118,6 @@ pub enum LinkSide<Id> {
 }
 
 // ------------------------------------------------------------------------------------------
-
-impl Graph {
-    /// Generate a graph of all chunks which are reachable within a given length constraint.
-    // TODO: Move this wholesale into the `build` submodule
-    pub fn new(query: &Query, config: &Config) -> Result<Self, BuildError> {
-        build::build(query, config)
-    }
-}
 
 impl<Id> LinkSide<Id> {
     pub fn is_chunk(&self) -> bool {
