@@ -38,7 +38,7 @@ impl Graph {
         let method_datas = query
             .methods
             .iter()
-            .map(|m| MethodData::new(m, &fixed_bells))
+            .map(|m| MethodData::new(m, &fixed_bells, query))
             .collect::<MethodVec<_>>();
 
         // Generate chunk layout
@@ -120,7 +120,7 @@ impl Graph {
                 (StartOrEnd, Chunk(chunk_id)) => starts.push((*link_id, chunk_id.clone())),
                 (Chunk(chunk_id), StartOrEnd) => ends.push((*link_id, chunk_id.clone())),
                 (Chunk(_), Chunk(_)) => {} // Internal link
-                (StartOrEnd, StartOrEnd) => unreachable!("0-length start->end link found"),
+                (StartOrEnd, StartOrEnd) => unreachable!("Can't have 0-length start->end links"),
             }
         }
 
@@ -403,7 +403,7 @@ fn generate_chunk_lengths<'q>(
     let chunk_factory = ChunkFactory::new(query, method_datas);
 
     // Populate the frontier with start chunks, and add start links to `links`
-    for start_id in find_locations_of_row(&query.start_row, method_datas, Boundary::Start) {
+    for start_id in find_locations_of_row(&query.start_row, Boundary::Start, method_datas) {
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             from: LinkSide::StartOrEnd,
@@ -566,7 +566,7 @@ impl EndLookupTable {
         let mut end_lookup = HashMap::new();
         for part_head in query.part_head_group.rows() {
             let end_row = part_head * &query.end_row;
-            for end_location in find_locations_of_row(&end_row, method_datas, Boundary::End) {
+            for end_location in find_locations_of_row(&end_row, Boundary::End, method_datas) {
                 let method_idx = end_location.method;
                 let method = &method_datas[method_idx].method;
                 // For each end location, any other lead in the same course can also contain an end
@@ -965,10 +965,12 @@ pub(super) struct MethodData<'query> {
     pub(super) method: &'query Method,
     pub(super) plain_course: Block<bellframe::method::RowAnnot<'query>>,
     pub(super) lead_head_masks: Vec<Mask>,
+    start_indices: Vec<usize>,
+    end_indices: Vec<usize>,
 }
 
 impl<'query> MethodData<'query> {
-    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)]) -> Self {
+    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();
@@ -1005,10 +1007,42 @@ impl<'query> MethodData<'query> {
             }
         }
 
+        // Compute exact `{start,end}indices`
+        let wrap_sub_lead_indices = |sub_lead_indices: &[isize]| -> Vec<usize> {
+            sub_lead_indices
+                .iter()
+                .map(|idx| {
+                    let lead_len_i = method.lead_len() as isize;
+                    (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
+                })
+                .collect_vec()
+        };
+        let mut start_indices = wrap_sub_lead_indices(&method.start_indices);
+        let mut end_indices = match &method.end_indices {
+            Some(indices) => wrap_sub_lead_indices(indices),
+            None => (0..method.lead_len()).collect_vec(),
+        };
+        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
+        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
+        // this, we set both `{start,end}_indices` to the union between `start_indices` and
+        // `end_indices`.
+        if query.is_multipart() {
+            let union = start_indices
+                .iter()
+                .filter(|idx| end_indices.contains(idx))
+                .copied()
+                .collect_vec();
+            start_indices = union.clone();
+            end_indices = union;
+        }
+
         Self {
             method,
             plain_course: method.plain_course(),
             lead_head_masks: filtered_lead_head_masks,
+
+            start_indices,
+            end_indices,
         }
     }
 
@@ -1016,31 +1050,29 @@ impl<'query> MethodData<'query> {
     fn is_lead_head(&self, lead_head: &Row) -> bool {
         self.lead_head_masks.iter().any(|m| m.matches(lead_head))
     }
+
+    fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
+        match boundary {
+            Boundary::Start => &self.start_indices,
+            Boundary::End => &self.end_indices,
+        }
+    }
 }
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
 fn find_locations_of_row(
     row: &Row,
-    method_datas: &MethodVec<MethodData>,
     boundary: Boundary,
+    method_datas: &MethodVec<MethodData>,
 ) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut starts = Vec::new();
     for (method_idx, method_data) in method_datas.iter_enumerated() {
-        let m = &method_data.method;
-        let allowed_indices = match boundary {
-            Boundary::Start => m.start_indices.clone(),
-            Boundary::End => match &m.end_indices {
-                Some(idxs) => idxs.clone(),
-                // If `end_indices` isn't specified, then every index within the lead is possible
-                None => (0..m.lead_len() as isize).collect_vec(),
-            },
-        };
-        for sub_lead_idx in allowed_indices {
-            let lead_len_i = m.lead_len() as isize;
-            let sub_lead_idx = (sub_lead_idx % lead_len_i + lead_len_i) as usize % m.lead_len();
-            let lead_head = Row::solve_xa_equals_b(m.row_in_plain_lead(sub_lead_idx), row).unwrap();
+        for &sub_lead_idx in method_data.start_or_end_indices(boundary) {
+            let lead_head =
+                Row::solve_xa_equals_b(method_data.method.row_in_plain_lead(sub_lead_idx), row)
+                    .unwrap();
             // This start is valid if it matches at least one of this method's lead head masks
             if method_data.is_lead_head(&lead_head) {
                 starts.push(ChunkIdInFirstPart {
