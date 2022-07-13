@@ -292,7 +292,7 @@ impl Mask {
     /// Creates a new `Mask` which matches precisely the [`Row`]s matched by both `self` _and_
     /// `other`.  If `self` and `other` aren't [compatible](Self::is_compatible_with), then such a
     /// `Mask` cannot exist and `None` is returned.
-    pub fn combine(&self, other: &Mask) -> Option<Mask> {
+    pub fn intersect(&self, other: &Mask) -> Option<Mask> {
         if !self.is_compatible_with(other) {
             return None;
         }

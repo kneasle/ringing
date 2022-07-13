@@ -6,10 +6,10 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    fmt::{Debug, Formatter},
+    fmt::{Debug, Formatter, Write},
 };
 
-use bellframe::{Mask, Row, RowBuf, Truth};
+use bellframe::{Bell, Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
 use super::{
@@ -56,16 +56,18 @@ impl FalsenessTable {
         chunks: &HashSet<(ChunkId, PerPartLength)>,
         query: &Query,
         method_datas: &MethodVec<MethodData>,
+        fixed_bells: &[(Bell, usize)],
     ) -> Self {
         // Determine which (lead head mask, range) pairs are **actually** used in the graph.  We
         // will produce a 'FCH' tables for every one of these, which will be used as lookups when
         // generating false links.
-        let mut masks_used = HashSet::<(ChunkRange, &Mask)>::new();
+        let mut masks_used = HashSet::<(ChunkRange, Mask)>::new();
         for (method_idx, method_data) in method_datas.iter_enumerated() {
             for lead_head_mask in &method_data.lead_head_masks {
                 for (id, len) in chunks {
                     if id.method == method_idx && lead_head_mask.matches(&id.lead_head) {
-                        masks_used.insert((ChunkRange::new(id.row_idx, *len), lead_head_mask));
+                        masks_used
+                            .insert((ChunkRange::new(id.row_idx, *len), lead_head_mask.clone()));
                     }
                 }
             }
@@ -75,137 +77,33 @@ impl FalsenessTable {
         // against the masks used **in every part** (not just the ones which are used in chunk
         // equivalence classes).  Therefore, we produce a new set of masks to be compared against
         // those in the graph.
-        let masks_used_in_all_parts = masks_used
+        let mut masks_used_in_all_parts = masks_used
             .iter()
             .cartesian_product(query.part_head_group.rows())
-            .map(|(&(range, mask), part_head)| (range, part_head * mask))
+            .map(|((range, mask), part_head)| (*range, part_head * mask))
             .collect::<HashSet<_>>();
 
-        // For every `(range, mask)` pair, group the rows by the locations of the bells in the
-        // mask.  For example, if the mask is `1xxxxx78` then the first few rows of Cornwall would
-        // end up something like:
-        //  Group   ->    Row
-        // 1xxxxx78 -> 12345678
-        // x1xxxx87 -> 21436587
-        // 1xxxxx78 -> 12346578
-        // x1xxxx87 -> 21435687
-        //    ...         ...
-        //
-        // These would be grouped by the LHS into:
-        // 1xxxxx78 -> [12345678, 12346578]
-        // x1xxxx87 -> [21436587, 21435687]
-        //
-        // This is useful because falseness can exist between two rows **only** if their 'group'
-        // masks are compatible.  For example, any rows of the form `xx1xx8x7` can't be false
-        // against a row of the form `x1xxx8x7` because the treble can't be in two places at once.
-        // The time needed to compute falseness tables is quadratic in the sizes of the rows we
-        // have to cross-product together, so it is extremely worthwhile to split large groups of
-        // rows into many smaller groups which can be computed independently.
-        //
-        // In this loop, we also check for `ChunkRange`s which are 'self-false' (i.e. include some
-        // row multiple times).
-        type RowGroups<'m_datas> = HashMap<Mask, Vec<&'m_datas Row>>;
-        let mut self_false_ranges = HashSet::<ChunkRange>::new();
-        let mut row_groups = HashMap::<(ChunkRange, &Mask), RowGroups>::new();
-        'range_mask_loop: for (range, mask) in masks_used_in_all_parts.iter() {
-            let plain_course = &method_datas[range.start.method].plain_course;
+        // For any ranges which have lots of masks, replace those masks with a single 'empty' one
+        // (see doc comment of `reduce_masks` for more info)
+        reduce_masks(
+            &mut masks_used,
+            &mut masks_used_in_all_parts,
+            query,
+            method_datas,
+            fixed_bells,
+        );
 
-            // The chunks with the same `range` are either all self-false or all self-true
-            if self_false_ranges.contains(range) {
-                continue;
-            }
+        // Group rows and compute self-falseness
+        let (self_false_ranges, row_groups) = group_rows(masks_used_in_all_parts, method_datas);
 
-            let mut rows_so_far = HashSet::<&Row>::new();
-            let mut row_groups_for_this_range: RowGroups = HashMap::new();
-            for offset in 0..range.len.as_usize() {
-                let row_index = (range.start.sub_lead_idx + offset) % plain_course.len();
-                let row = plain_course.get_row(row_index).unwrap();
-                // Check for self-falseness.  I.e. if some row is repeated twice within a chunk,
-                // then it's considered 'self-false' and should be removed from the graph
-                if !rows_so_far.insert(row) {
-                    self_false_ranges.insert(*range);
-                    // Don't bother computing falseness against self-false chunks, because they
-                    // will not end up in the graph
-                    continue 'range_mask_loop;
-                }
-                // Group the new row
-                let transposed_mask = mask * row;
-                row_groups_for_this_range
-                    .entry(transposed_mask)
-                    .or_default()
-                    .push(row);
-            }
+        // Compute FCHs between every `(range, le_mask)` combination
+        let false_chunk_transpositions =
+            generate_false_chunk_transpositions(&masks_used, &row_groups);
 
-            row_groups.insert((*range, mask), row_groups_for_this_range);
-        }
-
-        // Sanity check that all self-false ranges don't appear in `row_groups_by_range` (there's
-        // no point computing falseness for them because they can't actually appear in the graph).
-        for (range, _) in row_groups.keys() {
-            assert!(!self_false_ranges.contains(range));
-        }
-
-        // For each (range, mask) used as an equivalence mask in the composition, compute the false
-        // chunk transpositions against every (range, mask) in **every part** of the composition.
-        //
-        // Note that this is the section that causes the quadratic behaviour (created by the heavy
-        // use of `cartesian_product`s).
-        let mut false_chunk_transpositions =
-            HashMap::<(ChunkRange, &Mask), HashMap<(ChunkRange, &Mask), HashSet<RowBuf>>>::new();
-        // For every pair of `(range, mask)`s ...
-        for (range_mask1, (range_mask2, row_groups2)) in
-            masks_used.iter().cartesian_product(&row_groups)
-        {
-            let row_groups1 = match row_groups.get(range_mask1) {
-                Some(rg) => rg,
-                None => continue, // Anything not in `row_groups` is self-false
-            };
-
-            let fch_entry = false_chunk_transpositions
-                .entry(*range_mask1)
-                .or_default()
-                .entry(*range_mask2)
-                .or_default();
-
-            // ... for every pair of row groups within them ...
-            for ((row_mask1, rows1), (row_mask2, rows2)) in
-                row_groups1.iter().cartesian_product(row_groups2)
-            {
-                // ... if the masks are compatible ...
-                if row_mask1.is_compatible_with(row_mask2) {
-                    // ... then falseness is possible and every pair of rows in `rows1 x rows2`
-                    // will generate a false course head between `i1` and `i2`
-                    for (row1, row2) in rows1.iter().cartesian_product(rows2) {
-                        let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
-                        fch_entry.insert(false_course_head);
-                    }
-                }
-            }
-        }
-
-        // Build a `FalsenessEntry` encoding the falseness of that `ChunkRange` to every other
-        let mut falseness_entries = HashMap::<ChunkRange, FalsenessEntry>::new();
-        for range in self_false_ranges {
-            falseness_entries.insert(range, FalsenessEntry::SelfFalse);
-        }
-
-        let mut false_entries_by_range =
-            HashMap::<ChunkRange, Vec<(Mask, Vec<(ChunkRange, RowBuf)>)>>::new();
-        for ((range, mask), false_ranges) in false_chunk_transpositions {
-            let mut false_chunks = Vec::<(ChunkRange, RowBuf)>::new();
-            for ((false_range, _false_mask), false_transpositions) in false_ranges {
-                for transposition in false_transpositions {
-                    false_chunks.push((false_range, transposition));
-                }
-            }
-            false_entries_by_range
-                .entry(range)
-                .or_default()
-                .push((mask.clone(), false_chunks));
-        }
-        for (range, entry) in false_entries_by_range {
-            falseness_entries.insert(range, FalsenessEntry::FalseCourseHeads(entry));
-        }
+        // Combine `self_false_ranges` and `false_chunk_transpositions` into the final
+        // `FalsenessEntry`s
+        let falseness_entries =
+            generate_falseness_entries(self_false_ranges, false_chunk_transpositions);
 
         Self { falseness_entries }
     }
@@ -261,6 +159,238 @@ impl FalsenessTable {
     }
 }
 
+/// Combine the [set](HashSet) of self-false [`ChunkRange`]s with the computed
+/// [`FalseTranspositions`] into a set of [`FalsenessEntry`]s which summarise all the falseness in
+/// the [`Graph`].
+fn generate_falseness_entries(
+    self_false_ranges: HashSet<ChunkRange>,
+    false_chunk_transpositions: FalseTranspositions,
+) -> HashMap<ChunkRange, FalsenessEntry> {
+    let mut falseness_entries = HashMap::<ChunkRange, FalsenessEntry>::new();
+    for range in self_false_ranges {
+        falseness_entries.insert(range, FalsenessEntry::SelfFalse);
+    }
+    let mut false_entries_by_range =
+        HashMap::<ChunkRange, Vec<(Mask, Vec<(ChunkRange, RowBuf)>)>>::new();
+    for ((range, mask), false_ranges) in false_chunk_transpositions {
+        let mut false_chunks = Vec::<(ChunkRange, RowBuf)>::new();
+        for ((false_range, _false_mask), false_transpositions) in false_ranges {
+            for transposition in false_transpositions {
+                false_chunks.push((*false_range, transposition));
+            }
+        }
+        false_entries_by_range
+            .entry(*range)
+            .or_default()
+            .push((mask.clone(), false_chunks));
+    }
+    for (range, entry) in false_entries_by_range {
+        falseness_entries.insert(range, FalsenessEntry::FalseCourseHeads(entry));
+    }
+    falseness_entries
+}
+
+//////////////////////////////////////
+// HELPER FUNCTIONS FOR TABLE BUILD //
+//////////////////////////////////////
+
+type RowGroups<'m_datas> = HashMap<Mask, Vec<&'m_datas Row>>;
+type FalseTranspositions<'masks, 'groups> =
+    HashMap<&'masks (ChunkRange, Mask), HashMap<&'groups (ChunkRange, Mask), HashSet<RowBuf>>>;
+
+/// Optimisation: If some [`ChunkRange`]s have too many corresponding [`Mask`]s, then replace all
+/// the masks with the [empty `Mask`](Mask::empty).  This often happens in e.g. cyclic spliced,
+/// where all chunks are a lead long but often hundreds of lead head masks are generated.
+///
+/// This is worthwhile because falseness generation is quadratic in _two things_:
+///  a) building the table is quadratic in the number of `(range, mask)`
+///  b) setting the links is `O(|nodes| * |fch table entries|)`
+///
+/// Therefore if `(range, mask)`s is _really big_ but there are relatively few nodes, all of the
+/// same length and `sub_lead_idx` (this often happens with e.g. cyclic Maximus), we end up with
+/// the naive table generation being thousands of times slower than setting the links (I had one
+/// search that took 70s for build but only 47ms for links; a difference factor of 1500x).  In
+/// cases like these, making the table build faster at the cost of the link generation is a massive
+/// win overall.
+fn reduce_masks(
+    masks_used: &mut HashSet<(ChunkRange, Mask)>,
+    masks_used_in_all_parts: &mut HashSet<(ChunkRange, Mask)>,
+    query: &Query,
+    method_datas: &MethodVec<MethodData>,
+    fixed_bells: &[(Bell, usize)],
+) {
+    let mut fixed_bell_mask = Mask::empty(query.stage);
+    for &(bell, place) in fixed_bells {
+        fixed_bell_mask
+            .set_bell(bell, place)
+            .expect("Fixed bells shouldn't repeat");
+    }
+
+    // Determine which methods need reducing, and which `ChunkRange` they reduce to
+    let masks_by_range = masks_used_in_all_parts
+        .iter()
+        .into_group_map_by(|(range, _masks)| *range);
+    let reduced_ranges = masks_by_range
+        .into_iter()
+        .filter(|(_range, masks)| masks.len() > 50) // Reduce any range with too many masks
+        .map(|(range, _mask)| range)
+        .collect::<HashSet<_>>();
+
+    // Do the reduction
+    for mask_set in [masks_used_in_all_parts, masks_used] {
+        // Remove existing masks for any `ChunkRange` which we reduced
+        mask_set.retain(|(range, _mask)| !reduced_ranges.contains(range));
+        // In their places, add a single mask containing only fixed bells (e.g. `1xxxxxxxxxxx` for
+        // fixed-treble Maximus).
+        mask_set.extend(
+            reduced_ranges
+                .iter()
+                .map(|range| (*range, fixed_bell_mask.clone())),
+        );
+    }
+
+    // Log what we've done
+    if !reduced_ranges.is_empty() {
+        let fmt_range = |range: &ChunkRange| -> String {
+            let method = &method_datas[range.start.method].method;
+            let mut s = method.shorthand.clone();
+            if range.start.sub_lead_idx == 0 && range.len.as_usize() == method.lead_len() {
+                // Whole lead; don't add any extra annotation
+            } else {
+                // Not a whole lead; annotate it with the sub-lead range
+                write!(
+                    s,
+                    "({:?}+{})",
+                    range.start.sub_lead_idx,
+                    range.len.as_usize()
+                )
+                .unwrap();
+            }
+            s
+        };
+        log::debug!(
+            "Computing all false lead heads for {}",
+            reduced_ranges.iter().map(fmt_range).join(", ")
+        );
+    }
+}
+
+/// For every `(range, mask)` pair, group the rows by the locations of the bells in the mask.  For
+/// example, if the mask is `1xxxxx78` then the first few rows of Cornwall would end up something
+/// like:
+///  Group   ->    Row
+/// 1xxxxx78 -> 12345678
+/// x1xxxx87 -> 21436587
+/// 1xxxxx78 -> 12346578
+/// x1xxxx87 -> 21435687
+///    ...         ...
+///
+/// These would be grouped by the LHS into:
+/// 1xxxxx78 -> [12345678, 12346578]
+/// x1xxxx87 -> [21436587, 21435687]
+///
+/// This is useful because falseness can exist between two rows **only** if their 'group' masks are
+/// compatible.  For example, any rows of the form `xx1xx8x7` can't be false against a row of the
+/// form `x1xxx8x7` because the treble can't be in two places at once.  The time needed to compute
+/// falseness tables is quadratic in the sizes of the rows we have to cross-product together, so it
+/// is extremely worthwhile to split large groups of rows into many smaller groups which can be
+/// computed independently.
+///
+/// In this loop, we also check for `ChunkRange`s which are 'self-false' (i.e. include some row
+/// multiple times).
+fn group_rows<'query>(
+    masks_used_in_all_parts: HashSet<(ChunkRange, Mask)>,
+    method_datas: &'query MethodVec<MethodData<'query>>,
+) -> (
+    HashSet<ChunkRange>,
+    HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&'query Row>>>,
+) {
+    let mut self_false_ranges = HashSet::<ChunkRange>::new();
+    let mut row_groups = HashMap::<(ChunkRange, Mask), RowGroups>::new();
+    'range_mask_loop: for (range, mask) in &masks_used_in_all_parts {
+        let plain_course = &method_datas[range.start.method].plain_course;
+
+        // The chunks with the same `range` are either all self-false or all self-true
+        if self_false_ranges.contains(range) {
+            continue;
+        }
+
+        let mut rows_so_far = HashSet::<&Row>::new();
+        let mut row_groups_for_this_range: RowGroups = HashMap::new();
+        for offset in 0..range.len.as_usize() {
+            let row_index = (range.start.sub_lead_idx + offset) % plain_course.len();
+            let row = plain_course.get_row(row_index).unwrap();
+            // Check for self-falseness.  I.e. if some row is repeated twice within a chunk,
+            // then it's considered 'self-false' and should be removed from the graph
+            if !rows_so_far.insert(row) {
+                self_false_ranges.insert(*range);
+                // Don't bother computing falseness against self-false chunks, because they
+                // will not end up in the graph
+                continue 'range_mask_loop;
+            }
+            // Group the new row
+            let transposed_mask = mask * row;
+            row_groups_for_this_range
+                .entry(transposed_mask)
+                .or_default()
+                .push(row);
+        }
+
+        row_groups.insert((*range, mask.clone()), row_groups_for_this_range);
+    }
+
+    // Sanity check that all self-false ranges don't appear in `row_groups_by_range` (there's no
+    // point computing falseness for them because they can't actually appear in the graph).
+    for (range, _) in row_groups.keys() {
+        assert!(!self_false_ranges.contains(range));
+    }
+
+    (self_false_ranges, row_groups)
+}
+
+/// For each (range, mask) used as an equivalence mask in the composition, compute the false chunk
+/// transpositions against every (range, mask) in **every part** of the composition.
+///
+/// Note that this is the section that causes the quadratic behaviour (created by the heavy use of
+/// `cartesian_product`s).
+fn generate_false_chunk_transpositions<'masks, 'groups>(
+    masks_used: &'masks HashSet<(ChunkRange, Mask)>,
+    row_groups: &'groups HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&Row>>>,
+) -> FalseTranspositions<'masks, 'groups> {
+    let mut false_chunk_transpositions: FalseTranspositions = HashMap::new();
+    // For every pair of `(range, mask)`s ...
+    for (range_mask1, (range_mask2, row_groups2)) in masks_used.iter().cartesian_product(row_groups)
+    {
+        let row_groups1 = match row_groups.get(range_mask1) {
+            Some(rg) => rg,
+            None => continue, // Anything not in `row_groups` is self-false
+        };
+
+        let fch_entry = false_chunk_transpositions
+            .entry(range_mask1)
+            .or_default()
+            .entry(range_mask2)
+            .or_default();
+
+        // ... for every pair of row groups within them ...
+        for ((row_mask1, rows1), (row_mask2, rows2)) in
+            row_groups1.iter().cartesian_product(row_groups2)
+        {
+            // ... if the masks are compatible ...
+            if row_mask1.is_compatible_with(row_mask2) {
+                // ... then falseness is possible and every pair of rows in `rows1 x rows2`
+                // will generate a false course head between `i1` and `i2`
+                for (row1, row2) in rows1.iter().cartesian_product(rows2) {
+                    let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
+                    fch_entry.insert(false_course_head);
+                }
+            }
+        }
+    }
+    false_chunk_transpositions
+}
+
+/// The range of rows covered by some [`Chunk`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct ChunkRange {
     start: RowIdx,

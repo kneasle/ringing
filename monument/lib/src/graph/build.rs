@@ -113,7 +113,13 @@ pub(super) fn build(query: &Query, config: &Config) -> Result<Graph, BuildError>
 
     // Assign falseness links
     if !query.allow_false {
-        compute_falseness(&mut chunks, &mut chunk_equiv_map, query, &method_datas);
+        compute_falseness(
+            &mut chunks,
+            &mut chunk_equiv_map,
+            query,
+            &method_datas,
+            &fixed_bells,
+        );
     }
 
     // Count music
@@ -278,13 +284,15 @@ fn compute_falseness(
     chunk_equiv_map: &mut ChunkEquivalenceMap,
     query: &Query,
     method_datas: &index_vec::IndexVec<MethodIdx, MethodData>,
+    fixed_bells: &[(Bell, usize)],
 ) {
     let start = Instant::now();
     let chunk_ids_and_lengths = chunks
         .iter()
         .map(|(id, chunk)| (id.clone(), chunk.per_part_length))
         .collect::<HashSet<_>>();
-    let falseness_table = FalsenessTable::new(&chunk_ids_and_lengths, query, method_datas);
+    let falseness_table =
+        FalsenessTable::new(&chunk_ids_and_lengths, query, method_datas, fixed_bells);
     log::debug!("  Falseness table built in {:.2?}", start.elapsed());
 
     let start = Instant::now();
@@ -989,14 +997,14 @@ impl<'query> ChunkEquivalenceMap<'query> {
 
 /// Cached data about a single [`Method`], used to speed up chunk generation.
 #[derive(Debug)]
-pub(super) struct MethodData<'source> {
-    pub(super) method: &'source Method,
-    pub(super) plain_course: Block<bellframe::method::RowAnnot<'source>>,
+pub(super) struct MethodData<'query> {
+    pub(super) method: &'query Method,
+    pub(super) plain_course: Block<bellframe::method::RowAnnot<'query>>,
     pub(super) lead_head_masks: Vec<Mask>,
 }
 
-impl<'source> MethodData<'source> {
-    fn new(method: &'source Method, fixed_bells: &[(Bell, usize)]) -> Self {
+impl<'query> MethodData<'query> {
+    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)]) -> Self {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();

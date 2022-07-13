@@ -1,9 +1,15 @@
 ## Unreleased
 
 ### Monument
+- (#112) Refactor `FalsenessTable::new` into multiple helper functions
+- (#112) Massively speed up falseness generation when using custom CHs in cyclic comps, by computing
+    all the false lead heads rather than computing falseness between all pairs of masks.
 - (#110) Exclusively use `{Total,PerPart}Length` to refer to lengths (as opposed to `usize`), thus
     allowing the compiler to spot when we mix them up.
 - (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
+
+### BellFrame
+- (#112) Rename `Mask::combine` to `Mask::intersect`
 
 ---
 
