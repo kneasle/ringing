@@ -432,8 +432,6 @@ pub enum QueryUpdate {
     Comp(Comp),
     /// A thread is sending a status update
     Progress(Progress),
-    /// The queue of prefixes has got too large and is being shortened
-    TruncatingQueue,
     /// The search is being aborted
     Aborting,
 }
@@ -451,6 +449,9 @@ pub struct Progress {
     pub avg_length: f32,
     /// The length of the longest composition in the queue
     pub max_length: TotalLength,
+
+    /// `true` if the search is currently truncating the queue to save memory
+    pub truncating_queue: bool,
 }
 
 impl Progress {
@@ -462,6 +463,8 @@ impl Progress {
         queue_len: 0,
         avg_length: 0.0,
         max_length: TotalLength::ZERO,
+
+        truncating_queue: false,
     };
 }
 

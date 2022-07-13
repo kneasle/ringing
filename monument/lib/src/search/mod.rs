@@ -31,10 +31,23 @@ pub(crate) fn search(
     // Initialise the frontier to just the start chunks
     let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph);
 
-    // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
-    // frontier).
     let mut iter_count = 0;
     let mut num_comps = 0;
+
+    macro_rules! send_progress_update {
+        (truncating_queue = $truncating_queue: expr) => {
+            send_progress_update(
+                &frontier,
+                &mut update_fn,
+                iter_count,
+                num_comps,
+                $truncating_queue,
+            );
+        };
+    }
+
+    // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
+    // frontier).  This is best-first search (and can be A* depending on the cost function used).
     while let Some(prefix) = frontier.pop() {
         let maybe_comp = prefix.expand(&search_data, &mut frontier);
 
@@ -50,8 +63,9 @@ pub(crate) fn search(
 
         // If the queue gets too long, then halve its size
         if frontier.len() >= config.queue_limit {
-            update_fn(QueryUpdate::TruncatingQueue);
+            send_progress_update!(truncating_queue = true);
             truncate_heap(&mut frontier, config.queue_limit / 2);
+            send_progress_update!(truncating_queue = false);
         }
 
         iter_count += 1;
@@ -64,12 +78,12 @@ pub(crate) fn search(
 
         // Send stats every so often
         if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
-            send_progress_update(&frontier, &mut update_fn, iter_count, num_comps);
+            send_progress_update!(truncating_queue = false);
         }
     }
 
     // Always send a final update before finishing
-    send_progress_update(&frontier, &mut update_fn, iter_count, num_comps);
+    send_progress_update!(truncating_queue = false);
 
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
@@ -85,6 +99,7 @@ fn send_progress_update(
     update_fn: &mut impl FnMut(QueryUpdate),
     iter_count: usize,
     num_comps: usize,
+    truncating_queue: bool,
 ) {
     let mut total_len = TotalLength::ZERO;
     let mut max_length = TotalLength::ZERO;
@@ -95,9 +110,16 @@ fn send_progress_update(
     update_fn(QueryUpdate::Progress(Progress {
         iter_count,
         num_comps,
+
         queue_len: frontier.len(),
-        avg_length: total_len.as_usize() as f32 / frontier.len() as f32,
+        avg_length: if frontier.is_empty() {
+            0.0 // Avoid returning `NaN` if the frontier is empty
+        } else {
+            total_len.as_usize() as f32 / frontier.len() as f32
+        },
         max_length,
+
+        truncating_queue,
     }));
 }
 

@@ -211,7 +211,6 @@ struct SingleLineProgressLogger {
     is_first_comp: bool,
 
     last_progress: Progress,
-    is_truncating_queue: bool,
     is_aborting: bool,
     /// The number of characters in the last line we printed.  `UpdateLogger` will use this add
     /// enough spaces to the end of the next message to completely overwrite the last one
@@ -225,7 +224,6 @@ impl SingleLineProgressLogger {
             is_first_comp: true,
 
             last_progress: Progress::START,
-            is_truncating_queue: false,
             is_aborting: false,
             last_line_length: 0,
         }
@@ -275,15 +273,8 @@ impl SingleLineProgressLogger {
     fn update_progress(&mut self, update: QueryUpdate) -> Option<Comp> {
         match update {
             QueryUpdate::Comp(comp) => return Some(comp),
-            QueryUpdate::Progress(progress) => {
-                self.last_progress = progress;
-                self.is_truncating_queue = false;
-            }
-            QueryUpdate::TruncatingQueue => self.is_truncating_queue = true,
-            QueryUpdate::Aborting => {
-                self.is_truncating_queue = false;
-                self.is_aborting = true;
-            }
+            QueryUpdate::Progress(progress) => self.last_progress = progress,
+            QueryUpdate::Aborting => self.is_aborting = true,
         }
         None
     }
@@ -301,12 +292,14 @@ impl SingleLineProgressLogger {
             p.max_length
         )
         .unwrap();
-        buf.push_str(match (self.is_aborting, self.is_truncating_queue) {
-            (false, false) => "",
-            (true, false) => ".  Aborting...",
-            (false, true) => ".  Truncating queue...",
-            (true, true) => unreachable!("Must either be aborting or truncating queue"),
-        });
+        buf.push_str(
+            match (self.is_aborting, self.last_progress.truncating_queue) {
+                (false, false) => "",
+                (true, false) => ".  Aborting...",
+                (false, true) => ".  Truncating queue...",
+                (true, true) => unreachable!("Must either be aborting or truncating queue"),
+            },
+        );
     }
 
     /// Add whitespace to the end of a string to make sure it will cover the last thing we printed.
