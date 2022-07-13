@@ -253,7 +253,7 @@ impl CompPrefix {
         // Handle splices over the part head
         let mut score = self.score;
         let is_splice = first_elem.method != last_elem.method
-            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(data.query);
         let splice_over_part_head = data.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
@@ -264,7 +264,7 @@ impl CompPrefix {
                 .unwrap();
             let end_labels = data.query.methods[last_elem.method]
                 .first_lead()
-                .get_annot(last_elem.end_sub_lead_idx(&data.query))
+                .get_annot(last_elem.end_sub_lead_idx(data.query))
                 .unwrap();
             let is_valid_splice = start_labels.iter().any(|label| end_labels.contains(label));
             if !is_valid_splice {
@@ -292,11 +292,11 @@ impl CompPrefix {
         // Sanity check that the composition is true
         if !data.query.allow_false {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length.as_usize());
-            for row in comp.rows(&data.query).rows() {
+            for row in comp.rows(data.query).rows() {
                 if !rows_so_far.insert(row) {
                     panic!(
                         "Generated false composition ({})",
-                        comp.call_string(&data.query)
+                        comp.call_string(data.query)
                     );
                 }
             }

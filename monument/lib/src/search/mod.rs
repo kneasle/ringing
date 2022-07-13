@@ -1,16 +1,12 @@
 use std::{
     collections::BinaryHeap,
     ops::Range,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc::SyncSender,
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use itertools::Itertools;
 
-use crate::{utils::TotalLength, Progress, Query, QueryUpdate};
+use crate::{utils::TotalLength, Config, Progress, Query, QueryUpdate};
 
 mod graph;
 mod prefix;
@@ -25,11 +21,10 @@ const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(
     graph: &crate::Graph,
-    query: Arc<Query>,
-    queue_limit: usize,
-    mem_forget_search_data: bool,
-    update_channel: SyncSender<QueryUpdate>,
-    abort_flag: Arc<AtomicBool>,
+    query: &Query,
+    config: &Config,
+    mut update_fn: impl FnMut(QueryUpdate),
+    abort_flag: &AtomicBool,
 ) {
     let search_data = SearchData::new(graph, query);
 
@@ -45,7 +40,7 @@ pub(crate) fn search(
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
-            update_channel.send(QueryUpdate::Comp(comp)).unwrap();
+            update_fn(QueryUpdate::Comp(comp));
             num_comps += 1;
 
             if num_comps == search_data.query.num_comps {
@@ -54,32 +49,32 @@ pub(crate) fn search(
         }
 
         // If the queue gets too long, then halve its size
-        if frontier.len() >= queue_limit {
-            update_channel.send(QueryUpdate::TruncatingQueue).unwrap();
-            truncate_heap(&mut frontier, queue_limit / 2);
+        if frontier.len() >= config.queue_limit {
+            update_fn(QueryUpdate::TruncatingQueue);
+            truncate_heap(&mut frontier, config.queue_limit / 2);
         }
 
         iter_count += 1;
 
         // Check for abort every so often
         if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
-            update_channel.send(QueryUpdate::Aborting).unwrap();
+            update_fn(QueryUpdate::Aborting);
             break;
         }
 
         // Send stats every so often
         if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
-            send_progress_update(&frontier, &update_channel, iter_count, num_comps);
+            send_progress_update(&frontier, &mut update_fn, iter_count, num_comps);
         }
     }
 
     // Always send a final update before finishing
-    send_progress_update(&frontier, &update_channel, iter_count, num_comps);
+    send_progress_update(&frontier, &mut update_fn, iter_count, num_comps);
 
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
     // clean up the memory anyway.
-    if mem_forget_search_data {
+    if config.mem_forget_search_data {
         std::mem::forget(search_data);
         std::mem::forget(frontier);
     }
@@ -87,7 +82,7 @@ pub(crate) fn search(
 
 fn send_progress_update(
     frontier: &BinaryHeap<CompPrefix>,
-    update_channel: &SyncSender<QueryUpdate>,
+    update_fn: &mut impl FnMut(QueryUpdate),
     iter_count: usize,
     num_comps: usize,
 ) {
@@ -97,15 +92,13 @@ fn send_progress_update(
         total_len += n.length();
         max_length = max_length.max(n.length());
     });
-    update_channel
-        .send(QueryUpdate::Progress(Progress {
-            iter_count,
-            num_comps,
-            queue_len: frontier.len(),
-            avg_length: total_len.as_usize() as f32 / frontier.len() as f32,
-            max_length,
-        }))
-        .unwrap();
+    update_fn(QueryUpdate::Progress(Progress {
+        iter_count,
+        num_comps,
+        queue_len: frontier.len(),
+        avg_length: total_len.as_usize() as f32 / frontier.len() as f32,
+        max_length,
+    }));
 }
 
 fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
@@ -119,16 +112,16 @@ fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
 }
 
 /// Static, immutable data used for prefix expansion
-struct SearchData {
+struct SearchData<'query> {
     graph: self::graph::Graph,
-    query: Arc<Query>,
+    query: &'query Query,
     method_count_ranges: Vec<Range<usize>>,
 }
 
-impl SearchData {
-    fn new(graph: &crate::Graph, query: Arc<Query>) -> Self {
+impl<'query> SearchData<'query> {
+    fn new(graph: &crate::Graph, query: &'query Query) -> Self {
         Self {
-            graph: self::graph::Graph::new(graph, &query),
+            graph: self::graph::Graph::new(graph, query),
             method_count_ranges: query
                 .methods
                 .iter()

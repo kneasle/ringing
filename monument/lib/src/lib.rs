@@ -23,8 +23,7 @@ use std::{
     ops::Range,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::sync_channel,
-        Arc, Mutex,
+        Mutex,
     },
 };
 
@@ -405,64 +404,24 @@ impl Query {
 
     /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
     /// generate the same overall set of compositions.
-    pub fn optimise_graph(&self, mut graph: Graph, config: &Config) -> Vec<Graph> {
+    pub fn optimise_graph(&self, graph: &mut Graph, config: &Config) {
         graph.optimise(&config.optimisation_passes, self);
-        vec![graph]
     }
 
     /// Given a set of (optimised) graphs, run multi-threaded tree search to generate compositions.
     /// `update_fn` is run whenever a thread generates a [`QueryUpdate`].
     pub fn search(
-        arc_self: Arc<Self>,
-        graphs: Vec<Graph>,
+        &self,
+        graph: Graph,
         config: &Config,
-        mut update_fn: impl FnMut(QueryUpdate) + Send + 'static,
-        abort_flag: Arc<AtomicBool>,
+        update_fn: impl FnMut(QueryUpdate),
+        abort_flag: &AtomicBool,
     ) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
         abort_flag.store(false, Ordering::SeqCst);
-        // Create a new thread which will handle the query updates
-        let (update_tx, update_rx) = sync_channel::<QueryUpdate>(1_000);
-        let update_thread = std::thread::spawn(move || {
-            while let Ok(update) = update_rx.recv() {
-                update_fn(update);
-            }
-        });
-        // Run the search
-        let num_threads = graphs.len();
-        let handles = graphs
-            .into_iter()
-            .map(|graph| {
-                let query = arc_self.clone();
-                let queue_limit = config.queue_limit;
-                let mem_forget_search_data = config.mem_forget_search_data;
-                let abort_flag = abort_flag.clone();
-                let update_channel = update_tx.clone();
-                std::thread::spawn(move || {
-                    search::search(
-                        &graph,
-                        query.clone(),
-                        queue_limit / num_threads,
-                        mem_forget_search_data,
-                        update_channel,
-                        abort_flag,
-                    );
-                })
-            })
-            .collect_vec();
-        // `update_thread` will only terminate once **all** copies of `update_tx` are dropped.
-        // Each worker thread has its own copy, but if we don't explicitly drop this one then
-        // `update_thread` will never terminate (causing the worker thread to hang).
-        drop(update_tx);
-
-        // Wait for all search threads to terminate
-        for h in handles {
-            h.join().unwrap();
-        }
-        // Wait for `update_thread` to terminate
-        update_thread.join().unwrap();
+        search::search(&graph, self, config, update_fn, abort_flag);
     }
 }
 
