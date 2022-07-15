@@ -809,6 +809,30 @@
   "test/cases/error-messages.md: duplicate-shorthand": {
     "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
   },
+  "test/cases/error-messages.md: length-proving::does-not-come-round": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-1": {
+    "error_message": "No compositions can fit the required length range (5000 <= length <= 5200).  The nearest lengths are 4752 and 5280."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-2": {
+    "error_message": "No compositions can fit the required length range (length == 350).  No compositions are possible."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-3": {
+    "error_message": "No compositions can fit the required length range (length == 370).  The nearest length is 360."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-1": {
+    "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (count == 250).  The nearest counts are 226 and 256."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-2": {
+    "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (250 <= count <= 400).  The nearest counts are 224 and 448."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-3": {
+    "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (count <= 300).  The nearest count is 360."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-4": {
+    "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (380 <= count).  The nearest count is 360."
+  },
   "test/cases/error-messages.md: method-not-found::case-1": {
     "error_message": "Can't find \"Brisol Suprise Major\" in the Central Council method library.  Did you mean:\n     \"Bristol Surprise Major\" (Bristol Surprise Major)"
   },

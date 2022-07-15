@@ -337,3 +337,75 @@ method = "Woolly Jumper Alliance Major"
 base_music = "none"
 music = [{ pattern = "*87", stroke = "back" }]
 ```
+
+
+
+## length-proving
+
+### unachievable-length-1
+```toml
+length = "peal" # 5000..=5200 can't be reached without big bobs (5280 can be)
+method = "Cambridge Surprise Maximus"
+bobs_only = true
+```
+
+### unachievable-length-2
+```toml
+length = 350 # Nearest length is just 360
+method = "Bristol Surprise Royal"
+base_calls = "none"
+```
+
+### unachievable-length-3
+```toml
+length = 370 # Nearest length is just 360
+method = "Bristol Surprise Royal"
+base_calls = "none"
+```
+
+### does-not-come-round
+```toml
+length = "practice"
+method = "Bristol Surprise Major"
+base_calls = "none"
+end_row = "12348765" # Not in the plain course of Bristol Major
+```
+
+### unachievable-method-count-1
+```toml
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count = 250 # 224 or 448 are both possible
+```
+
+### unachievable-method-count-2
+```toml
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count = { min = 250, max = 400 } # 224 or 448 are both possible
+part_head = "18234567"
+```
+
+### unachievable-method-count-3
+```toml
+length = { min = 0, max = 500 }
+method = "Clyde Surprise Royal"
+method_count.max = 300 # 360 is the only possible count
+base_calls = "none"
+```
+
+### unachievable-method-count-4
+```toml
+length = { min = 0, max = 500 }
+method = "Clyde Surprise Royal"
+method_count.min = 380 # 360 is the only possible count
+base_calls = "none"
+```
