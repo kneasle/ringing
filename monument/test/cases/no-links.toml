@@ -5,7 +5,7 @@ methods = [
     "Yorkshire Surprise Major",
 ]
 splice_style = "calls"
-method_count.max = 400
+method_count = { min = 0, max = 400 }
 
 base_music = "none"
 music_file = "../music/8.toml"

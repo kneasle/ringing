@@ -861,8 +861,12 @@
     "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
   },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },
-  "test/cases/false-comp.toml": { "comps": [] },
-  "test/cases/false-course-1.toml": { "comps": [] },
+  "test/cases/false-comp.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 700).  No compositions are possible."
+  },
+  "test/cases/false-course-1.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
   "test/cases/false-course-2.toml": {
     "comps": [
       { "length": 290, "string": "WsMBsWsMB>", "avg_score": -0.042419434 },
@@ -2320,7 +2324,9 @@
       { "length": 96, "string": "B[H]", "avg_score": 0.4020691, "part_head": "14235678" }
     ]
   },
-  "test/cases/multipart-self-false.toml": { "comps": [] },
+  "test/cases/multipart-self-false.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
   "test/cases/multipart.toml": {
     "comps": [
       { "length": 192, "string": "HsHH", "avg_score": 0.3447876, "part_head": "12435678" },
@@ -3142,13 +3148,18 @@
   },
   "test/cases/self-false-2.toml": {
     "comps": [
+      { "length": 192, "string": "B[H]B[H]B[sH]B[H]B[H]B[sH]", "avg_score": 0.3447876 },
+      { "length": 192, "string": "B[H]B[sH]B[H]B[H]B[sH]B[H]", "avg_score": 0.3447876 },
+      { "length": 192, "string": "B[sH]B[H]B[H]B[sH]B[H]B[H]", "avg_score": 0.3447876 },
       { "length": 128, "string": "B[H]B[sH]B[H]B[sH]", "avg_score": 0.3656311 },
       { "length": 96, "string": "B[H]B[H]B[H]", "avg_score": 0.4020691 },
       { "length": 128, "string": "B[sH]B[H]B[sH]B[H]", "avg_score": 0.4203186 },
       { "length": 64, "string": "B[sH]B[sH]", "avg_score": 0.5375061 }
     ]
   },
-  "test/cases/self-false-3.toml": { "comps": [] },
+  "test/cases/self-false-3.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 500).  No compositions are possible."
+  },
   "test/cases/singles-only.toml": {
     "comps": [
       { "length": 224, "string": "sMsHsMsH", "avg_score": -0.04107666 },

@@ -35,7 +35,6 @@ pub struct Graph {
     chunks: HashMap<ChunkId, Chunk>,
     links: LinkSet,
 
-    // TODO: Can we get away without having these?
     /// Lookup table for the [`Link`]s which can start a composition, along with the [`ChunkId`]s
     /// that they lead to
     ///
@@ -109,15 +108,23 @@ pub struct Link {
     pub ph_rotation_back: PhRotation,
 }
 
+impl Link {
+    pub fn is_start(&self) -> bool {
+        self.from.is_start_or_end()
+    }
+
+    pub fn is_end(&self) -> bool {
+        self.to.is_start_or_end()
+    }
+}
+
 /// What a `Link` points to.  This is either a [`StartOrEnd`](Self::StartOrEnd), or a specific
 /// [`Chunk`](Self::Chunk).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LinkSide<Id> {
     StartOrEnd,
     Chunk(Id),
 }
-
-// ------------------------------------------------------------------------------------------
 
 impl<Id> LinkSide<Id> {
     pub fn is_chunk(&self) -> bool {
@@ -132,6 +139,13 @@ impl<Id> LinkSide<Id> {
         match self {
             Self::Chunk(c) => Some(c),
             Self::StartOrEnd => None,
+        }
+    }
+
+    pub fn as_ref(&self) -> LinkSide<&Id> {
+        match self {
+            Self::StartOrEnd => LinkSide::StartOrEnd,
+            Self::Chunk(c) => LinkSide::Chunk(c),
         }
     }
 
@@ -423,6 +437,18 @@ impl Chunk {
 
     pub fn predecessors_mut(&mut self) -> &mut Vec<LinkId> {
         &mut self.predecessors
+    }
+
+    pub fn pred_links<'g>(&'g self, graph: &'g Graph) -> impl Iterator<Item = (LinkId, &'g Link)> {
+        self.predecessors
+            .iter()
+            .filter_map(|&id| graph.get_link(id).map(|l| (id, l)))
+    }
+
+    pub fn succ_links<'g>(&'g self, graph: &'g Graph) -> impl Iterator<Item = (LinkId, &'g Link)> {
+        self.successors
+            .iter()
+            .filter_map(|&id| graph.get_link(id).map(|l| (id, l)))
     }
 
     pub fn false_chunks(&self) -> &[ChunkId] {

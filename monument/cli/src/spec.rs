@@ -1,10 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Write,
-    ops::{self, Deref, Range},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, time::Duration};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -30,8 +24,6 @@ use crate::{
 };
 
 use self::length::Length;
-
-const METHOD_BALANCE_ALLOWANCE: f32 = 0.1; // By how much the method balance is allowed to vary
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
@@ -199,19 +191,12 @@ impl Spec {
         let calls = self.calls(stage)?;
 
         // Generate extra method data
-        let is_spliced = loaded_methods.len() > 1;
         let shorthands = monument::utils::default_shorthands(
             loaded_methods
                 .iter()
                 .map(|(m, common)| (m.title(), common.shorthand.as_deref())),
         );
-        let method_count = OptRange::from(self.method_count).or_range(&default_method_count(
-            loaded_methods.len(),
-            &self.length.range,
-        ));
-        if is_spliced {
-            log::info!("method count range: {:?}", method_count);
-        }
+        let global_method_count = OptRange::from(self.method_count);
         // Combine method data
         let mut methods = MethodVec::new();
         #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
@@ -219,12 +204,7 @@ impl Spec {
             let override_ch_masks = common
                 .course_heads
                 .map(|chs| parse_ch_masks(&chs, stage))
-                .transpose()?; // Maps `Option<Result<T, E>>` to `Option<T>`
-            let explicit_count_range = OptRange::from(common.count_range);
-            let count_range = explicit_count_range.or_range(&method_count);
-            if is_spliced && explicit_count_range.is_set() {
-                log::info!("count range for {:<2}: {:?}", shorthand, count_range);
-            }
+                .transpose()?;
             // Determine the start_indices
             let custom_start_indices = common
                 .start_indices
@@ -240,7 +220,7 @@ impl Spec {
                 inner: method,
                 ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
-                count_range,
+                count_range: OptRange::from(common.count_range).or(global_method_count),
                 start_indices,
                 end_indices: common
                     .end_indices
@@ -261,10 +241,7 @@ impl Spec {
 
         // Build this layout into a `Graph`
         Ok(Query {
-            len_range: Range {
-                start: TotalLength::new(self.length.range.start),
-                end: TotalLength::new(self.length.range.end),
-            },
+            len_range: (&self.length).into(),
             num_comps: self.num_comps,
             allow_false: self.allow_false,
             stage,
@@ -441,15 +418,6 @@ fn tenors_together_mask(stage: Stage) -> Mask {
         fixed_bells.extend(stage.bells().skip(6));
     }
     Mask::fix_bells(stage, fixed_bells)
-}
-
-/// Determine a suitable default range in which method counts must lie, thus enforcing decent
-/// method balance.
-fn default_method_count(num_methods: usize, len_range: &ops::Range<usize>) -> ops::Range<usize> {
-    let min_f32 = len_range.start as f32 / num_methods as f32 * (1.0 - METHOD_BALANCE_ALLOWANCE);
-    let max_f32 = len_range.end as f32 / num_methods as f32 * (1.0 + METHOD_BALANCE_ALLOWANCE);
-    // + 1 because the `method_count` is an **inclusive** range
-    (min_f32.floor() as usize)..(max_f32.ceil() as usize + 1)
 }
 
 ///////////////
@@ -728,6 +696,7 @@ mod length {
         ops::{Range, RangeInclusive},
     };
 
+    use monument::utils::TotalLength;
     use serde::{
         de::{Error, MapAccess, Visitor},
         Deserialize, Deserializer,
@@ -744,37 +713,43 @@ mod length {
     #[derive(Debug, Clone)]
     #[repr(transparent)]
     pub(super) struct Length {
-        pub(super) range: Range<usize>,
+        pub(super) range: RangeInclusive<usize>,
     }
 
     // Convert Length to a ranges
-    impl From<Length> for Range<usize> {
+    impl From<&Length> for RangeInclusive<TotalLength> {
         #[inline(always)]
-        fn from(l: Length) -> Range<usize> {
-            l.range
+        fn from(l: &Length) -> RangeInclusive<TotalLength> {
+            let start = TotalLength::new(*l.range.start());
+            let end = TotalLength::new(*l.range.end());
+            start..=end
         }
     }
+
+    /////////////
+    // PARSING //
+    /////////////
 
     impl From<usize> for Length {
         #[inline(always)]
         fn from(v: usize) -> Length {
-            Length { range: v..v + 1 }
+            Length { range: v..=v }
         }
     }
 
     impl From<Range<usize>> for Length {
         #[inline(always)]
         fn from(r: Range<usize>) -> Length {
-            Length { range: r }
+            Length {
+                range: r.start..=r.end - 1,
+            }
         }
     }
 
     impl From<RangeInclusive<usize>> for Length {
         #[inline(always)]
-        fn from(r: RangeInclusive<usize>) -> Length {
-            Length {
-                range: *r.start()..r.end() + 1,
-            }
+        fn from(range: RangeInclusive<usize>) -> Length {
+            Length { range }
         }
     }
 

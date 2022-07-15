@@ -1,5 +1,7 @@
 length = "practice"
 methods = ["Bristol Surprise Major", "Yorkshire Surprise Major"]
+method_count = { min = 32, max = 160 }
+
 base_calls = "none"
 allow_false = true
 

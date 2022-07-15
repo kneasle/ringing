@@ -1,5 +1,7 @@
 length = { min = 0, max = 500 }
 methods = ["Plain Bob Major", "Little Bob Major"]
+method_count = { min = 0, max = 270 }
+
 part_head = "13456782"
 
 base_music = "none"

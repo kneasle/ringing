@@ -28,6 +28,10 @@ macro_rules! impl_length {
                 Self(l as u32)
             }
 
+            pub fn as_u32(self) -> u32 {
+                self.0
+            }
+
             pub fn as_usize(self) -> usize {
                 self.0 as usize
             }
@@ -42,12 +46,14 @@ macro_rules! impl_length {
         impl Sub for $name {
             type Output = Self;
 
+            #[track_caller]
             fn sub(self, rhs: Self) -> Self {
                 Self(self.0 - rhs.0)
             }
         }
 
         impl SubAssign for $name {
+            #[track_caller]
             fn sub_assign(&mut self, rhs: Self) {
                 self.0 -= rhs.0
             }
@@ -56,12 +62,14 @@ macro_rules! impl_length {
         impl Add for $name {
             type Output = Self;
 
+            #[track_caller]
             fn add(self, rhs: Self) -> Self {
                 Self(self.0 + rhs.0)
             }
         }
 
         impl AddAssign for $name {
+            #[track_caller]
             fn add_assign(&mut self, rhs: Self) {
                 self.0 += rhs.0
             }

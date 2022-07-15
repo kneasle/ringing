@@ -4,6 +4,7 @@
 
 length = "practice"
 methods = ["Plain Bob Major", "Little Bob Major"]
+method_count = { min = 0, max = 200 }
 base_calls = "none"
 
 base_music = "none"

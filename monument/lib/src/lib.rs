@@ -5,11 +5,14 @@
 
 pub mod graph;
 pub mod music;
+mod prove_length;
 mod search;
 pub mod utils;
 
-use serde::Deserialize;
+pub use prove_length::RefinedRanges;
 pub use utils::OptRange;
+
+use serde::Deserialize;
 
 use itertools::Itertools;
 use music::Score;
@@ -21,7 +24,7 @@ use utils::{
 use std::{
     fmt::{Display, Formatter},
     hash::Hash,
-    ops::Range,
+    ops::RangeInclusive,
     sync::{
         atomic::{AtomicBool, Ordering},
         Mutex,
@@ -38,7 +41,7 @@ use graph::{optimise::Pass, Graph};
 #[derive(Debug, Clone)]
 pub struct Query {
     // GENERAL
-    pub len_range: Range<TotalLength>,
+    pub len_range: RangeInclusive<TotalLength>,
     pub num_comps: usize,
     pub allow_false: bool,
     pub stage: Stage,
@@ -92,8 +95,8 @@ pub struct Method {
     pub inner: bellframe::Method,
     pub shorthand: String,
 
-    /// The number of rows of this method must fit within this [`Range`]
-    pub count_range: Range<usize>,
+    /// The number of rows of this method must fit within this range
+    pub count_range: OptRange,
     /// The indices in which we can start a composition during this `Method`.  `None` means any
     /// index is allowed (provided the CH masks are satisfied).  These are interpreted modulo the
     /// lead length of the method.
@@ -203,19 +206,9 @@ impl Default for Config {
 /// The different ways that graph building can fail
 #[derive(Debug)]
 pub enum Error {
-    /// The given maximum graph size limit was reached
-    SizeLimit(usize),
+    /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
-    /// The same [`Chunk`](graph::Chunk) could start at two different strokes, and some
-    /// [`MusicType`](crate::music::MusicType) relies on that
-    InconsistentStroke,
-    /// Some [`Call`](crate::Call) doesn't have enough calling positions to cover the [`Stage`]
-    WrongCallingPositionsLength {
-        call_name: String,
-        calling_position_len: usize,
-        stage: Stage,
-    },
     /// Some [`Call`](crate::Call) refers to a lead location that doesn't exist
     UndefinedLeadLocation { call_name: String, label: String },
     /// [`Query`] didn't define any [`Method`]s
@@ -231,6 +224,34 @@ pub enum Error {
         part_head: RowBuf,
         mask_in_other_part: Mask,
     },
+    /// Some [`Call`](crate::Call) doesn't have enough calling positions to cover the [`Stage`]
+    WrongCallingPositionsLength {
+        call_name: String,
+        calling_position_len: usize,
+        stage: Stage,
+    },
+
+    /* GRAPH BUILD ERRORS */
+    /// The given maximum graph size limit was reached
+    SizeLimit(usize),
+    /// The same [`Chunk`](graph::Chunk) could start at two different strokes, and some
+    /// [`MusicType`](crate::music::MusicType) relies on that
+    InconsistentStroke,
+
+    /* LENGTH PROVING ERRORS */
+    /// The requested length range isn't achievable
+    UnachievableLength {
+        requested_range: RangeInclusive<TotalLength>,
+        next_shorter_len: Option<TotalLength>,
+        next_longer_len: Option<TotalLength>,
+    },
+    /// Some method range isn't achievable
+    UnachievableMethodCount {
+        method_name: String,
+        requested_range: OptRange,
+        next_shorter_len: Option<TotalLength>,
+        next_longer_len: Option<TotalLength>,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -238,20 +259,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::SizeLimit(limit) => write!(
-                f,
-                "Graph size limit of {} chunks reached.  You can set it \
-higher with `--graph-size-limit <n>`.",
-                limit
-            ),
             Error::DifferentStartEndRowInMultipart => {
                 write!(f, "Start/end rows must be the same for multipart comps")
             }
-            Error::InconsistentStroke => write!(
-                f,
-                "The same chunk of ringing can be at multiple strokes, probably \
-because you're using a method with odd-length leads"
-            ),
             Error::NoMethods => write!(f, "Can't have a composition with no methods"),
             Error::WrongCallingPositionsLength {
                 call_name,
@@ -294,8 +304,92 @@ because you're using a method with odd-length leads"
                     mask_in_other_part
                 )
             }
+
+            /* GRAPH BUILD ERRORS */
+            Error::SizeLimit(limit) => write!(
+                f,
+                "Graph size limit of {} chunks reached.  You can set it \
+higher with `--graph-size-limit <n>`.",
+                limit
+            ),
+            Error::InconsistentStroke => write!(
+                f,
+                "The same chunk of ringing can be at multiple strokes, probably \
+because you're using a method with odd-length leads"
+            ),
+
+            /* LENGTH PROVING ERRORS */
+            Error::UnachievableLength {
+                requested_range,
+                next_shorter_len,
+                next_longer_len,
+            } => {
+                write!(f, "No compositions can fit the required length range (")?;
+                write_range(
+                    f,
+                    "length",
+                    Some(*requested_range.start()),
+                    Some(*requested_range.end()),
+                )?;
+                write!(f, ").  ")?;
+                match (next_shorter_len, next_longer_len) {
+                    (Some(l1), Some(l2)) => write!(f, "The nearest lengths are {l1} and {l2}."),
+                    (Some(l), None) | (None, Some(l)) => write!(f, "The nearest length is {l}."),
+                    // TODO: Give this its own error?
+                    (None, None) => write!(f, "No compositions are possible."),
+                }
+            }
+            Error::UnachievableMethodCount {
+                method_name,
+                requested_range,
+                next_shorter_len,
+                next_longer_len,
+            } => {
+                assert_ne!((requested_range.min, requested_range.max), (None, None));
+
+                // Write the bulk of the error message with an inequality for the range (e.g.
+                //
+                // `{min} <= count <= {max}` or `{min} <= count`
+                write!(
+                    f,
+                    "No method counts for {:?} satisfy the requested range (",
+                    method_name,
+                )?;
+                write_range(f, "count", requested_range.min, requested_range.max)?;
+                write!(f, ").  ")?;
+                // Describe the nearest ranges
+                match (next_shorter_len, next_longer_len) {
+                    (Some(l1), Some(l2)) => write!(f, "The nearest counts are {l1} and {l2}."),
+                    (Some(l), None) | (None, Some(l)) => write!(f, "The nearest count is {l}."),
+                    (None, None) => unreachable!(), // Method count of 0 is always possible
+                }
+            }
         }
     }
+}
+
+/// Prettily format a (possibly open) inclusive range as an inequality (e.g. `300 <= count <= 500`)
+fn write_range<T: Ord + Display>(
+    f: &mut impl std::fmt::Write,
+    name: &str,
+    min: Option<T>,
+    max: Option<T>,
+) -> std::fmt::Result {
+    match (min, max) {
+        // Write e.g. `224 <= count <= 224` as `count == 224`
+        (Some(min), Some(max)) if min == max => write!(f, "{name} == {min}")?,
+        // Otherwise write everything as an inequality
+        (min, max) => {
+            if let Some(min) = min {
+                write!(f, "{min} <= ")?;
+            }
+            write!(f, "{name}")?;
+            if let Some(max) = max {
+                write!(f, " <= {max}")?;
+            }
+        }
+    }
+    Ok(())
 }
 
 impl std::error::Error for Error {}
@@ -507,7 +601,7 @@ impl std::fmt::Display for DisplayComp<'_> {
 ////////////
 
 impl Query {
-    pub fn unoptimised_graph(&self, config: &Config) -> self::Result<Graph> {
+    pub fn unoptimised_graph(&self, config: &Config) -> crate::Result<Graph> {
         graph::Graph::new(self, config)
     }
 
@@ -517,11 +611,17 @@ impl Query {
         graph.optimise(&config.optimisation_passes, self);
     }
 
+    /// Prove which lengths/method counts are actually possible
+    pub fn refine_ranges(&self, graph: &Graph) -> crate::Result<RefinedRanges> {
+        prove_length::prove_lengths(graph, self)
+    }
+
     /// Given a set of (optimised) graphs, run multi-threaded tree search to generate compositions.
     /// `update_fn` is run whenever a thread generates a [`QueryUpdate`].
     pub fn search(
         &self,
         graph: Graph,
+        refined_ranges: RefinedRanges,
         config: &Config,
         update_fn: impl FnMut(QueryUpdate),
         abort_flag: &AtomicBool,
@@ -530,7 +630,7 @@ impl Query {
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
         abort_flag.store(false, Ordering::SeqCst);
-        search::search(&graph, self, config, update_fn, abort_flag);
+        search::search(&graph, self, config, refined_ranges, update_fn, abort_flag);
     }
 }
 
