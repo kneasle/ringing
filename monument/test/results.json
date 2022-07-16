@@ -812,6 +812,12 @@
   "test/cases/error-messages.md: length-proving::does-not-come-round": {
     "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
   },
+  "test/cases/error-messages.md: length-proving::invalid-method-counts-1": {
+    "error_message": "Not enough method counts; the composition needs at least 1344 rows but the methods can make at most 672."
+  },
+  "test/cases/error-messages.md: length-proving::invalid-method-counts-2": {
+    "error_message": "Too much method counts; the method counts need at least 2016 rows, but at most 1344 rows are available."
+  },
   "test/cases/error-messages.md: length-proving::unachievable-length-1": {
     "error_message": "No compositions can fit the required length range (5000 <= length <= 5200).  The nearest lengths are 4752 and 5280."
   },

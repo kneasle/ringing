@@ -252,6 +252,15 @@ pub enum Error {
         next_shorter_len: Option<TotalLength>,
         next_longer_len: Option<TotalLength>,
     },
+    /// The total of the minimum method counts is longer than the composition
+    TooMuchMethodCount {
+        min_total_method_count: TotalLength,
+        max_length: TotalLength,
+    },
+    TooLittleMethodCount {
+        max_total_method_count: TotalLength,
+        min_length: TotalLength,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -332,6 +341,7 @@ because you're using a method with odd-length leads"
                     Some(*requested_range.end()),
                 )?;
                 write!(f, ").  ")?;
+                // Describe the nearest composition length(s)
                 match (next_shorter_len, next_longer_len) {
                     (Some(l1), Some(l2)) => write!(f, "The nearest lengths are {l1} and {l2}."),
                     (Some(l), None) | (None, Some(l)) => write!(f, "The nearest length is {l}."),
@@ -347,9 +357,6 @@ because you're using a method with odd-length leads"
             } => {
                 assert_ne!((requested_range.min, requested_range.max), (None, None));
 
-                // Write the bulk of the error message with an inequality for the range (e.g.
-                //
-                // `{min} <= count <= {max}` or `{min} <= count`
                 write!(
                     f,
                     "No method counts for {:?} satisfy the requested range (",
@@ -357,12 +364,35 @@ because you're using a method with odd-length leads"
                 )?;
                 write_range(f, "count", requested_range.min, requested_range.max)?;
                 write!(f, ").  ")?;
-                // Describe the nearest ranges
+                // Describe the nearest method counts
                 match (next_shorter_len, next_longer_len) {
                     (Some(l1), Some(l2)) => write!(f, "The nearest counts are {l1} and {l2}."),
                     (Some(l), None) | (None, Some(l)) => write!(f, "The nearest count is {l}."),
                     (None, None) => unreachable!(), // Method count of 0 is always possible
                 }
+            }
+            Error::TooMuchMethodCount {
+                min_total_method_count,
+                max_length,
+            } => {
+                write!(f, "Too much method counts; the method counts need at least")?;
+                write!(
+                    f,
+                    " {min_total_method_count} rows, but at most {max_length} rows are available."
+                )
+            }
+            Error::TooLittleMethodCount {
+                max_total_method_count,
+                min_length,
+            } => {
+                write!(
+                    f,
+                    "Not enough method counts; the composition needs at least {min_length} rows"
+                )?;
+                write!(
+                    f,
+                    " but the methods can make at most {max_total_method_count}."
+                )
             }
         }
     }

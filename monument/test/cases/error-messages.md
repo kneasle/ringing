@@ -409,3 +409,27 @@ method = "Clyde Surprise Royal"
 method_count.min = 380 # 360 is the only possible count
 base_calls = "none"
 ```
+
+### invalid-method-counts-1
+```toml
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count.max = 300 # At least 448 of each method are required
+part_head = "18234567"
+```
+
+### invalid-method-counts-2
+```toml
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count.min = 500 # 500 of each method makes 1500 rows, which is longer than a QP
+part_head = "18234567"
+```

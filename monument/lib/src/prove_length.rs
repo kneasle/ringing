@@ -31,10 +31,10 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     /* TOTAL LENGTH */
 
     // Work out which lengths are possible
-    let total_lengths = possible_lengths(graph, query);
+    let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&total_lengths, &query.len_range) {
+    let refined_len_range = match matching_lengths(&possible_lengths, query.len_range.clone()) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -73,11 +73,11 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     let method_bounds_max = method_bounds(query, &refined_len_range, Bound::Max);
     // Combine all the information to compute the true method bounds
     let mut refined_method_counts = MethodVec::new();
-    for (method_idx, possible_lengths) in possible_lengths_by_method.iter_enumerated() {
+    for (method_idx, possible_lengths) in possible_lengths_by_method.into_iter_enumerated() {
         let min_bound = method_bounds_min[method_idx];
         let max_bound = method_bounds_max[method_idx];
         let method = &query.methods[method_idx];
-        let refined_counts = refine_method_counts(min_bound, max_bound, possible_lengths, method)?;
+        let refined_counts = refine_method_counts(min_bound, max_bound, &possible_lengths, method)?;
         refined_method_counts.push(refined_counts);
     }
     log::debug!("  Method count ranges computed in {:.2?}", start.elapsed());
@@ -86,6 +86,9 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     if query.is_spliced() {
         print_method_counts(&refined_method_counts, query);
     }
+
+    // Check for clearly impossible method bounds
+    check_final_bounds(&refined_method_counts, &refined_len_range)?;
 
     Ok(RefinedRanges {
         length: refined_len_range,
@@ -306,7 +309,7 @@ fn possible_method_counts(
     //                     │         │││  │ ╭──╮ │
     //                     │         VVV  V V  │ │
     //                     │   ┍━━━━━━━━━━━━━┑ │ │
-    //  (start_end_counts) │   │    graph    | | │ (internal_counts)
+    //  (start_end_counts) │   │  all chunks | | │ (internal_counts)
     //                     │   ┕━━━━━━━━━━━━━┙ │ |
     //                     │         │││  │ ╰──╯ │
     //                     │         │││  ╰──────╯
@@ -500,7 +503,7 @@ fn refine_method_counts(
     }
 
     // Refine the ranges
-    let matching_lengths = matching_lengths(possible_lengths, &(min_len..=max_len));
+    let matching_lengths = matching_lengths(possible_lengths, min_len..=max_len);
     log::trace!(
         "  Matching lengths: {} < {}{} <= {} <= {}{} < {}",
         match matching_lengths.next_smaller {
@@ -623,10 +626,53 @@ enum BoundType {
     Preferred,
 }
 
+///////////////////////////
+// FINAL BOUNDS CHECKING //
+///////////////////////////
+
+/// Given the method count and length ranges, check that the total method count and the length
+/// range overlap (e.g. this will error if we're composing a peal but the total method count is
+/// 4000 rows).
+fn check_final_bounds(
+    method_counts: &MethodVec<RangeInclusive<TotalLength>>,
+    length_range: &RangeInclusive<TotalLength>,
+) -> crate::Result<()> {
+    let min_total_method_count = method_counts
+        .iter()
+        .map(|range| *range.start())
+        .sum::<TotalLength>();
+    let max_total_method_count = method_counts
+        .iter()
+        .map(|range| *range.end())
+        .sum::<TotalLength>();
+    let min_length = *length_range.start();
+    let max_length = *length_range.end();
+
+    // Check for clearly unachievable bounds
+    if max_total_method_count < min_length {
+        // Even if all the method bounds are maxed out, we still can't reach the minimum range
+        return Err(crate::Error::TooLittleMethodCount {
+            max_total_method_count,
+            min_length,
+        });
+    }
+    if min_total_method_count > max_length {
+        // Even if the maximum length is rung, we don't have enough rows to satisfy the method
+        // counts
+        return Err(crate::Error::TooMuchMethodCount {
+            min_total_method_count,
+            max_length,
+        });
+    }
+
+    Ok(())
+}
+
 /////////////////////
 // LENGTH MATCHING //
 /////////////////////
 
+#[derive(Debug)]
 struct LengthMatches {
     next_smaller: Option<TotalLength>,
     range: Option<RangeInclusive<TotalLength>>,
@@ -636,7 +682,7 @@ struct LengthMatches {
 /// Refine the length range based on what lengths are actually possible, returning an
 /// [`Error`](crate::Error) if no lengths are possible.  For example, a peal of T/D Major will have
 /// its length refined from `5000..=5200` to `5024..=5186`.
-fn matching_lengths(lengths: &[TotalLength], range: &RangeInclusive<TotalLength>) -> LengthMatches {
+fn matching_lengths(lengths: &[TotalLength], range: RangeInclusive<TotalLength>) -> LengthMatches {
     let mut next_smaller = None;
     let mut min = None;
     let mut max = None;

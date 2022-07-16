@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::{
+    iter::Sum,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
 
 use super::group::PartHeadGroup;
 
@@ -72,6 +75,16 @@ macro_rules! impl_length {
             #[track_caller]
             fn add_assign(&mut self, rhs: Self) {
                 self.0 += rhs.0
+            }
+        }
+
+        impl Sum for $name {
+            fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+                let mut total = Self::ZERO;
+                for v in iter {
+                    total += v;
+                }
+                total
             }
         }
     };
