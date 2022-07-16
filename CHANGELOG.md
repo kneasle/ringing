@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Monument
+- (#115) Demote 'default music' message from `WARN` to `INFO`.
 - (#113) Remove unnecessary threading from the search code (which can currently only use one thread
     anyway).
 - (#112) Refactor `FalsenessTable::new` into multiple helper functions
@@ -11,6 +12,9 @@
 - (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
 
 ### BellFrame
+- (#115) Remove unnecessary `unsafe` in `bellframe::music`.
+- (#115) Fix integer underflow when computing internal runs.
+- (#115) Implement `Ord` for `Mask`
 - (#112) Rename `Mask::combine` to `Mask::intersect`
 
 ---
