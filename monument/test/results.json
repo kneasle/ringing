@@ -809,6 +809,36 @@
   "test/cases/error-messages.md: duplicate-shorthand": {
     "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
   },
+  "test/cases/error-messages.md: length-proving::does-not-come-round": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
+  "test/cases/error-messages.md: length-proving::invalid-method-counts-1": {
+    "error_message": "Not enough method counts; the composition needs at least 1344 rows but the methods can make at most 672."
+  },
+  "test/cases/error-messages.md: length-proving::invalid-method-counts-2": {
+    "error_message": "Too much method counts; the method counts need at least 2016 rows, but at most 1344 rows are available."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-1": {
+    "error_message": "No compositions can fit the required length range (5000 <= length <= 5200).  The nearest lengths are 4752 and 5280."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-2": {
+    "error_message": "No compositions can fit the required length range (length == 350).  No compositions are possible."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-length-3": {
+    "error_message": "No compositions can fit the required length range (length == 370).  The nearest length is 360."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-1": {
+    "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (count == 250).  The nearest counts are 226 and 256."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-2": {
+    "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (250 <= count <= 400).  The nearest counts are 224 and 448."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-3": {
+    "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (count <= 300).  The nearest count is 360."
+  },
+  "test/cases/error-messages.md: length-proving::unachievable-method-count-4": {
+    "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (380 <= count).  The nearest count is 360."
+  },
   "test/cases/error-messages.md: method-not-found::case-1": {
     "error_message": "Can't find \"Brisol Suprise Major\" in the Central Council method library.  Did you mean:\n     \"Bristol Surprise Major\" (Bristol Surprise Major)"
   },
@@ -861,8 +891,12 @@
     "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
   },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },
-  "test/cases/false-comp.toml": { "comps": [] },
-  "test/cases/false-course-1.toml": { "comps": [] },
+  "test/cases/false-comp.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 700).  No compositions are possible."
+  },
+  "test/cases/false-course-1.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
   "test/cases/false-course-2.toml": {
     "comps": [
       { "length": 290, "string": "WsMBsWsMB>", "avg_score": -0.042419434 },
@@ -2320,7 +2354,9 @@
       { "length": 96, "string": "B[H]", "avg_score": 0.4020691, "part_head": "14235678" }
     ]
   },
-  "test/cases/multipart-self-false.toml": { "comps": [] },
+  "test/cases/multipart-self-false.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
+  },
   "test/cases/multipart.toml": {
     "comps": [
       { "length": 192, "string": "HsHH", "avg_score": 0.3447876, "part_head": "12435678" },
@@ -3142,13 +3178,18 @@
   },
   "test/cases/self-false-2.toml": {
     "comps": [
+      { "length": 192, "string": "B[H]B[H]B[sH]B[H]B[H]B[sH]", "avg_score": 0.3447876 },
+      { "length": 192, "string": "B[H]B[sH]B[H]B[H]B[sH]B[H]", "avg_score": 0.3447876 },
+      { "length": 192, "string": "B[sH]B[H]B[H]B[sH]B[H]B[H]", "avg_score": 0.3447876 },
       { "length": 128, "string": "B[H]B[sH]B[H]B[sH]", "avg_score": 0.3656311 },
       { "length": 96, "string": "B[H]B[H]B[H]", "avg_score": 0.4020691 },
       { "length": 128, "string": "B[sH]B[H]B[sH]B[H]", "avg_score": 0.4203186 },
       { "length": 64, "string": "B[sH]B[sH]", "avg_score": 0.5375061 }
     ]
   },
-  "test/cases/self-false-3.toml": { "comps": [] },
+  "test/cases/self-false-3.toml": {
+    "error_message": "No compositions can fit the required length range (0 <= length <= 500).  No compositions are possible."
+  },
   "test/cases/singles-only.toml": {
     "comps": [
       { "length": 224, "string": "sMsHsMsH", "avg_score": -0.04107666 },

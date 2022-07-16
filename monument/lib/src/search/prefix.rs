@@ -177,7 +177,7 @@ impl CompPrefix {
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
 
-        let max_length = data.query.len_range.end;
+        let max_length = *data.ranges.length.end();
         for (succ_idx, link) in chunk.succs.iter_enumerated() {
             let rotation = part_head * link.ph_rotation;
             let score = score + link.score;
@@ -189,7 +189,7 @@ impl CompPrefix {
                 let length_after_succ = length + succ_chunk.total_length;
                 let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
 
-                if length_after_succ + succ_chunk.min_len_to_rounds >= max_length {
+                if length_after_succ + succ_chunk.min_len_to_rounds > max_length {
                     continue; // Chunk would make comp too long
                 }
                 if unringable_chunks.get(succ_idx.index()).unwrap() {
@@ -197,7 +197,7 @@ impl CompPrefix {
                 }
                 if !method_counts_after_chunk.is_feasible(
                     (max_length - length_after_succ).as_usize(),
-                    &data.method_count_ranges,
+                    data.ranges.method_counts.as_raw_slice(),
                 ) {
                     continue; // Can't recover the method balance before running out of rows
                 }
@@ -228,7 +228,7 @@ impl CompPrefix {
     fn check_comp(&self, data: &SearchData) -> Option<Comp> {
         assert!(self.next_link_side.is_start_or_end());
 
-        if !data.query.len_range.contains(&self.length) {
+        if !data.ranges.length.contains(&self.length) {
             return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
@@ -236,7 +236,10 @@ impl CompPrefix {
         // (conservatively) if the range is feasible within the _maximum possible_ length
         // range.  However, the composition is likely to be _shorter_ than this range and
         // removing those extra rows could make the method count infeasible.
-        if !self.method_counts.is_feasible(0, &data.method_count_ranges) {
+        if !self
+            .method_counts
+            .is_feasible(0, data.ranges.method_counts.as_raw_slice())
+        {
             return None; // Comp doesn't have the required method balance
         }
         if !data.query.part_head_group.is_generator(self.part_head) {

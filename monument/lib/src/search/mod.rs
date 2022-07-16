@@ -1,12 +1,11 @@
 use std::{
     collections::BinaryHeap,
-    ops::Range,
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use itertools::Itertools;
-
-use crate::{utils::TotalLength, Config, Progress, Query, QueryUpdate};
+use crate::{
+    prove_length::RefinedRanges, utils::TotalLength, Config, Progress, Query, QueryUpdate,
+};
 
 mod graph;
 mod prefix;
@@ -23,10 +22,16 @@ pub(crate) fn search(
     graph: &crate::Graph,
     query: &Query,
     config: &Config,
+    refined_ranges: RefinedRanges,
     mut update_fn: impl FnMut(QueryUpdate),
     abort_flag: &AtomicBool,
 ) {
-    let search_data = SearchData::new(graph, query);
+    // Build the graph and populate the `SearchData`
+    let search_data = SearchData {
+        graph: self::graph::Graph::new(graph, query),
+        ranges: refined_ranges,
+        query,
+    };
 
     // Initialise the frontier to just the start chunks
     let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph);
@@ -101,10 +106,10 @@ fn send_progress_update(
     num_comps: usize,
     truncating_queue: bool,
 ) {
-    let mut total_len = TotalLength::ZERO;
+    let mut total_len = 0u64; // NOTE: We have use `u64` here to avoid overflow
     let mut max_length = TotalLength::ZERO;
     frontier.iter().for_each(|n| {
-        total_len += n.length();
+        total_len += n.length().as_u32() as u64;
         max_length = max_length.max(n.length());
     });
     update_fn(QueryUpdate::Progress(Progress {
@@ -115,7 +120,7 @@ fn send_progress_update(
         avg_length: if frontier.is_empty() {
             0.0 // Avoid returning `NaN` if the frontier is empty
         } else {
-            total_len.as_usize() as f32 / frontier.len() as f32
+            total_len as f32 / frontier.len() as f32
         },
         max_length,
 
@@ -137,19 +142,5 @@ fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
 struct SearchData<'query> {
     graph: self::graph::Graph,
     query: &'query Query,
-    method_count_ranges: Vec<Range<usize>>,
-}
-
-impl<'query> SearchData<'query> {
-    fn new(graph: &crate::Graph, query: &'query Query) -> Self {
-        Self {
-            graph: self::graph::Graph::new(graph, query),
-            method_count_ranges: query
-                .methods
-                .iter()
-                .map(|m| m.count_range.clone())
-                .collect_vec(),
-            query,
-        }
-    }
+    ranges: RefinedRanges,
 }

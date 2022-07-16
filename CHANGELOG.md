@@ -1,6 +1,12 @@
 ## Unreleased
 
 ### Monument
+- (#116) Much smarter way of determining default method balance.  (Nerdy details:) Method counts are
+    weighted by the square root of each method's lead length (so shorter methods won't need as many
+    rows), and will round 'outwards' for cases like cyclic spliced where a 'perfect' method balance
+    actually has a wide range of different counts.
+- (#116) Prove which lengths and method counts are actually possible, and error if the two can't
+    match.
 - (#115) Demote 'default music' message from `WARN` to `INFO`.
 - (#113) Remove unnecessary threading from the search code (which can currently only use one thread
     anyway).

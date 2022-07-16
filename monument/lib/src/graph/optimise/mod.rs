@@ -335,7 +335,7 @@ pub mod passes {
                     .iter()
                     .map(|(_link_id, chunk_id)| (chunk_id, TotalLength::ZERO)),
                 &view,
-                Some(query.len_range.end),
+                Some(*query.len_range.end()),
             );
             // Set the chunk distances and strip out unreachable chunks
             view.retain_chunks(
@@ -354,7 +354,7 @@ pub mod passes {
     /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
     pub fn strip_long_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
-            graph.retain_chunks(|_id, chunk| chunk.min_comp_length() < query.len_range.end);
+            graph.retain_chunks(|_id, chunk| chunk.min_comp_length() <= *query.len_range.end());
         }))
     }
 
@@ -447,7 +447,7 @@ pub mod passes {
 fn compute_distances<'a>(
     start_chunks: impl IntoIterator<Item = (&'a ChunkId, TotalLength)>,
     view: &DirectionalView<'a>,
-    dist_limit: Option<TotalLength>,
+    inclusive_dist_limit: Option<TotalLength>,
 ) -> HashMap<ChunkId, TotalLength> {
     // Set of chunks which are reachable within the range limit, mapped to their shortest distance
     // from a start chunk.  These are the chunks which will be kept in the graph.
@@ -480,7 +480,7 @@ fn compute_distances<'a>(
         // Skip this chunk if any chunk succeeding it would take longer to reach than the length of
         // the composition
         let distance_after_chunk = distance + chunk_view.chunk.total_length();
-        if let Some(l) = dist_limit {
+        if let Some(l) = inclusive_dist_limit {
             if distance_after_chunk > l {
                 continue;
             }

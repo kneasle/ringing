@@ -26,7 +26,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{Comp, Config, Progress, Query, QueryUpdate};
+use monument::{Comp, Config, Progress, Query, QueryUpdate, RefinedRanges};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -74,6 +74,8 @@ pub fn run(
         .map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
     query.optimise_graph(&mut graph, config);
+    let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
+
     if debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
@@ -81,7 +83,7 @@ pub fn run(
     // Thread-safe data for the query engine
     let abort_flag = Arc::new(AtomicBool::new(false));
     let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
-    let comp_printer = CompPrinter::new(query.clone());
+    let comp_printer = CompPrinter::new(query.clone(), &refined_ranges);
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     // Run the search
@@ -100,7 +102,14 @@ pub fn run(
             }
         }
     };
-    Query::search(&query, graph, config, update_fn, &abort_flag);
+    Query::search(
+        &query,
+        graph,
+        refined_ranges,
+        config,
+        update_fn,
+        &abort_flag,
+    );
 
     // Recover and sort the compositions, then return the query
     let mut comps = comps.lock().unwrap().to_vec();
@@ -348,24 +357,16 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(query: Arc<Query>) -> Self {
+    fn new(query: Arc<Query>, refine_ranges: &RefinedRanges) -> Self {
         Self {
-            length_width: query
-                .len_range
-                .end
-                .as_usize()
-                .saturating_sub(1)
-                .to_string()
-                .len(),
+            length_width: query.len_range.end().as_usize().to_string().len(),
             method_counts: query
                 .methods
                 .iter()
-                .map(|method| {
-                    // `-1` converts from exclusive to inclusive range
-                    //
+                .zip_eq(&refine_ranges.method_counts)
+                .map(|(method, refined_count_range)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width =
-                        method.count_range.end.saturating_sub(1).to_string().len();
+                    let max_count_width = refined_count_range.end().as_usize().to_string().len();
                     let max_width = max_count_width.max(method.shorthand.len());
                     (max_width, method.shorthand.clone())
                 })

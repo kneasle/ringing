@@ -1,7 +1,6 @@
 use std::{cmp::Ordering, ops::Range};
 
 use itertools::Itertools;
-use serde::Deserialize;
 
 mod counts;
 pub mod group;
@@ -16,8 +15,7 @@ pub use lengths::{PerPartLength, TotalLength};
 /// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and
 /// [`RangeFull`](std::ops::RangeFull) (`..`) in a format that can be easily parsed from TOML with
 /// Serde.
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct OptRange {
     pub min: Option<usize>,
     pub max: Option<usize>,
