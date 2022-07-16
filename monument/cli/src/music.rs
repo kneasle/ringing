@@ -175,7 +175,7 @@ impl BaseMusic {
             BaseMusic::Default => {
                 let toml = default_music_toml(stage);
                 match toml {
-                    Some(_) => log::warn!(
+                    Some(_) => log::info!(
                         r#"Using default music.  If you want no music, set `base_music = "none"`."#
                     ),
                     None => log::warn!(
