@@ -4,13 +4,12 @@ use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet},
     convert::identity,
-    fmt::{Display, Formatter},
     ops::Deref,
     sync::Arc,
     time::Instant,
 };
 
-use bellframe::{Bell, Block, Mask, Row, RowBuf, Stage, Stroke};
+use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
@@ -27,159 +26,127 @@ use super::{
     RowIdx, TotalLength,
 };
 
-/// The different ways that graph building can fail
-#[derive(Debug)]
-pub enum BuildError {
-    /// The given maximum graph size limit was reached
-    SizeLimit(usize),
-    /// Different start/end rows were specified in a multi-part
-    DifferentStartEndRowInMultipart,
-    /// The same [`Chunk`] could start at two different strokes, and some
-    /// [`MusicType`](crate::music::MusicType) relies on that
-    InconsistentStroke,
-    /// Some [`Call`](crate::Call) doesn't have enough calling positions to cover the [`Stage`]
-    WrongCallingPositionsLength {
-        call_name: String,
-        calling_position_len: usize,
-        stage: Stage,
-    },
+impl Graph {
+    /// Generate a graph of all chunks which are reachable within a given length constraint.
+    pub fn new(query: &Query, config: &Config) -> crate::Result<Self> {
+        log::debug!("Building unoptimised graph:");
+        let graph_build_start = Instant::now();
 
-    /// Some [`Call`](crate::Call) refers to a lead location that doesn't exist
-    UndefinedLeadLocation { call_name: String, label: String },
-    /// [`Query`] didn't define any [`Method`]s
-    NoMethods,
-    /// Two [`Method`]s use the same shorthand
-    DuplicateShorthand {
-        shorthand: String,
-        title1: String,
-        title2: String,
-    },
-    NoCourseHeadInPart {
-        mask_in_first_part: Mask,
-        part_head: RowBuf,
-        mask_in_other_part: Mask,
-    },
-}
+        check_query(query)?;
 
-/// Top-level function go build an unoptimised [`Graph`] for a given [`Query`].
-pub(super) fn build(query: &Query, config: &Config) -> Result<Graph, BuildError> {
-    log::debug!("Building unoptimised graph:");
-    let graph_build_start = Instant::now();
+        let fixed_bells = fixed_bells(query);
+        let method_datas = query
+            .methods
+            .iter()
+            .map(|m| MethodData::new(m, &fixed_bells, query))
+            .collect::<MethodVec<_>>();
 
-    check_query(query)?;
+        // Generate chunk layout
+        let start = Instant::now();
+        let (mut chunk_equiv_map, chunk_lengths, links) =
+            generate_chunk_lengths(query, &method_datas, config)?;
+        log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
-    let fixed_bells = fixed_bells(query);
-    let method_datas = query
-        .methods
-        .iter()
-        .map(|m| MethodData::new(m, &fixed_bells))
-        .collect::<MethodVec<_>>();
+        // TODO: Combine overlapping chunks
 
-    // Generate chunk layout
-    let start = Instant::now();
-    let (mut chunk_equiv_map, chunk_lengths, links) =
-        generate_chunk_lengths(query, &method_datas, config)?;
-    log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
+        // Build actual chunks
+        let mut chunks = chunk_lengths
+            .into_iter()
+            .map(|(id, per_part_length): (ChunkId, PerPartLength)| {
+                let chunk = expand_chunk(&id, per_part_length, query);
+                (id, chunk)
+            })
+            .collect::<HashMap<_, _>>();
 
-    // TODO: Combine overlapping chunks
-
-    // Build actual chunks
-    let mut chunks = chunk_lengths
-        .into_iter()
-        .map(|(id, per_part_length): (ChunkId, PerPartLength)| {
-            let chunk = expand_chunk(&id, per_part_length, query);
-            (id, chunk)
-        })
-        .collect::<HashMap<_, _>>();
-
-    // Assign `successor`/`predecessor` links
-    let start = Instant::now();
-    for (link_id, link) in links.iter() {
-        if let LinkSide::Chunk(id) = &link.from {
-            if let Some(chunk) = chunks.get_mut(id) {
-                chunk.successors.push(*link_id);
+        // Assign `successor`/`predecessor` links
+        let start = Instant::now();
+        for (link_id, link) in links.iter() {
+            if let LinkSide::Chunk(id) = &link.from {
+                if let Some(chunk) = chunks.get_mut(id) {
+                    chunk.successors.push(*link_id);
+                }
+            }
+            if let LinkSide::Chunk(id) = &link.to {
+                if let Some(chunk) = chunks.get_mut(id) {
+                    chunk.predecessors.push(*link_id);
+                }
             }
         }
-        if let LinkSide::Chunk(id) = &link.to {
-            if let Some(chunk) = chunks.get_mut(id) {
-                chunk.predecessors.push(*link_id);
-            }
-        }
-    }
-    log::debug!(
-        "  Successor/predecessor links set in {:.2?}",
-        start.elapsed()
-    );
-
-    // Assign falseness links
-    if !query.allow_false {
-        compute_falseness(
-            &mut chunks,
-            &mut chunk_equiv_map,
-            query,
-            &method_datas,
-            &fixed_bells,
+        log::debug!(
+            "  Successor/predecessor links set in {:.2?}",
+            start.elapsed()
         );
-    }
 
-    // Count music
-    let start = Instant::now();
-    let relies_on_stroke = query
-        .music_types
-        .iter()
-        .any(|ty| ty.strokes != StrokeSet::Both);
-    let start_strokes = get_start_strokes(&chunks, &links, query);
-    if start_strokes.is_none() && relies_on_stroke {
-        return Err(BuildError::InconsistentStroke);
-    }
-    // Now we know the starting strokes, count the music on each chunk
-    for (id, chunk) in &mut chunks {
-        count_scores(id, chunk, &method_datas, &start_strokes, query);
-    }
-    log::debug!("  Music counted in {:.2?}", start.elapsed());
-
-    log::debug!(
-        "Graph build completed in {:.3?} ({} chunks and {} links)",
-        graph_build_start.elapsed(),
-        chunks.len(),
-        links.map.len(),
-    );
-
-    // Compute start/end links
-    use LinkSide::*;
-    let mut starts = Vec::new();
-    let mut ends = Vec::new();
-    for (link_id, link) in &links.map {
-        match (&link.from, &link.to) {
-            (StartOrEnd, Chunk(chunk_id)) => starts.push((*link_id, chunk_id.clone())),
-            (Chunk(chunk_id), StartOrEnd) => ends.push((*link_id, chunk_id.clone())),
-            (Chunk(_), Chunk(_)) => {} // Internal link
-            (StartOrEnd, StartOrEnd) => unreachable!("0-length start->end link found"),
+        // Assign falseness links
+        if !query.allow_false {
+            compute_falseness(
+                &mut chunks,
+                &mut chunk_equiv_map,
+                query,
+                &method_datas,
+                &fixed_bells,
+            );
         }
+
+        // Count music
+        let start = Instant::now();
+        let relies_on_stroke = query
+            .music_types
+            .iter()
+            .any(|ty| ty.strokes != StrokeSet::Both);
+        let start_strokes = get_start_strokes(&chunks, &links, query);
+        if start_strokes.is_none() && relies_on_stroke {
+            return Err(crate::Error::InconsistentStroke);
+        }
+        // Now we know the starting strokes, count the music on each chunk
+        for (id, chunk) in &mut chunks {
+            count_scores(id, chunk, &method_datas, &start_strokes, query);
+        }
+        log::debug!("  Music counted in {:.2?}", start.elapsed());
+
+        log::debug!(
+            "Graph build completed in {:.3?} ({} chunks and {} links)",
+            graph_build_start.elapsed(),
+            chunks.len(),
+            links.map.len(),
+        );
+
+        // Compute start/end links
+        use LinkSide::*;
+        let mut starts = Vec::new();
+        let mut ends = Vec::new();
+        for (link_id, link) in &links.map {
+            match (&link.from, &link.to) {
+                (StartOrEnd, Chunk(chunk_id)) => starts.push((*link_id, chunk_id.clone())),
+                (Chunk(chunk_id), StartOrEnd) => ends.push((*link_id, chunk_id.clone())),
+                (Chunk(_), Chunk(_)) => {} // Internal link
+                (StartOrEnd, StartOrEnd) => unreachable!("Can't have 0-length start->end links"),
+            }
+        }
+
+        // Finally construct the graph
+        Ok(Graph {
+            chunks,
+            links,
+
+            starts,
+            ends,
+        })
     }
-
-    // Finally construct the graph
-    Ok(Graph {
-        chunks,
-        links,
-
-        starts,
-        ends,
-    })
 }
 
 /// Check a [`Query`] for obvious errors before starting to build the [`Graph`]
-fn check_query(query: &Query) -> Result<(), BuildError> {
+fn check_query(query: &Query) -> crate::Result<()> {
     // Different start/end rows aren't well defined for multi-parts
     if query.is_multipart() && query.start_row != query.end_row {
-        return Err(BuildError::DifferentStartEndRowInMultipart);
+        return Err(crate::Error::DifferentStartEndRowInMultipart);
     }
 
     // Two methods using the same shorthand
     for (i1, m1) in query.methods.iter_enumerated() {
         for m2 in &query.methods[..i1] {
             if m1.shorthand == m2.shorthand {
-                return Err(BuildError::DuplicateShorthand {
+                return Err(crate::Error::DuplicateShorthand {
                     shorthand: m1.shorthand.clone(),
                     title1: m1.title().to_owned(),
                     title2: m2.title().to_owned(),
@@ -191,7 +158,7 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
     // Too short calling positions
     for call in &query.calls {
         if call.calling_positions.len() != query.stage.num_bells() {
-            return Err(BuildError::WrongCallingPositionsLength {
+            return Err(crate::Error::WrongCallingPositionsLength {
                 call_name: call.debug_symbol.clone(),
                 calling_position_len: call.calling_positions.len(),
                 stage: query.stage,
@@ -209,7 +176,7 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
     for call in &query.calls {
         for lead_label in [&call.lead_location_from, &call.lead_location_to] {
             if !used_lead_locations.contains(lead_label) {
-                return Err(BuildError::UndefinedLeadLocation {
+                return Err(crate::Error::UndefinedLeadLocation {
                     call_name: call.debug_symbol.clone(),
                     label: lead_label.clone(),
                 });
@@ -234,7 +201,7 @@ fn check_query(query: &Query) -> Result<(), BuildError> {
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
-                    return Err(BuildError::NoCourseHeadInPart {
+                    return Err(crate::Error::NoCourseHeadInPart {
                         mask_in_first_part: mask_in_first_part.clone(),
                         part_head: part_head.to_owned(),
                         mask_in_other_part,
@@ -423,14 +390,11 @@ fn generate_chunk_lengths<'q>(
     query: &'q Query,
     method_datas: &MethodVec<MethodData>,
     config: &Config,
-) -> Result<
-    (
-        ChunkEquivalenceMap<'q>,
-        HashMap<ChunkId, PerPartLength>,
-        LinkSet,
-    ),
-    BuildError,
-> {
+) -> crate::Result<(
+    ChunkEquivalenceMap<'q>,
+    HashMap<ChunkId, PerPartLength>,
+    LinkSet,
+)> {
     let mut chunk_lengths = HashMap::new();
     let mut links = LinkSet::new();
 
@@ -439,7 +403,7 @@ fn generate_chunk_lengths<'q>(
     let chunk_factory = ChunkFactory::new(query, method_datas);
 
     // Populate the frontier with start chunks, and add start links to `links`
-    for start_id in find_locations_of_row(&query.start_row, method_datas, Boundary::Start) {
+    for start_id in find_locations_of_row(&query.start_row, Boundary::Start, method_datas) {
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             from: LinkSide::StartOrEnd,
@@ -464,7 +428,7 @@ fn generate_chunk_lengths<'q>(
         }
 
         if chunk_lengths.len() > config.graph_size_limit {
-            return Err(BuildError::SizeLimit(config.graph_size_limit));
+            return Err(crate::Error::SizeLimit(config.graph_size_limit));
         }
 
         // Build the chunk
@@ -602,7 +566,7 @@ impl EndLookupTable {
         let mut end_lookup = HashMap::new();
         for part_head in query.part_head_group.rows() {
             let end_row = part_head * &query.end_row;
-            for end_location in find_locations_of_row(&end_row, method_datas, Boundary::End) {
+            for end_location in find_locations_of_row(&end_row, Boundary::End, method_datas) {
                 let method_idx = end_location.method;
                 let method = &method_datas[method_idx].method;
                 // For each end location, any other lead in the same course can also contain an end
@@ -1001,10 +965,12 @@ pub(super) struct MethodData<'query> {
     pub(super) method: &'query Method,
     pub(super) plain_course: Block<bellframe::method::RowAnnot<'query>>,
     pub(super) lead_head_masks: Vec<Mask>,
+    start_indices: Vec<usize>,
+    end_indices: Vec<usize>,
 }
 
 impl<'query> MethodData<'query> {
-    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)]) -> Self {
+    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();
@@ -1041,10 +1007,42 @@ impl<'query> MethodData<'query> {
             }
         }
 
+        // Compute exact `{start,end}indices`
+        let wrap_sub_lead_indices = |sub_lead_indices: &[isize]| -> Vec<usize> {
+            sub_lead_indices
+                .iter()
+                .map(|idx| {
+                    let lead_len_i = method.lead_len() as isize;
+                    (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
+                })
+                .collect_vec()
+        };
+        let mut start_indices = wrap_sub_lead_indices(&method.start_indices);
+        let mut end_indices = match &method.end_indices {
+            Some(indices) => wrap_sub_lead_indices(indices),
+            None => (0..method.lead_len()).collect_vec(),
+        };
+        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
+        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
+        // this, we set both `{start,end}_indices` to the union between `start_indices` and
+        // `end_indices`.
+        if query.is_multipart() {
+            let union = start_indices
+                .iter()
+                .filter(|idx| end_indices.contains(idx))
+                .copied()
+                .collect_vec();
+            start_indices = union.clone();
+            end_indices = union;
+        }
+
         Self {
             method,
             plain_course: method.plain_course(),
             lead_head_masks: filtered_lead_head_masks,
+
+            start_indices,
+            end_indices,
         }
     }
 
@@ -1052,31 +1050,29 @@ impl<'query> MethodData<'query> {
     fn is_lead_head(&self, lead_head: &Row) -> bool {
         self.lead_head_masks.iter().any(|m| m.matches(lead_head))
     }
+
+    fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
+        match boundary {
+            Boundary::Start => &self.start_indices,
+            Boundary::End => &self.end_indices,
+        }
+    }
 }
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
 fn find_locations_of_row(
     row: &Row,
-    method_datas: &MethodVec<MethodData>,
     boundary: Boundary,
+    method_datas: &MethodVec<MethodData>,
 ) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut starts = Vec::new();
     for (method_idx, method_data) in method_datas.iter_enumerated() {
-        let m = &method_data.method;
-        let allowed_indices = match boundary {
-            Boundary::Start => m.start_indices.clone(),
-            Boundary::End => match &m.end_indices {
-                Some(idxs) => idxs.clone(),
-                // If `end_indices` isn't specified, then every index within the lead is possible
-                None => (0..m.lead_len() as isize).collect_vec(),
-            },
-        };
-        for sub_lead_idx in allowed_indices {
-            let lead_len_i = m.lead_len() as isize;
-            let sub_lead_idx = (sub_lead_idx % lead_len_i + lead_len_i) as usize % m.lead_len();
-            let lead_head = Row::solve_xa_equals_b(m.row_in_plain_lead(sub_lead_idx), row).unwrap();
+        for &sub_lead_idx in method_data.start_or_end_indices(boundary) {
+            let lead_head =
+                Row::solve_xa_equals_b(method_data.method.row_in_plain_lead(sub_lead_idx), row)
+                    .unwrap();
             // This start is valid if it matches at least one of this method's lead head masks
             if method_data.is_lead_head(&lead_head) {
                 starts.push(ChunkIdInFirstPart {
@@ -1150,72 +1146,3 @@ fn filter_bells_fixed_by_call(
         }
     }
 }
-
-////////////////////
-// ERROR MESSAGES //
-////////////////////
-
-impl Display for BuildError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BuildError::SizeLimit(limit) => write!(
-                f,
-                "Graph size limit of {} chunks reached.  You can set it \
-higher with `--graph-size-limit <n>`.",
-                limit
-            ),
-            BuildError::DifferentStartEndRowInMultipart => {
-                write!(f, "Start/end rows must be the same for multipart comps")
-            }
-            BuildError::InconsistentStroke => write!(
-                f,
-                "The same chunk of ringing can be at multiple strokes, probably \
-because you're using a method with odd-length leads"
-            ),
-            BuildError::NoMethods => write!(f, "Can't have a composition with no methods"),
-            BuildError::WrongCallingPositionsLength {
-                call_name,
-                calling_position_len,
-                stage,
-            } => write!(
-                f,
-                "Call {:?} only specifies {} calling positions, but the stage has {} bells",
-                call_name,
-                calling_position_len,
-                stage.num_bells()
-            ),
-            BuildError::DuplicateShorthand {
-                shorthand,
-                title1,
-                title2,
-            } => write!(
-                f,
-                "Methods {:?} and {:?} share a shorthand ({})",
-                title1, title2, shorthand
-            ),
-            BuildError::UndefinedLeadLocation { call_name, label } => write!(
-                f,
-                "Call {:?} refers to a lead location {:?}, which doesn't exist",
-                call_name, label
-            ), // TODO: Suggest one that does exist
-            BuildError::NoCourseHeadInPart {
-                mask_in_first_part,
-                part_head,
-                mask_in_other_part,
-            } => {
-                writeln!(
-                    f,
-                    "course head `{}` becomes `{}` in the part starting `{}`, which isn't in `course_heads`.",
-                    mask_in_first_part, mask_in_other_part, part_head
-                )?;
-                write!(
-                    f,
-                    "   help: consider adding `{}` to `course_heads`",
-                    mask_in_other_part
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for BuildError {}

@@ -182,17 +182,12 @@ impl Pattern {
             // An iterator that yields the bells forming this run in ascending order
             let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
-            // This unsafety is OK because all of the input patterns must be normalised because
-            // they contain only one wildcard
-            let descending_pattern = unsafe {
-                // Descending runs on the front (e.g. `1234*`)
-                Self::from_elems_unchecked(run_iterator.clone().chain(once(Elem::Star)), stage)
-            };
-            let ascending_pattern = unsafe {
-                // Ascending runs on the front (e.g. `4321*`)
-                Self::from_elems_unchecked(run_iterator.rev().chain(once(Elem::Star)), stage)
-            };
-
+            // Descending runs on the front (e.g. `1234*`)
+            let descending_pattern =
+                Self::from_elems(run_iterator.clone().chain(once(Elem::Star)), stage).unwrap();
+            // Ascending runs on the front (e.g. `4321*`)
+            let ascending_pattern =
+                Self::from_elems(run_iterator.rev().chain(once(Elem::Star)), stage).unwrap();
             runs.push(descending_pattern);
             runs.push(ascending_pattern);
         }
@@ -204,7 +199,8 @@ impl Pattern {
     /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_internal(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
-        if num_bells < len {
+        // + 2 for one bell on either side (to make things internal)
+        if num_bells < len + 2 {
             return vec![];
         }
 
@@ -214,18 +210,16 @@ impl Pattern {
             // An iterator that yields the bells forming this run in ascending order
             let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
-            // The unsafety is OK because all the input patterns are normalised
-
             // Descending runs (e.g. `x*1234x*`)
             let mut desc_elems = vec![Elem::X, Elem::Star];
             desc_elems.extend(run_iterator.clone());
             desc_elems.extend([Elem::X, Elem::Star]);
-            runs.push(unsafe { Self::from_vec_unchecked(desc_elems, stage) });
+            runs.push(Self::from_vec(desc_elems, stage).unwrap());
             // Ascending runs (e.g. `x*4321x*`)
             let mut asc_elems = vec![Elem::X, Elem::Star];
             asc_elems.extend(run_iterator.rev());
             asc_elems.extend([Elem::X, Elem::Star]);
-            runs.push(unsafe { Self::from_vec_unchecked(asc_elems, stage) });
+            runs.push(Self::from_vec(asc_elems, stage).unwrap());
         }
 
         runs
@@ -244,19 +238,13 @@ impl Pattern {
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in ascending order
             let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
-            // This unsafety is OK because all of the input patterns must be normalised because
-            // they contain only one wildcard
-            let descending_pattern = unsafe {
-                // Descending runs on the back (e.g. `*1234`)
-                Self::from_elems_unchecked(once(Elem::Star).chain(run_iterator.clone()), stage)
-            };
-            let ascending_pattern = unsafe {
-                // Ascending runs on the back (e.g. `*4321`)
-                Self::from_elems_unchecked(
-                    once(Elem::Star).chain(run_iterator.clone().rev()),
-                    stage,
-                )
-            };
+            // Descending runs on the back (e.g. `*1234`)
+            let descending_pattern =
+                Self::from_elems(once(Elem::Star).chain(run_iterator.clone()), stage).unwrap();
+            // Ascending runs on the back (e.g. `*4321`)
+            let ascending_pattern =
+                Self::from_elems(once(Elem::Star).chain(run_iterator.clone().rev()), stage)
+                    .unwrap();
             runs.push(descending_pattern);
             runs.push(ascending_pattern);
         }
@@ -278,26 +266,22 @@ impl Pattern {
             // An iterator that yields the bells forming this run in ascending order
             let run_iterator = (i..i + len).map(Bell::from_index).map(Elem::Bell);
 
-            // This unsafety is OK because all of the input patterns must be normalised because
-            // they contain only one wildcard
-            let descending_pattern = unsafe {
-                // Descending runs (e.g. `*1234*`)
-                Self::from_elems_unchecked(
-                    once(Elem::Star)
-                        .chain(run_iterator.clone())
-                        .chain(once(Elem::Star)),
-                    stage,
-                )
-            };
-            let ascending_pattern = unsafe {
-                // Ascending runs (e.g. `*4321*`)
-                Self::from_elems_unchecked(
-                    once(Elem::Star)
-                        .chain(run_iterator.clone().rev())
-                        .chain(once(Elem::Star)),
-                    stage,
-                )
-            };
+            // Descending runs (e.g. `*1234*`)
+            let descending_pattern = Self::from_elems(
+                once(Elem::Star)
+                    .chain(run_iterator.clone())
+                    .chain(once(Elem::Star)),
+                stage,
+            )
+            .unwrap();
+            // Ascending runs (e.g. `*4321*`)
+            let ascending_pattern = Self::from_elems(
+                once(Elem::Star)
+                    .chain(run_iterator.clone().rev())
+                    .chain(once(Elem::Star)),
+                stage,
+            )
+            .unwrap();
 
             runs.push(descending_pattern);
             runs.push(ascending_pattern);
