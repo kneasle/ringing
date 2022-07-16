@@ -204,7 +204,8 @@ impl Pattern {
     /// [`Row`].  If the run length is longer than the stage, then no `Pattern`s are returned.
     pub fn runs_internal(stage: Stage, len: u8) -> Vec<Self> {
         let num_bells = stage.num_bells_u8();
-        if num_bells < len {
+        // + 2 for one bell on either side (to make things internal)
+        if num_bells < len + 2 {
             return vec![];
         }
 
