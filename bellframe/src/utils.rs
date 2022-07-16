@@ -91,8 +91,7 @@ pub fn choice(n: usize, k: usize) -> Option<usize> {
     //                       k!
     //
     // This minimises the risk of overflow, since we only have to directly compute `n! / k!` and
-    // `k!`, both of which are smaller than `n!` and `(n - k)! * k!`.  This lessens the risk of
-    // overflow.
+    // `k!`, both of which are smaller than `n!` and `(n - k)! * k!`.
 
     // Replace `k` with `min(k, n - k)` because `n choose k = n choose (n - k)` for all n, k and we
     // want to do as few loop iterations as possible.
