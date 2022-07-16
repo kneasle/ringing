@@ -13,7 +13,7 @@ use itertools::Itertools;
 /// `'x'` (`X` is not a valid [`Bell`] name).
 ///
 /// This can also be thought of as a music [`Pattern`] with no `*`s.
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Mask {
     bells: Vec<Option<Bell>>,
 }
