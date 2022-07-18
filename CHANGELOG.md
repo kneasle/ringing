@@ -18,6 +18,7 @@
 - (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
 
 ### BellFrame
+- (#117) Rationalise the use of `unsafe` in `bellframe`.
 - (#115) Remove unnecessary `unsafe` in `bellframe::music`.
 - (#115) Fix integer underflow when computing internal runs.
 - (#115) Implement `Ord` for `Mask`

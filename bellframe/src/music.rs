@@ -138,7 +138,7 @@ impl Pattern {
             return Err(PatternError::TooShort(num_non_stars, stage, string)); // Too short
         }
 
-        // Unsafety is OK because `elems` has been normalised
+        // SAFETY: `elems` has been normalised
         Ok(unsafe { Self::from_vec_unchecked(elems, stage) })
     }
 
@@ -146,8 +146,8 @@ impl Pattern {
     ///
     /// # Safety
     ///
-    /// See [`Pattern::from_vec_unchecked`] for safety requirements.
-    /// [`Pattern::from_vec_unchecked`] is called after collecting the [`Iterator`] into a [`Vec`].
+    /// Safe if `iter.collect::<Vec<_>>()` satisfies the safety conditions of
+    /// [`Pattern::from_vec_unchecked`].
     pub unsafe fn from_elems_unchecked(iter: impl IntoIterator<Item = Elem>, stage: Stage) -> Self {
         Self::from_vec_unchecked(iter.into_iter().collect_vec(), stage)
     }
@@ -471,7 +471,7 @@ impl Pattern {
                     None => return Ok(true),
                     // Because of normalisation, a star cannot be followed by anything other than a
                     // bell (or the end of the pattern).  This branch should only be reachable with
-                    // `unsafe`
+                    // incorrect use of `unsafe`
                     _ => unreachable!(),
                 },
                 // If we've run out of pattern elements, then the row matches iff we also run out of

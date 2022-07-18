@@ -101,7 +101,7 @@ impl RowBuf {
     /// assert_eq!(RowBuf::rounds(Stage::CATERS).to_string(), "123456789");
     /// ```
     pub fn rounds(stage: Stage) -> Self {
-        // This unsafety is OK, because rounds is always a valid `Row`
+        // SAFETY: rounds is a valid `Row` on any stage
         unsafe { Self::from_bell_iter_unchecked(stage.bells()) }
     }
 
@@ -115,7 +115,7 @@ impl RowBuf {
     /// assert_eq!(RowBuf::backrounds(Stage::CATERS).to_string(), "987654321");
     /// ```
     pub fn backrounds(stage: Stage) -> Self {
-        // This unsafety is OK, because backrounds is always a valid `Row`
+        // SAFETY: backrounds is always a valid `Row`
         unsafe { Self::from_bell_iter_unchecked(stage.bells().rev()) }
     }
 
@@ -131,7 +131,7 @@ impl RowBuf {
     pub fn queens(stage: Stage) -> Self {
         let odds = stage.bells().step_by(2);
         let evens = stage.bells().skip(1).step_by(2);
-        // This unsafety is OK, because Queens is always a valid `Row`
+        // SAFETY: Queens is always a valid `Row`
         unsafe { Self::from_bell_iter_unchecked(odds.chain(evens)) }
     }
 
@@ -199,8 +199,7 @@ impl RowBuf {
     ///     "4213"
     /// );
     /// // Converting a `Row` from an invalid `Vec` of `Bell`s compiles and runs,
-    /// // but silently creates an invalid `Row` and, by extension, silently causes
-    /// // undefined behaviour
+    /// // but silently creates an invalid `Row` and silently causes undefined behaviour
     /// assert_eq!(
     ///     unsafe {
     ///         RowBuf::from_vec_unchecked(vec![
@@ -266,7 +265,7 @@ impl RowBuf {
     /// let row = unsafe { RowBuf::from_bell_iter_unchecked(iter) };
     /// assert_eq!(row.to_string(), "14532");
     /// // Create an invalid row from an iterator over `Bell`s.  We get no error,
-    /// // but doing anything with the resulting `Row` is undefined behaviour
+    /// // but instead we get silent Undefined Behaviour
     /// let iter = [0, 3, 7, 2, 1].iter().copied().map(Bell::from_index);
     /// let row = unsafe { RowBuf::from_bell_iter_unchecked(iter) };
     /// assert_eq!(row.to_string(), "14832");
@@ -329,8 +328,8 @@ impl RowBuf {
         let cover_bells = stage.bells().skip(bells.len());
         bells.extend(cover_bells);
 
-        // This unsafety is OK because we have verified that `bells` corresponds to a `Row`, while
-        // the no-zero-stage invariant makes sure that `bells` is non-empty
+        // SAFETY: we have verified that `bells` corresponds to a `Row`, while the no-zero-stage
+        // invariant makes sure that `bells` is non-empty
         let mut row = unsafe { Self::from_vec_unchecked(bells) };
         row.extend_to_stage(stage);
         Ok(row)
@@ -346,8 +345,8 @@ impl RowBuf {
     /// inference.
     #[inline]
     pub fn as_row(&self) -> &Row {
-        // This unsafety is OK, because `RowBuf` requires its bells to form a valid row according
-        // to the Framework
+        // SAFETY: By definition, `RowBuf` requires its bells to form a valid row according to the
+        // Framework
         unsafe { Row::from_slice_unchecked(&self.bell_vec) }
     }
 
@@ -355,8 +354,8 @@ impl RowBuf {
     /// inference.
     #[inline]
     pub fn as_mut_row(&mut self) -> &mut Row {
-        // This unsafety is OK, because `RowBuf` requires its bells to form a valid row according
-        // to the Framework
+        // SAFETY: By definition, `RowBuf` requires its bells to form a valid row according to the
+        // Framework
         unsafe { Row::from_mut_slice_unchecked(&mut self.bell_vec) }
     }
 
@@ -390,9 +389,7 @@ impl Deref for RowBuf {
 impl DerefMut for RowBuf {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // This unsafety is OK because the slice of `Bell`s comes from a `RowBuf`, which must
-        // represent a valid row
-        unsafe { Row::from_mut_slice_unchecked(&mut self.bell_vec) }
+        self.as_mut_row()
     }
 }
 

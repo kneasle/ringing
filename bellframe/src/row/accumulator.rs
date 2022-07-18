@@ -28,7 +28,7 @@ impl RowAccumulator {
 
     /// Performs `self = self * row`
     #[inline]
-    pub fn accumulate(&mut self, row: &Row) -> Result<(), IncompatibleStages> {
+    pub fn post_accumulate(&mut self, row: &Row) -> Result<(), IncompatibleStages> {
         self.total.mul_into(row, &mut self.temp_row)?; // Multiply `total` into `temp_row`
         std::mem::swap(&mut self.total, &mut self.temp_row); // Swap the result back into `total`
         Ok(())
@@ -40,7 +40,7 @@ impl RowAccumulator {
     ///
     /// This is safe if `row.stage() == self.stage()`.
     #[inline]
-    pub unsafe fn accumulate_unchecked(&mut self, row: &Row) {
+    pub unsafe fn post_accumulate_unchecked(&mut self, row: &Row) {
         self.total.mul_into_unchecked(row, &mut self.temp_row); // Multiply `total` into `temp_row`
         std::mem::swap(&mut self.total, &mut self.temp_row); // Swap the result back into `total`
     }
@@ -86,13 +86,13 @@ impl RowAccumulator {
 impl MulAssign<&Row> for RowAccumulator {
     #[inline]
     fn mul_assign(&mut self, rhs: &Row) {
-        self.accumulate(rhs).unwrap()
+        self.post_accumulate(rhs).unwrap()
     }
 }
 
 impl MulAssign<&RowBuf> for RowAccumulator {
     #[inline]
     fn mul_assign(&mut self, rhs: &RowBuf) {
-        self.accumulate(rhs).unwrap()
+        self.post_accumulate(rhs).unwrap()
     }
 }

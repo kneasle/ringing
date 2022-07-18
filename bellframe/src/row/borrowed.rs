@@ -266,21 +266,21 @@ impl Row {
     ///
     /// // Multiplying two Rows of the same Stage is fine
     /// assert_eq!(
-    ///     RowBuf::parse("13425678")?.mul_result(&RowBuf::parse("43217568")?),
+    ///     RowBuf::parse("13425678")?.try_mul(&RowBuf::parse("43217568")?),
     ///     Ok(RowBuf::parse("24317568")?)
     /// );
     /// // Multiplying two Rows of different Stages causes an error but no
     /// // undefined behaviour
     /// assert_eq!(
     ///     &RowBuf::parse("13425678")?
-    ///         .mul_result(&RowBuf::parse("4321")?)
+    ///         .try_mul(&RowBuf::parse("4321")?)
     ///         .unwrap_err()
     ///         .to_string(),
     ///     "Incompatible stages: Major (lhs), Minimus (rhs)"
     /// );
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
-    pub fn mul_result(&self, rhs: &Self) -> Result<RowBuf, IncompatibleStages> {
+    pub fn try_mul(&self, rhs: &Self) -> Result<RowBuf, IncompatibleStages> {
         IncompatibleStages::test_err(self.stage(), rhs.stage())?;
         // This unsafety is OK because the `self` and `rhs` are both assumed to be valid, and we
         // have already checked that their stages are equal
@@ -288,7 +288,7 @@ impl Row {
     }
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), but without checking that the
-    /// [`Stage`]s are compatible.  This is slightly faster than using `*` or [`Row::mul_result`],
+    /// [`Stage`]s are compatible.  This is slightly faster than using `*` or [`Row::try_mul`],
     /// but could cause undefined behaviour.
     ///
     /// # Safety
@@ -309,12 +309,10 @@ impl Row {
     /// );
     /// // Multiplying two Rows of different Stages is not OK, and creates an invalid Row.
     /// // Note how both sides of the `assert_eq` have to use unsafe to create an invalid Row.
-    /// assert_eq!(
-    ///     unsafe { RowBuf::parse("13475628")?.mul_unchecked(&RowBuf::parse("4321")?) },
-    ///     unsafe {RowBuf::from_vec_unchecked(
-    ///         [7, 4, 3, 1].iter().map(|&x| Bell::from_number(x).unwrap()).collect()
-    ///     )}
-    /// );
+    /// let bad_row = unsafe {
+    ///     RowBuf::parse("13475628")?.mul_unchecked(&RowBuf::parse("4321")?)
+    /// };
+    /// assert_eq!(bad_row.to_string(), "7431"); // NOT A VALID ROW!
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     pub unsafe fn mul_unchecked(&self, rhs: &Row) -> RowBuf {
@@ -496,7 +494,7 @@ impl Row {
         let mut accumulator = RowAccumulator::rounds(self.stage());
         for _ in 0..exponent {
             // Unwrap is safe because the accumulator has the same stage as `self`
-            accumulator.accumulate(self).unwrap();
+            accumulator.post_accumulate(self).unwrap();
         }
         accumulator.into_total()
     }
@@ -505,38 +503,14 @@ impl Row {
     /// post-transposes `a` to `b`.
     #[inline]
     pub fn solve_ax_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
-        a.inv().mul_result(b)
+        a.inv().try_mul(b)
     }
 
     /// Computes the value of `x` which satisfies `x * a = b` - i.e. the `Row` which
     /// pre-multiplies `a` to `b`.  This is equivalent to `a.transposition_to(b)`.
     #[inline]
     pub fn solve_xa_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
-        b.mul_result(&a.inv())
-    }
-
-    /// Computes the value of `r` which satisfies `r * self = other` - i.e. the `Row` which
-    /// pre-multiplies `self` to `other`.
-    #[inline]
-    #[deprecated(
-        note = "This function's name is confusing, so please use `Row::solve_xa_equals_b` instead"
-    )]
-    pub fn tranposition_to(&self, other: &Self) -> Result<RowBuf, IncompatibleStages> {
-        other.mul_result(&self.inv())
-    }
-
-    /// Computes the value of `r` which satisfies `r * self = other` - i.e. the `Row` which
-    /// pre-multiplies `self` to `other`, bypassing the same-[`Stage`] check.
-    ///
-    /// # Safety
-    ///
-    /// This is safe if `self` and `other` have the same [`Stage`].
-    #[inline]
-    #[deprecated(
-        note = "This function's name is confusing, so please use `Row::solve_xa_equals_b` instead"
-    )]
-    pub unsafe fn tranposition_to_unchecked(&self, other: &Self) -> RowBuf {
-        other.mul_unchecked(&self.inv())
+        b.try_mul(&a.inv())
     }
 
     /* MISC FUNCTIONS */
@@ -592,7 +566,7 @@ impl Row {
         while !accum.total().is_rounds() {
             // Safe, because `RowAccumulator` is initialised with `self` and its stage never
             // changes (so `accum.stage() == self.stage()` for all loop iterations).
-            unsafe { accum.accumulate_unchecked(self) };
+            unsafe { accum.post_accumulate_unchecked(self) };
             count += 1;
         }
         count
@@ -627,8 +601,7 @@ impl Row {
             if last_row.is_rounds() {
                 return closure;
             }
-            // This unsafety is OK, because `self` is a valid Row and `row` and `self` will always
-            // have the same Stage
+            // This unsafety is OK, because `row` and `self` have the same Stage
             let next_row = unsafe { last_row.mul_unchecked(self) };
             closure.push(next_row);
         }
@@ -663,7 +636,7 @@ impl Row {
         let mut closure = vec![RowBuf::rounds(self.stage())];
         loop {
             let last_row = closure.last().unwrap();
-            // This unsafety is OK, because `row` and `self` will always have the same Stage
+            // This unsafety is OK, because `row` and `self` have the same Stage
             let next_row = unsafe { last_row.mul_unchecked(self) };
             if next_row.is_rounds() {
                 return closure;
@@ -715,6 +688,7 @@ impl Row {
                 let r2 = r2.as_ref();
                 IncompatibleStages::test_err(s, r2.stage())?;
                 for r1 in &transpose_from {
+                    // SAFETY: We checked that `r2` and all of `transpose_from` have stage `s`
                     transpose_to.push(unsafe { r1.mul_unchecked(r2) });
                 }
             }
@@ -756,7 +730,7 @@ impl Row {
         // number is bounded by the size of the resulting group (which is finite).
         while let Some(r) = frontier.pop_front() {
             for r2 in rows.clone().into_iter() {
-                // This unsafety is OK because we checked that all Rows in `rows` have equal stages
+                // SAFETY: we checked that all Rows in `rows` have stage `s`
                 let new_row = unsafe { r.mul_unchecked(r2) };
                 if !set.contains(&new_row) {
                     frontier.push_back(new_row.clone());
@@ -804,8 +778,7 @@ impl Row {
         for &b in &row_set {
             b.inv_into_buf(&mut b_inv);
             for &a in &row_set {
-                // This unsafety is OK because we checked that all the stages match at the start of
-                // this function
+                // SAFETY: we checked that all the stages match at the start of this function
                 unsafe { a.mul_into_unchecked(&b_inv, &mut a_mul_b_inv) }
                 // If `a * !b` is not in `row_set`, then this can't be a group so we return false
                 if !row_set.contains(&*a_mul_b_inv) {
@@ -955,7 +928,7 @@ impl Mul for &Row {
     /// ```
     #[inline]
     fn mul(self, rhs: &Row) -> Self::Output {
-        self.mul_result(rhs).unwrap()
+        self.try_mul(rhs).unwrap()
     }
 }
 
@@ -967,7 +940,7 @@ macro_rules! mul_impl {
             /// Uses the RHS to permute the LHS without consuming either argument.
             #[inline]
             fn mul(self, rhs: $rhs) -> Self::Output {
-                self.mul_result(&rhs).unwrap()
+                self.try_mul(&rhs).unwrap()
             }
         }
     };

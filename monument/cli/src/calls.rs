@@ -25,10 +25,7 @@ impl BaseCalls {
         bob_weight: Option<f32>,
         single_weight: Option<f32>,
     ) -> anyhow::Result<CallVec<Call>> {
-        // Panic if the comp has less than 4 bells.  I don't expect anyone to use Monument to
-        // generate comps on fewer than 8 bells, but we should still check because otherwise the
-        // `unsafe` code causes undefined behaviour
-        assert!(stage >= Stage::MINIMUS);
+        assert!(stage >= Stage::MINIMUS); // Calls aren't defined on < 4 bells
 
         let (mut bob, mut single) = match self {
             BaseCalls::None => return Ok(CallVec::new()),
@@ -39,16 +36,10 @@ impl BaseCalls {
             BaseCalls::Far => {
                 let n = stage.num_bells_u8();
                 (
-                    // The unsafety here is OK, because the slice is always sorted (unless stage <
-                    // MINIMUS, in which case the assert trips)
-                    lead_end_bob(unsafe {
-                        PlaceNot::from_sorted_slice(&[0, n - 3], stage).unwrap()
-                    }),
-                    // The unsafety here is OK, because the slice is always sorted (unless stage <
-                    // MINIMUS, in which case the assert trips)
-                    lead_end_single(unsafe {
-                        PlaceNot::from_sorted_slice(&[0, n - 3, n - 2, n - 1], stage).unwrap()
-                    }),
+                    lead_end_bob(PlaceNot::from_slice(&mut [0, n - 3], stage).unwrap()),
+                    lead_end_single(
+                        PlaceNot::from_slice(&mut [0, n - 3, n - 2, n - 1], stage).unwrap(),
+                    ),
                 )
             }
         };

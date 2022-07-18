@@ -91,8 +91,7 @@ impl SameStageVec {
     #[inline]
     pub fn from_row_buf(row: RowBuf) -> Self {
         let stage = row.stage();
-        // This unsafety is OK because `row.to_bell_vec()` generates a Vec containing only one
-        // `Row`, which is required to be valid by `RowBuf`'s invariants
+        // SAFETY: `row.to_bell_vec()` generates a Vec containing the `Bell`s of exactly one valid `Row`
         unsafe { Self::from_bell_vec_unchecked(row.into_bell_vec(), stage) }
     }
 
@@ -173,8 +172,7 @@ impl SameStageVec {
     /// Gets a reference to the [`Row`] at a given `index`, or `None` if `index >= self.len()`.
     pub fn get(&self, index: usize) -> Option<&Row> {
         let bell_slice = self.bells.get(self.get_range_of_row(index))?;
-        // This unsafety is OK, because we uphold an invariant that each stage-aligned segment of
-        // `self.bells` is a valid `Row`
+        // SAFETY: by invariant, each stage-aligned segment of `self.bells` is a valid `Row`
         Some(unsafe { Row::from_slice_unchecked(bell_slice) })
     }
 
@@ -183,8 +181,7 @@ impl SameStageVec {
     pub fn get_mut(&mut self, index: usize) -> Option<&mut Row> {
         let range = self.get_range_of_row(index);
         let bell_slice = self.bells.get_mut(range)?;
-        // This unsafety is OK, because we uphold an invariant that each stage-aligned segment of
-        // `self.bells` is a valid `Row`
+        // SAFETY: by invariant, each stage-aligned segment of `self.bells` is a valid `Row`
         Some(unsafe { Row::from_mut_slice_unchecked(bell_slice) })
     }
 
@@ -247,9 +244,11 @@ impl SameStageVec {
         // Compute the index of the first `Bell` in the last `Row`, and return `None` if that index
         // would be negative
         let start_index = self.bells.len().checked_sub(self.stage.num_bells())?;
+        debug_assert_eq!(self.bells.len() % self.stage.num_bells(), 0);
         debug_assert_eq!(start_index % self.stage.num_bells(), 0);
-        // This unsafety is OK because we enforce an invariant that every stage-aligned segment of
-        // `self.bells` is a valid `Row`.
+        // SAFETY: `start_index` and `self.bells.len()` are multiples of `self.stage.num_bells()`,
+        // so `self.bells[start_index..]` is 'stage-aligned'.  By invariant, every stage-aligned
+        // segment of `self.bells` is a valid `Row`.
         Some(unsafe { RowBuf::from_bell_iter_unchecked(self.bells.drain(start_index..)) })
     }
 
@@ -340,12 +339,11 @@ impl SameStageVec {
         IncompatibleStages::test_err(lhs_row.stage(), self.stage())?;
         // TODO: Write vectorised routine for this
         for b in &mut self.bells {
-            // This function is safe because:
+            // SAFETY:
             // - We know that `self.stage() == lhs_row.stage()`
             // - Because of the `Row` invariants, `b.index() < self.stage()` for all `b` in
             //   `self.bells`
             // => `b.index() < lhs_row.stage()` for every `b`
-            // => calling `get_bell_unchecked` is safe
             *b = unsafe { lhs_row.get_bell_unchecked(b.index()) };
         }
         Ok(())
@@ -361,12 +359,14 @@ impl SameStageVec {
     /// Splits `self` into two `SameStageVec`s (`a` and `b`) where:
     /// - `a.len() == index`, and
     /// - `self == a.extend_from_buf(&b)` (i.e. no rows are created or destroyed)
+    ///
+    /// Returns `None` if `index > self.len()`
     pub fn split(self, index: usize) -> Option<(Self, Self)> {
         let (left_bells, right_bells) =
             utils::split_vec(self.bells, index * self.stage.num_bells())?;
         Some((
-            // Both of these are safe because we split `self.bells` at an integer multiple of
-            // `self.stage`, thus preserving the row boundaries and upholding the invariants
+            // SAFETY: `self.bells` is split at an integer multiple of `self.stage`, which must be
+            // a row boundary, so each side is a valid sequence of `Row`s
             unsafe { Self::from_bell_vec_unchecked(left_bells, self.stage) },
             unsafe { Self::from_bell_vec_unchecked(right_bells, self.stage) },
         ))
@@ -396,10 +396,15 @@ impl SameStageVec {
 impl Index<usize> for SameStageVec {
     type Output = Row;
 
+    #[track_caller]
     fn index(&self, index: usize) -> &Self::Output {
-        // This unsafety is fine, because we require that every stage-aligned chunk of bells forms
-        // a valid row according to the Framework
-        unsafe { Row::from_slice_unchecked(&self.bells[self.get_range_of_row(index)]) }
+        self.get(index).unwrap_or_else(|| {
+            panic!(
+                "Index of `SameStageVec` is out of range (index was {} but there are only {} rows)",
+                index,
+                self.len()
+            )
+        })
     }
 }
 
@@ -444,9 +449,8 @@ impl<'v> Iterator for Iter<'v> {
         // invariant on `self.bells_left` is still satisfied.
         let (next_row, future_rows) = self.bells_left.split_at(self.stage.num_bells());
         self.bells_left = future_rows;
-        // This unsafety is OK because the invariant on `self.bells_left` requires that `next_row`
-        // (a stage-aligned segment of `self.bells_left`) forms a valid row according to the
-        // Framework.
+        // SAFETY: the invariant on `self.bells_left` requires that `next_row` (a stage-aligned
+        // segment of `self.bells_left`) forms a valid `Row`.
         Some(unsafe { Row::from_slice_unchecked(next_row) })
     }
 
@@ -466,9 +470,8 @@ impl<'v> DoubleEndedIterator for Iter<'v> {
             .bells_left
             .split_at(self.bells_left.len() - self.stage.num_bells());
         self.bells_left = future_rows;
-        // This unsafety is OK because the invariant on `self.bells_left` requires that `next_row`
-        // (a stage-aligned segment of `self.bells_left`) forms a valid row according to the
-        // Framework.
+        // SAFETY: the invariant on `self.bells_left` requires that `next_row` (a stage-aligned
+        // segment of `self.bells_left`) forms a valid `Row`.
         Some(unsafe { Row::from_slice_unchecked(next_row) })
     }
 }
