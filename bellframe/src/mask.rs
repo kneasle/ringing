@@ -100,7 +100,8 @@ impl Mask {
     pub fn fix_bells(stage: Stage, fixed_bells: impl IntoIterator<Item = Bell>) -> Self {
         let mut new_mask = Self::empty(stage);
         for b in fixed_bells {
-            // Unsafety is OK because bells are only ever fixed to their own locations
+            // SAFETY: bells are only ever fixed to their own locations, so can't be fixed in two
+            // different locations
             unsafe { new_mask.fix_unchecked(b) };
         }
         new_mask
@@ -185,8 +186,7 @@ impl Mask {
             Some(p) if p == place => Ok(()), // Bell is already fixed here, so nothing to do
             Some(_) => Err(BellAlreadySet(bell)), // Adding the bell would fix it twice
             None => {
-                // Unsafety is OK because this match arm only executes if the bell isn't fixed in
-                // `self`
+                // SAFETY: because this match arm only executes if `bell` isn't fixed in `self`
                 unsafe { self.set_bell_unchecked(bell, place) };
                 Ok(())
             }
@@ -210,8 +210,8 @@ impl Mask {
     /// If this mask matches exactly one [`Row`], then return that [`Row`] (otherwise `None`).
     pub fn as_row(&self) -> Option<RowBuf> {
         if self.bells.iter().all(Option::is_some) {
-            // This unsafety is OK because we assert an invariant that masks are subsets of rows
-            // (and thus a complete mask satisfies all the invariants of rows).
+            // SAFETY: The invariants of `self.bells` a superset of those of `Row`s, so a complete
+            // `Mask` satisfies all the invariants of `Row` and `RowBuf`.
             Some(unsafe { RowBuf::from_bell_iter_unchecked(self.bells.iter().map(|b| b.unwrap())) })
         } else {
             None

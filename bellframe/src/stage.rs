@@ -18,7 +18,7 @@ use crate::{RowBuf, SameStageVec};
 use crate::{Bell, Method, Row};
 
 /// A newtype over [`u8`] that represents a stage.  All `Stage`s must contain at least one
-/// [`Bell`]; zero-bell `Stage`s cannot be created without `unsafe` code.
+/// [`Bell`]; zero-bell `Stage`s cannot be created without using incorrect `unsafe` code.
 ///
 /// To create a new `Stage`, you can either create it directly with [`Stage::try_from`] (which
 /// returns a [`Result`]) or with [`Stage::new`] (which panics if passed `0`).
@@ -216,8 +216,7 @@ impl Stage {
                 new_extent_bell_vec.extend_from_slice(bells_after)
             }
         }
-        // Unsafety is OK because we generated the rows by inserting the new tenor into an already
-        // known-good row.
+        // SAFETY: We generated the rows by inserting the new tenor into an already valid `Row`.
         unsafe { SameStageVec::from_bell_vec_unchecked(new_extent_bell_vec, self) }
     }
 }

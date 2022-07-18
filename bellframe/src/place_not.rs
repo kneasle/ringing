@@ -115,44 +115,34 @@ impl PlaceNot {
             .filter_map(Bell::from_name)
             .map(Bell::index_u8)
             .collect();
-        // Sort the places into ascending order (unstable sort doesn't matter for usizes)
-        parsed_places.sort_unstable();
-        // Convert this unsorted slice into a PlaceNot, or return an error.  The unsafety is OK
-        // because we have just sorted the slice
-        unsafe { Self::from_sorted_slice(&parsed_places, stage) }
+        // Create a new `PlaceNot` with these places (or error)
+        Self::from_slice(&mut parsed_places, stage)
     }
 
     /// Creates a new `PlaceNot` from a sorted slice of places, performing bounds checks and
     /// returning errors if necessary.
-    ///
-    /// # Safety
-    ///
-    /// This function is safe if `parsed_places` is sorted into increasing order
-    pub unsafe fn from_sorted_slice(
-        parsed_places: &[u8],
-        stage: Stage,
-    ) -> Result<Self, ParseError> {
-        // Check if we were given no places (I'm making this an error because '-' should be used
-        // instead)
-        parsed_places.last().ok_or(ParseError::NoPlacesGiven)?;
+    pub fn from_slice(input_places: &mut [u8], stage: Stage) -> Result<Self, ParseError> {
+        // Sort the places into ascending order (unstable sort doesn't matter for integers)
+        input_places.sort_unstable();
+        let lowest_place = *input_places.first().ok_or(ParseError::NoPlacesGiven)?;
+        let highest_place = *input_places.last().unwrap();
+
         // Check if any of the bells are out of range
-        if let Some(out_of_range_place) =
-            parsed_places.last().filter(|p| **p >= stage.num_bells_u8())
-        {
+        if highest_place >= stage.num_bells_u8() {
             return Err(ParseError::PlaceOutOfStage {
-                place: *out_of_range_place,
+                place: highest_place,
                 stage,
             });
         }
 
         // Rebuild to a new Vec when adding places to avoid quadratic behaviour
-        let mut places = Vec::with_capacity(parsed_places.len() + 5);
+        let mut places = Vec::with_capacity(input_places.len() + 5);
         // Add implicit place in lead
-        if parsed_places.first().filter(|p| *p % 2 == 1).is_some() {
-            places.push(0)
+        if lowest_place % 2 == 1 {
+            places.push(0);
         }
         // Copy the contents of `parsed_places`, inserting implicit places where necessary
-        for (p, q) in parsed_places.iter().copied().tuple_windows() {
+        for (p, q) in input_places.iter().copied().tuple_windows() {
             // Add `p` to `places`
             places.push(p);
             // Check if there is an implicit place made between these, or if the place notation is
@@ -168,20 +158,15 @@ impl PlaceNot {
             }
             // `q` will be pushed in the next loop iteration
         }
-        // Copy the last element from `places`.  This is a special case, because `tuple_windows`
-        // won't return the last element as the first element of a tuple window (because there's
-        // nothing to pair it with)
-        if let Some(p) = parsed_places.last() {
-            places.push(*p)
-        }
+        // Copy the last element from `places` (aka the highest place).  This is a special case,
+        // because `tuple_windows` won't return the last element as the first element of a tuple
+        // window (because there's nothing to pair it with)
+        places.push(highest_place);
         // Add implicit place at the back if necessary
-        if parsed_places
-            .last()
-            .filter(|p| (stage.num_bells_u8() - *p) % 2 == 0)
-            .is_some()
-        {
-            places.push(stage.num_bells_u8() - 1)
+        if (stage.num_bells_u8() - highest_place) % 2 == 0 {
+            places.push(stage.num_bells_u8() - 1);
         }
+
         // Create struct and return.  We don't need to sort `places`, because we only pushed to it
         // in ascending order.
         Ok(PlaceNot { places, stage })
@@ -285,7 +270,7 @@ impl PlaceNot {
     /// Returns a [`RowBuf`] representing the same transposition as this `PlaceNot`.
     pub fn transposition(&self) -> RowBuf {
         let mut row = RowBuf::rounds(self.stage());
-        // This unsafety is OK because the `row` has the same stage as `self`
+        // SAFETY: `row` has the same stage as `self`
         unsafe { self.permute_unchecked(&mut row) };
         row
     }
@@ -529,18 +514,12 @@ impl PnBlock {
                 // the places we've collected so far and push it to `buf`
                 CharMeaning::Cross | CharMeaning::Delimiter => {
                     if !places.is_empty() {
-                        // Create a new place notation from `places`, reporting the error if
-                        // necessary
-                        places.sort_unstable();
-                        // This unsafety is OK, because we have just sorted the slice
-                        let new_pn = unsafe {
-                            PlaceNot::from_sorted_slice(&places, stage).map_err(|e| {
-                                PnBlockParseError::PnError(current_pn_start_index..i, e)
-                            })
-                        }?;
-                        places.clear();
                         // Push the new place notation to the buffer
+                        let new_pn = PlaceNot::from_slice(&mut places, stage).map_err(|e| {
+                            PnBlockParseError::PnError(current_pn_start_index..i, e)
+                        })?;
                         buf.push(new_pn);
+                        places.clear();
                     }
                 }
                 // A '+' (for asymmetric block) not at the start of a block is an error
@@ -631,7 +610,7 @@ impl PnBlock {
         let mut rows = SameStageVec::from_row_buf(start_row.clone());
         let mut current_row = start_row;
         for pn in &self.pns {
-            // This unsafety is OK because:
+            // SAFETY:
             // - all PlaceNots in `self` have the same stage (by invariant)
             // - we return with an error if `start_row` has a different `stage` to this `PnBlock`
             // => `pn.stage() == current_row.stage()`
