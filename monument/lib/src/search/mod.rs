@@ -93,7 +93,7 @@ pub(crate) fn search(
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
     // clean up the memory anyway.
-    if config.mem_forget_search_data {
+    if config.leak_search_memory {
         std::mem::forget(search_data);
         std::mem::forget(frontier);
     }

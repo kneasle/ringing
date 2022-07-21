@@ -11,8 +11,7 @@ use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
 use itertools::Itertools;
-use monument::Config;
-use monument_cli::{CtrlCBehaviour, DebugOption};
+use monument_cli::{DebugOption, Environment};
 use ordered_float::OrderedFloat;
 use path_slash::PathExt;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -29,50 +28,31 @@ use serde::{Deserialize, Deserializer, Serialize};
 const IGNORE_PATH: &str = "test/ignore.toml";
 const EXPECTED_RESULTS_PATH: &str = "test/results.json";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
-const TEST_DIRS: [(&str, SuiteUse); 2] = [
-    ("test/cases/", SuiteUse::Test), // Test cases which we expect to succeed
-    ("examples/", SuiteUse::Example), // Examples to show how Monument's TOML format works
+const TEST_DIRS: [(&str, SuiteState); 2] = [
+    ("test/cases/", SuiteState::Run), // Test cases which we expect to succeed
+    ("examples/", SuiteState::Parse), // Examples to show how Monument's TOML format works
 ];
 const PATH_TO_MONUMENT_DIR: &str = "../";
-
-/// The maximum number of items allowed in the queue at one time
-const QUEUE_LIMIT: usize = 10_000_000;
 
 ///////////////////////////
 // TOP-LEVEL RUNNER CODE //
 ///////////////////////////
 
 /// Run the full test suite.
-pub fn run(run_type: RunType) -> anyhow::Result<Outcome> {
+pub fn run() -> anyhow::Result<Outcome> {
     monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
 
     // Collect the test cases
-    let cases = sources_to_cases(collect_sources(run_type)?)?;
-    // Run the tests.  We run _tests_ in parallel, but _benchmarks_ sequentially
+    let cases = sources_to_cases(collect_sources()?)?;
+    // Run the tests.
     println!("running {} tests", cases.len());
-    let run = |c: UnrunTestCase| run_and_print_test(c, run_type);
-    let completed_tests: Vec<RunTestCase> = match run_type {
-        RunType::Test => cases.into_par_iter().map(run).collect(),
-        RunType::Bench => cases.into_iter().map(run).collect(),
-    };
+    let completed_tests: Vec<RunTestCase> = cases.into_par_iter().map(run_test).collect();
     // Collate failures and unspecified tests from all `Suite`s
     report_failures(&completed_tests);
     let outcome = print_summary_string(&completed_tests);
     // Save current results file, used when blessing results
     write_actual_results(completed_tests)?;
     Ok(outcome)
-}
-
-/// The different ways that the test suite can be run
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// Each of `cargo test` and `cargo bench` will only use one of these, so each will cause the
-// `dead_code` lint
-#[allow(dead_code)]
-pub enum RunType {
-    /// Run using `cargo test`
-    Test,
-    /// Run using `cargo bench`
-    Bench,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -178,42 +158,17 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
 // LOADING TEST CASES //
 ////////////////////////
 
-/// The ways a test suite can be used
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SuiteUse {
-    /// Simple and fast cases which are designed to test parts of Monument, found in
-    /// `monument/test/cases/`.
-    /// These are always run.
-    Test,
-    /// Slower inputs designed to illustrate parts of Monument, found in `monument/examples`.
-    Example,
-    /// Slower inputs designed to be test Monument's performance, found in `monument/test/bench`.
-    Bench,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SuiteState {
     Run,
     Parse,
-    Ignore,
 }
 
 /// Determine where all the tests should come from, and how they should be run
-fn collect_sources(run_type: RunType) -> anyhow::Result<Vec<(CaseSource, SuiteState)>> {
+fn collect_sources() -> anyhow::Result<Vec<(CaseSource, SuiteState)>> {
     // Collect the individual test sources from every suite
     let mut test_sources: Vec<(CaseSource, SuiteState)> = Vec::new();
-    for (path, suite_use) in TEST_DIRS {
-        // Determine whether tests in this directory should be run
-        let state = match (run_type, suite_use) {
-            // If `cargo test`, parse everything but only run `test/cases/`
-            (RunType::Test, SuiteUse::Test) => SuiteState::Run,
-            (RunType::Test, SuiteUse::Bench | SuiteUse::Example) => SuiteState::Parse,
-            // If `cargo bench`, only run benchmarks and ignore everything else
-            // TODO: Run `examples/` as benchmarks?
-            (RunType::Bench, SuiteUse::Bench) => SuiteState::Run,
-            (RunType::Bench, SuiteUse::Test | SuiteUse::Example) => SuiteState::Ignore,
-        };
-
+    for (path, state) in TEST_DIRS {
         // TODO: Make newtypes for the different relative paths?
         let path_relative_to_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
 
@@ -403,31 +358,9 @@ fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
 // RUNNING TEST CASES //
 ////////////////////////
 
-/// Run a specific test case, printing a line when finished.  The type signature is a bit weird but
-/// means that this can be used directly when mapping over iterators.
-fn run_and_print_test(unrun_case: UnrunTestCase, run_type: RunType) -> RunTestCase {
-    let config = Config {
-        queue_limit: QUEUE_LIMIT,
-        thread_limit: match run_type {
-            RunType::Test => Some(1), // For tests, we run cases in parallel - one thread each
-            RunType::Bench => None,   // For bench, we run cases sequentially so no thread limit
-        },
-        ..Config::default()
-    };
-    // Run the test
-    let run_case = run_test(unrun_case, &config);
-    // Determine what should be printed after the '...'
-    println!(
-        "{} ... {}",
-        run_case.name(),
-        run_case.outcome().colored_string()
-    );
-    // Return the completed results
-    run_case
-}
-
-/// Run a test case (skipping ignored cases), determining its [`TestResult`]
-fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
+/// Run a test case (skipping ignored cases), determining its [`TestResult`].  Prints a status line
+/// once finished.
+fn run_test(case: UnrunTestCase) -> RunTestCase {
     // Skip any ignored tests
     if case.ignored {
         return RunTestCase {
@@ -449,16 +382,16 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
         },
     };
 
-    // Run Monument
     let no_search = case.expected_results == ExpectedResult::Parsed;
-    let monument_result = monument_cli::run(
-        source,
-        no_search.then(|| DebugOption::StopBeforeSearch),
-        config,
-        CtrlCBehaviour::TerminateProcess, // Don't bother recovering comps whilst testing
-    );
+
+    // Run Monument
+    let options = monument_cli::args::Options {
+        debug_option: no_search.then(|| DebugOption::StopBeforeSearch),
+        ..Default::default()
+    };
+    let monument_result = monument_cli::run(source, &options, Environment::TestHarness);
     // Convert Monument's `Result` into a `Results`
-    let actual_results = match monument_result {
+    let actual_result = match monument_result {
         // Successful search run
         Ok(Some(result)) => {
             assert!(!no_search);
@@ -491,11 +424,17 @@ fn run_test(case: UnrunTestCase, config: &Config) -> RunTestCase {
             ActualResult::Error(color_free_error_string)
         }
     };
-    // Add the actual results to get a full search
-    RunTestCase {
+
+    let run_case = RunTestCase {
         base: case,
-        actual_result: actual_results,
-    }
+        actual_result,
+    };
+    println!(
+        "{} ... {}",
+        run_case.name(),
+        run_case.outcome().colored_string()
+    );
+    run_case
 }
 
 ////////////////////////////

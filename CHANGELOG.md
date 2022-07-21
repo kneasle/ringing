@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Monument
+- (#120) Allow `queue_limit` and `graph_size_limit` to be set in the TOML format.
 - (#116) Much smarter way of determining default method balance.  (Nerdy details:) Method counts are
     weighted by the square root of each method's lead length (so shorter methods won't need as many
     rows), and will round 'outwards' for cases like cyclic spliced where a 'perfect' method balance
