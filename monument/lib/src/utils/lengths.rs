@@ -42,7 +42,7 @@ macro_rules! impl_length {
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "{}", self.0)
+                std::fmt::Display::fmt(&self.0, f)
             }
         }
 
