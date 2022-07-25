@@ -336,27 +336,12 @@
       { "length": 1344, "string": "#Y[-]LL[-]C[-]L[s]Y[s]", "avg_score": -0.03125, "part_head": "17823456" },
       { "length": 1344, "string": "#Y[-]LL[-]L[-]C[s]Y[s]", "avg_score": -0.03125, "part_head": "17823456" },
       { "length": 1344, "string": "#Y[-]LL[-]L[-]L[s]Y[s]", "avg_score": -0.03125, "part_head": "17823456" },
-      {
-        "length": 1344,
-        "string": "#C[s]Y[-]Y[s]Y[s]L[-]Y[s]",
-        "avg_score": -0.030212402,
-        "part_head": "13456782"
-      },
-      {
-        "length": 1344,
-        "string": "#C[s]Y[-]Y[s]Y[s]C[-]Y[s]",
-        "avg_score": -0.029449463,
-        "part_head": "13456782"
-      },
+      { "length": 1344, "string": "#C[s]Y[-]Y[s]Y[s]L[-]Y[s]", "avg_score": -0.030212402, "part_head": "13456782" },
+      { "length": 1344, "string": "#C[s]Y[-]Y[s]Y[s]C[-]Y[s]", "avg_score": -0.029449463, "part_head": "13456782" },
       { "length": 1344, "string": "#L[s]Y[-]Y[s]Y[s]L[-]Y[s]", "avg_score": -0.02722168, "part_head": "13456782" },
       { "length": 1344, "string": "#Y[-]Y[s]C[-]Y[-]Y[-]Y[s]", "avg_score": -0.02722168, "part_head": "18234567" },
       { "length": 1344, "string": "#Y[-]Y[s]L[-]Y[-]Y[-]Y[s]", "avg_score": -0.02722168, "part_head": "18234567" },
-      {
-        "length": 1344,
-        "string": "#L[s]Y[-]Y[s]Y[s]C[-]Y[s]",
-        "avg_score": -0.026489258,
-        "part_head": "13456782"
-      },
+      { "length": 1344, "string": "#L[s]Y[-]Y[s]Y[s]C[-]Y[s]", "avg_score": -0.026489258, "part_head": "13456782" },
       { "length": 1344, "string": "#Y[-]C[s]Y[-]Y[s]Y[-]Y", "avg_score": -0.020080566, "part_head": "18234567" },
       { "length": 1344, "string": "#Y[-]L[s]Y[-]Y[s]Y[-]Y", "avg_score": -0.020080566, "part_head": "18234567" },
       { "length": 1344, "string": "#Y[s]C[s]YY[s]Y[s]Y[-]", "avg_score": -0.016357422, "part_head": "18234567" },
@@ -904,9 +889,7 @@
       { "length": 194, "string": "sWMB>", "avg_score": -0.030426025 }
     ]
   },
-  "test/cases/false-course-3.toml": {
-    "comps": [{ "length": 192, "string": "sTsWsMsBsVsH", "avg_score": -0.09375 }]
-  },
+  "test/cases/false-course-3.toml": { "comps": [{ "length": 192, "string": "sTsWsMsBsVsH", "avg_score": -0.09375 }] },
   "test/cases/false-splice.toml": {
     "comps": [
       { "length": 290, "string": "L[W]BBB[M]B[sM]L[sH]L[sW]BBL>", "avg_score": 0.04309082 },
@@ -2269,9 +2252,7 @@
       { "length": 448, "string": "#PLLL[-]P[-]L", "avg_score": 0.12454224, "part_head": "17823456" }
     ]
   },
-  "test/cases/inclusive-method-count.toml": {
-    "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }]
-  },
+  "test/cases/inclusive-method-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },
   "test/cases/little-bob-shorthand.toml": {
     "comps": [
       { "length": 48, "string": "LLLPL", "avg_score": 0.5 },
@@ -2308,12 +2289,7 @@
   },
   "test/cases/multipart-multiple-start-ends-1.toml": {
     "comps": [
-      {
-        "length": 672,
-        "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>",
-        "avg_score": 0.034240723,
-        "part_head": "14235678"
-      },
+      { "length": 672, "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>", "avg_score": 0.034240723, "part_head": "14235678" },
       { "length": 576, "string": "<BB[H]BB[sM]B[M]Y[sW]B>", "avg_score": 0.045837402, "part_head": "14235678" },
       { "length": 672, "string": "BB[M]B[M]B[sM]Y[W]B[sW]B", "avg_score": 0.05505371, "part_head": "13425678" },
       { "length": 672, "string": "BB[sM]B[M]Y[sW]B[W]B[W]B", "avg_score": 0.059509277, "part_head": "13425678" },
@@ -2332,12 +2308,7 @@
   },
   "test/cases/multipart-multiple-start-ends-2.toml": {
     "comps": [
-      {
-        "length": 672,
-        "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>",
-        "avg_score": 0.034240723,
-        "part_head": "14235678"
-      },
+      { "length": 672, "string": "<BB[H]BB[M]B[M]B[sM]Y[sW]B>", "avg_score": 0.034240723, "part_head": "14235678" },
       { "length": 576, "string": "<BB[H]BB[sM]B[M]Y[sW]B>", "avg_score": 0.045837402, "part_head": "14235678" },
       { "length": 672, "string": "BB[M]B[M]B[sM]Y[W]B[sW]B", "avg_score": 0.05505371, "part_head": "13425678" },
       { "length": 672, "string": "BB[sM]B[M]Y[sW]B[W]B[W]B", "avg_score": 0.059509277, "part_head": "13425678" },

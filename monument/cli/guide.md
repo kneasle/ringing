@@ -157,6 +157,8 @@ take you to more in-depth docs about it.
 - [`length`](#length-required)
 - [`num_comps = 100`](#num_comps)
 - [`allow_false = false`](#allow_false)
+- [`queue_limit`](#queue_limit)
+- [`graph_size_limit`](#graph_size_limit)
 
 **Methods:**
 - [`method`](#method)
@@ -225,6 +227,19 @@ The number of compositions you want.  Defaults to `100`
 
 If `true`, Monument will ignore falseness and generate potentially false compositions.  Defaults to
 `false`.
+
+#### `queue_limit`
+
+**_(since v0.11.0)_**
+
+Sets a limit on the number of compositions that Monument will consider at any time.  Monument's
+memory usage is proportional to this queue's length.  Defaults to 10 million.
+
+#### `graph_size_limit`
+
+**_(since v0.11.0)_**
+
+Sets a limit on the number of chunks in the composition graph.  Defaults to 100,000.
 
 ### Methods
 
@@ -507,7 +522,9 @@ patterns = [
 ```
 Defaults to 0.
 
-#### `leadwise` _(removed in v0.10.0)_
+#### `leadwise`
+
+**_(removed in v0.10.0)_**
 
 If set, this will stop Monument using calling positions, and instead label all the calls
 positionally.  `course_heads`, `split_tenors` and `ch_weights` will obviously have no effect, and
@@ -519,7 +536,9 @@ this is for weird cases like differential methods, which don't have a well-defin
 
 ### Starts/Ends
 
-#### `start_row` and `end_row` _(since v0.10.0)_
+#### `start_row` and `end_row`
+
+**_(since v0.10.0)_**
 
 Specifies the row used to start or finish the composition, both defaulting to rounds.  These don't
 work with multi-parts, but are useful for things like getting Monument to extend 720s of Minor into

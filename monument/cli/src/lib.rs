@@ -6,6 +6,7 @@
 #![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
+pub mod args;
 pub mod calls;
 pub mod music;
 pub mod spec;
@@ -26,7 +27,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{Comp, Config, Progress, Query, QueryUpdate, RefinedRanges};
+use monument::{Comp, Progress, Query, QueryUpdate, RefinedRanges};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -42,15 +43,14 @@ pub fn init_logging(filter: LevelFilter) {
 
 pub fn run(
     source: Source,
-    debug_option: Option<DebugOption>,
-    config: &Config,
-    ctrl_c_behaviour: CtrlCBehaviour,
+    options: &args::Options,
+    env: Environment,
 ) -> anyhow::Result<Option<QueryResult>> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
         ($variant: ident, $val: expr) => {
-            if debug_option == Some(DebugOption::$variant) {
+            if options.debug_option == Some(DebugOption::$variant) {
                 dbg!($val);
                 return Ok(None);
             }
@@ -68,15 +68,21 @@ pub fn run(
     let query = Arc::new(spec.lower(&source)?);
     debug_print!(Query, query);
 
+    let mut config = spec.config(options);
+    // If running in CLI mode, don't `drop` any of the search data structures, since Monument will
+    // exit shortly after the search terminates.  With the `Arc`-based data structures, this is
+    // seriously beneficial - it shaves many seconds off Monument's total running time.
+    config.leak_search_memory = env == Environment::Cli;
+
     // Optimise the graph(s)
     let mut graph = query
-        .unoptimised_graph(config)
+        .unoptimised_graph(&config)
         .map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
-    query.optimise_graph(&mut graph, config);
+    query.optimise_graph(&mut graph, &config);
     let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
 
-    if debug_option == Some(DebugOption::StopBeforeSearch) {
+    if options.debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
 
@@ -86,14 +92,16 @@ pub fn run(
     let comp_printer = CompPrinter::new(query.clone(), &refined_ranges);
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
-    // Run the search
-    if ctrl_c_behaviour == CtrlCBehaviour::RecoverComps {
+    // Intercept `ctrl-C` if running in CLI mode
+    if env == Environment::Cli {
         let abort_flag = abort_flag.clone();
         let handler = move || abort_flag.store(true, Ordering::Relaxed);
         if let Err(e) = ctrlc::set_handler(handler) {
             log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
+
+    // Run the search
     let update_fn = {
         let comps = comps.clone();
         move |update| {
@@ -106,7 +114,7 @@ pub fn run(
         &query,
         graph,
         refined_ranges,
-        config,
+        &config,
         update_fn,
         &abort_flag,
     );
@@ -124,6 +132,15 @@ pub fn run(
     }))
 }
 
+/// How this instance of Monument is being run
+#[derive(Debug, PartialEq, Eq)]
+pub enum Environment {
+    /// Being run by the test harness as a test case
+    TestHarness,
+    /// Being run by the CLI
+    Cli,
+}
+
 /// The `Source` of the TOML that Monument should read.  In nearly all cases, this will be loaded
 /// from the file a given [`Path`](std::path::Path).  For the test runner it's useful to be able to
 /// run Monument on strings that aren't loaded from a specific file, so for this we have the
@@ -137,17 +154,6 @@ pub enum Source<'a> {
         spec: &'a str,
         music_file: Option<&'a str>,
     },
-}
-
-/// How this query run should handle `Ctrl-C`.  This is usually
-/// [`RecoverComps`](Self::RecoverComps) when running as a stand-alone command and
-/// [`TerminateProcess`](Self::TerminateProcess) when running in the unit tests.
-#[derive(Debug, PartialEq, Eq)]
-pub enum CtrlCBehaviour {
-    /// Terminate the process instantly, without attempting to recover the compositions
-    TerminateProcess,
-    /// Capture the `Ctrl-C`, abort the search, and print the comps
-    RecoverComps,
 }
 
 #[derive(Debug, Clone)]

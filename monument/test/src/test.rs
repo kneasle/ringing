@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
         }
     } else {
         // If no args were given, just run the tests
-        match common::run(common::RunType::Test)? {
+        match common::run()? {
             common::Outcome::Fail => Err(anyhow::Error::msg("Tests failed")),
             common::Outcome::Pass => Ok(()),
         }

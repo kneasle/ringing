@@ -43,6 +43,12 @@ pub struct Spec {
     #[serde(default)]
     allow_false: bool,
 
+    /* CONFIG OPTIONS */
+    /// If set, overrides `-Q`/`--queue-limit` CLI argument
+    queue_limit: Option<usize>,
+    /// If set, overrides `--graph-size-limit` CLI argument
+    graph_size_limit: Option<usize>,
+
     /* METHODS */
     /// The method who's compositions we are after
     method: Option<MethodSpec>,
@@ -156,7 +162,21 @@ impl Spec {
         crate::utils::parse_toml(toml_string)
     }
 
-    /// 'Lower' this `Spec`ification into a [`Query`]
+    pub fn config(&self, opts: &crate::args::Options) -> monument::Config {
+        let mut config = monument::Config {
+            thread_limit: opts.num_threads,
+            ..Default::default()
+        };
+        if let Some(limit) = opts.graph_size_limit.or(self.graph_size_limit) {
+            config.graph_size_limit = limit;
+        }
+        if let Some(limit) = opts.queue_limit.or(self.queue_limit) {
+            config.queue_limit = limit;
+        }
+        config
+    }
+
+    /// 'Lower' this `Spec`ification into a [`Query`].
     pub fn lower(&self, source: &Source) -> anyhow::Result<Query> {
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self

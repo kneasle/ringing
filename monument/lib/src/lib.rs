@@ -182,7 +182,7 @@ pub struct Config {
     /// This massively improves the termination speed (because all individual allocations don't
     /// need to be freed), but only makes sense for the CLI, where Monument will do exactly one
     /// search run before terminating (thus returning the memory to the OS anyway).
-    pub mem_forget_search_data: bool,
+    pub leak_search_memory: bool,
 }
 
 impl Default for Config {
@@ -194,7 +194,7 @@ impl Default for Config {
             optimisation_passes: graph::optimise::passes::default(),
 
             queue_limit: 10_000_000,
-            mem_forget_search_data: false,
+            leak_search_memory: false,
         }
     }
 }
