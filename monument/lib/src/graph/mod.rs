@@ -178,17 +178,37 @@ impl Graph {
     ) {
         log::debug!("Optimising graph:");
         let mut last_size = self.size();
-        log::debug!("  Initial graph size: {:?}", last_size);
+        log::debug!("  Initial size: {:?}", last_size);
         let mut iter_count = 0;
+        let mut passes_since_last_time_graph_got_smaller = 0;
         let start_time = Instant::now();
-        loop {
+        'optimisation: loop {
             // Run every optimisation pass
             for p in passes {
                 // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
                 // is unnecessary.  I think that this system can deadlock if multiple threads are
                 // optimising graphs in parallel using the same set of passes.
                 p.lock().unwrap().run(self, query);
+
+                // Check if this optimisation pass has made the graph smaller
+                let new_size = self.size();
+                match new_size.cmp(&last_size) {
+                    Ordering::Less => passes_since_last_time_graph_got_smaller = 0,
+                    Ordering::Equal => {}
+                    Ordering::Greater => {
+                        unreachable!("Optimisation should never increase graph size")
+                    }
+                }
+                last_size = new_size;
+                // If we've run every optimisation pass without the graph getting smaller, then no
+                // more optimisation is possible
+                if passes_since_last_time_graph_got_smaller >= passes.len() {
+                    break 'optimisation;
+                }
+                passes_since_last_time_graph_got_smaller += 1;
             }
+            log::debug!("  New     size: {:?}", last_size);
+
             // Stop optimising if the limit has been reached
             if iter_count > limit {
                 log::warn!(
@@ -197,20 +217,8 @@ impl Graph {
                 break;
             }
             iter_count += 1;
-            // Stop optimising if the graph has stopped getting smaller
-            let new_size = self.size();
-            log::debug!("  New size: {:?}", new_size);
-            match new_size.cmp(&last_size) {
-                // If graph got smaller, then keep optimising in case more optimisation is possible
-                Ordering::Less => {}
-                // If the last optimisation pass couldn't make `self` smaller, then assume no
-                // changes has been made and further optimisation is impossible
-                Ordering::Equal => break,
-                // Optimisation passes shouldn't increase the graph size
-                Ordering::Greater => unreachable!("Optimisation should never increase graph size"),
-            }
-            last_size = new_size;
         }
+        log::debug!("  Final   size: {:?}", last_size);
         log::debug!(
             "Finished optimisation in {:?} after {} iters of every pass",
             start_time.elapsed(),

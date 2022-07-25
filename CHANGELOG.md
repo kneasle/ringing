@@ -1,6 +1,8 @@
 ## Unreleased
 
 ### Monument
+- (#122) Stop graph optimisation when all passes fail to make progress once (rather than waiting for
+    an entire run of passes to not make progress).
 - (#121) Renamed `lead_location` to `label` (for brevity).
 - (#120) Allow `queue_limit` and `graph_size_limit` to be set in the TOML format.
 - (#116) Much smarter way of determining default method balance.  (Nerdy details:) Method counts are
