@@ -260,7 +260,8 @@ impl CompPrefix {
         let splice_over_part_head = data.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
-            // common lead_location between the start and end of the composition)
+            // common label between the start and end of the composition for a splice to be
+            // allowed)
             let start_labels = data.query.methods[first_elem.method]
                 .first_lead()
                 .get_annot(first_elem.start_sub_lead_idx)

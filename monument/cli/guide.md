@@ -255,7 +255,8 @@ method = "Bristol Surprise Major"
 [method]
 title = "Lincolnshire Surprise Major"
 shorthand = "N" # (optional; defaults to the first letter of the title)
-lead_locations = { LE = 0, HL = 16 } # (optional; defaults to `{ LE = 0 }`)
+labels = { LE = 0, HL = 16 } # (optional; defaults to `{ LE = 0 }`)
+lead_locations = { LE = 0, HL = 16 } # (pre-v0.11.0 name for `labels`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
 course_heads = ["*78"]
@@ -269,7 +270,8 @@ name = "Double Norwich Court" # Note this is *name*, not *title*
 place_notation = "x4x36x5x8,8"
 stage = 8
 shorthand = "N" # (optional; defaults to the first letter of the title)
-lead_locations = { LE = 0, HL = 8 } # (optional; defaults to `{ LE = 0 }`)
+labels = { LE = 0, HL = 8 } # (optional; defaults to `{ LE = 0 }`)
+lead_locations = { LE = 0, HL = 16 } # (pre-v0.11.0 name for `labels`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
 course_heads = ["*78"]
@@ -277,12 +279,12 @@ start_indices = [2]
 end_indices = [2]
 ```
 
-You can also specify multiple locations for the same lead label, useful for e.g. Stedman:
+You can also specify multiple indices for the same `label`, useful for e.g. Stedman:
 
 ```toml
 [method]
 title = "Stedman Triples"
-lead_locations = { SE = [3, 9] }
+labels = { SE = [3, 9] }
 ```
 
 #### `methods`
@@ -361,13 +363,14 @@ Array of custom calls:
 [[calls]]
 place_notation = "16"
 symbol = "x"
-debug_symbol = "x"     # Optional; symbol to use for debugging.  Defaults to same as `symbol`
-lead_location = "LE"   # Optional; where in the method to apply the call.  Defaults to "LE"
+debug_symbol = "x"    # Optional; symbol to use for debugging.  Defaults to same as `symbol`
+label = "LE"          # Optional; where in the method to apply the call.  Defaults to "LE"
+lead_location = "LE"  # Optional; pre-v0.11.0 name for `label`
+weight = -4           # Optional; Score given to each instance of this call.  Defaults to -3
 calling_positions = "LIBFVXSMWH" # Optional; defaults to 'LIBFVXSEN...' with 'MWH' added
-weight = -4            # Optional; Score given to each instance of this call.  Defaults to -3
 ```
 
-Since _v0.9.0_, calls can go from/to different lead labels.  This is useful if, for example, you
+Since _v0.9.0_, calls can go from/to different lead `labels`.  This is useful if, for example, you
 want to make sure you only apply some calls to some methods.  The following example adds `16` bobs
 only in 8ths place methods, and `14` bobs in 2nds place methods (as in
 [Leary's 23](https://complib.org/composition/21607)):
@@ -375,10 +378,10 @@ only in 8ths place methods, and `14` bobs in 2nds place methods (as in
 ```toml
 length = "QP"
 methods = [
-    { title = "Bristol Surprise Major",     lead_locations = { LE = 0, 8ths = 0 } },
-    { title = "Deva Surprise Major",        lead_locations = { LE = 0, 8ths = 0 } },
-    { title = "Cambridge Surprise Major",   lead_locations = { LE = 0, 2nds = 0 } },
-    { title = "Superlative Surprise Major", lead_locations = { LE = 0, 2nds = 0 } },
+    { title = "Bristol Surprise Major",     labels = { LE = 0, 8ths = 0 } },
+    { title = "Deva Surprise Major",        labels = { LE = 0, 8ths = 0 } },
+    { title = "Cambridge Surprise Major",   labels = { LE = 0, 2nds = 0 } },
+    { title = "Superlative Surprise Major", labels = { LE = 0, 2nds = 0 } },
 ]
 part_head = "13456782"
 
@@ -387,12 +390,14 @@ base_calls = "none" # Only use our own custom calls
 symbol = ""
 debug_symbol = "-"
 place_notation = "14"
-lead_location = { from = "2nds", to = "LE" }
+# '14' bobs go *from* only 2nds place methods, but *to* any method
+label = { from = "2nds", to = "LE" }
 
 [[calls]]
 symbol = "x"
 place_notation = "16"
-lead_location = { from = "8ths", to = "LE" }
+# '16' bobs go *from* only 8ths place methods, but *to* any method
+label = { from = "8ths", to = "LE" }
 ```
 
 Notice how we're using lead labels `2nds` and `8ths` to control which calls are able to be placed at

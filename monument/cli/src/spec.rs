@@ -480,7 +480,9 @@ pub struct MethodCommon {
     #[serde(default, rename = "count")]
     count_range: OptRangeInclusive,
     /// Maps labels to where in the lead they occur
-    lead_locations: Option<HashMap<String, LeadLocations>>,
+    labels: Option<HashMap<String, LeadLabels>>,
+    /// Deprecated name for `labels` (deprecated since `v0.11.0`)
+    lead_locations: Option<HashMap<String, LeadLabels>>,
     /// Custom set of course head masks for this method
     course_heads: Option<Vec<String>>,
     start_indices: Option<Vec<isize>>,
@@ -489,12 +491,12 @@ pub struct MethodCommon {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
-pub enum LeadLocations {
+pub enum LeadLabels {
     JustOne(isize),
     Many(Vec<isize>),
 }
 
-impl LeadLocations {
+impl LeadLabels {
     fn as_slice(&self) -> &[isize] {
         match self {
             Self::JustOne(idx) => std::slice::from_ref(idx),
@@ -508,7 +510,7 @@ impl MethodSpec {
         &self,
         base_calls: BaseCalls,
     ) -> anyhow::Result<(bellframe::Method, MethodCommon)> {
-        let mut method = self.get_method_without_lead_locations()?;
+        let mut method = self.get_method_without_labels()?;
 
         if base_calls != BaseCalls::None {
             match method.name() {
@@ -528,11 +530,11 @@ impl MethodSpec {
         }
 
         let lead_len = method.lead_len() as isize;
-        for (name, locations) in self.get_lead_locations() {
-            for l in locations.as_slice() {
-                let wrapped_index = ((l % lead_len) + lead_len) % lead_len;
+        for (label, indices) in self.get_labels()? {
+            for idx in indices.as_slice() {
+                let wrapped_index = ((idx % lead_len) + lead_len) % lead_len;
                 // This cast is OK because we used % twice to guarantee a positive index
-                method.add_label(wrapped_index as usize, name.clone());
+                method.add_label(wrapped_index as usize, label.clone());
             }
         }
 
@@ -550,14 +552,22 @@ impl MethodSpec {
         }
     }
 
-    fn get_lead_locations(&self) -> HashMap<String, LeadLocations> {
-        self.common()
-            .and_then(|c| c.lead_locations.clone())
-            .unwrap_or_else(default_lead_labels)
+    fn get_labels(&self) -> anyhow::Result<HashMap<String, LeadLabels>> {
+        if let Some(common) = self.common() {
+            if common.lead_locations.is_some() {
+                return Err(anyhow::Error::msg(
+                    "`methods.lead_locations` has been renamed to `labels`",
+                ));
+            }
+        }
+        Ok(self
+            .common()
+            .and_then(|c| c.labels.clone())
+            .unwrap_or_else(default_lead_labels))
     }
 
-    /// Attempt to generate a new [`Method`] with no lead location annotations
-    fn get_method_without_lead_locations(&self) -> anyhow::Result<bellframe::Method> {
+    /// Attempt to generate a new [`Method`] with no labels
+    fn get_method_without_labels(&self) -> anyhow::Result<bellframe::Method> {
         match self {
             MethodSpec::FromCcLib { title, .. } | MethodSpec::JustTitle(title) => {
                 let lib = MethodLib::cc_lib().ok_or_else(|| {
@@ -698,11 +708,11 @@ fn default_num_comps() -> usize {
     100
 }
 
-/// By default, add a lead location "LE" on the 0th row (i.e. when the place notation repeats,
-/// usually the lead end).
-fn default_lead_labels() -> HashMap<String, LeadLocations> {
+/// By default, add a label "LE" on the 0th row (i.e. when the place notation repeats, usually the
+/// lead end).
+fn default_lead_labels() -> HashMap<String, LeadLabels> {
     let mut labels = HashMap::new();
-    labels.insert(LABEL_LEAD_END.to_owned(), LeadLocations::JustOne(0));
+    labels.insert(LABEL_LEAD_END.to_owned(), LeadLabels::JustOne(0));
     labels
 }
 

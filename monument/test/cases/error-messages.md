@@ -12,6 +12,29 @@ quickly whilst still being widely-used, flexible and human-readable.
 
 
 
+## deprecation
+
+### lead_locations-in-method
+
+```toml
+length = "QP"
+method.title = "Bristol Surprise Major"
+method.lead_locations = { LE = 0 } # Deprecation error in >= v0.11.0
+```
+
+### lead_location-in-calls
+
+```toml
+length = "QP"
+method = "Bristol Surprise Major"
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+lead_location = "LE" # Deprecation error in >= v0.11.0
+```
+
+
 ## method-pn-parsing
 
 ### repeated-place
@@ -128,7 +151,7 @@ method = "Bristol Surprise Major"
 [[calls]]
 symbol = "x"
 place_notation = "16"
-lead_location = "poo" # poo isn't defined anywhere
+label = "poo" # poo isn't defined anywhere
 ```
 
 ## calling-positions-too-short
@@ -261,14 +284,13 @@ on the half-lead:
 
 ```toml
 length = "practice"
-method.title = "Bristol Surprise Major"
-method.lead_locations = { LE = 0, HL = 16 }
+method = { title = "Bristol Surprise Major", labels = { LE = 0, HL = 16 } }
 base_music = "none"
 
 [[calls]]
 symbol = "s" # Not a clash, because this is a HL call
 place_notation = "5678"
-lead_location = "HL"
+label = "HL"
 calling_positions = "hwmvfbil"
 ```
 

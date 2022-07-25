@@ -10,10 +10,11 @@ pub mod class;
 pub const LABEL_LEAD_END: &str = "LE";
 
 /// The definition of a 'method' within Change Ringing.  Essentially, a `Method` consists of a
-/// [`Block`] which is intended to be rung as a repeating unit (usually a 'lead'), along with names
-/// for specific locations within this [`Block`].  Calls can then be attached to these locations
-/// (by name), and thus the single lead can be modified to determine the effect of calls in a
-/// general way.  This follows how complib.org's composition input works.
+/// [`Block`] which is intended to be rung as a repeating unit (usually a 'lead'), along with
+/// 'labels' for specific locations within this [`Block`].  Calls can then be attached to these
+/// locations (by their label), and thus the single lead can be modified to determine the effect of
+/// calls in a general way.  This follows how [CompLib](https://complib.org)'s composition input
+/// works.
 #[derive(Debug, Clone)]
 pub struct Method {
     title: String,
@@ -56,8 +57,8 @@ impl Method {
         }
     }
 
-    /// Parses a place notation string and creates a `Method` with that place notation and no lead
-    /// locations.
+    /// Parses a place notation string and creates a `Method` with that place notation and no
+    /// labels.
     pub fn from_place_not_string(
         name: String,
         stage: Stage,
@@ -69,11 +70,12 @@ impl Method {
         ))
     }
 
-    /// Creates a new `Method` from some place notation, adding a lead end annotation.
+    /// Creates a new `Method` from some place notation, adding a [`LABEL_LEAD_END`] on the first
+    /// row.
     pub fn with_lead_end(name: String, block: &PnBlock) -> Self {
         let mut first_lead: Block<Vec<String>> = block.to_block_from_rounds();
         first_lead
-            .get_annot_mut(first_lead.len() - 1)
+            .get_annot_mut(0)
             .unwrap()
             .push(LABEL_LEAD_END.to_owned());
         Self::with_name(name, first_lead)
@@ -83,8 +85,8 @@ impl Method {
     // GETTERS //
     /////////////
 
-    /// Returns an [`Block`] of the first lead of this [`Method`], along with the lead
-    /// location labels.
+    /// Returns an [`Block`] of the first lead of this [`Method`], along with the labels applied to
+    /// each [`Row`].
     #[inline]
     pub fn first_lead(&self) -> &Block<Vec<String>> {
         &self.first_lead
