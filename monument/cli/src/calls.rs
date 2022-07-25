@@ -67,7 +67,7 @@ impl BaseCalls {
             (false, true) => vec![single],
             (true, true) => {
                 return Err(anyhow::Error::msg(
-                    "Can't be both `bobs_only` and `singles_only`",
+                    "Composition can't be both `bobs_only` and `singles_only`",
                 ))
             }
         };
@@ -89,7 +89,9 @@ pub struct SpecificCall {
     symbol: String,
     debug_symbol: Option<String>,
     #[serde(default = "lead_end")]
-    lead_location: LeadLocation,
+    label: CallLabel,
+    /// Deprecated alias for `label`
+    lead_location: Option<CallLabel>,
     calling_positions: Option<CallingPositions>,
     #[serde(default = "default_misc_call_score")]
     weight: f32,
@@ -97,11 +99,11 @@ pub struct SpecificCall {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
-pub enum LeadLocation {
-    /// from/to are the same location
+pub enum CallLabel {
+    /// Call goes from/to the same label
     Same(String),
-    /// from/to are different (e.g. for cases like Leary's 23, which use 6ths place calls in 8ths
-    /// place methods)
+    /// Call goes from/to different labels (e.g. for cases like Leary's 23, which use 6ths place
+    /// calls in 8ths place methods)
     Different { from: String, to: String },
 }
 
@@ -130,25 +132,28 @@ impl SpecificCall {
             Some(CallingPositions::Str(s)) => s.chars().map(|c| c.to_string()).collect_vec(),
             Some(CallingPositions::List(positions)) => positions.clone(),
         };
-        let (lead_location_from, lead_location_to) = match &self.lead_location {
-            LeadLocation::Same(loc) => (loc.clone(), loc.clone()),
-            LeadLocation::Different { from, to } => (from.clone(), to.clone()),
+        if self.lead_location.is_some() {
+            return Err(anyhow::Error::msg(
+                "`calls.lead_location` has been renamed to `label`",
+            ));
+        }
+        let (label_from, label_to) = match &self.label {
+            CallLabel::Same(loc) => (loc.clone(), loc.clone()),
+            CallLabel::Different { from, to } => (from.clone(), to.clone()),
         };
         Ok(Call {
             display_symbol: self.symbol.clone(),
             debug_symbol: self.debug_symbol.as_ref().unwrap_or(&self.symbol).clone(),
             calling_positions,
-            lead_location_from,
-            lead_location_to,
+            label_from,
+            label_to,
             place_not,
             weight: self.weight,
         })
     }
 }
 
-/// Check for duplicate calls.  Calls are a 'duplicate' if assign the same symbol at the same
-/// lead location but to **different** place notations.  If they're the same, then Monument
-/// will de-duplicate them.
+/// Check for which assign the same `symbol` at the same `label`.
 pub fn check_for_duplicate_call_names<'calls>(
     call_specs: &'calls CallVec<Call>,
     symbol_name: &str,
@@ -156,13 +161,13 @@ pub fn check_for_duplicate_call_names<'calls>(
 ) -> anyhow::Result<()> {
     let sorted_calls = call_specs
         .iter()
-        .map(|call| (get_symbol(call), &call.lead_location_from, &call.place_not))
+        .map(|call| (get_symbol(call), &call.label_from, &call.place_not))
         .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
-    for ((sym1, lead_location1, pn1), (sym2, lead_location2, pn2)) in sorted_calls.tuple_windows() {
-        if sym1 == sym2 && lead_location1 == lead_location2 {
+    for ((sym1, label1, pn1), (sym2, label2, pn2)) in sorted_calls.tuple_windows() {
+        if sym1 == sym2 && label1 == label2 {
             return Err(anyhow::Error::msg(format!(
                 "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
-                symbol_name, sym1, lead_location1, pn1, pn2
+                symbol_name, sym1, label1, pn1, pn2
             )));
         }
     }
@@ -175,8 +180,8 @@ fn lead_end_bob(place_not: PlaceNot) -> Call {
         display_symbol: String::new(),
         debug_symbol: "-".to_owned(),
         calling_positions: default_calling_positions(&place_not),
-        lead_location_from: LABEL_LEAD_END.to_owned(),
-        lead_location_to: LABEL_LEAD_END.to_owned(),
+        label_from: LABEL_LEAD_END.to_owned(),
+        label_to: LABEL_LEAD_END.to_owned(),
         place_not,
         weight: DEFAULT_BOB_WEIGHT,
     }
@@ -188,8 +193,8 @@ fn lead_end_single(place_not: PlaceNot) -> Call {
         display_symbol: "s".to_owned(),
         debug_symbol: "s".to_owned(),
         calling_positions: default_calling_positions(&place_not),
-        lead_location_from: LABEL_LEAD_END.to_owned(),
-        lead_location_to: LABEL_LEAD_END.to_owned(),
+        label_from: LABEL_LEAD_END.to_owned(),
+        label_to: LABEL_LEAD_END.to_owned(),
         place_not,
         weight: DEFAULT_SINGLE_WEIGHT,
     }
@@ -259,8 +264,8 @@ fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     positions
 }
 
-fn lead_end() -> LeadLocation {
-    LeadLocation::Same(LABEL_LEAD_END.to_owned())
+fn lead_end() -> CallLabel {
+    CallLabel::Same(LABEL_LEAD_END.to_owned())
 }
 
 fn default_misc_call_score() -> f32 {

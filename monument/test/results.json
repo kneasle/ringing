@@ -727,7 +727,7 @@
   },
   "test/cases/end-row.toml": { "comps": [{ "length": 130, "string": ">", "avg_score": 0.0 }] },
   "test/cases/error-messages.md: bobs-and-singles-only": {
-    "error_message": "Can't be both `bobs_only` and `singles_only`"
+    "error_message": "Composition can't be both `bobs_only` and `singles_only`"
   },
   "test/cases/error-messages.md: call-pn-parse": {
     "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
@@ -764,6 +764,12 @@
   },
   "test/cases/error-messages.md: chs-not-in-other-parts": {
     "error_message": "course head `xxxx7856` becomes `xxxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `xxxx7865` to `course_heads`"
+  },
+  "test/cases/error-messages.md: deprecation::lead_location-in-calls": {
+    "error_message": "`calls.lead_location` has been renamed to `label`"
+  },
+  "test/cases/error-messages.md: deprecation::lead_locations-in-method": {
+    "error_message": "`methods.lead_locations` has been renamed to `labels`"
   },
   "test/cases/error-messages.md: duplicate-calls::debug-symbol": {
     "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
@@ -873,7 +879,7 @@
     "error_message": "Can't parse part head \"123456789\": bell '9' is not within stage Major"
   },
   "test/cases/error-messages.md: undefined-lead-location": {
-    "error_message": "Call \"x\" refers to a lead location \"poo\", which doesn't exist"
+    "error_message": "Call \"x\" refers to a label \"poo\", which doesn't exist"
   },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },
   "test/cases/false-comp.toml": {

@@ -166,17 +166,17 @@ fn check_query(query: &Query) -> crate::Result<()> {
         }
     }
 
-    // Calls referring to non-existent lead locations
-    let mut used_lead_locations = HashSet::<&String>::new();
+    // Calls referring to non-existent labels
+    let mut defined_labels = HashSet::<&String>::new();
     for m in &query.methods {
         for annot in m.plain_course().annots() {
-            used_lead_locations.extend(annot.labels);
+            defined_labels.extend(annot.labels);
         }
     }
     for call in &query.calls {
-        for lead_label in [&call.lead_location_from, &call.lead_location_to] {
-            if !used_lead_locations.contains(lead_label) {
-                return Err(crate::Error::UndefinedLeadLocation {
+        for lead_label in [&call.label_from, &call.label_to] {
+            if !defined_labels.contains(lead_label) {
+                return Err(crate::Error::UndefinedLabel {
                     call_name: call.debug_symbol.clone(),
                     label: lead_label.clone(),
                 });
@@ -703,7 +703,7 @@ impl LinkLookupTable {
                     //
                     // ... for every call that can be placed there ...
                     for (call_idx, call) in query.calls.iter_enumerated() {
-                        if &call.lead_location_from == label {
+                        if &call.label_from == label {
                             let row_before_call = method_data
                                 .plain_course
                                 .get_row(dist_from_lead_head - 1)
@@ -714,7 +714,7 @@ impl LinkLookupTable {
                                 dist_from_lead_head,
                                 Some(call_idx),
                                 &row_after_call,
-                                &call.lead_location_to,
+                                &call.label_to,
                                 method_data,
                                 &link_ends_by_label,
                                 method_datas,
@@ -729,8 +729,8 @@ impl LinkLookupTable {
                             .plain_course
                             .get_row(dist_from_lead_head)
                             .unwrap();
-                        // Add plain links from every instance of a lead location to every other
-                        // instance of that lead location
+                        // Add plain links from every instance of a label to every other instance
+                        // of that label
                         create_links(
                             dist_from_lead_head,
                             None,
@@ -866,7 +866,7 @@ fn create_links(
 ) {
     let link_ends = link_ends_by_label
         .get(label_to)
-        .expect("Undefined lead locations should be checked before graph expansion");
+        .expect("Undefined labels should be checked before graph expansion");
     // ... for every place within a lead this could go to ...
     for (row_idx_to, transposition_to_lead_head) in link_ends {
         // post-transposition
@@ -1121,7 +1121,7 @@ fn filter_bells_fixed_by_call(
     set: &mut HashSet<Bell>,
 ) {
     // Note that all calls are required to only substitute one piece of place notation.
-    for sub_lead_idx_after_call in method.label_indices(&call.lead_location_from) {
+    for sub_lead_idx_after_call in method.label_indices(&call.label_from) {
         // TODO: Handle different from/to locations
         let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
         let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`

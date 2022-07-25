@@ -129,8 +129,8 @@ pub struct Call {
     pub debug_symbol: String,
     pub calling_positions: Vec<String>,
 
-    pub lead_location_from: String,
-    pub lead_location_to: String,
+    pub label_from: String,
+    pub label_to: String,
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_not: PlaceNot,
 
@@ -209,8 +209,8 @@ pub enum Error {
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
-    /// Some [`Call`](crate::Call) refers to a lead location that doesn't exist
-    UndefinedLeadLocation { call_name: String, label: String },
+    /// Some [`Call`](crate::Call) refers to a label that doesn't exist
+    UndefinedLabel { call_name: String, label: String },
     /// [`Query`] didn't define any [`Method`]s
     NoMethods,
     /// Two [`Method`]s use the same shorthand
@@ -292,9 +292,9 @@ impl Display for Error {
                 "Methods {:?} and {:?} share a shorthand ({})",
                 title1, title2, shorthand
             ),
-            Error::UndefinedLeadLocation { call_name, label } => write!(
+            Error::UndefinedLabel { call_name, label } => write!(
                 f,
-                "Call {:?} refers to a lead location {:?}, which doesn't exist",
+                "Call {:?} refers to a label {:?}, which doesn't exist",
                 call_name, label
             ), // TODO: Suggest one that does exist
             Error::NoCourseHeadInPart {

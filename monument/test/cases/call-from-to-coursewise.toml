@@ -3,10 +3,10 @@
 
 length = "practice"
 methods = [
-    { title = "Yorkshire Surprise Major",   lead_locations = { LE = 0, 2nds = 0 } },
-    { title = "Superlative Surprise Major", lead_locations = { LE = 0, 2nds = 0 } },
-    { title = "Bristol Surprise Major",     lead_locations = { LE = 0, 8ths = 0 } },
-    { title = "Deva Surprise Major",        lead_locations = { LE = 0, 8ths = 0 } },
+    { title = "Yorkshire Surprise Major",   labels = { LE = 0, 2nds = 0 } },
+    { title = "Superlative Surprise Major", labels = { LE = 0, 2nds = 0 } },
+    { title = "Bristol Surprise Major",     labels = { LE = 0, 8ths = 0 } },
+    { title = "Deva Surprise Major",        labels = { LE = 0, 8ths = 0 } },
 ]
 method_count = { min = 0, max = 64 }
 
@@ -15,9 +15,9 @@ base_calls = "none" # Only use our own custom calls
 symbol = ""
 debug_symbol = "-"
 place_notation = "14"
-lead_location = { from = "2nds", to = "LE" }
+label = { from = "2nds", to = "LE" }
 
 [[calls]]
 symbol = "x"
 place_notation = "16"
-lead_location = { from = "8ths", to = "LE" }
+label = { from = "8ths", to = "LE" }

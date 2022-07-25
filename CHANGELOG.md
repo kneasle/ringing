@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Monument
+- (#121) Renamed `lead_location` to `label` (for brevity).
 - (#120) Allow `queue_limit` and `graph_size_limit` to be set in the TOML format.
 - (#116) Much smarter way of determining default method balance.  (Nerdy details:) Method counts are
     weighted by the square root of each method's lead length (so shorter methods won't need as many
@@ -116,12 +117,11 @@
     can't automatically set `{bob,single}s_only`.
 - (#92) Remove fixed tenors from part heads in summary (e.g. `1342567890ET` is now be just `1342`).
 - (#91) Calls can now go from/to different lead labels.  Set this with e.g.
-    `lead_location = { from = "2nds", to = "HL" }`.  Useful for adding finer control over where
+    `label = { from = "2nds", to = "HL" }`.  Useful for adding finer control over where
     calls can be placed.
 - (#91) Allow multiple labels on the same row within a lead.  Also reversed the syntax from e.g.
-    `lead_locations = { 0 = "LE", 16 = "HL" }` to `lead_locations = { LE = 0, HL = 16 }`.  The same
-    label can be added to multiple rows like `lead_locations = { SE = [3, 9] }` (for Six-Ends in
-    Stedman).
+    `labels = { 0 = "LE", 16 = "HL" }` to `labels = { LE = 0, HL = 16 }`.  The same label can be
+    added to multiple rows like `labels = { SE = [3, 9] }` (for Six-Ends in Stedman).
 
 #### Internal Improvements
 - (#89) Refactor the search algorithm (splitting the node expansion from the best-first search code)

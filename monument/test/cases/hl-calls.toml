@@ -1,12 +1,11 @@
 length = { min = 0, max = 200 }
-method.title = "Bristol Surprise Major"
-method.lead_locations = { LE = 0, HL = 16 }
+method = { title = "Bristol Surprise Major", labels = { LE = 0, HL = 16 } }
 base_music = "none"
 
 [[calls]]
 place_notation = "58"
 symbol = ""
 debug_symbol = "-"
-lead_location = "HL"
+label = "HL"
 calling_positions = "hwmvfbi_"
 weight = -1
