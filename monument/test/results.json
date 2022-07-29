@@ -3139,6 +3139,16 @@
       { "length": 384, "string": "D[xB]Y[sH]DD[sH]", "avg_score": 0.015625, "part_head": "13425678" }
     ]
   },
+  "test/cases/regression/single-method-cyclic.toml": {
+    "comps": [
+      { "length": 672, "string": "#PPPP[s]P[s]P[-]", "avg_score": 0.1000061, "part_head": "17823456" },
+      { "length": 672, "string": "#PPPP[-]P[s]P[s]", "avg_score": 0.10296631, "part_head": "17823456" },
+      { "length": 672, "string": "#PPPP[s]P[-]P[s]", "avg_score": 0.10296631, "part_head": "17823456" },
+      { "length": 672, "string": "#PPPP[-]P[-]P[-]", "avg_score": 0.1104126, "part_head": "17823456" },
+      { "length": 672, "string": "#P[s]P[s]PPPP", "avg_score": 0.13064575, "part_head": "14567823" },
+      { "length": 672, "string": "#P[-]P[-]PPPP", "avg_score": 0.14108276, "part_head": "14567823" }
+    ]
+  },
   "test/cases/self-false-1.toml": {
     "comps": [
       { "length": 288, "string": "BB[M]BBB[B]BBB[W]B", "avg_score": 0.1166687 },

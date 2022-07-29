@@ -482,7 +482,7 @@ impl Comp {
         s.push_str(if is_snap_start { "<" } else { "" });
         while let Some(path_elem) = path_iter.next() {
             // Method text
-            if query.is_spliced() {
+            if query.is_spliced() || query.call_display_style == CallDisplayStyle::Positional {
                 // Add one shorthand for every lead *covered* (not number of lead heads reached)
                 //
                 // TODO: Deal with half-lead spliced
