@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### Monument
+- (#124) Fix incorrect output for single-method cyclic comps.
 - (#122) Stop graph optimisation when all passes fail to make progress once (rather than waiting for
     an entire run of passes to not make progress).
 - (#121) Renamed `lead_location` to `label` (for brevity).
