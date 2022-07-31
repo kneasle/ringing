@@ -1,28 +1,36 @@
-## Unreleased
+## 31st July 2022
 
-### Monument
-- (#124) Fix incorrect output for single-method cyclic comps.
-- (#122) Stop graph optimisation when all passes fail to make progress once (rather than waiting for
-    an entire run of passes to not make progress).
-- (#121) Renamed `lead_location` to `label` (for brevity).
-- (#120) Allow `queue_limit` and `graph_size_limit` to be set in the TOML format.
+### Monument v0.11.0
+
+#### Headline Features
 - (#116) Much smarter way of determining default method balance.  (Nerdy details:) Method counts are
     weighted by the square root of each method's lead length (so shorter methods won't need as many
     rows), and will round 'outwards' for cases like cyclic spliced where a 'perfect' method balance
     actually has a wide range of different counts.
+- (#121) Renamed `lead_location` to `label` (for brevity).
+- (#120) Allow `queue_limit` and `graph_size_limit` to be set in the TOML format.
 - (#116) Prove which lengths and method counts are actually possible, and error if the two can't
     match.
+
+#### Smaller Changes
+- (#122) Stop graph optimisation when all passes fail to make progress once (rather than waiting for
+    an entire run of passes to not make progress).
 - (#115) Demote 'default music' message from `WARN` to `INFO`.
+- (#112) Massively speed up falseness generation when using custom CHs in cyclic comps, by computing
+    all the false lead heads rather than computing falseness between all pairs of masks.
+
+#### Bug Fixes
+- (#124) Fix incorrect output for single-method cyclic comps.
+
+#### Internal Improvements
 - (#113) Remove unnecessary threading from the search code (which can currently only use one thread
     anyway).
 - (#112) Refactor `FalsenessTable::new` into multiple helper functions
-- (#112) Massively speed up falseness generation when using custom CHs in cyclic comps, by computing
-    all the false lead heads rather than computing falseness between all pairs of masks.
 - (#110) Exclusively use `{Total,PerPart}Length` to refer to lengths (as opposed to `usize`), thus
     allowing the compiler to spot when we mix them up.
 - (#109) Encapsulate all the part-head logic into `PartHeadGroup`/`PartHead`/`PhRotation`.
 
-### BellFrame
+### BellFrame v0.10.0
 - (#117) Rationalise the use of `unsafe` in `bellframe`.
 - (#115) Remove unnecessary `unsafe` in `bellframe::music`.
 - (#115) Fix integer underflow when computing internal runs.
