@@ -230,11 +230,8 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         successors: Vec::new(),
         false_chunks: Vec::new(),
         music: Breakdown::zero(0),
-        duffer: false,
 
         // Used by optimisation passes
-        lb_distance_from_non_duffer: TotalLength::ZERO,
-        lb_distance_to_non_duffer: TotalLength::ZERO,
         required: false,
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,

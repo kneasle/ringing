@@ -69,7 +69,6 @@ pub struct Query {
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
     pub start_stroke: Stroke,
-    pub max_duffer_rows: Option<TotalLength>,
 }
 
 impl Query {

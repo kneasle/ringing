@@ -22,7 +22,6 @@ pub struct MusicType {
 
     pub weight: Score,
     pub count_range: OptRange,
-    pub non_duffer: bool,
 }
 
 impl MusicType {
@@ -36,7 +35,6 @@ impl MusicType {
             patterns,
             weight: OrderedFloat(weight),
             count_range,
-            non_duffer: false, // TODO: Implement non-duffers properly
             strokes: stroke_set,
         }
     }

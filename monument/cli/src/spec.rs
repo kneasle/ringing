@@ -10,9 +10,8 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    music::MusicType,
-    utils::{group::PartHeadGroup, TotalLength},
-    Call, CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptRange, Query, SpliceStyle,
+    music::MusicType, utils::group::PartHeadGroup, Call, CallDisplayStyle, CallVec, MethodVec,
+    MusicTypeVec, OptRange, Query, SpliceStyle,
 };
 use serde::Deserialize;
 
@@ -101,12 +100,6 @@ pub struct Spec {
     /// The [`Stroke`] of the first row of the composition
     #[serde(default = "crate::utils::handstroke")]
     start_stroke: Stroke,
-    /// The value for `non_duffer` given to music types when none is explicitly given
-    // TODO: Uncomment these when implementing non-duffers
-    // #[serde(default = "get_true")]
-    // default_non_duffer: bool,
-    /// The most consecutive rows of duffer chunks.
-    max_duffer_rows: Option<usize>,
 
     /* COURSES */
     /// The [`Row`] which starts the composition.  When computing falseness and music, this **is**
@@ -280,7 +273,6 @@ impl Spec {
             music_types,
             music_displays,
             start_stroke: self.start_stroke,
-            max_duffer_rows: self.max_duffer_rows.map(TotalLength::new),
         })
     }
 
