@@ -14,8 +14,8 @@ use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
-    music::Breakdown,
     query::{self, CallVec, Query, StrokeSet},
+    utils::MusicBreakdown,
     utils::{
         group::{PartHeadGroup, PhRotation},
         Boundary, Counts,
@@ -230,7 +230,7 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         predecessors: Vec::new(),
         successors: Vec::new(),
         false_chunks: Vec::new(),
-        music: Breakdown::zero(0),
+        music: MusicBreakdown::zero(0),
 
         // Used by optimisation passes
         required: false,
@@ -303,7 +303,7 @@ fn count_scores(
     // Always set music to `0`s, even if the chunk is unreachable.  If we don't, then an
     // optimisation pass could see this chunk and run `zip_eq` on the `MusicType`s, thus causing a
     // panic.
-    chunk.music = Breakdown::zero(query.music_types.len());
+    chunk.music = MusicBreakdown::zero(query.music_types.len());
 
     let start_stroke = match start_strokes {
         Some(map) => match map.get(id) {
@@ -328,7 +328,7 @@ fn count_scores(
             plain_course.get_row(index).unwrap()
         });
         // Count weight from music
-        chunk.music += &Breakdown::from_rows(
+        chunk.music += &MusicBreakdown::from_rows(
             row_iter,
             &lead_head_in_part,
             query.music_types.as_raw_slice(),

@@ -365,14 +365,14 @@ struct CompPrinter {
 impl CompPrinter {
     fn new(query: Arc<Query>, refine_ranges: &RefinedRanges) -> Self {
         Self {
-            length_width: query.len_range.end().as_usize().to_string().len(),
+            length_width: query.length_range.end().to_string().len(),
             method_counts: query
                 .methods
                 .iter()
-                .zip_eq(&refine_ranges.method_counts)
+                .zip_eq(refine_ranges.method_counts())
                 .map(|(method, refined_count_range)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = refined_count_range.end().as_usize().to_string().len();
+                    let max_count_width = refined_count_range.end().to_string().len();
                     let max_width = max_count_width.max(method.shorthand.len());
                     (max_width, method.shorthand.clone())
                 })

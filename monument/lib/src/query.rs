@@ -7,9 +7,8 @@ use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
 use crate::{
-    music::Score,
     utils::{group::PartHeadGroup, PerPartLength, TotalLength},
-    OptRange,
+    OptRange, Score,
 };
 
 /// Information provided to Monument which specifies what compositions are generated.
@@ -19,7 +18,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Query {
     // GENERAL
-    pub len_range: RangeInclusive<TotalLength>,
+    pub length_range: RangeInclusive<usize>,
     pub num_comps: usize,
     pub allow_false: bool,
     pub stage: Stage,
@@ -50,6 +49,17 @@ pub struct Query {
 }
 
 impl Query {
+    /// Same as [`Query::length_range`], but with the lengths represented as [`TotalLength`]s.
+    pub(crate) fn total_length_range(&self) -> RangeInclusive<TotalLength> {
+        let start = TotalLength::new(*self.length_range.start());
+        let end = self.max_length();
+        start..=end
+    }
+
+    pub(crate) fn max_length(&self) -> TotalLength {
+        TotalLength::new(*self.length_range.end())
+    }
+
     pub fn num_parts(&self) -> usize {
         self.part_head_group.size()
     }
@@ -60,10 +70,6 @@ impl Query {
 
     pub fn is_spliced(&self) -> bool {
         self.methods.len() > 1
-    }
-
-    pub fn positional_calls(&self) -> bool {
-        self.call_display_style == CallDisplayStyle::Positional
     }
 }
 

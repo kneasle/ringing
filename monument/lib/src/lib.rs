@@ -4,7 +4,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod graph;
-pub mod music;
 mod prove_length;
 pub mod query;
 mod search;
@@ -15,8 +14,7 @@ use query::{CallDisplayStyle, CallIdx, MethodIdx, Query};
 pub use utils::OptRange;
 
 use itertools::Itertools;
-use music::Score;
-use utils::{group::PartHead, Counts, PerPartLength, TotalLength};
+use utils::{group::PartHead, Counts, PerPartLength};
 
 use std::{
     fmt::{Display, Formatter},
@@ -29,6 +27,8 @@ use bellframe::{Block, Mask, Row, RowBuf, Stage};
 use graph::Graph;
 
 use crate::query::MethodVec;
+
+pub type Score = ordered_float::OrderedFloat<f32>;
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
 pub struct Config {
@@ -106,25 +106,25 @@ pub enum Error {
     /* LENGTH PROVING ERRORS */
     /// The requested length range isn't achievable
     UnachievableLength {
-        requested_range: RangeInclusive<TotalLength>,
-        next_shorter_len: Option<TotalLength>,
-        next_longer_len: Option<TotalLength>,
+        requested_range: RangeInclusive<usize>,
+        next_shorter_len: Option<usize>,
+        next_longer_len: Option<usize>,
     },
     /// Some method range isn't achievable
     UnachievableMethodCount {
         method_name: String,
         requested_range: OptRange,
-        next_shorter_len: Option<TotalLength>,
-        next_longer_len: Option<TotalLength>,
+        next_shorter_len: Option<usize>,
+        next_longer_len: Option<usize>,
     },
     /// The total of the minimum method counts is longer than the composition
     TooMuchMethodCount {
-        min_total_method_count: TotalLength,
-        max_length: TotalLength,
+        min_total_method_count: usize,
+        max_length: usize,
     },
     TooLittleMethodCount {
-        max_total_method_count: TotalLength,
-        min_length: TotalLength,
+        max_total_method_count: usize,
+        min_length: usize,
     },
 }
 
@@ -299,7 +299,7 @@ pub struct Comp {
     pub path: Vec<PathElem>,
 
     pub part_head: PartHead,
-    pub length: TotalLength,
+    pub length: usize,
     /// The number of rows generated of each method
     pub method_counts: Counts,
     /// The number of counts generated of each [`MusicType`](query::MusicType)
@@ -333,7 +333,8 @@ impl PathElem {
 
 impl Comp {
     pub fn call_string(&self, query: &Query) -> String {
-        let needs_brackets = query.is_spliced() || query.positional_calls();
+        let needs_brackets =
+            query.is_spliced() || query.call_display_style == CallDisplayStyle::Positional;
         let is_snap_start = self.path[0].start_sub_lead_idx > 0;
         let is_snap_finish = self.path.last().unwrap().end_sub_lead_idx(query) > 0;
         let part_head = self.part_head(query);
@@ -448,7 +449,7 @@ impl Comp {
         for _ in 0..query.num_parts() - 1 {
             comp.extend_from_within(..part_len);
         }
-        assert_eq!(comp.len(), self.length.as_usize());
+        assert_eq!(comp.len(), self.length);
         assert_eq!(comp.leftover_row(), query.end_row.as_row());
         comp
     }
@@ -546,7 +547,7 @@ pub struct Progress {
     /// The average length of a composition in the queue
     pub avg_length: f32,
     /// The length of the longest composition in the queue
-    pub max_length: TotalLength,
+    pub max_length: usize,
 
     /// `true` if the search is currently truncating the queue to save memory
     pub truncating_queue: bool,
@@ -560,7 +561,7 @@ impl Progress {
 
         queue_len: 0,
         avg_length: 0.0,
-        max_length: TotalLength::ZERO,
+        max_length: 0,
 
         truncating_queue: false,
     };

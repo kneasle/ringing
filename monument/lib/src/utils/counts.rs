@@ -54,7 +54,7 @@ impl Counts {
 
     /// Determine the feasibility of getting every count within `target_range`, whilst distributing
     /// at most `max_count_left` counts.  This is used for pruning on method splices.
-    pub fn is_feasible(
+    pub(crate) fn is_feasible(
         &self,
         max_count_left: usize,
         target_ranges: &[RangeInclusive<TotalLength>],

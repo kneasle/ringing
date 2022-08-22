@@ -2,12 +2,11 @@ use std::collections::HashMap;
 
 use crate::{
     graph::LinkSide,
-    music::Score,
     utils::{
         group::{PartHead, PhRotation},
         Counts, PerPartLength, TotalLength,
     },
-    CallIdx, Query,
+    CallIdx, Query, Score,
 };
 use bit_vec::BitVec;
 

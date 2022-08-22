@@ -109,7 +109,7 @@ fn send_progress_update(
     let mut total_len = 0u64; // NOTE: We have use `u64` here to avoid overflow
     let mut max_length = TotalLength::ZERO;
     frontier.iter().for_each(|n| {
-        total_len += n.length().as_u32() as u64;
+        total_len += n.length().as_usize() as u64;
         max_length = max_length.max(n.length());
     });
     update_fn(QueryUpdate::Progress(Progress {
@@ -122,7 +122,7 @@ fn send_progress_update(
         } else {
             total_len as f32 / frontier.len() as f32
         },
-        max_length,
+        max_length: max_length.as_usize(),
 
         truncating_queue,
     }));

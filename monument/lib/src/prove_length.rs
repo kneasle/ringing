@@ -18,8 +18,16 @@ const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;
 
 #[non_exhaustive] // Make sure that any `RefinedRanges` must come from `prove_lengths`
 pub struct RefinedRanges {
-    pub length: RangeInclusive<TotalLength>,
-    pub method_counts: MethodVec<RangeInclusive<TotalLength>>,
+    pub(crate) length: RangeInclusive<TotalLength>,
+    pub(crate) method_counts: MethodVec<RangeInclusive<TotalLength>>,
+}
+
+impl RefinedRanges {
+    pub fn method_counts(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
+        self.method_counts
+            .iter()
+            .map(|range| range.start().as_usize()..=range.end().as_usize())
+    }
 }
 
 /// Attempt to prove which composition lengths and method counts are possible.  This result can
@@ -34,7 +42,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, query.len_range.clone()) {
+    let refined_len_range = match matching_lengths(&possible_lengths, query.total_length_range()) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -46,9 +54,9 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.len_range.clone(),
-                next_shorter_len: next_smaller,
-                next_longer_len: next_larger,
+                requested_range: query.length_range.clone(),
+                next_shorter_len: next_smaller.map(TotalLength::as_usize),
+                next_longer_len: next_larger.map(TotalLength::as_usize),
             });
         }
     };
@@ -154,7 +162,7 @@ fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
                 }
                 // If this is the first end-length to be too long, then there's no point
                 // continuing the search (which otherwise would never finish)
-                if length > *query.len_range.end() {
+                if length > query.max_length() {
                     break;
                 }
             }
@@ -393,7 +401,7 @@ fn possible_method_counts(
             continue; // Don't bother adding to a length we've seen before
         }
         counts.push(count);
-        if count > *query.len_range.end() {
+        if count > query.max_length() {
             break; // Stop searching as soon as we find one length that's above our limit
         }
         // Add every possible interior length to this
@@ -557,8 +565,8 @@ fn refine_method_counts(
                     return Err(crate::Error::UnachievableMethodCount {
                         method_name: method.title().to_owned(),
                         requested_range: method.count_range,
-                        next_shorter_len: next_smaller,
-                        next_longer_len: next_larger,
+                        next_shorter_len: next_smaller.map(TotalLength::as_usize),
+                        next_longer_len: next_larger.map(TotalLength::as_usize),
                     });
                 }
             }
@@ -652,16 +660,16 @@ fn check_final_bounds(
     if max_total_method_count < min_length {
         // Even if all the method bounds are maxed out, we still can't reach the minimum range
         return Err(crate::Error::TooLittleMethodCount {
-            max_total_method_count,
-            min_length,
+            max_total_method_count: max_total_method_count.as_usize(),
+            min_length: min_length.as_usize(),
         });
     }
     if min_total_method_count > max_length {
         // Even if the maximum length is rung, we don't have enough rows to satisfy the method
         // counts
         return Err(crate::Error::TooMuchMethodCount {
-            min_total_method_count,
-            max_length,
+            min_total_method_count: min_total_method_count.as_usize(),
+            max_length: max_length.as_usize(),
         });
     }
 

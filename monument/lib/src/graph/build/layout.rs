@@ -72,7 +72,7 @@ pub(super) fn chunk_lengths<'q>(
 
         // Stop expanding if the shortest path from rounds to the end of the chunk takes longer
         // than the max comp length
-        if min_distance_after_chunk > *query.len_range.end() {
+        if min_distance_after_chunk > query.max_length() {
             continue;
         }
 

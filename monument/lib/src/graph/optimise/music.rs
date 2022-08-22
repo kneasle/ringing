@@ -5,7 +5,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
-    music::Breakdown,
+    utils::MusicBreakdown,
     Query,
 };
 
@@ -45,7 +45,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     for (idx, min) in &min_music_counts {
         required_music_counts[*idx] = *min;
     }
-    let mut counts_needed_from_non_required_chunks = Breakdown {
+    let mut counts_needed_from_non_required_chunks = MusicBreakdown {
         score: OrderedFloat(0.0),
         counts: required_music_counts.into(),
     };
@@ -93,7 +93,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
 /// Remove any chunk which exceeds the max count for any music type.  Usually this max count will be
 /// 0 (i.e. any chunks with that music should be removed).
 pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query) {
-    let mut counts_from_required_chunks = Breakdown::zero(query.music_types.len());
+    let mut counts_from_required_chunks = MusicBreakdown::zero(query.music_types.len());
     for chunk in graph.chunks.values() {
         if chunk.required {
             counts_from_required_chunks += &chunk.music;
@@ -123,7 +123,7 @@ pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query
 /// `chunk_patterns`.
 // TODO: Why is this returning duplicates?
 fn search_chunk_combinations<'gr>(
-    counts_needed_from_non_required_chunks: &Breakdown,
+    counts_needed_from_non_required_chunks: &MusicBreakdown,
     non_required_chunks: &[(&'gr ChunkId, &'gr Chunk)],
 ) -> Vec<HashSet<&'gr ChunkId>> {
     let mut chunk_patterns = Vec::<HashSet<&ChunkId>>::new();
@@ -145,7 +145,7 @@ fn search_chunk_combinations<'gr>(
 fn search_chunks<'iter, 'graph: 'iter>(
     mut chunks: impl Iterator<Item = &'iter (&'graph ChunkId, &'graph Chunk)> + Clone,
 
-    counts_needed: &Breakdown,
+    counts_needed: &MusicBreakdown,
     non_required_chunks: &[(&'graph ChunkId, &'graph Chunk)],
 
     chunks_used: &mut HashSet<&'graph ChunkId>,

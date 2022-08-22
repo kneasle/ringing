@@ -373,7 +373,7 @@ mod passes {
                     .iter()
                     .map(|(_link_id, chunk_id)| (chunk_id, TotalLength::ZERO)),
                 &view,
-                Some(*query.len_range.end()),
+                Some(query.max_length()),
             );
             // Set the chunk distances and strip out unreachable chunks
             view.retain_chunks(
@@ -396,7 +396,7 @@ mod passes {
                 let min_comp_length_with_chunk = chunk.lb_distance_from_rounds
                     + chunk.total_length
                     + chunk.lb_distance_to_rounds;
-                min_comp_length_with_chunk <= *query.len_range.end()
+                min_comp_length_with_chunk <= query.max_length()
             });
         }))
     }

@@ -258,7 +258,7 @@ impl Spec {
 
         // Build this layout into a `Graph`
         Ok(Query {
-            len_range: (&self.length).into(),
+            length_range: self.length.range.clone(),
             num_comps: self.num_comps,
             allow_false: self.allow_false,
             stage,
@@ -722,7 +722,6 @@ mod length {
         ops::{Range, RangeInclusive},
     };
 
-    use monument::utils::TotalLength;
     use serde::{
         de::{Error, MapAccess, Visitor},
         Deserialize, Deserializer,
@@ -740,16 +739,6 @@ mod length {
     #[repr(transparent)]
     pub(super) struct Length {
         pub(super) range: RangeInclusive<usize>,
-    }
-
-    // Convert Length to a ranges
-    impl From<&Length> for RangeInclusive<TotalLength> {
-        #[inline(always)]
-        fn from(l: &Length) -> RangeInclusive<TotalLength> {
-            let start = TotalLength::new(*l.range.start());
-            let end = TotalLength::new(*l.range.end());
-            start..=end
-        }
     }
 
     /////////////

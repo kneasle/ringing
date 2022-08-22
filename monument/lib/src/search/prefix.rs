@@ -10,10 +10,9 @@ use bit_vec::BitVec;
 
 use crate::{
     graph::LinkSide,
-    music::Score,
     query::SpliceStyle,
     utils::{group::PartHead, Counts, TotalLength},
-    Comp, PathElem,
+    Comp, PathElem, Score,
 };
 
 use super::{
@@ -288,7 +287,7 @@ impl CompPrefix {
             path,
 
             part_head: self.part_head,
-            length: self.length,
+            length: self.length.as_usize(),
             method_counts: self.method_counts.clone(),
             music_counts,
             total_score: score,
@@ -296,7 +295,7 @@ impl CompPrefix {
         };
         // Sanity check that the composition is true
         if !data.query.allow_false {
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length.as_usize());
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length);
             for row in comp.rows(data.query).rows() {
                 if !rows_so_far.insert(row) {
                     panic!(
