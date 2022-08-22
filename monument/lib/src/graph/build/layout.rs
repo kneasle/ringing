@@ -9,8 +9,9 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
+    query::{Query, SpliceStyle},
     utils::{group::PhRotation, Boundary, FrontierItem, PerPartLength, TotalLength},
-    CallIdx, Config, MethodIdx, MethodVec, Query, SpliceStyle,
+    CallIdx, Config, MethodIdx, MethodVec,
 };
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};

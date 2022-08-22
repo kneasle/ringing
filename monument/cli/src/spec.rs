@@ -10,8 +10,12 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    music::MusicType, utils::group::PartHeadGroup, Call, CallDisplayStyle, CallVec, MethodVec,
-    MusicTypeVec, OptRange, Query, SpliceStyle,
+    query::{
+        Call, CallDisplayStyle, CallVec, MethodVec, MusicDisplay, MusicType, MusicTypeVec, Query,
+        SpliceStyle,
+    },
+    utils::group::PartHeadGroup,
+    OptRange,
 };
 use serde::Deserialize;
 
@@ -229,7 +233,7 @@ impl Spec {
                 None => vec![0],
             };
 
-            methods.push(monument::Method {
+            methods.push(monument::query::Method {
                 inner: method,
                 ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
@@ -280,7 +284,7 @@ impl Spec {
         &self,
         source: &Source,
         stage: Stage,
-    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>)> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
         // Load TOML for the music file
         let music_file_buffer;
         let music_file_str = match (&self.music_file, source) {

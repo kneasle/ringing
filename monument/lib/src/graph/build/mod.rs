@@ -14,12 +14,13 @@ use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
-    music::{Breakdown, StrokeSet},
+    music::Breakdown,
+    query::{self, CallVec, Query, StrokeSet},
     utils::{
         group::{PartHeadGroup, PhRotation},
         Boundary, Counts,
     },
-    CallVec, Config, Method, MethodVec, Query,
+    Config, MethodVec,
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};
@@ -399,7 +400,7 @@ impl<'query> ChunkEquivalenceMap<'query> {
 /// Cached data about a single [`Method`], used to speed up chunk generation.
 #[derive(Debug)]
 struct MethodData<'query> {
-    method: &'query Method,
+    method: &'query query::Method,
     plain_course: Block<bellframe::method::RowAnnot<'query>>,
     lead_head_masks: Vec<Mask>,
     start_indices: Vec<usize>,
@@ -407,7 +408,7 @@ struct MethodData<'query> {
 }
 
 impl<'query> MethodData<'query> {
-    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
+    fn new(method: &'query query::Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();
@@ -513,7 +514,7 @@ fn fixed_bells(query: &Query) -> Vec<(Bell, usize)> {
 
 /// Returns the place bells which are always preserved by plain leads and all calls of a single
 /// method (e.g. hunt bells in non-variable-hunt compositions).
-fn fixed_bells_of_method(method: &crate::Method, calls: &CallVec<crate::Call>) -> HashSet<Bell> {
+fn fixed_bells_of_method(method: &query::Method, calls: &CallVec<query::Call>) -> HashSet<Bell> {
     // Start the set with the bells which are fixed by the plain lead of every method
     let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
     for call in calls {
@@ -528,7 +529,7 @@ fn fixed_bells_of_method(method: &crate::Method, calls: &CallVec<crate::Call>) -
 // by placing the call at this location.
 fn filter_bells_fixed_by_call(
     method: &bellframe::Method,
-    call: &crate::Call,
+    call: &query::Call,
     set: &mut HashSet<Bell>,
 ) {
     // Note that all calls are required to only substitute one piece of place notation.

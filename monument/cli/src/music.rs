@@ -6,8 +6,8 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    music::{MusicType, StrokeSet},
-    MusicTypeVec, OptRange,
+    query::{MusicType, MusicTypeVec, StrokeSet},
+    OptRange,
 };
 use serde::Deserialize;
 
@@ -115,7 +115,7 @@ pub fn generate_music(
     base_music: BaseMusic,
     music_file_str: Option<&str>,
     stage: Stage,
-) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>)> {
+) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>)> {
     let mut music_builder = MusicTypeBuilder::new(stage);
 
     // Base music
@@ -163,7 +163,7 @@ impl MusicTypeBuilder {
         Ok(())
     }
 
-    fn finish(self) -> (MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>) {
+    fn finish(self) -> (MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>) {
         compute_music_displays(self.annot_music_types)
     }
 }
@@ -692,8 +692,8 @@ impl MusicTypeDisplay {
 /// 4-bell runs/5678s/6578s can be either front/internal/back).
 fn compute_music_displays(
     annot_music_types: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
-) -> (MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>) {
-    use monument::music::MusicDisplay;
+) -> (MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>) {
+    use monument::query::MusicDisplay;
 
     let num_music_types = annot_music_types.len();
 

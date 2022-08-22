@@ -6,20 +6,17 @@
 pub mod graph;
 pub mod music;
 mod prove_length;
+pub mod query;
 mod search;
 pub mod utils;
 
 pub use prove_length::RefinedRanges;
+use query::{CallDisplayStyle, CallIdx, MethodIdx, Query};
 pub use utils::OptRange;
-
-use serde::Deserialize;
 
 use itertools::Itertools;
 use music::Score;
-use utils::{
-    group::{PartHead, PartHeadGroup},
-    Counts, PerPartLength, TotalLength,
-};
+use utils::{group::PartHead, Counts, PerPartLength, TotalLength};
 
 use std::{
     fmt::{Display, Formatter},
@@ -28,136 +25,10 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
+use bellframe::{Block, Mask, Row, RowBuf, Stage};
 use graph::Graph;
 
-/// Information provided to Monument which specifies what compositions are generated.
-///
-/// Compare this to [`Config`], which determines _how_ those compositions are generated (and
-/// therefore determines how quickly the results are generated).
-#[derive(Debug, Clone)]
-pub struct Query {
-    // GENERAL
-    pub len_range: RangeInclusive<TotalLength>,
-    pub num_comps: usize,
-    pub allow_false: bool,
-    pub stage: Stage,
-
-    // METHODS & CALLING
-    pub methods: MethodVec<Method>,
-    pub calls: CallVec<Call>,
-    // TODO: Make this defined per-method?  Or per-stage?
-    pub call_display_style: CallDisplayStyle,
-    pub splice_style: SpliceStyle,
-    pub splice_weight: f32,
-
-    // COURSES
-    //
-    // (CH masks are defined on each `Method`)
-    pub start_row: RowBuf,
-    pub end_row: RowBuf,
-    pub part_head_group: PartHeadGroup,
-    /// The `f32` is the weight given to every row in any course matching the given [`Mask`]
-    pub ch_weights: Vec<(Mask, f32)>,
-
-    // MUSIC
-    pub music_types: MusicTypeVec<music::MusicType>,
-    pub music_displays: Vec<music::MusicDisplay>,
-    /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
-    /// `self.start_row`
-    pub start_stroke: Stroke,
-}
-
-impl Query {
-    pub fn num_parts(&self) -> usize {
-        self.part_head_group.size()
-    }
-
-    pub fn is_multipart(&self) -> bool {
-        self.num_parts() > 1
-    }
-
-    pub fn is_spliced(&self) -> bool {
-        self.methods.len() > 1
-    }
-
-    pub fn positional_calls(&self) -> bool {
-        self.call_display_style == CallDisplayStyle::Positional
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Method {
-    pub inner: bellframe::Method,
-    pub shorthand: String,
-
-    /// The number of rows of this method must fit within this range
-    pub count_range: OptRange,
-    /// The indices in which we can start a composition during this `Method`.  `None` means any
-    /// index is allowed (provided the CH masks are satisfied).  These are interpreted modulo the
-    /// lead length of the method.
-    pub start_indices: Vec<isize>,
-    /// The indices in which we can end a composition during this `Method`.  `None` means any index
-    /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
-    /// length of the method.
-    pub end_indices: Option<Vec<isize>>,
-    pub ch_masks: Vec<Mask>,
-}
-
-impl Method {
-    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
-    }
-}
-
-impl std::ops::Deref for Method {
-    type Target = bellframe::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-/// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
-pub struct Call {
-    pub display_symbol: String,
-    pub debug_symbol: String,
-    pub calling_positions: Vec<String>,
-
-    pub label_from: String,
-    pub label_to: String,
-    // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
-    pub place_not: PlaceNot,
-
-    pub weight: f32,
-}
-
-/// How the calls in a given composition should be displayed
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CallDisplayStyle {
-    /// Calls should be displayed as a count since the last course head
-    Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`]
-    CallingPositions(Bell),
-}
-
-/// The different styles of spliced that can be generated
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
-pub enum SpliceStyle {
-    /// Splices could happen at any lead label
-    #[serde(rename = "leads")]
-    LeadLabels,
-    /// Splices only happen at calls
-    #[serde(rename = "calls")]
-    Calls,
-}
-
-impl Default for SpliceStyle {
-    fn default() -> Self {
-        Self::LeadLabels
-    }
-}
+use crate::query::MethodVec;
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
 pub struct Config {
@@ -203,11 +74,11 @@ pub enum Error {
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
-    /// Some [`Call`](crate::Call) refers to a label that doesn't exist
+    /// Some [`Call`](query::Call) refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// [`Query`] didn't define any [`Method`]s
+    /// [`Query`] didn't define any [`Method`](query::Method)s
     NoMethods,
-    /// Two [`Method`]s use the same shorthand
+    /// Two [`Method`](query::Method)s use the same shorthand
     DuplicateShorthand {
         shorthand: String,
         title1: String,
@@ -218,7 +89,7 @@ pub enum Error {
         part_head: RowBuf,
         mask_in_other_part: Mask,
     },
-    /// Some [`Call`](crate::Call) doesn't have enough calling positions to cover the [`Stage`]
+    /// Some [`Call`](query::Call) doesn't have enough calling positions to cover the [`Stage`]
     WrongCallingPositionsLength {
         call_name: String,
         calling_position_len: usize,
@@ -229,7 +100,7 @@ pub enum Error {
     /// The given maximum graph size limit was reached
     SizeLimit(usize),
     /// The same [`Chunk`](graph::Chunk) could start at two different strokes, and some
-    /// [`MusicType`](crate::music::MusicType) relies on that
+    /// [`MusicType`](query::MusicType) relies on that
     InconsistentStroke,
 
     /* LENGTH PROVING ERRORS */
@@ -431,7 +302,7 @@ pub struct Comp {
     pub length: TotalLength,
     /// The number of rows generated of each method
     pub method_counts: Counts,
-    /// The number of counts generated of each [`MusicType`](music::MusicType)
+    /// The number of counts generated of each [`MusicType`](query::MusicType)
     pub music_counts: Counts,
     /// The total [`Score`] of this composition, accumulated from music, calls, coursing patterns,
     /// etc.
@@ -700,13 +571,6 @@ impl Default for Progress {
         Self::START
     }
 }
-
-index_vec::define_index_type! { pub struct MethodIdx = usize; }
-index_vec::define_index_type! { pub struct CallIdx = usize; }
-index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
-pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
 
 #[cfg(test)]
 mod tests {

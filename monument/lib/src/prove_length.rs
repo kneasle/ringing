@@ -292,7 +292,7 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 /// perfectly accurate.
 fn possible_method_counts(
     method_idx: MethodIdx,
-    method: &crate::Method,
+    method: &crate::query::Method,
     graph: &Graph,
     query: &Query,
 ) -> Vec<TotalLength> {
@@ -472,7 +472,7 @@ fn refine_method_counts(
     (min_type, mut min_len): (BoundType, TotalLength),
     (max_type, mut max_len): (BoundType, TotalLength),
     possible_lengths: &[TotalLength],
-    method: &crate::Method,
+    method: &crate::query::Method,
 ) -> crate::Result<RangeInclusive<TotalLength>> {
     use BoundType::{Explicit as Expl, Preferred as Pref};
 

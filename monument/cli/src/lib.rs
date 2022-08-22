@@ -27,7 +27,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{Comp, Progress, Query, QueryUpdate, RefinedRanges};
+use monument::{query::Query, Comp, Progress, QueryUpdate, RefinedRanges};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
