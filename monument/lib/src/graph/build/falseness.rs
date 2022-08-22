@@ -1,4 +1,4 @@
-//! Utilities for computing falseness between graph chunks
+//! Efficiently compute falseness between [`Chunk`]s in a [`Graph`](crate::graph::Graph).
 
 // This algorithm is fiddly, and I think that the somewhat verbose type hints are the best way to
 // show how the code works (both to the reader and the compiler)
@@ -7,16 +7,52 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Debug, Formatter, Write},
+    time::Instant,
 };
 
 use bellframe::{Bell, Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
-use super::{
-    build::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData},
-    ChunkId, PerPartLength, RowIdx,
+use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
+use crate::{
+    graph::{Chunk, ChunkId, PerPartLength, RowIdx},
+    MethodVec, Query,
 };
-use crate::{MethodVec, Query};
+
+/// Set the falseness links for some [`Chunk`]s, removing any which are false against themselves.
+///
+/// This is the *only* item exported by this module, so the entire module should be considered
+/// implementation detail of this function.
+pub(super) fn set_links(
+    chunks: &mut HashMap<ChunkId, Chunk>,
+    chunk_equiv_map: &mut ChunkEquivalenceMap,
+    query: &Query,
+    method_datas: &MethodVec<MethodData>,
+    fixed_bells: &[(Bell, usize)],
+) {
+    let start = Instant::now();
+    let chunk_ids_and_lengths = chunks
+        .iter()
+        .map(|(id, chunk)| (id.clone(), chunk.per_part_length))
+        .collect::<HashSet<_>>();
+    let falseness_table =
+        FalsenessTable::new(&chunk_ids_and_lengths, query, method_datas, fixed_bells);
+    log::debug!("  Falseness table built in {:.2?}", start.elapsed());
+
+    let start = Instant::now();
+    chunks.retain(|id, chunk| {
+        falseness_table
+            .set_falseness_links(
+                id,
+                chunk.per_part_length,
+                &mut chunk.false_chunks,
+                chunk_equiv_map,
+                &chunk_ids_and_lengths,
+            )
+            .is_true() // Remove any chunks which are self-false
+    });
+    log::debug!("  Falseness links set in {:.2?}", start.elapsed());
+}
 
 /// A pre-computed table used to quickly determine the falseness in an entire
 /// [`Graph`](crate::Graph).
@@ -28,7 +64,7 @@ use crate::{MethodVec, Query};
 /// number of _unique chunk ranges_, which is often orders of magnitude smaller than the total
 /// number of chunks.
 #[derive(Debug, Clone)]
-pub(super) struct FalsenessTable {
+struct FalsenessTable {
     /// For each [`ChunkRange`], list the false [`ChunkRange`]s and the lead head transpositions
     /// that make them false.  Intuitively, these transposition tables are very similar to false
     /// course head tables for methods - they encode every possible falseness in an efficient way.
@@ -52,7 +88,7 @@ enum FalsenessEntry {
 impl FalsenessTable {
     /// Creates a `FalsenessTable` capable of efficiently generating falseness between a given set
     /// of chunks.
-    pub fn new(
+    fn new(
         chunks: &HashSet<(ChunkId, PerPartLength)>,
         query: &Query,
         method_datas: &MethodVec<MethodData>,
@@ -111,7 +147,7 @@ impl FalsenessTable {
     /// Set the falseness links for a given [`Chunk`].  If the [`Chunk`] is false against itself in
     /// the same part (i.e. 'self-false'), then [`Truth::False`] is returned.
     // TODO: Decouple this from the `build::*` module
-    pub fn set_falseness_links(
+    fn set_falseness_links(
         &self,
         id: &ChunkId,
         length: PerPartLength,
