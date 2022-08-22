@@ -2,7 +2,6 @@
 //! optimising such graphs, in preparation for performing tree search.
 
 mod build;
-mod falseness;
 pub mod optimise;
 
 use std::{
