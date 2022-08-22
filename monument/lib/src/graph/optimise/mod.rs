@@ -1,14 +1,12 @@
-//! A plugin-able system of passes made over the composition [`Graph`], in order to modify or
-//! optimise the graph.
+//! Code to optimise a composition [`Graph`].
 
 use std::{
-    cmp::Reverse,
+    cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap},
     fmt::Debug,
     ops::Not,
+    time::Instant,
 };
-
-use bellframe::Truth;
 
 use crate::{utils::FrontierItem, Query};
 
@@ -16,42 +14,112 @@ use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide, TotalLength};
 
 use self::Direction::{Backward, Forward};
 
-pub type SinglePass = Box<dyn FnMut(&mut Graph, &Query)>;
+impl Graph {
+    /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
+    /// made.
+    pub fn optimise(&mut self, query: &Query) {
+        const ITERATION_LIMIT: usize = 20;
+
+        let passes = passes::default();
+
+        log::debug!("Optimising graph:");
+        let mut last_size = self.size();
+        log::debug!("  Initial size: {:?}", last_size);
+        let mut iter_count = 0;
+        let mut passes_since_last_time_graph_got_smaller = 0;
+        let start_time = Instant::now();
+        'optimisation: loop {
+            // Run every optimisation pass
+            for p in &passes {
+                // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
+                // is unnecessary.  I think that this system can deadlock if multiple threads are
+                // optimising graphs in parallel using the same set of passes.
+                p.lock().unwrap().run(self, query);
+
+                // Check if this optimisation pass has made the graph smaller
+                let new_size = self.size();
+                match new_size.cmp(&last_size) {
+                    Ordering::Less => passes_since_last_time_graph_got_smaller = 0,
+                    Ordering::Equal => {}
+                    Ordering::Greater => {
+                        unreachable!("Optimisation should never increase graph size")
+                    }
+                }
+                last_size = new_size;
+                // If we've run every optimisation pass without the graph getting smaller, then no
+                // more optimisation is possible
+                if passes_since_last_time_graph_got_smaller >= passes.len() {
+                    break 'optimisation;
+                }
+                passes_since_last_time_graph_got_smaller += 1;
+            }
+            log::debug!("  New     size: {:?}", last_size);
+
+            // Stop optimising if the limit has been reached
+            if iter_count > ITERATION_LIMIT {
+                log::warn!(
+                    "Graph optimisation limit reached, but more progress could have been made."
+                );
+                break;
+            }
+            iter_count += 1;
+        }
+        log::debug!("  Final   size: {:?}", last_size);
+        log::debug!(
+            "Finished optimisation in {:?} after {} iters of every pass",
+            start_time.elapsed(),
+            iter_count
+        );
+        log::debug!(
+            "Optimised graph has {} chunks, {} starts, {} ends",
+            self.chunks.len(),
+            self.starts.len(),
+            self.ends.len()
+        );
+    }
+
+    /// Return a value representing the 'size' of this graph.  Optimisation passes are
+    /// **required** to never increase this quantity.  Graph size is compared on the following
+    /// factors (in order of precedence, most important first):
+    /// 1. Number of chunks (smaller is better)
+    /// 2. Number of links (smaller is better)
+    /// 3. Number of required chunks (more is better)
+    fn size(&self) -> (usize, usize, Reverse<usize>) {
+        let mut num_links = 0;
+        let mut num_required_chunks = 0;
+        for chunk in self.chunks.values() {
+            num_links += chunk.successors.len();
+            if chunk.required {
+                num_required_chunks += 1;
+            }
+        }
+        (self.chunks.len(), num_links, Reverse(num_required_chunks))
+    }
+}
+
+type SinglePass = Box<dyn FnMut(&mut Graph, &Query)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  For example,
 /// computing distances to/from rounds (removing unreachable chunks).
-pub type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query)>;
+type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
 /// generates), whilst modifying the [`Graph`] to make tree search faster.
-pub enum Pass {
+enum Pass {
     /// Run a single non-directional pass
     Single(SinglePass),
-    /// Run a `DirectionalPass` but only in one [`Direction`]
-    OneDirection(DirectionalPass, Direction),
     /// Run a `DirectionalPass` twice, [`Forward`] first
     BothDirections(DirectionalPass),
-    /// Run a `DirectionalPass` twice, [`Backward`] first
-    BothDirectionsRev(DirectionalPass),
 }
 
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
-    pub fn run(&mut self, graph: &mut Graph, query: &Query) {
-        let mut run_in_direction = |direction: Direction, pass: &mut DirectionalPass| {
-            pass(DirectionalView::new(graph, direction), query)
-        };
-
+    fn run(&mut self, graph: &mut Graph, query: &Query) {
         match self {
             Pass::Single(pass) => pass(graph, query),
-            Pass::OneDirection(pass, direction) => run_in_direction(*direction, pass),
             Pass::BothDirections(pass) => {
-                run_in_direction(Forward, pass);
-                run_in_direction(Backward, pass);
-            }
-            Pass::BothDirectionsRev(pass) => {
-                run_in_direction(Backward, pass);
-                run_in_direction(Forward, pass);
+                pass(DirectionalView::new(graph, Forward), query);
+                pass(DirectionalView::new(graph, Backward), query);
             }
         }
     }
@@ -63,7 +131,7 @@ impl Pass {
 
 /// A `Direction` in which a [`DirectionalPass`] can be run
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Copy)]
-pub enum Direction {
+enum Direction {
     /// The direction that a composition will be rung (i.e. start -> end)
     Forward,
     /// The reverse of the direction that a composition will be rung (i.e. end -> start)
@@ -85,21 +153,14 @@ impl Not for Direction {
 /// given [`Direction`].  I.e. if the [`Direction`] is [`Backward`], then the graph's ordering is
 /// reversed.
 #[derive(Debug)]
-pub struct DirectionalView<'graph> {
+struct DirectionalView<'graph> {
     graph: &'graph mut Graph,
     direction: Direction,
 }
 
 impl<'graph> DirectionalView<'graph> {
-    pub fn new(graph: &'graph mut Graph, direction: Direction) -> Self {
+    fn new(graph: &'graph mut Graph, direction: Direction) -> Self {
         Self { graph, direction }
-    }
-
-    pub fn chunks(&self) -> impl Iterator<Item = (&ChunkId, ChunkView)> {
-        self.graph
-            .chunks
-            .iter()
-            .map(|(id, chunk)| (id, ChunkView::new(chunk, self.graph, self.direction)))
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
@@ -111,6 +172,7 @@ impl<'graph> DirectionalView<'graph> {
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
+    #[allow(dead_code)] // Don't want `starts` without `ends`
     fn ends(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
             Forward => &self.graph.ends,
@@ -118,14 +180,15 @@ impl<'graph> DirectionalView<'graph> {
         }
     }
 
-    pub fn get_chunk(&'graph self, id: &ChunkId) -> Option<ChunkView<'graph>> {
+    fn get_chunk(&'graph self, id: &ChunkId) -> Option<ChunkView<'graph>> {
         self.graph
             .chunks
             .get(id)
             .map(|chunk| ChunkView::new(chunk, self.graph, self.direction))
     }
 
-    pub fn get_chunk_mut(&'graph mut self, id: &ChunkId) -> Option<ChunkViewMut<'graph>> {
+    #[allow(dead_code)] // Don't want `get_chunk` without `get_chunk_mut`
+    fn get_chunk_mut(&'graph mut self, id: &ChunkId) -> Option<ChunkViewMut<'graph>> {
         let direction = self.direction;
         self.graph
             .chunks
@@ -133,7 +196,7 @@ impl<'graph> DirectionalView<'graph> {
             .map(|chunk| ChunkViewMut::new(chunk, direction))
     }
 
-    pub fn retain_chunks(&mut self, mut pred: impl FnMut(&ChunkId, ChunkViewMut) -> bool) {
+    fn retain_chunks(&mut self, mut pred: impl FnMut(&ChunkId, ChunkViewMut) -> bool) {
         let direction = self.direction;
         self.graph
             .chunks
@@ -145,15 +208,15 @@ impl<'graph> DirectionalView<'graph> {
 /// swap the successors/predecessors).
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
-pub struct ChunkView<'graph> {
-    pub chunk: &'graph Chunk,
-    pub graph: &'graph Graph,
-    pub direction: Direction,
+struct ChunkView<'graph> {
+    chunk: &'graph Chunk,
+    graph: &'graph Graph,
+    direction: Direction,
 }
 
 impl<'graph> ChunkView<'graph> {
     #[must_use]
-    pub fn new(chunk: &'graph Chunk, graph: &'graph Graph, direction: Direction) -> Self {
+    fn new(chunk: &'graph Chunk, graph: &'graph Graph, direction: Direction) -> Self {
         Self {
             chunk,
             graph,
@@ -161,17 +224,10 @@ impl<'graph> ChunkView<'graph> {
         }
     }
 
-    pub fn successors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
+    fn successors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
         self.convert_links(match self.direction {
             Forward => &self.chunk.successors,
             Backward => &self.chunk.predecessors,
-        })
-    }
-
-    pub fn predecessors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
-        self.convert_links(match self.direction {
-            Forward => &self.chunk.predecessors,
-            Backward => &self.chunk.successors,
         })
     }
 
@@ -192,9 +248,9 @@ impl<'graph> ChunkView<'graph> {
 /// swap the successors/predecessors).
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct ChunkViewMut<'graph> {
-    pub chunk: &'graph mut Chunk,
-    pub direction: Direction,
+struct ChunkViewMut<'graph> {
+    chunk: &'graph mut Chunk,
+    direction: Direction,
 }
 
 impl<'graph> ChunkViewMut<'graph> {
@@ -202,22 +258,8 @@ impl<'graph> ChunkViewMut<'graph> {
         Self { chunk, direction }
     }
 
-    fn successors_mut(&mut self) -> &mut Vec<super::LinkId> {
-        match self.direction {
-            Forward => &mut self.chunk.successors,
-            Backward => &mut self.chunk.predecessors,
-        }
-    }
-
-    fn predecessors_mut(&mut self) -> &mut Vec<super::LinkId> {
-        match self.direction {
-            Forward => &mut self.chunk.predecessors,
-            Backward => &mut self.chunk.successors,
-        }
-    }
-
     /// Mutable reference to the distance from rounds **to** the start of this chunk
-    pub fn distance_mut(&mut self) -> &mut TotalLength {
+    fn distance_mut(&mut self) -> &mut TotalLength {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_rounds,
             Backward => &mut self.chunk.lb_distance_to_rounds,
@@ -228,20 +270,21 @@ impl<'graph> ChunkViewMut<'graph> {
 /// A view of a [`Link`], facing in a given [`Direction`]
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct LinkView<'graph> {
-    pub link: &'graph Link,
-    pub direction: Direction,
+struct LinkView<'graph> {
+    link: &'graph Link,
+    direction: Direction,
 }
 
 impl<'graph> LinkView<'graph> {
-    pub fn from(&self) -> &'graph LinkSide<ChunkId> {
+    #[allow(dead_code)] // Don't want `to` without `from`
+    fn from(&self) -> &'graph LinkSide<ChunkId> {
         match self.direction {
             Direction::Forward => &self.link.from,
             Direction::Backward => &self.link.to,
         }
     }
 
-    pub fn to(&self) -> &'graph LinkSide<ChunkId> {
+    fn to(&self) -> &'graph LinkSide<ChunkId> {
         match self.direction {
             Direction::Forward => &self.link.to,
             Direction::Backward => &self.link.from,
@@ -256,7 +299,7 @@ impl<'graph> LinkView<'graph> {
 mod music; // Proving chunks as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent chunks
 
-pub mod passes {
+mod passes {
     use std::{collections::HashSet, sync::Mutex};
 
     use itertools::Itertools;
@@ -270,7 +313,7 @@ pub mod passes {
 
     /// A default sequence of built-in optimisation passes.  Each is stored in a [`Mutex`] to
     /// enable concurrent access.
-    pub fn default() -> Vec<Mutex<Pass>> {
+    pub(super) fn default() -> Vec<Mutex<Pass>> {
         [
             // Misc optimisations
             remove_links_between_false_chunks(),
@@ -294,27 +337,27 @@ pub mod passes {
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
     /// removing any which can't reach rounds in either direction.
-    pub fn strip_refs() -> Pass {
+    fn strip_refs() -> Pass {
         Pass::Single(Box::new(super::strip_refs::remove_dangling_refs))
     }
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
     /// removing any which can't reach rounds in either direction.
-    pub fn required_music() -> Pass {
+    fn required_music() -> Pass {
         Pass::Single(Box::new(super::music::required_music_min))
     }
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
     /// removing any which can't reach rounds in either direction.
-    pub fn remove_chunks_exceeding_max_count() -> Pass {
+    fn remove_chunks_exceeding_max_count() -> Pass {
         Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count))
     }
 
     /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
-    pub fn remove_links_between_false_chunks() -> Pass {
+    fn remove_links_between_false_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, _query: &Query| {
             graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
-                chunk_from.truth_against(id_to).is_true()
+                !chunk_from.false_chunks.contains(id_to)
             })
         }))
     }
@@ -323,7 +366,7 @@ pub mod passes {
 
     /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
     /// removing any which can't reach rounds in either direction.
-    pub fn compute_distances() -> Pass {
+    fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(|mut view: DirectionalView, query: &Query| {
             let expanded_chunk_distances = super::compute_distances(
                 view.starts()
@@ -347,11 +390,14 @@ pub mod passes {
     }
 
     /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
-    pub fn strip_long_chunks() -> Pass {
+    fn strip_long_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
-            graph
-                .chunks
-                .retain(|_id, chunk| chunk.min_comp_length() <= *query.len_range.end());
+            graph.chunks.retain(|_id, chunk| {
+                let min_comp_length_with_chunk = chunk.lb_distance_from_rounds
+                    + chunk.total_length
+                    + chunk.lb_distance_to_rounds;
+                min_comp_length_with_chunk <= *query.len_range.end()
+            });
         }))
     }
 
@@ -359,7 +405,7 @@ pub mod passes {
 
     /// A [`Pass`] which checks for a single start/end chunk and marks that chunk as required
     /// (because all compositions must start or end at that chunk).
-    pub fn mark_single_start_or_end_as_required() -> Pass {
+    fn mark_single_start_or_end_as_required() -> Pass {
         Pass::BothDirections(Box::new(|view: DirectionalView, _| {
             let single_chunk_id = match view.starts().iter().exactly_one() {
                 Ok((_link_id, chunk_id)) => chunk_id.clone(),
@@ -372,7 +418,7 @@ pub mod passes {
     }
 
     /// A [`Pass`] which removes any chunks which are false against a chunk marked as required
-    pub fn remove_chunks_false_against_required() -> Pass {
+    fn remove_chunks_false_against_required() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, _| {
             let mut chunk_ids_to_remove: HashSet<ChunkId> = HashSet::new();
             // For each required chunk ...
@@ -482,20 +528,5 @@ impl Graph {
                 _ => false, // If either side of the link is dangling, remove the link
             }
         })
-    }
-}
-
-impl Chunk {
-    //! Helpers for optimisation passes
-
-    /// Returns the mutual truth of `self` against the chunk with id of `other`
-    fn truth_against(&self, other: &ChunkId) -> Truth {
-        // Chunks are mutually *true* if `other` *isn't* included in `self.false_chunks`
-        Truth::from(!self.false_chunks.contains(other))
-    }
-
-    /// A lower bound on the length of a composition which passes through this chunk.
-    fn min_comp_length(&self) -> TotalLength {
-        self.lb_distance_from_rounds + self.total_length + self.lb_distance_to_rounds
     }
 }

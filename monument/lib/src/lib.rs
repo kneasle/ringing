@@ -25,10 +25,7 @@ use std::{
     fmt::{Display, Formatter},
     hash::Hash,
     ops::RangeInclusive,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Mutex,
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
@@ -170,7 +167,6 @@ pub struct Config {
     pub thread_limit: Option<usize>,
 
     /* Graph Generation */
-    pub optimisation_passes: Vec<Mutex<graph::optimise::Pass>>,
     /// The maximum graph size, in chunks.  If a search would produce a graph bigger than this, it
     /// is aborted.
     pub graph_size_limit: usize,
@@ -189,7 +185,6 @@ impl Default for Config {
         Self {
             thread_limit: None,
 
-            optimisation_passes: graph::optimise::passes::default(),
             graph_size_limit: 100_000,
 
             queue_limit: 10_000_000,

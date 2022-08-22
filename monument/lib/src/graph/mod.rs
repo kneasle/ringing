@@ -2,15 +2,13 @@
 //! optimising such graphs, in preparation for performing tree search.
 
 mod build;
-pub mod optimise; // TODO: Not pub
+mod optimise;
 
 use std::{
-    cmp::{Ordering, Reverse},
     collections::HashMap,
     fmt::{Debug, Display, Formatter},
     ops::Deref,
     sync::Arc,
-    time::Instant,
 };
 
 use bellframe::Row;
@@ -18,7 +16,7 @@ use bellframe::Row;
 use crate::{
     music::Breakdown,
     utils::{group::PhRotation, Counts, PerPartLength, TotalLength},
-    CallIdx, Config, MethodIdx, Query,
+    CallIdx, MethodIdx,
 };
 
 /// A 'prototype' chunk graph that is (relatively) inefficient to traverse but easy to modify.  This
@@ -86,7 +84,7 @@ pub struct Chunk {
 pub struct Link {
     pub from: LinkSide<ChunkId>,
     pub to: LinkSide<ChunkId>,
-    /// Indexes into [`Query::calls`]
+    /// Indexes into [`crate::Query::calls`]
     pub call: Option<CallIdx>,
     pub ph_rotation: PhRotation,
     // TODO: Remove this and compute it on the fly for `LinkView`?
@@ -139,90 +137,6 @@ impl<Id> LinkSide<Id> {
             Self::StartOrEnd => LinkSide::StartOrEnd,
             Self::Chunk(t) => LinkSide::Chunk(f(t)),
         }
-    }
-}
-
-// ------------------------------------------------------------------------------------------
-
-/// # Optimisation
-impl Graph {
-    /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
-    /// made.
-    pub fn optimise(&mut self, query: &Query, config: &Config) {
-        const ITERATION_LIMIT: usize = 20;
-
-        log::debug!("Optimising graph:");
-        let mut last_size = self.size();
-        log::debug!("  Initial size: {:?}", last_size);
-        let mut iter_count = 0;
-        let mut passes_since_last_time_graph_got_smaller = 0;
-        let start_time = Instant::now();
-        'optimisation: loop {
-            // Run every optimisation pass
-            for p in &config.optimisation_passes {
-                // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
-                // is unnecessary.  I think that this system can deadlock if multiple threads are
-                // optimising graphs in parallel using the same set of passes.
-                p.lock().unwrap().run(self, query);
-
-                // Check if this optimisation pass has made the graph smaller
-                let new_size = self.size();
-                match new_size.cmp(&last_size) {
-                    Ordering::Less => passes_since_last_time_graph_got_smaller = 0,
-                    Ordering::Equal => {}
-                    Ordering::Greater => {
-                        unreachable!("Optimisation should never increase graph size")
-                    }
-                }
-                last_size = new_size;
-                // If we've run every optimisation pass without the graph getting smaller, then no
-                // more optimisation is possible
-                if passes_since_last_time_graph_got_smaller >= config.optimisation_passes.len() {
-                    break 'optimisation;
-                }
-                passes_since_last_time_graph_got_smaller += 1;
-            }
-            log::debug!("  New     size: {:?}", last_size);
-
-            // Stop optimising if the limit has been reached
-            if iter_count > ITERATION_LIMIT {
-                log::warn!(
-                    "Graph optimisation limit reached, but more progress could have been made."
-                );
-                break;
-            }
-            iter_count += 1;
-        }
-        log::debug!("  Final   size: {:?}", last_size);
-        log::debug!(
-            "Finished optimisation in {:?} after {} iters of every pass",
-            start_time.elapsed(),
-            iter_count
-        );
-        log::debug!(
-            "Optimised graph has {} chunks, {} starts, {} ends",
-            self.chunks.len(),
-            self.starts.len(),
-            self.ends.len()
-        );
-    }
-
-    /// Return a value representing the 'size' of this graph.  Optimisation passes are
-    /// **required** to never increase this quantity.  Graph size is compared on the following
-    /// factors (in order of precedence, most important first):
-    /// 1. Number of chunks (smaller is better)
-    /// 2. Number of links (smaller is better)
-    /// 3. Number of required chunks (more is better)
-    pub fn size(&self) -> (usize, usize, Reverse<usize>) {
-        let mut num_links = 0;
-        let mut num_required_chunks = 0;
-        for chunk in self.chunks.values() {
-            num_links += chunk.successors.len();
-            if chunk.required {
-                num_required_chunks += 1;
-            }
-        }
-        (self.chunks.len(), num_links, Reverse(num_required_chunks))
     }
 }
 
@@ -356,14 +270,11 @@ mod link_set {
             self.map.contains_key(&id)
         }
 
-        pub fn get_mut(&mut self, id: LinkId) -> Option<&mut Link> {
-            self.map.get_mut(&id)
-        }
-
         pub fn iter(&self) -> std::collections::hash_map::Iter<LinkId, Link> {
             self.map.iter()
         }
 
+        #[allow(dead_code)] // Don't want `values` without `keys`
         pub fn keys(&self) -> std::iter::Copied<std::collections::hash_map::Keys<LinkId, Link>> {
             self.map.keys().copied()
         }
