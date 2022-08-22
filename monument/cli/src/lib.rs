@@ -79,7 +79,7 @@ pub fn run(
         .unoptimised_graph(&config)
         .map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
-    query.optimise_graph(&mut graph, &config);
+    graph.optimise(&query, &config);
     let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {

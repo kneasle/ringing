@@ -252,14 +252,14 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 
     // Compute the starts
     let mut starts = HashSet::<SimpleChunk>::new();
-    for (_start_link, start_chunk_id) in graph.starts() {
+    for (_start_link, start_chunk_id) in &graph.starts {
         starts.extend(get_simple_chunks(start_chunk_id));
     }
 
     // Compute the simplified graph
     let mut successors =
         HashMap::<SimpleChunk, HashSet<(TotalLength, LinkSide<SimpleChunk>)>>::new();
-    for (id, chunk) in graph.chunks() {
+    for (id, chunk) in &graph.chunks {
         for simple_chunk in get_simple_chunks(id) {
             let successors = successors.entry(simple_chunk).or_default();
 
@@ -267,12 +267,12 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
             for (_id, succ_link) in chunk.succ_links(graph) {
                 match &succ_link.to {
                     LinkSide::StartOrEnd => {
-                        successors.insert((chunk.total_length(), LinkSide::StartOrEnd));
+                        successors.insert((chunk.total_length, LinkSide::StartOrEnd));
                     }
                     LinkSide::Chunk(succ_id) => {
                         for succ_simple_chunk in get_simple_chunks(succ_id) {
                             successors
-                                .insert((chunk.total_length(), LinkSide::Chunk(succ_simple_chunk)));
+                                .insert((chunk.total_length, LinkSide::Chunk(succ_simple_chunk)));
                         }
                     }
                 }
@@ -334,7 +334,7 @@ fn possible_method_counts(
     let mut end_counts = HashSet::new();
     let mut interior_counts = HashSet::new();
     let mut start_end_counts = HashSet::new(); // Counts of chunks which are both starts & ends
-    for (id, chunk) in graph.chunks() {
+    for (id, chunk) in &graph.chunks {
         let only_starts = chunk.pred_links(graph).all(|(_id, link)| link.is_start());
         let any_starts = chunk.pred_links(graph).any(|(_id, link)| link.is_start());
         let only_ends = chunk.succ_links(graph).all(|(_id, link)| link.is_end());
@@ -365,7 +365,7 @@ fn possible_method_counts(
             (false, true) => &mut end_counts,
             (false, false) => &mut interior_counts,
         };
-        count_group.insert(chunk.total_length());
+        count_group.insert(chunk.total_length);
     }
 
     log::trace!("  Start       counts: {:?}", start_counts);

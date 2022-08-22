@@ -10,7 +10,7 @@ use crate::{
 mod graph;
 mod prefix;
 
-pub use graph::Graph;
+use graph::Graph;
 
 use self::prefix::CompPrefix;
 

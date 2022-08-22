@@ -106,14 +106,14 @@ impl Graph {
             "Graph build completed in {:.3?} ({} chunks and {} links)",
             graph_build_start.elapsed(),
             chunks.len(),
-            links.map.len(),
+            links.len(),
         );
 
         // Compute start/end links
         use LinkSide::*;
         let mut starts = Vec::new();
         let mut ends = Vec::new();
-        for (link_id, link) in &links.map {
+        for (link_id, link) in links.iter() {
             match (&link.from, &link.to) {
                 (StartOrEnd, Chunk(chunk_id)) => starts.push((*link_id, chunk_id.clone())),
                 (Chunk(chunk_id), StartOrEnd) => ends.push((*link_id, chunk_id.clone())),
@@ -216,8 +216,6 @@ fn check_query(query: &Query) -> crate::Result<()> {
 fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
     Chunk {
-        label: String::new(),
-
         per_part_length,
         total_length,
         // All the length goes to the method rung in this chunk
@@ -262,7 +260,7 @@ fn get_start_strokes(
     // considers the `start_row` to be part of the composition (so that leads go from lead head to
     // end, inclusive), so we need to invert `query.start_row` to convert.
     let stroke_of_start_row = !query.start_stroke;
-    for link in links.map.values() {
+    for link in links.values() {
         if let (LinkSide::StartOrEnd, LinkSide::Chunk(id)) = (&link.from, &link.to) {
             frontier.push((id.clone(), stroke_of_start_row));
         }

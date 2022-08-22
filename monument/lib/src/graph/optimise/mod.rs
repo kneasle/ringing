@@ -8,6 +8,8 @@ use std::{
     ops::Not,
 };
 
+use bellframe::Truth;
+
 use crate::{utils::FrontierItem, Query};
 
 use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide, TotalLength};
@@ -95,43 +97,47 @@ impl<'graph> DirectionalView<'graph> {
 
     pub fn chunks(&self) -> impl Iterator<Item = (&ChunkId, ChunkView)> {
         self.graph
-            .chunks()
+            .chunks
+            .iter()
             .map(|(id, chunk)| (id, ChunkView::new(chunk, self.graph, self.direction)))
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
-    pub fn starts(&self) -> &[(LinkId, ChunkId)] {
+    fn starts(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
-            Forward => self.graph.starts(),
-            Backward => self.graph.ends(),
+            Forward => &self.graph.starts,
+            Backward => &self.graph.ends,
         }
     }
 
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
-    pub fn ends(&self) -> &[(LinkId, ChunkId)] {
+    fn ends(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
-            Forward => self.graph.ends(),
-            Backward => self.graph.starts(),
+            Forward => &self.graph.ends,
+            Backward => &self.graph.starts,
         }
     }
 
     pub fn get_chunk(&'graph self, id: &ChunkId) -> Option<ChunkView<'graph>> {
         self.graph
-            .get_chunk(id)
+            .chunks
+            .get(id)
             .map(|chunk| ChunkView::new(chunk, self.graph, self.direction))
     }
 
     pub fn get_chunk_mut(&'graph mut self, id: &ChunkId) -> Option<ChunkViewMut<'graph>> {
         let direction = self.direction;
         self.graph
-            .get_chunk_mut(id)
+            .chunks
+            .get_mut(id)
             .map(|chunk| ChunkViewMut::new(chunk, direction))
     }
 
     pub fn retain_chunks(&mut self, mut pred: impl FnMut(&ChunkId, ChunkViewMut) -> bool) {
         let direction = self.direction;
         self.graph
-            .retain_chunks(|id, chunk| pred(id, ChunkViewMut::new(chunk, direction)));
+            .chunks
+            .retain(|id, chunk| pred(id, ChunkViewMut::new(chunk, direction)));
     }
 }
 
@@ -157,15 +163,15 @@ impl<'graph> ChunkView<'graph> {
 
     pub fn successors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
         self.convert_links(match self.direction {
-            Forward => self.chunk.successors(),
-            Backward => self.chunk.predecessors(),
+            Forward => &self.chunk.successors,
+            Backward => &self.chunk.predecessors,
         })
     }
 
     pub fn predecessors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
         self.convert_links(match self.direction {
-            Forward => self.chunk.predecessors(),
-            Backward => self.chunk.successors(),
+            Forward => &self.chunk.predecessors,
+            Backward => &self.chunk.successors,
         })
     }
 
@@ -175,7 +181,7 @@ impl<'graph> ChunkView<'graph> {
     ) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
         links.iter().filter_map(|link_id| {
             Some(LinkView {
-                link: self.graph.get_link(*link_id)?,
+                link: self.graph.links.get(*link_id)?,
                 direction: self.direction,
             })
         })
@@ -196,17 +202,17 @@ impl<'graph> ChunkViewMut<'graph> {
         Self { chunk, direction }
     }
 
-    pub fn successors_mut(&mut self) -> &mut Vec<super::LinkId> {
+    fn successors_mut(&mut self) -> &mut Vec<super::LinkId> {
         match self.direction {
-            Forward => self.chunk.successors_mut(),
-            Backward => self.chunk.predecessors_mut(),
+            Forward => &mut self.chunk.successors,
+            Backward => &mut self.chunk.predecessors,
         }
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<super::LinkId> {
+    fn predecessors_mut(&mut self) -> &mut Vec<super::LinkId> {
         match self.direction {
-            Forward => self.chunk.predecessors_mut(),
-            Backward => self.chunk.successors_mut(),
+            Forward => &mut self.chunk.predecessors,
+            Backward => &mut self.chunk.successors,
         }
     }
 
@@ -354,7 +360,9 @@ pub mod passes {
     /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
     pub fn strip_long_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
-            graph.retain_chunks(|_id, chunk| chunk.min_comp_length() <= *query.len_range.end());
+            graph
+                .chunks
+                .retain(|_id, chunk| chunk.min_comp_length() <= *query.len_range.end());
         }))
     }
 
@@ -366,12 +374,13 @@ pub mod passes {
                 // Give all non-duffer chunks a distance of 0, and assign all start/end chunks to
                 // their own length (thus treating rounds as a 0-length non-duffer)
                 view.graph
-                    .chunks()
+                    .chunks
+                    .iter()
                     .filter(|&(_id, chunk)| !chunk.duffer)
                     .map(|(id, _chunk)| (id, TotalLength::ZERO))
                     .chain(view.starts().iter().filter_map(|(_link_id, chunk_id)| {
-                        let chunk = view.graph.get_chunk(chunk_id)?;
-                        chunk.duffer.then(|| (chunk_id, chunk.total_length()))
+                        let chunk = view.graph.chunks.get(chunk_id)?;
+                        chunk.duffer.then(|| (chunk_id, chunk.total_length))
                     })),
                 &view,
                 query.max_duffer_rows,
@@ -396,7 +405,9 @@ pub mod passes {
     pub fn strip_duff_chunks() -> Pass {
         Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
             if let Some(max_duffer_rows) = query.max_duffer_rows {
-                graph.retain_chunks(|_id, chunk| chunk.min_duffer_length() <= max_duffer_rows);
+                graph
+                    .chunks
+                    .retain(|_id, chunk| chunk.min_duffer_length() <= max_duffer_rows);
             }
         }))
     }
@@ -411,7 +422,7 @@ pub mod passes {
                 Ok((_link_id, chunk_id)) => chunk_id.clone(),
                 Err(_) => return,
             };
-            if let Some(chunk) = view.graph.get_chunk_mut(&single_chunk_id) {
+            if let Some(chunk) = view.graph.chunks.get_mut(&single_chunk_id) {
                 chunk.required = true;
             }
         }))
@@ -422,18 +433,20 @@ pub mod passes {
         Pass::Single(Box::new(|graph: &mut Graph, _| {
             let mut chunk_ids_to_remove: HashSet<ChunkId> = HashSet::new();
             // For each required chunk ...
-            for (id, chunk) in graph.chunks() {
+            for (id, chunk) in &graph.chunks {
                 if chunk.required {
                     // ... mark all its false chunks (**except itself**) to be removed
                     let other_false_chunk_ids = chunk
-                        .false_chunks()
+                        .false_chunks
                         .iter()
                         .cloned()
                         .filter(|false_id| false_id != id);
                     chunk_ids_to_remove.extend(other_false_chunk_ids);
                 }
             }
-            graph.retain_chunks(|id, _chunk| !chunk_ids_to_remove.contains(id));
+            graph
+                .chunks
+                .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
         }))
     }
 }
@@ -479,7 +492,7 @@ fn compute_distances<'a>(
 
         // Skip this chunk if any chunk succeeding it would take longer to reach than the length of
         // the composition
-        let distance_after_chunk = distance + chunk_view.chunk.total_length();
+        let distance_after_chunk = distance + chunk_view.chunk.total_length;
         if let Some(l) = inclusive_dist_limit {
             if distance_after_chunk > l {
                 continue;
@@ -501,4 +514,54 @@ fn compute_distances<'a>(
     }
 
     expanded_chunk_distances
+}
+
+/// # Helpers for optimisation passes
+impl Graph {
+    /// Removes all internal (i.e. [`Chunk`] to [`Chunk`]) links for whom `pred` returns `false`.
+    fn retain_internal_links(
+        &mut self,
+        mut pred: impl FnMut(&Link, &ChunkId, &Chunk, &ChunkId, &Chunk) -> bool,
+    ) {
+        self.links.retain(|_link_id, link| {
+            // Extract `ChunkId`s on either side of this link, or return `true` if the link is
+            // external
+            let (id_from, id_to) = match (&link.from, &link.to) {
+                (LinkSide::Chunk(f), LinkSide::Chunk(t)) => (f, t),
+                (LinkSide::StartOrEnd, LinkSide::StartOrEnd) => {
+                    unreachable!("StartOrEnd -> StartOrEnd links aren't allowed");
+                }
+                _ => return true, // Link is external
+            };
+
+            match (self.chunks.get(id_from), self.chunks.get(id_to)) {
+                (Some(from), Some(to)) => pred(link, id_from, from, id_to, to),
+                _ => false, // If either side of the link is dangling, remove the link
+            }
+        })
+    }
+}
+
+impl Chunk {
+    //! Helpers for optimisation passes
+
+    /// Returns the mutual truth of `self` against the chunk with id of `other`
+    fn truth_against(&self, other: &ChunkId) -> Truth {
+        // Chunks are mutually *true* if `other` *isn't* included in `self.false_chunks`
+        Truth::from(!self.false_chunks.contains(other))
+    }
+
+    /// A lower bound on the length of a composition which passes through this chunk.
+    fn min_comp_length(&self) -> TotalLength {
+        self.lb_distance_from_rounds + self.total_length + self.lb_distance_to_rounds
+    }
+
+    /// A lower bound on the length of the run of duffers which passes through this chunk.
+    fn min_duffer_length(&self) -> TotalLength {
+        if self.duffer {
+            TotalLength::ZERO // Make sure that non-duffers are never pruned
+        } else {
+            self.lb_distance_from_non_duffer + self.total_length + self.lb_distance_to_non_duffer
+        }
+    }
 }

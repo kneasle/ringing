@@ -30,11 +30,12 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     // The `(ChunkId, Chunk)` pairs of chunks which contribute to the types of music that we care
     // about.
     let (required_chunks, non_required_chunks) = graph
-        .chunks()
+        .chunks
+        .iter()
         .filter(|(_id, chunk)| {
             min_music_counts
                 .iter()
-                .any(|(ty_idx, _)| chunk.music().counts[*ty_idx] > 0)
+                .any(|(ty_idx, _)| chunk.music.counts[*ty_idx] > 0)
         })
         .map(|(id, chunk)| (id, chunk))
         .partition::<Vec<_>, _>(|(_id, chunk)| chunk.required);
@@ -51,7 +52,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     for (_id, chunk) in required_chunks {
         // Non-required chunks aren't required to get music which the required chunks can already
         // achieve
-        counts_needed_from_non_required_chunks.saturating_sub_assign(chunk.music());
+        counts_needed_from_non_required_chunks.saturating_sub_assign(&chunk.music);
     }
 
     // Do tree search over the non-required interesting chunks, determining which combinations of
@@ -78,7 +79,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     let no_required_chunks = new_required_chunks.is_empty();
     log::debug!("required: {:?}", new_required_chunks);
     for required_id in new_required_chunks {
-        graph.get_chunk_mut(&required_id).unwrap().required = true;
+        graph.chunks.get_mut(&required_id).unwrap().required = true;
     }
 
     // If there aren't any chunks to mark as required, then we can pick a chunk to condition on and
@@ -179,7 +180,7 @@ fn search_chunks<'iter, 'graph: 'iter>(
         iters_left,
     );
 
-    for false_id in chunk.false_chunks() {
+    for false_id in &chunk.false_chunks {
         if chunks_used.contains(false_id) {
             return; // Don't add this chunk if it's false
         }
@@ -187,7 +188,7 @@ fn search_chunks<'iter, 'graph: 'iter>(
 
     // Add the chunk
     chunks_used.insert(id);
-    let counts_needed_with_this_chunk = counts_needed.saturating_sub(chunk.music());
+    let counts_needed_with_this_chunk = counts_needed.saturating_sub(&chunk.music);
     // Continue searching, assuming that this chunk is used
     search_chunks(
         chunks.clone(),

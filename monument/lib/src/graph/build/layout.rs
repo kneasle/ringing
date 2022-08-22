@@ -1,10 +1,3 @@
-//! Code to generate the layout of [`Chunk`](crate::graph::Chunk)s.  All this computes is which
-//! ranges of rows can be rung and how they can be linked togeter.
-
-//////////////////
-// CHUNK LAYOUT //
-//////////////////
-
 use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet},

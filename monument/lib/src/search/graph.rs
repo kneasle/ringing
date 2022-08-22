@@ -14,13 +14,13 @@ use bit_vec::BitVec;
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
 #[derive(Debug, Clone)]
-pub struct Graph {
+pub(super) struct Graph {
     pub starts: StartVec<(ChunkIdx, crate::graph::LinkId, PartHead)>,
     pub chunks: ChunkVec<Chunk>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Chunk {
+pub(super) struct Chunk {
     pub id: crate::graph::ChunkId,
 
     pub score: Score,
@@ -31,7 +31,6 @@ pub struct Chunk {
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub min_len_to_rounds: TotalLength,
-    pub label: String,
 
     pub duffer: bool,
     pub dist_to_non_duffer: TotalLength,
@@ -46,7 +45,7 @@ pub struct Chunk {
 
 /// A link between a chunk and its successor
 #[derive(Debug, Clone)]
-pub struct SuccLink {
+pub(super) struct SuccLink {
     pub call: Option<CallIdx>,
     pub next: LinkSide<ChunkIdx>,
     pub score: Score,
@@ -59,14 +58,14 @@ pub struct SuccLink {
 
 impl Graph {
     pub fn new(source_graph: &crate::graph::Graph, query: &Query) -> Self {
-        let num_chunks = source_graph.chunk_map().len();
+        let num_chunks = source_graph.chunks.len();
 
         // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
         // the set of chunks with numbers that can be used to index into a BitVec for falseness
         // computation.
         let mut index_to_id = ChunkVec::<(crate::graph::ChunkId, &crate::graph::Chunk)>::new();
         let mut id_to_index = HashMap::<crate::graph::ChunkId, ChunkIdx>::new();
-        for (id, chunk) in source_graph.chunks() {
+        for (id, chunk) in &source_graph.chunks {
             let index = index_to_id.push((id.to_owned(), chunk));
             id_to_index.insert(id.to_owned(), index);
         }
@@ -80,16 +79,16 @@ impl Graph {
 
                 // Generate a BitVec with a 1 for every chunk which is false against this chunk
                 let mut falseness = BitVec::from_elem(num_chunks, false);
-                for false_id in source_chunk.false_chunks() {
+                for false_id in &source_chunk.false_chunks {
                     let false_chunk_idx = id_to_index[false_id];
                     falseness.set(false_chunk_idx.index(), true);
                 }
 
                 let succs = source_chunk
-                    .successors()
+                    .successors
                     .iter()
                     .filter_map(|link_id| {
-                        let link = source_graph.get_link(*link_id)?;
+                        let link = source_graph.links.get(*link_id)?;
                         let next = match &link.to {
                             LinkSide::Chunk(ch_id) => LinkSide::Chunk(*id_to_index.get(ch_id)?),
                             LinkSide::StartOrEnd => LinkSide::StartOrEnd,
@@ -106,16 +105,15 @@ impl Graph {
                 Chunk {
                     id: from_id,
 
-                    score: source_chunk.score(),
-                    music_counts: source_chunk.music().counts.clone(),
+                    score: source_chunk.music.score,
+                    music_counts: source_chunk.music.counts.clone(),
 
-                    per_part_length: source_chunk.per_part_length(),
-                    total_length: source_chunk.total_length(),
-                    method_counts: source_chunk.method_counts().clone(),
+                    per_part_length: source_chunk.per_part_length,
+                    total_length: source_chunk.total_length,
+                    method_counts: source_chunk.method_counts.clone(),
                     min_len_to_rounds: source_chunk.lb_distance_to_rounds,
-                    label: source_chunk.label().to_owned(),
 
-                    duffer: source_chunk.duffer(),
+                    duffer: source_chunk.duffer,
                     dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer,
 
                     succs,
@@ -126,12 +124,12 @@ impl Graph {
 
         // Compute the list of start chunks and their labels
         let mut starts = StartVec::new();
-        for (start_link_id, start_chunk_id) in source_graph.starts() {
-            let start_link = match source_graph.get_link(*start_link_id) {
+        for (start_link_id, start_chunk_id) in &source_graph.starts {
+            let start_link = match source_graph.links.get(*start_link_id) {
                 Some(l) => l,
                 None => continue, // Skip any dangling start `LinkId`s
             };
-            if source_graph.get_chunk(start_chunk_id).is_some() {
+            if source_graph.chunks.contains_key(start_chunk_id) {
                 starts.push((
                     id_to_index[start_chunk_id],
                     *start_link_id,
@@ -161,7 +159,7 @@ fn link_score(
         // - (Bristol, 17) -> (Bristol, 0)    **is** a splice (it skips half a lead)
         (LinkSide::Chunk(c1), LinkSide::Chunk(c2)) => {
             let sub_lead_idx_after_prev_chunk = query.methods[c1.method]
-                .add_sub_lead_idx(c1.sub_lead_idx, source_chunk.per_part_length());
+                .add_sub_lead_idx(c1.sub_lead_idx, source_chunk.per_part_length);
             let is_continuation =
                 c1.method == c2.method && sub_lead_idx_after_prev_chunk == c2.sub_lead_idx;
             !is_continuation

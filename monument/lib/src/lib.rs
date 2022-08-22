@@ -32,7 +32,7 @@ use std::{
 };
 
 use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
-use graph::{optimise::Pass, Graph};
+use graph::Graph;
 
 /// Information provided to Monument which specifies what compositions are generated.
 ///
@@ -171,7 +171,7 @@ pub struct Config {
     pub thread_limit: Option<usize>,
 
     /* Graph Generation */
-    pub optimisation_passes: Vec<Mutex<Pass>>,
+    pub optimisation_passes: Vec<Mutex<graph::optimise::Pass>>,
     /// The maximum graph size, in chunks.  If a search would produce a graph bigger than this, it
     /// is aborted.
     pub graph_size_limit: usize,
@@ -190,8 +190,8 @@ impl Default for Config {
         Self {
             thread_limit: None,
 
-            graph_size_limit: 100_000,
             optimisation_passes: graph::optimise::passes::default(),
+            graph_size_limit: 100_000,
 
             queue_limit: 10_000_000,
             leak_search_memory: false,
@@ -633,12 +633,6 @@ impl std::fmt::Display for DisplayComp<'_> {
 impl Query {
     pub fn unoptimised_graph(&self, config: &Config) -> crate::Result<Graph> {
         graph::Graph::new(self, config)
-    }
-
-    /// Converts a single [`Graph`] into a set of [`Graph`]s which make tree search faster but
-    /// generate the same overall set of compositions.
-    pub fn optimise_graph(&self, graph: &mut Graph, config: &Config) {
-        graph.optimise(&config.optimisation_passes, self);
     }
 
     /// Prove which lengths/method counts are actually possible
