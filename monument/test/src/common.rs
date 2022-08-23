@@ -779,7 +779,7 @@ impl Comp {
 }
 
 impl Comp {
-    fn new(source: &monument::Comp, query: &monument::query::Query) -> Self {
+    fn new(source: &monument::Composition, query: &monument::query::Query) -> Self {
         Self {
             length: source.length,
             string: source.call_string(query),

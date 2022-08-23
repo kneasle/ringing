@@ -12,7 +12,7 @@ use crate::{
     graph::LinkSide,
     query::SpliceStyle,
     utils::{group::PartHead, Counts, TotalLength},
-    Comp, PathElem, Score,
+    Composition, PathElem, Score,
 };
 
 use super::{
@@ -146,7 +146,11 @@ impl Deref for CompPrefix {
 
 impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
-    pub(super) fn expand(self, data: &SearchData, frontier: &mut BinaryHeap<Self>) -> Option<Comp> {
+    pub(super) fn expand(
+        self,
+        data: &SearchData,
+        frontier: &mut BinaryHeap<Self>,
+    ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
@@ -225,7 +229,7 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &SearchData) -> Option<Comp> {
+    fn check_comp(&self, data: &SearchData) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !data.ranges.length.contains(&self.length) {
@@ -283,7 +287,7 @@ impl CompPrefix {
         }
 
         // Now we know the composition is valid, construct it and return
-        let comp = Comp {
+        let comp = Composition {
             path,
 
             part_head: self.part_head,

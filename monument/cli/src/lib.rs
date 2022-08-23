@@ -27,7 +27,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Comp, Progress, QueryUpdate, RefinedRanges};
+use monument::{query::Query, Composition, Progress, QueryUpdate, RefinedRanges};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -86,7 +86,7 @@ pub fn run(
 
     // Thread-safe data for the query engine
     let abort_flag = Arc::new(AtomicBool::new(false));
-    let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
+    let comps = Arc::new(Mutex::new(Vec::<Composition>::new()));
     let comp_printer = CompPrinter::new(query.clone(), &refined_ranges);
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
@@ -156,7 +156,7 @@ pub enum Source<'a> {
 
 #[derive(Debug, Clone)]
 pub struct QueryResult {
-    pub comps: Vec<Comp>,
+    pub comps: Vec<Composition>,
     pub query: Arc<Query>,
     pub duration: Duration,
     pub aborted: bool,
@@ -242,7 +242,7 @@ impl SingleLineProgressLogger {
         }
     }
 
-    fn log(&mut self, update: QueryUpdate) -> Option<Comp> {
+    fn log(&mut self, update: QueryUpdate) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
@@ -282,8 +282,9 @@ impl SingleLineProgressLogger {
         comp
     }
 
-    /// Given a new update, update `self` and return the [`Comp`] (if one has just been generated)
-    fn update_progress(&mut self, update: QueryUpdate) -> Option<Comp> {
+    /// Given a new update, update `self` and return the [`Composition`] (if one has just been
+    /// generated)
+    fn update_progress(&mut self, update: QueryUpdate) -> Option<Composition> {
         match update {
             QueryUpdate::Comp(comp) => return Some(comp),
             QueryUpdate::Progress(progress) => self.last_progress = progress,
@@ -435,7 +436,7 @@ impl CompPrinter {
         s
     }
 
-    fn comp_string(&self, comp: &Comp) -> String {
+    fn comp_string(&self, comp: &Composition) -> String {
         let query = &self.query;
 
         // Length
