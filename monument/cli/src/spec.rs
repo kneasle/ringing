@@ -175,6 +175,7 @@ impl Spec {
 
     /// 'Lower' this `Spec`ification into a [`Query`].
     pub fn lower(&self, source: &Source) -> anyhow::Result<Query> {
+        log::debug!("Generating query");
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods

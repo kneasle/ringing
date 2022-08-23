@@ -15,11 +15,12 @@ pub mod utils;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
+    ops::RangeInclusive,
     path::PathBuf,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::{Duration, Instant},
 };
@@ -27,7 +28,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Composition, Progress, QueryUpdate, RefinedRanges};
+use monument::{query::Query, Composition, Progress, SearchUpdate};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -62,9 +63,7 @@ pub fn run(
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
-
     // Convert the `Spec` into a `Layout` and other data required for running a search
-    log::debug!("Generating query");
     let query = Arc::new(spec.lower(&source)?);
     debug_print!(Query, query);
 
@@ -74,23 +73,17 @@ pub fn run(
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     config.leak_search_memory = env == Environment::Cli;
 
-    // Optimise the graph(s)
-    let mut graph = monument::Graph::unoptimised(&query, &config).map_err(anyhow::Error::msg)?;
-    debug_print!(Graph, graph);
-    graph.optimise(&query);
-    let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
+    // Build all the data structures for the search
+    let search = monument::SearchData::new(&query, &config)?;
+    let comp_printer = CompPrinter::new(query.clone(), search.method_count_ranges());
+    let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
 
-    // Thread-safe data for the query engine
+    // In CLI mode, attach `ctrl-C` to the abort flag
     let abort_flag = Arc::new(AtomicBool::new(false));
-    let comps = Arc::new(Mutex::new(Vec::<Composition>::new()));
-    let comp_printer = CompPrinter::new(query.clone(), &refined_ranges);
-    let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
-
-    // Intercept `ctrl-C` if running in CLI mode
     if env == Environment::Cli {
         let abort_flag = abort_flag.clone();
         let handler = move || abort_flag.store(true, Ordering::Relaxed);
@@ -98,27 +91,15 @@ pub fn run(
             log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
-
-    // Run the search
-    let update_fn = {
-        let comps = comps.clone();
-        move |update| {
-            if let Some(comp) = update_logger.log(update) {
-                comps.lock().unwrap().push(comp);
-            }
+    // Set up a callback to log then store the compositions
+    let mut comps = Vec::<Composition>::new();
+    let update_fn = |update| {
+        if let Some(comp) = update_logger.log(update) {
+            comps.push(comp);
         }
     };
-    Query::search(
-        &query,
-        graph,
-        refined_ranges,
-        &config,
-        update_fn,
-        &abort_flag,
-    );
-
-    // Recover and sort the compositions, then return the query
-    let mut comps = comps.lock().unwrap().to_vec();
+    // Run the search
+    search.search(abort_flag.clone(), update_fn);
     use ordered_float::OrderedFloat as OF;
     comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.avg_score)));
     Ok(Some(QueryResult {
@@ -242,11 +223,11 @@ impl SingleLineProgressLogger {
         }
     }
 
-    fn log(&mut self, update: QueryUpdate) -> Option<Composition> {
+    fn log(&mut self, update: SearchUpdate) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
-                QueryUpdate::Comp(c) => Some(c),
+                SearchUpdate::Comp(c) => Some(c),
                 _ => None,
             };
         }
@@ -284,11 +265,11 @@ impl SingleLineProgressLogger {
 
     /// Given a new update, update `self` and return the [`Composition`] (if one has just been
     /// generated)
-    fn update_progress(&mut self, update: QueryUpdate) -> Option<Composition> {
+    fn update_progress(&mut self, update: SearchUpdate) -> Option<Composition> {
         match update {
-            QueryUpdate::Comp(comp) => return Some(comp),
-            QueryUpdate::Progress(progress) => self.last_progress = progress,
-            QueryUpdate::Aborting => self.is_aborting = true,
+            SearchUpdate::Comp(comp) => return Some(comp),
+            SearchUpdate::Progress(progress) => self.last_progress = progress,
+            SearchUpdate::Aborting => self.is_aborting = true,
         }
         None
     }
@@ -362,16 +343,19 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(query: Arc<Query>, refine_ranges: &RefinedRanges) -> Self {
+    fn new(
+        query: Arc<Query>,
+        method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
+    ) -> Self {
         Self {
             length_width: query.length_range.end().to_string().len(),
             method_counts: query
                 .methods
                 .iter()
-                .zip_eq(refine_ranges.method_counts())
-                .map(|(method, refined_count_range)| {
+                .zip_eq(method_count_ranges)
+                .map(|(method, count_range)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = refined_count_range.end().to_string().len();
+                    let max_count_width = count_range.end().to_string().len();
                     let max_width = max_count_width.max(method.shorthand.len());
                     (max_width, method.shorthand.clone())
                 })

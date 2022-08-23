@@ -13,12 +13,17 @@ pub mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use graph::Graph; // TODO: Not pub
-pub use prove_length::RefinedRanges; // TODO: Not pub
 pub use utils::OptRange; // TODO: Not pub
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    ops::RangeInclusive,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
+use prove_length::RefinedRanges;
 use query::{CallIdx, MethodIdx, MethodVec, Query};
 
 /// The [`Score`] used to determine which [`Composition`]s are better than others.
@@ -26,6 +31,7 @@ use query::{CallIdx, MethodIdx, MethodVec, Query};
 pub type Score = ordered_float::OrderedFloat<f32>;
 
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
+#[derive(Debug, Clone)]
 pub struct Config {
     /* General */
     /// Number of threads used to generate compositions.  If `None`, this uses the number of
@@ -63,33 +69,74 @@ impl Default for Config {
 // SEARCH //
 ////////////
 
-impl Query {
-    /// Prove which lengths/method counts are actually possible
-    pub fn refine_ranges(&self, graph: &Graph) -> crate::Result<RefinedRanges> {
-        prove_length::prove_lengths(graph, self)
+/// Run a [`Query`], blocking the current thread until the search finishes.
+pub fn run(query: &Query, config: &Config) -> crate::Result<Vec<Composition>> {
+    let mut comps = Vec::<Composition>::new();
+    let update_fn = |update| {
+        if let SearchUpdate::Comp(comp) = update {
+            comps.push(comp);
+        }
+    };
+    let abort_flag = Arc::new(AtomicBool::new(true));
+    SearchData::new(query, config)?.search(abort_flag, update_fn);
+    Ok(comps)
+}
+
+/// Immutable data required for a [`Query`] to run.  This is useful if you want to use the data
+/// before starting the full search (e.g. to access computed method count ranges).
+#[derive(Debug)]
+pub struct SearchData<'a> {
+    query: &'a Query,
+    config: &'a Config,
+    graph: graph::Graph,
+    refined_ranges: RefinedRanges,
+}
+
+impl<'a> SearchData<'a> {
+    pub fn new(query: &'a Query, config: &'a Config) -> crate::Result<Self> {
+        // Build and optimise the graph
+        let mut graph = graph::Graph::unoptimised(query, config)?;
+        graph.optimise(query);
+        // Prove which lengths are impossible, and use that to refine the length and method count
+        // ranges
+        let refined_ranges = prove_length::prove_lengths(&graph, query)?;
+
+        Ok(Self {
+            query,
+            config,
+            graph,
+            refined_ranges,
+        })
     }
 
-    /// Given a set of (optimised) graphs, run multi-threaded tree search to generate compositions.
-    /// `update_fn` is run whenever a thread generates a [`QueryUpdate`].
-    pub fn search(
-        &self,
-        graph: Graph,
-        refined_ranges: RefinedRanges,
-        config: &Config,
-        update_fn: impl FnMut(QueryUpdate),
-        abort_flag: &AtomicBool,
-    ) {
+    pub fn search(&self, abort_flag: Arc<AtomicBool>, update_fn: impl FnMut(SearchUpdate)) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
         abort_flag.store(false, Ordering::SeqCst);
-        search::search(&graph, self, config, refined_ranges, update_fn, abort_flag);
+        search::search(
+            self.query,
+            self.config,
+            &self.graph,
+            &self.refined_ranges,
+            update_fn,
+            &abort_flag,
+        );
+    }
+
+    /// Returns an iterator which yields the refined method count ranges for each
+    /// [`Method`](crate::query::Method) in the [`Query`].
+    pub fn method_count_ranges(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
+        self.refined_ranges
+            .method_counts
+            .iter()
+            .map(|range| range.start().as_usize()..=range.end().as_usize())
     }
 }
 
 /// Status/progress update for a search
 #[derive(Debug)]
-pub enum QueryUpdate {
+pub enum SearchUpdate {
     /// A new composition has been found
     Comp(Composition),
     /// A thread is sending a status update

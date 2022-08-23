@@ -16,18 +16,10 @@ use crate::{
 
 const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;
 
-#[non_exhaustive] // Make sure that any `RefinedRanges` must come from `prove_lengths`
-pub struct RefinedRanges {
-    pub(crate) length: RangeInclusive<TotalLength>,
-    pub(crate) method_counts: MethodVec<RangeInclusive<TotalLength>>,
-}
-
-impl RefinedRanges {
-    pub fn method_counts(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
-        self.method_counts
-            .iter()
-            .map(|range| range.start().as_usize()..=range.end().as_usize())
-    }
+#[derive(Debug)]
+pub(crate) struct RefinedRanges {
+    pub length: RangeInclusive<TotalLength>,
+    pub method_counts: MethodVec<RangeInclusive<TotalLength>>,
 }
 
 /// Attempt to prove which composition lengths and method counts are possible.  This result can

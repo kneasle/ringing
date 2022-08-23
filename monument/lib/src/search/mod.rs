@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    prove_length::RefinedRanges, utils::TotalLength, Config, Progress, Query, QueryUpdate,
+    prove_length::RefinedRanges, utils::TotalLength, Config, Progress, Query, SearchUpdate,
 };
 
 mod graph;
@@ -19,11 +19,11 @@ const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(
-    graph: &crate::Graph,
     query: &Query,
     config: &Config,
-    refined_ranges: RefinedRanges,
-    mut update_fn: impl FnMut(QueryUpdate),
+    graph: &crate::graph::Graph,
+    refined_ranges: &RefinedRanges,
+    mut update_fn: impl FnMut(SearchUpdate),
     abort_flag: &AtomicBool,
 ) {
     // Build the graph and populate the `SearchData`
@@ -58,7 +58,7 @@ pub(crate) fn search(
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
-            update_fn(QueryUpdate::Comp(comp));
+            update_fn(SearchUpdate::Comp(comp));
             num_comps += 1;
 
             if num_comps == search_data.query.num_comps {
@@ -77,7 +77,7 @@ pub(crate) fn search(
 
         // Check for abort every so often
         if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
-            update_fn(QueryUpdate::Aborting);
+            update_fn(SearchUpdate::Aborting);
             break;
         }
 
@@ -101,7 +101,7 @@ pub(crate) fn search(
 
 fn send_progress_update(
     frontier: &BinaryHeap<CompPrefix>,
-    update_fn: &mut impl FnMut(QueryUpdate),
+    update_fn: &mut impl FnMut(SearchUpdate),
     iter_count: usize,
     num_comps: usize,
     truncating_queue: bool,
@@ -112,7 +112,7 @@ fn send_progress_update(
         total_len += n.length().as_usize() as u64;
         max_length = max_length.max(n.length());
     });
-    update_fn(QueryUpdate::Progress(Progress {
+    update_fn(SearchUpdate::Progress(Progress {
         iter_count,
         num_comps,
 
@@ -139,8 +139,8 @@ fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
 }
 
 /// Static, immutable data used for prefix expansion
-struct SearchData<'query> {
+struct SearchData<'a> {
     graph: self::graph::Graph,
-    query: &'query Query,
-    ranges: RefinedRanges,
+    query: &'a Query,
+    ranges: &'a RefinedRanges,
 }
