@@ -9,10 +9,11 @@ use bellframe::Row;
 use bit_vec::BitVec;
 
 use crate::{
+    composition::{Composition, PathElem},
     graph::LinkSide,
     query::SpliceStyle,
     utils::{group::PartHead, Counts, TotalLength},
-    Composition, PathElem, Score,
+    Score,
 };
 
 use super::{
