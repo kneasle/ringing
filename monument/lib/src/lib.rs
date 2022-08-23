@@ -67,7 +67,7 @@ impl Default for Config {
 // ERRORS //
 ////////////
 
-/// The different ways that graph building can fail
+/// The different ways that Monument can fail
 #[derive(Debug)]
 pub enum Error {
     /* QUERY VERIFICATION ERRORS */
@@ -519,7 +519,7 @@ impl Query {
     }
 }
 
-/// Instances of this are emitted by the search as it's running
+/// Status/progress update for a search
 #[derive(Debug)]
 pub enum QueryUpdate {
     /// A new composition has been found
@@ -530,6 +530,7 @@ pub enum QueryUpdate {
     Aborting,
 }
 
+/// How much of a search has been completed so far
 #[derive(Debug)]
 pub struct Progress {
     /// How many chunks have been expanded so far
