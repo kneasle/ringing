@@ -3,14 +3,15 @@
 #![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-pub mod graph;
+mod graph;
 mod prove_length;
 pub mod query;
 mod search;
 pub mod utils;
 
+pub use graph::Graph;
 pub use prove_length::RefinedRanges;
-use query::{CallDisplayStyle, CallIdx, MethodIdx, Query};
+use query::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, Query};
 pub use utils::OptRange;
 
 use itertools::Itertools;
@@ -24,9 +25,6 @@ use std::{
 };
 
 use bellframe::{Block, Mask, Row, RowBuf, Stage};
-use graph::Graph;
-
-use crate::query::MethodVec;
 
 pub type Score = ordered_float::OrderedFloat<f32>;
 
@@ -99,8 +97,8 @@ pub enum Error {
     /* GRAPH BUILD ERRORS */
     /// The given maximum graph size limit was reached
     SizeLimit(usize),
-    /// The same [`Chunk`](graph::Chunk) could start at two different strokes, and some
-    /// [`MusicType`](query::MusicType) relies on that
+    /// The same chunk of ringing could start at two different strokes, and some
+    /// [`MusicType`](query::MusicType) relies on the strokes always being the same
     InconsistentStroke,
 
     /* LENGTH PROVING ERRORS */
@@ -497,10 +495,6 @@ impl std::fmt::Display for DisplayComp<'_> {
 ////////////
 
 impl Query {
-    pub fn unoptimised_graph(&self, config: &Config) -> crate::Result<Graph> {
-        graph::Graph::new(self, config)
-    }
-
     /// Prove which lengths/method counts are actually possible
     pub fn refine_ranges(&self, graph: &Graph) -> crate::Result<RefinedRanges> {
         prove_length::prove_lengths(graph, self)

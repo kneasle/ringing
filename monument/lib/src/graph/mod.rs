@@ -1,5 +1,7 @@
-//! Creation and manipulation of composition graphs.  This implements routines for creating and
-//! optimising such graphs, in preparation for performing tree search.
+//! Creation and manipulation of composition graphs.
+//!
+//! This implements routines for creating and optimising such graphs, in preparation for performing
+//! tree search.
 
 mod build;
 mod optimise;
@@ -48,7 +50,7 @@ pub struct Graph {
 /// A `Chunk` in a chunk [`Graph`].  This is an indivisible chunk of ringing which cannot be split
 /// up by calls or splices.
 #[derive(Debug, Clone)]
-pub struct Chunk {
+pub(crate) struct Chunk {
     pub(crate) predecessors: Vec<LinkId>,
     pub(crate) successors: Vec<LinkId>,
 
@@ -80,7 +82,7 @@ pub struct Chunk {
 
 /// A link between two [`Chunk`]s in a [`Graph`]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Link {
+pub(crate) struct Link {
     pub from: LinkSide<ChunkId>,
     pub to: LinkSide<ChunkId>,
     /// Indexes into [`crate::Query::calls`]
@@ -103,38 +105,20 @@ impl Link {
 /// What a `Link` points to.  This is either a [`StartOrEnd`](Self::StartOrEnd), or a specific
 /// [`Chunk`](Self::Chunk).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum LinkSide<Id> {
+pub(crate) enum LinkSide<Id> {
     StartOrEnd,
     Chunk(Id),
 }
 
 impl<Id> LinkSide<Id> {
-    pub fn is_chunk(&self) -> bool {
-        matches!(self, Self::Chunk(_))
-    }
-
     pub fn is_start_or_end(&self) -> bool {
         matches!(self, Self::StartOrEnd)
-    }
-
-    pub fn chunk(&self) -> Option<&Id> {
-        match self {
-            Self::Chunk(c) => Some(c),
-            Self::StartOrEnd => None,
-        }
     }
 
     pub fn as_ref(&self) -> LinkSide<&Id> {
         match self {
             Self::StartOrEnd => LinkSide::StartOrEnd,
             Self::Chunk(c) => LinkSide::Chunk(c),
-        }
-    }
-
-    pub fn map<U, F: Fn(&Id) -> U>(&self, f: F) -> LinkSide<U> {
-        match self {
-            Self::StartOrEnd => LinkSide::StartOrEnd,
-            Self::Chunk(t) => LinkSide::Chunk(f(t)),
         }
     }
 }
@@ -169,7 +153,7 @@ impl Chunk {
 
 /// The unique identifier of a [`Chunk`] within a given [`Graph`].
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct ChunkId {
+pub(crate) struct ChunkId {
     pub lead_head: Arc<Row>, // `Arc` is used to make cloning cheaper
     pub row_idx: RowIdx,
 }
@@ -208,7 +192,7 @@ impl Display for ChunkId {
 /// The unique index of a [`Row`] within a lead.
 // TODO: Merge this into `ChunkId`?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RowIdx {
+pub(crate) struct RowIdx {
     pub method: MethodIdx,
     pub sub_lead_idx: usize,
 }

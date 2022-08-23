@@ -75,9 +75,7 @@ pub fn run(
     config.leak_search_memory = env == Environment::Cli;
 
     // Optimise the graph(s)
-    let mut graph = query
-        .unoptimised_graph(&config)
-        .map_err(anyhow::Error::msg)?;
+    let mut graph = monument::Graph::unoptimised(&query, &config).map_err(anyhow::Error::msg)?;
     debug_print!(Graph, graph);
     graph.optimise(&query);
     let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
