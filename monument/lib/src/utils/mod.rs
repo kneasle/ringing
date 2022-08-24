@@ -3,15 +3,15 @@ use std::{
     ops::{Add, AddAssign, Range},
 };
 
-use crate::query::MusicType;
 use bellframe::{Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 
+use crate::query::MusicType;
+
 mod counts;
-pub mod group;
 mod lengths;
 
-pub use counts::Counts;
+pub(crate) use counts::Counts;
 pub(crate) use lengths::{PerPartLength, TotalLength};
 
 /// The [`Score`] used to determine which [`Composition`]s are better than others.

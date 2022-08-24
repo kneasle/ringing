@@ -9,8 +9,9 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
+    group::PhRotation,
     query::{Query, SpliceStyle},
-    utils::{group::PhRotation, Boundary, FrontierItem, PerPartLength, TotalLength},
+    utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
     CallIdx, Config, MethodIdx, MethodVec,
 };
 

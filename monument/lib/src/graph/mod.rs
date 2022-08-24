@@ -16,7 +16,8 @@ use std::{
 use bellframe::Row;
 
 use crate::{
-    utils::{group::PhRotation, Counts, MusicBreakdown, PerPartLength, TotalLength},
+    group::PhRotation,
+    utils::{Counts, MusicBreakdown, PerPartLength, TotalLength},
     CallIdx, MethodIdx,
 };
 

@@ -3,8 +3,6 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-use super::group::PartHeadGroup;
-
 /// A length **in one part** of the composition.  This and [`TotalLength`] allow the compiler to
 /// disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -17,7 +15,7 @@ pub(crate) struct PerPartLength(u32);
 pub(crate) struct TotalLength(u32);
 
 impl PerPartLength {
-    pub fn as_total(self, part_heads: &PartHeadGroup) -> TotalLength {
+    pub fn as_total(self, part_heads: &crate::group::PartHeadGroup) -> TotalLength {
         TotalLength(self.0 * part_heads.size() as u32)
     }
 }

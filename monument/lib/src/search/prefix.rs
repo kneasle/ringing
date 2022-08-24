@@ -11,8 +11,9 @@ use bit_vec::BitVec;
 use crate::{
     composition::{Composition, PathElem},
     graph::LinkSide,
+    group::PartHead,
     query::SpliceStyle,
-    utils::{group::PartHead, Counts, Score, TotalLength},
+    utils::{Counts, Score, TotalLength},
 };
 
 use super::{

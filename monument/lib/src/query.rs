@@ -10,8 +10,9 @@ use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
 use crate::{
+    group::PartHeadGroup,
     search::{SearchData, SearchUpdate},
-    utils::{group::PartHeadGroup, PerPartLength, Score, TotalLength},
+    utils::{PerPartLength, Score, TotalLength},
     Composition, Config, OptRange,
 };
 

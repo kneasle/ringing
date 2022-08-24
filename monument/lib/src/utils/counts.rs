@@ -7,7 +7,7 @@ use super::TotalLength;
 /// A collection of counts of something, usually instances of music types or rows of a given
 /// method.  Addition/subtraction is performed element-wise.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Counts(Vec<usize>);
+pub(crate) struct Counts(Vec<usize>);
 
 impl Counts {
     /// Creates a set of `Counts` where every count is 0.

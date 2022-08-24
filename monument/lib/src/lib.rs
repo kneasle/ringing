@@ -6,10 +6,11 @@
 mod composition;
 mod error;
 mod graph;
+mod group;
 mod prove_length;
 pub mod query;
 pub mod search;
-pub mod utils; // TODO: Not pub
+mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};

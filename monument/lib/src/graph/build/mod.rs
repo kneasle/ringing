@@ -14,12 +14,9 @@ use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
+    group::{PartHeadGroup, PhRotation},
     query::{self, CallVec, Query, StrokeSet},
-    utils::MusicBreakdown,
-    utils::{
-        group::{PartHeadGroup, PhRotation},
-        Boundary, Counts,
-    },
+    utils::{Boundary, Counts, MusicBreakdown},
     Config, MethodVec,
 };
 

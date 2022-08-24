@@ -2,10 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     graph::LinkSide,
-    utils::{
-        group::{PartHead, PhRotation},
-        Counts, PerPartLength, Score, TotalLength,
-    },
+    group::{PartHead, PhRotation},
+    utils::{Counts, PerPartLength, Score, TotalLength},
     CallIdx, Query,
 };
 use bit_vec::BitVec;
