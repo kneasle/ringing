@@ -12,8 +12,7 @@ use crate::{
     composition::{Composition, PathElem},
     graph::LinkSide,
     query::SpliceStyle,
-    utils::{group::PartHead, Counts, TotalLength},
-    Score,
+    utils::{group::PartHead, Counts, Score, TotalLength},
 };
 
 use super::{

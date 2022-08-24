@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign, Range},
 };
 
-use crate::{query::MusicType, Score};
+use crate::query::MusicType;
 use bellframe::{Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 
@@ -13,6 +13,9 @@ mod lengths;
 
 pub use counts::Counts;
 pub(crate) use lengths::{PerPartLength, TotalLength};
+
+/// The [`Score`] used to determine which [`Composition`]s are better than others.
+pub(crate) type Score = ordered_float::OrderedFloat<f32>;
 
 /// An inclusive range where each side is optionally bounded.  This is essentially a combination of
 /// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),

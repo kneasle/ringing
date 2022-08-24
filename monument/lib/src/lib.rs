@@ -26,10 +26,6 @@ use std::{
 use prove_length::RefinedRanges;
 use query::{CallIdx, MethodIdx, MethodVec, Query};
 
-/// The [`Score`] used to determine which [`Composition`]s are better than others.
-// TODO: Not pub
-pub type Score = ordered_float::OrderedFloat<f32>;
-
 /// Configuration parameters for Monument which **don't** change which compositions are emitted.
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -82,8 +78,10 @@ pub fn run(query: &Query, config: &Config) -> crate::Result<Vec<Composition>> {
     Ok(comps)
 }
 
-/// Immutable data required for a [`Query`] to run.  This is useful if you want to use the data
-/// before starting the full search (e.g. to access computed method count ranges).
+/// Immutable data required for a [`Query`] to run.
+///
+/// This is useful if you want to use the data before starting the full search (e.g. to access
+/// computed method count ranges).
 #[derive(Debug)]
 pub struct SearchData<'a> {
     query: &'a Query,

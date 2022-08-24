@@ -4,9 +4,9 @@ use crate::{
     graph::LinkSide,
     utils::{
         group::{PartHead, PhRotation},
-        Counts, PerPartLength, TotalLength,
+        Counts, PerPartLength, Score, TotalLength,
     },
-    CallIdx, Query, Score,
+    CallIdx, Query,
 };
 use bit_vec::BitVec;
 

@@ -7,8 +7,8 @@ use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
 use crate::{
-    utils::{group::PartHeadGroup, PerPartLength, TotalLength},
-    OptRange, Score,
+    utils::{group::PartHeadGroup, PerPartLength, Score, TotalLength},
+    OptRange,
 };
 
 /// Information provided to Monument which specifies what compositions are generated.
