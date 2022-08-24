@@ -3,10 +3,7 @@
 
 use std::{
     ops::RangeInclusive,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use crate::{
@@ -19,47 +16,73 @@ mod best_first;
 mod graph;
 mod prefix;
 
-/// Immutable data required for a [`Query`] to run.
+/// Handle to a search being run by Monument.
 ///
-/// This is useful if you want to use the data before starting the full search (e.g. to access
-/// computed method count ranges).
+/// This is used if you want to keep control over searches as they are running, for example
+/// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
+/// want to run a (hopefully quick) search, use
+/// [`QueryBuilder::run`](crate::query::QueryBuilder::run) or
+/// [`QueryBuilder::run_with_config`](crate::query::QueryBuilder::run_with_config).  Both of those
+/// will deal with handling the [`Search`] for you.
 #[derive(Debug)]
-pub struct SearchData<'a> {
-    query: &'a Query,
-    config: &'a Config,
-    // TODO: Reintroduce this to make the fast graph sparser
+pub struct Search {
+    /* Data */
+    query: Query,
+    config: Config,
+    // TODO: Reintroduce this to make the search graph smaller
     // source_graph: crate::graph::Graph,
     refined_ranges: RefinedRanges,
     graph: self::graph::Graph,
+    /* Concurrency control */
+    abort_flag: AtomicBool,
 }
 
-impl<'a> SearchData<'a> {
-    pub fn new(query: &'a Query, config: &'a Config) -> crate::Result<Self> {
+impl Search {
+    /// Create a new `Search` which generates [`Composition`]s according to the given [`Query`].
+    /// This also verifies that the [`Query`] makes sense; if not, an [`Error`](crate::Error)
+    /// describing the problem is returned.
+    ///
+    /// **The returned `Search` won't start until you explicitly call
+    /// [`search.run(...)`](Self::run)**.
+    pub fn new(query: Query, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
-        let mut source_graph = crate::graph::Graph::unoptimised(query, config)?;
-        source_graph.optimise(query);
+        let mut source_graph = crate::graph::Graph::unoptimised(&query, &config)?;
+        source_graph.optimise(&query);
         // Prove which lengths are impossible, and use that to refine the length and method count
         // ranges
-        let refined_ranges = prove_lengths(&source_graph, query)?;
+        let refined_ranges = prove_lengths(&source_graph, &query)?;
         // Create a fast-to-traverse copy of the graph
-        let graph = self::graph::Graph::new(&source_graph, query);
+        let graph = self::graph::Graph::new(&source_graph, &query);
 
-        Ok(Self {
+        Ok(Search {
             query,
             config,
             refined_ranges,
             graph,
+
+            abort_flag: AtomicBool::new(false),
         })
     }
 
-    pub fn search(&self, abort_flag: Arc<AtomicBool>, update_fn: impl FnMut(SearchUpdate)) {
+    /// Runs the search, **blocking the current thread** until either the search is completed or an
+    /// [abort is signalled](Self::signal_abort).
+    pub fn run(&self, update_fn: impl FnMut(Update)) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
-        abort_flag.store(false, Ordering::SeqCst);
-        best_first::search(self, update_fn, &abort_flag);
+        self.abort_flag.store(false, Ordering::SeqCst);
+        best_first::search(self, update_fn, &self.abort_flag);
     }
 
+    /// Signal that the search should be aborted as soon as possible.  `Search` is [`Sync`] and
+    /// uses interior mutability, so `signal_abort` can be called from a different thread to the
+    /// one blocking on [`Search::run`].
+    pub fn signal_abort(&self) {
+        self.abort_flag.store(true, Ordering::Relaxed);
+    }
+}
+
+impl Search {
     /// Returns an iterator which yields the refined method count ranges for each
     /// [`Method`](crate::query::Method) in the [`Query`].
     pub fn method_count_ranges(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
@@ -68,11 +91,16 @@ impl<'a> SearchData<'a> {
             .iter()
             .map(|range| range.start().as_usize()..=range.end().as_usize())
     }
+
+    /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
+    pub fn was_aborted(&self) -> bool {
+        self.abort_flag.load(Ordering::SeqCst)
+    }
 }
 
-/// Status/progress update for a search
+/// Update message from an in-flight [`Search`].
 #[derive(Debug)]
-pub enum SearchUpdate {
+pub enum Update {
     /// A new composition has been found
     Comp(Composition),
     /// A thread is sending a status update
@@ -81,27 +109,27 @@ pub enum SearchUpdate {
     Aborting,
 }
 
-/// How much of a search has been completed so far
+/// How much of a [`Search`] has been completed so far.
 #[derive(Debug)]
 pub struct Progress {
-    /// How many chunks have been expanded so far
+    /// How many times the core composing loop has been run so far.
     pub iter_count: usize,
-    /// How many comps have been generated so far
+    /// How many [`Composition`]s have been generated so far.
     pub num_comps: usize,
 
-    /// The current length of the A* queue
+    /// The current length of the queue of [`Composition`] prefixes waiting to be expanded.
     pub queue_len: usize,
-    /// The average length of a composition prefix in the queue
+    /// The average length of [`Composition`] prefixes in the queue.
     pub avg_length: f32,
-    /// The length of the longest composition prefix in the queue
+    /// The length of the longest [`Composition`] prefix in the queue.
     pub max_length: usize,
 
-    /// `true` if the search is currently truncating the queue to save memory
+    /// `true` if the search routine is currently shortening the prefix queue to save memory.
     pub truncating_queue: bool,
 }
 
 impl Progress {
-    /// The [`Progress`] made by a search which hasn't started yet
+    /// [`Progress`] made by a [`Search`] which hasn't started yet.
     pub const START: Self = Self {
         iter_count: 0,
         num_comps: 0,
@@ -114,8 +142,10 @@ impl Progress {
     };
 }
 
-/// Configuration parameters for a [`Search`](SearchData) which **don't** change which compositions
-/// are generated.
+/// Configuration options for a [`Search`].
+///
+/// Unlike the options in a [`Query`], `Config` options **don't** change which [`Composition`]s are
+/// generated.
 #[derive(Debug, Clone)]
 pub struct Config {
     /* General */
@@ -124,17 +154,20 @@ pub struct Config {
     pub thread_limit: Option<usize>,
 
     /* Graph Generation */
-    /// The maximum graph size, in chunks.  If a search would produce a graph bigger than this, it
-    /// is aborted.
+    /// The maximum number of chunks in the composition graph.  If a search would produce a graph
+    /// bigger than this, it is aborted.  If there was no limit, it would be very easy to cause an
+    /// out-of-memory crash by requesting a hugely open query such as split-tenors Maximus.
     pub graph_size_limit: usize,
 
     /* Search */
     /// The maximum number of [`Composition`] prefixes stored simultaneously whilst searching.
+    /// Hopefully this will soon be deprecated in favour of an explicit memory limit.
     pub queue_limit: usize,
     /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
-    /// This massively improves the termination speed (because all individual allocations don't
-    /// need to be freed), but only makes sense for the CLI, where Monument will do exactly one
-    /// search run before terminating (thus returning the memory to the OS anyway).
+    /// This massively improves the termination speed (because the search creates tons of small
+    /// allocations which we now don't need to explicitly free) but only makes sense for the CLI,
+    /// where the process will do exactly one search run before terminating (thus returning the memory
+    /// to the OS anyway).
     pub leak_search_memory: bool,
 }
 

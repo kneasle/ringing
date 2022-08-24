@@ -5,15 +5,15 @@ use std::{
 
 use crate::utils::TotalLength;
 
-use super::{prefix::CompPrefix, Progress, SearchData, SearchUpdate};
+use super::{prefix::CompPrefix, Progress, Search, Update};
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(
-    search_data: &SearchData,
-    mut update_fn: impl FnMut(SearchUpdate),
+    search_data: &Search,
+    mut update_fn: impl FnMut(Update),
     abort_flag: &AtomicBool,
 ) {
     // Initialise the frontier to just the start chunks
@@ -41,7 +41,7 @@ pub(crate) fn search(
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
-            update_fn(SearchUpdate::Comp(comp));
+            update_fn(Update::Comp(comp));
             num_comps += 1;
 
             if num_comps == search_data.query.num_comps {
@@ -60,7 +60,7 @@ pub(crate) fn search(
 
         // Check for abort every so often
         if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
-            update_fn(SearchUpdate::Aborting);
+            update_fn(Update::Aborting);
             break;
         }
 
@@ -83,7 +83,7 @@ pub(crate) fn search(
 
 fn send_progress_update(
     frontier: &BinaryHeap<CompPrefix>,
-    update_fn: &mut impl FnMut(SearchUpdate),
+    update_fn: &mut impl FnMut(Update),
     iter_count: usize,
     num_comps: usize,
     truncating_queue: bool,
@@ -94,7 +94,7 @@ fn send_progress_update(
         total_len += n.length().as_usize() as u64;
         max_length = max_length.max(n.length());
     });
-    update_fn(SearchUpdate::Progress(Progress {
+    update_fn(Update::Progress(Progress {
         iter_count,
         num_comps,
 

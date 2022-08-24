@@ -18,17 +18,14 @@ use std::{
     ops::RangeInclusive,
     path::PathBuf,
     str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Composition, Progress, SearchData, SearchUpdate};
+use monument::{query::Query, Composition, Progress, Search, Update};
 use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
@@ -75,7 +72,7 @@ pub fn run(
     config.leak_search_memory = env == Environment::Cli;
 
     // Build all the data structures for the search
-    let search = SearchData::new(&query, &config)?;
+    let search = Arc::new(Search::new(Query::clone(&query), config)?);
     let comp_printer =
         CompPrinter::new(query.clone(), music_displays, search.method_count_ranges());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
@@ -85,23 +82,20 @@ pub fn run(
     }
 
     // In CLI mode, attach `ctrl-C` to the abort flag
-    let abort_flag = Arc::new(AtomicBool::new(false));
     if env == Environment::Cli {
-        let abort_flag = abort_flag.clone();
-        let handler = move || abort_flag.store(true, Ordering::Relaxed);
-        if let Err(e) = ctrlc::set_handler(handler) {
+        let search = Arc::clone(&search);
+        if let Err(e) = ctrlc::set_handler(move || search.signal_abort()) {
             log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
-    // Set up a callback to log then store the compositions
+    // Run the search, collecting the compositions as the search runs
     let mut comps = Vec::<Composition>::new();
-    let update_fn = |update| {
+    search.run(|update| {
         if let Some(comp) = update_logger.log(update) {
             comps.push(comp);
         }
-    };
-    // Run the search
-    search.search(abort_flag.clone(), update_fn);
+    });
+    // Once the search has completed, sort the compositions and return
     use ordered_float::OrderedFloat as OF;
     comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.average_score())));
     Ok(Some(QueryResult {
@@ -109,7 +103,7 @@ pub fn run(
         query,
         comp_printer,
         duration: start_time.elapsed(),
-        aborted: abort_flag.load(Ordering::SeqCst),
+        aborted: search.was_aborted(),
     }))
 }
 
@@ -225,11 +219,11 @@ impl SingleLineProgressLogger {
         }
     }
 
-    fn log(&mut self, update: SearchUpdate) -> Option<Composition> {
+    fn log(&mut self, update: Update) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
-                SearchUpdate::Comp(c) => Some(c),
+                Update::Comp(c) => Some(c),
                 _ => None,
             };
         }
@@ -267,11 +261,11 @@ impl SingleLineProgressLogger {
 
     /// Given a new update, update `self` and return the [`Composition`] (if one has just been
     /// generated)
-    fn update_progress(&mut self, update: SearchUpdate) -> Option<Composition> {
+    fn update_progress(&mut self, update: Update) -> Option<Composition> {
         match update {
-            SearchUpdate::Comp(comp) => return Some(comp),
-            SearchUpdate::Progress(progress) => self.last_progress = progress,
-            SearchUpdate::Aborting => self.is_aborting = true,
+            Update::Comp(comp) => return Some(comp),
+            Update::Progress(progress) => self.last_progress = progress,
+            Update::Aborting => self.is_aborting = true,
         }
         None
     }

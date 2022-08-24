@@ -11,10 +11,10 @@ use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
 use crate::query::{Call, Method, MusicType, Query};
 
-/// Alias for `Result<T, monument::Error>`
+/// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// The different ways that Monument can fail
+/// The different ways that a [`Search`](crate::search::Search) can fail.
 #[derive(Debug)]
 pub enum Error {
     /* QUERY VERIFICATION ERRORS */

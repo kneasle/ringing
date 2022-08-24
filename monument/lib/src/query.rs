@@ -1,9 +1,6 @@
 //! Instructions for Monument about what compositions should be generated.
 
-use std::{
-    ops::{Range, RangeInclusive},
-    sync::{atomic::AtomicBool, Arc},
-};
+use std::ops::{Range, RangeInclusive};
 
 use bellframe::{music::Pattern, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
 use ordered_float::OrderedFloat;
@@ -11,7 +8,7 @@ use serde::Deserialize;
 
 use crate::{
     group::PartHeadGroup,
-    search::{SearchData, SearchUpdate},
+    search::{Search, Update},
     utils::{PerPartLength, Score, TotalLength},
     Composition, Config,
 };
@@ -217,15 +214,15 @@ pub struct QueryBuilder {
     query: Query,
 }
 
-/// A length range of a [`Query`].
+/// The length range of a [`Query`].
 pub enum Length {
-    /// Practice night touch.  Equivalent to `Custom(0..=300)`.
+    /// Practice night touch.  Equivalent to `Range(0..=300)`.
     Practice,
-    /// Equivalent to `Custom(1250..=1350)`.
+    /// Equivalent to `Range(1250..=1350)`.
     QuarterPeal,
-    /// Equivalent to `Custom(2500..=2600)`.
+    /// Equivalent to `Range(2500..=2600)`.
     HalfPeal,
-    /// Equivalent to `Custom(5000..=5200)`.
+    /// Equivalent to `Range(5000..=5200)`.
     Peal,
     /// Custom range
     Range(RangeInclusive<usize>),
@@ -235,20 +232,19 @@ impl QueryBuilder {
     /// Finish building and run the search with the default [`Config`], blocking until the required
     /// compositions have been generated.
     pub fn run(self) -> crate::Result<Vec<Composition>> {
-        self.run_with_config(&Config::default())
+        self.run_with_config(Config::default())
     }
 
     /// Finish building and run the search with a custom [`Config`], blocking until the required
     /// number of [`Composition`]s have been generated.
-    pub fn run_with_config(self, config: &Config) -> crate::Result<Vec<Composition>> {
+    pub fn run_with_config(self, config: Config) -> crate::Result<Vec<Composition>> {
         let mut comps = Vec::<Composition>::new();
         let update_fn = |update| {
-            if let SearchUpdate::Comp(comp) = update {
+            if let Update::Comp(comp) = update {
                 comps.push(comp);
             }
         };
-        let abort_flag = Arc::new(AtomicBool::new(true));
-        SearchData::new(&self.build(), config)?.search(abort_flag, update_fn);
+        Search::new(self.build(), config)?.run(update_fn);
         Ok(comps)
     }
 

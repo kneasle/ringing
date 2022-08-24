@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     graph::{ChunkIdx, Graph, StartIdx, SuccIdx},
-    SearchData,
+    Search,
 };
 
 /// The prefix of a composition.  These are ordered by average score per row.
@@ -149,7 +149,7 @@ impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
     pub(super) fn expand(
         self,
-        data: &SearchData,
+        data: &Search,
         frontier: &mut BinaryHeap<Self>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
@@ -230,7 +230,7 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &SearchData) -> Option<Composition> {
+    fn check_comp(&self, data: &Search) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !data.refined_ranges.length.contains(&self.length) {
@@ -261,7 +261,7 @@ impl CompPrefix {
         // Handle splices over the part head
         let mut score = self.score;
         let is_splice = first_elem.method != last_elem.method
-            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(data.query);
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
         let splice_over_part_head = data.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
@@ -273,7 +273,7 @@ impl CompPrefix {
                 .unwrap();
             let end_labels = data.query.methods[last_elem.method]
                 .first_lead()
-                .get_annot(last_elem.end_sub_lead_idx(data.query))
+                .get_annot(last_elem.end_sub_lead_idx(&data.query))
                 .unwrap();
             let is_valid_splice = start_labels.iter().any(|label| end_labels.contains(label));
             if !is_valid_splice {
@@ -292,20 +292,19 @@ impl CompPrefix {
             path,
 
             part_head: self.part_head,
-            length: self.length.as_usize(),
+            length: self.length,
             method_counts: self.method_counts.clone(),
             music_counts,
             total_score: score,
-            avg_score: score / self.length.as_usize() as f32,
         };
         // Sanity check that the composition is true
         if !data.query.allow_false {
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length);
-            for row in comp.rows(data.query).rows() {
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
+            for row in comp.rows(&data.query).rows() {
                 if !rows_so_far.insert(row) {
                     panic!(
                         "Generated false composition ({})",
-                        comp.call_string(data.query)
+                        comp.call_string(&data.query)
                     );
                 }
             }
@@ -316,7 +315,7 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &SearchData) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(&self, data: &Search) -> (Vec<PathElem>, Counts) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = self.path.flatten();
 
