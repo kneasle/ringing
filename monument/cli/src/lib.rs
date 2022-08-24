@@ -33,6 +33,7 @@ use monument::{
     search::{Progress, SearchData, SearchUpdate},
     Composition,
 };
+use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -68,7 +69,7 @@ pub fn run(
     let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
     // Convert the `Spec` into a `Layout` and other data required for running a search
-    let query = Arc::new(spec.lower(&source)?);
+    let (query, music_displays) = spec.lower(&source)?;
     debug_print!(Query, query);
 
     let mut config = spec.config(options);
@@ -79,7 +80,8 @@ pub fn run(
 
     // Build all the data structures for the search
     let search = SearchData::new(&query, &config)?;
-    let comp_printer = CompPrinter::new(query.clone(), search.method_count_ranges());
+    let comp_printer =
+        CompPrinter::new(query.clone(), music_displays, search.method_count_ranges());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -329,6 +331,7 @@ impl SingleLineProgressLogger {
 #[derive(Debug, Clone)]
 struct CompPrinter {
     query: Arc<Query>,
+    music_displays: Vec<MusicDisplay>,
 
     /// The maximum width of a composition's (total) length
     length_width: usize,
@@ -349,6 +352,7 @@ struct CompPrinter {
 impl CompPrinter {
     fn new(
         query: Arc<Query>,
+        music_displays: Vec<MusicDisplay>,
         method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
     ) -> Self {
         Self {
@@ -366,13 +370,13 @@ impl CompPrinter {
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
                 .then(|| query.part_head_group.effective_stage().num_bells()),
-            music_widths: query
-                .music_displays
+            music_widths: music_displays
                 .iter()
                 .map(|d| d.col_width(&query.music_types))
                 .collect_vec(),
 
             query,
+            music_displays,
         }
     }
 
@@ -409,12 +413,10 @@ impl CompPrinter {
         }
         // Music
         s.push_str("  music  ");
-        if !self.query.music_displays.is_empty() {
+        if !self.music_displays.is_empty() {
             s.push(' ');
         }
-        for (music_display, col_width) in
-            self.query.music_displays.iter().zip_eq(&self.music_widths)
-        {
+        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
             s.push_str("  ");
             write_centered_text(&mut s, &music_display.name, *col_width);
             s.push(' ');
@@ -443,12 +445,10 @@ impl CompPrinter {
         }
         // Music
         write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();
-        if !self.query.music_displays.is_empty() {
+        if !self.music_displays.is_empty() {
             s.push(':');
         }
-        for (music_display, col_width) in
-            self.query.music_displays.iter().zip_eq(&self.music_widths)
-        {
+        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
             s.push_str("  ");
             write_centered_text(
                 &mut s,

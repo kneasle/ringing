@@ -6,7 +6,7 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    query::{MusicType, MusicTypeVec, StrokeSet},
+    query::{MusicType, MusicTypeIdx, MusicTypeVec, StrokeSet},
     OptRange,
 };
 use serde::Deserialize;
@@ -115,7 +115,7 @@ pub fn generate_music(
     base_music: BaseMusic,
     music_file_str: Option<&str>,
     stage: Stage,
-) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>)> {
+) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
     let mut music_builder = MusicTypeBuilder::new(stage);
 
     // Base music
@@ -163,7 +163,7 @@ impl MusicTypeBuilder {
         Ok(())
     }
 
-    fn finish(self) -> (MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>) {
+    fn finish(self) -> (MusicTypeVec<MusicType>, Vec<MusicDisplay>) {
         compute_music_displays(self.annot_music_types)
     }
 }
@@ -545,6 +545,124 @@ fn music_type_preset(
 // DETERMINING HOW TO DISPLAY MUSIC //
 //////////////////////////////////////
 
+/// How music counts can be displayed.
+///
+/// This could take its counts from multiple [`MusicType`]s, and takes a few forms:
+/// 1. Just a total count: e.g. `*5678: 23`
+/// 2. Just a breakdown: e.g. `5678s: 24f,81i,24b`
+/// 3. A breakdown and a total count: e.g. `4-runs: 312 (73f,132i,107b)`
+///
+/// Setting all sources to `None` is allowed, but will create an empty column.
+#[derive(Debug, Clone)]
+pub struct MusicDisplay {
+    /// The name used to identify this type of music
+    pub name: String,
+
+    /// The index of the [`MusicType`] which provides the total count
+    pub source_total: Option<MusicTypeIdx>,
+
+    /// The index of the [`MusicType`] which provides the count off the front
+    pub source_front: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the internal count
+    pub source_internal: Option<MusicTypeIdx>,
+    /// The index of the [`MusicType`] which provides the count off the back
+    pub source_back: Option<MusicTypeIdx>,
+}
+
+impl MusicDisplay {
+    /// Creates a new [`MusicDisplay`] with no corresponding [`MusicType`]s
+    pub fn empty(name: String) -> Self {
+        Self {
+            name,
+            source_total: None,
+            source_front: None,
+            source_internal: None,
+            source_back: None,
+        }
+    }
+
+    /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
+    /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
+    pub fn col_width(&self, music_types: &MusicTypeVec<MusicType>) -> usize {
+        // We always pad the counts as much as required, so displaying a set of 0s results in a
+        // maximum-width string (i.e. all output strings are the same length)
+        let max_count_width = self
+            .display_counts(music_types, &vec![0; music_types.len()])
+            .len();
+        max_count_width.max(self.name.len())
+    }
+
+    /// Generate a compact string representing a given set of music counts
+    pub fn display_counts(
+        &self,
+        music_types: &MusicTypeVec<MusicType>,
+        counts: &[usize],
+    ) -> String {
+        let mut s = String::new();
+
+        // Add total count
+        if let Some(total_idx) = self.source_total {
+            write!(
+                s,
+                "{:>width$}",
+                counts[total_idx.index()],
+                width = max_count_len(&music_types[total_idx])
+            )
+            .unwrap();
+        }
+
+        // Add specific counts (if there are any)
+        if self.source_front.is_some()
+            || self.source_internal.is_some()
+            || self.source_back.is_some()
+        {
+            // Add brackets if there's a total score
+            if self.source_total.is_some() {
+                s.push_str(" (");
+            }
+            // Add every front/internal/back count for which we have a source
+            let mut is_first_count = true;
+            for (source, position_char) in [
+                (&self.source_front, 'f'),
+                (&self.source_internal, 'i'),
+                (&self.source_back, 'b'),
+            ] {
+                if let Some(music_type_idx) = source {
+                    // Add separating comma
+                    if !is_first_count {
+                        s.push(' ');
+                    }
+                    is_first_count = false;
+                    // Add the number
+                    write!(
+                        s,
+                        "{:>width$}",
+                        counts[music_type_idx.index()],
+                        width = max_count_len(&music_types[*music_type_idx])
+                    )
+                    .unwrap();
+                    s.push(position_char);
+                }
+            }
+            if self.source_total.is_some() {
+                s.push(')'); // Add closing brackets if there's a total score
+            }
+        }
+
+        s
+    }
+}
+
+/// Prints the width of the largest count possible for a [`MusicType`] (assuming that rows can't be
+/// repeated).
+fn max_count_len(music_type: &MusicType) -> usize {
+    // Determine how to display the music summary
+    let max_music_count = music_type.max_count().unwrap_or(usize::MAX);
+    // `min(4)` because we don't expect more than 9999 instances of a music type, even
+    // if more theoretically exist
+    max_music_count.to_string().len().min(4)
+}
+
 /// The way a [`MusicType`] should be displayed
 #[derive(Debug, Clone)]
 struct MusicTypeDisplay {
@@ -692,9 +810,7 @@ impl MusicTypeDisplay {
 /// 4-bell runs/5678s/6578s can be either front/internal/back).
 fn compute_music_displays(
     annot_music_types: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
-) -> (MusicTypeVec<MusicType>, Vec<monument::query::MusicDisplay>) {
-    use monument::query::MusicDisplay;
-
+) -> (MusicTypeVec<MusicType>, Vec<MusicDisplay>) {
     let num_music_types = annot_music_types.len();
 
     // Create an initial set of `MusicDisplay`s by grouping equivalent patterns into the same

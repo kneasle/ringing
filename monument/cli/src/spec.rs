@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, time::Duration};
+use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, sync::Arc, time::Duration};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -11,8 +11,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        Call, CallDisplayStyle, CallVec, MethodVec, MusicDisplay, MusicType, MusicTypeVec, Query,
-        SpliceStyle,
+        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, Query, SpliceStyle,
     },
     utils::group::PartHeadGroup,
     OptRange,
@@ -21,7 +20,7 @@ use serde::Deserialize;
 
 use crate::{
     calls::{check_for_duplicate_call_names, BaseCalls, SpecificCall},
-    music::{BaseMusic, MusicSpec},
+    music::{BaseMusic, MusicDisplay, MusicSpec},
     utils::OptRangeInclusive,
     Source,
 };
@@ -174,7 +173,7 @@ impl Spec {
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`].
-    pub fn lower(&self, source: &Source) -> anyhow::Result<Query> {
+    pub fn lower(&self, source: &Source) -> anyhow::Result<(Arc<Query>, Vec<MusicDisplay>)> {
         log::debug!("Generating query");
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
@@ -258,7 +257,7 @@ impl Spec {
         };
 
         // Build this layout into a `Graph`
-        Ok(Query {
+        let query = Query {
             length_range: self.length.range.clone(),
             num_comps: self.num_comps,
             allow_false: self.allow_false,
@@ -276,9 +275,9 @@ impl Spec {
             splice_weight: self.splice_weight,
 
             music_types,
-            music_displays,
             start_stroke: self.start_stroke,
-        })
+        };
+        Ok((Arc::new(query), music_displays))
     }
 
     fn music(
