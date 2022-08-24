@@ -11,6 +11,7 @@ use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
 use itertools::Itertools;
+use monument::{query::Query, Composition};
 use monument_cli::{DebugOption, Environment};
 use ordered_float::OrderedFloat;
 use path_slash::PathExt;
@@ -779,11 +780,11 @@ impl Comp {
 }
 
 impl Comp {
-    fn new(source: &monument::Composition, query: &monument::query::Query) -> Self {
+    fn new(source: &Composition, query: &Query) -> Self {
         Self {
-            length: source.length,
+            length: source.length(),
             string: source.call_string(query),
-            avg_score: Self::round_score(source.avg_score.0),
+            avg_score: Self::round_score(source.average_score()),
             // Only store part heads for multi-part strings
             part_head: query
                 .is_multipart()
