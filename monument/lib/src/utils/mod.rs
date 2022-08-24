@@ -53,21 +53,6 @@ impl OptRange {
     }
 }
 
-/// Given a set of method titles and possible shorthands, compute shorthands for the methods which
-/// don't already have defaults.
-pub fn default_shorthands<'s>(
-    ms: impl IntoIterator<Item = (&'s str, Option<&'s str>)>,
-) -> Vec<String> {
-    // For each method, choose a default shorthand using the first letter of the method's name
-    //
-    // TODO: Implement a smarter system that can resolve conflicts
-    ms.into_iter()
-        .map(|(title, shorthand)| {
-            shorthand.map_or_else(|| title.chars().next().unwrap().to_string(), str::to_owned)
-        })
-        .collect_vec()
-}
-
 /// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]
 pub(crate) struct FrontierItem<Item, Dist> {

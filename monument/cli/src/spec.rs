@@ -208,11 +208,7 @@ impl Spec {
         let calls = self.calls(stage)?;
 
         // Generate extra method data
-        let shorthands = monument::utils::default_shorthands(
-            loaded_methods
-                .iter()
-                .map(|(m, common)| (m.title(), common.shorthand.as_deref())),
-        );
+        let shorthands = default_shorthands(&loaded_methods);
         let global_method_count = OptRange::from(self.method_count);
         // Combine method data
         let mut methods = MethodVec::new();
@@ -589,6 +585,21 @@ impl MethodSpec {
                 .map_err(|e| anyhow::Error::msg(pn_parse_err_msg(name, place_notation, e))),
         }
     }
+}
+
+/// Given a set of method titles and possible shorthands, compute shorthands for the methods which
+/// don't already have defaults.
+fn default_shorthands(methods: &[(bellframe::Method, MethodCommon)]) -> Vec<String> {
+    methods
+        .iter()
+        .map(|(method, common)| match &common.shorthand {
+            Some(shorthand) => shorthand.to_owned(),
+            // Use the first character of the method name as a shorthand
+            //
+            // TODO: Implement a smarter system that can resolve conflicts?
+            None => method.title().chars().next().unwrap().to_string(),
+        })
+        .collect_vec()
 }
 
 ////////////////////
