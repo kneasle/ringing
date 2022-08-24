@@ -11,9 +11,9 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, Query, SpliceStyle,
+        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, Query, QueryBuilder,
+        SpliceStyle,
     },
-    utils::group::PartHeadGroup,
     OptRange,
 };
 use serde::Deserialize;
@@ -256,28 +256,29 @@ impl Spec {
             CallDisplayStyle::Positional
         };
 
-        // Build this layout into a `Graph`
-        let query = Query {
-            length_range: self.length.range.clone(),
-            num_comps: self.num_comps,
-            allow_false: self.allow_false,
-            stage,
+        // Build the `Query`
+        let length = monument::query::Length::Range(self.length.range.clone());
+        let query_builder = QueryBuilder::new(stage, length)
+            .num_comps(self.num_comps)
+            .allow_false(self.allow_false)
+            // Methods/calls
+            .add_methods(methods)
+            .splice_style(self.splice_style)
+            .splice_weight(self.splice_weight)
+            .add_calls(calls.into_iter().map(Call::from))
+            .call_display_style(call_display_style)
+            // Courses
+            .start_end_rows(
+                parse_row("start row", &self.start_row, stage)?,
+                parse_row("end row", &self.end_row, stage)?,
+            )
+            .part_head(&part_head)
+            .course_head_weights(ch_weights)
+            // Music
+            .music_types(music_types)
+            .start_stroke(self.start_stroke);
 
-            methods,
-            call_display_style,
-            calls: calls.into_iter().map(Call::from).collect(),
-            splice_style: self.splice_style,
-
-            start_row: parse_row("start row", &self.start_row, stage)?,
-            end_row: parse_row("end row", &self.end_row, stage)?,
-            part_head_group: PartHeadGroup::new(&part_head),
-            ch_weights,
-            splice_weight: self.splice_weight,
-
-            music_types,
-            start_stroke: self.start_stroke,
-        };
-        Ok((Arc::new(query), music_displays))
+        Ok((Arc::new(query_builder.build()), music_displays))
     }
 
     fn music(

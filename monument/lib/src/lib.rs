@@ -9,14 +9,11 @@ mod graph;
 mod prove_length;
 pub mod query;
 pub mod search;
-pub mod utils;
+pub mod utils; // TODO: Not pub
 
 pub use composition::Composition;
 pub use error::{Error, Result};
-use search::{SearchData, SearchUpdate};
 pub use utils::OptRange; // TODO: Not pub
-
-use std::sync::{atomic::AtomicBool, Arc};
 
 use query::{CallIdx, MethodIdx, MethodVec, Query};
 
@@ -53,22 +50,4 @@ impl Default for Config {
             leak_search_memory: false,
         }
     }
-}
-
-////////////
-// SEARCH //
-////////////
-
-/// Run a [`Query`], blocking the current thread until the search finishes.
-// TODO: Make this a method on `QueryBuilder`
-pub fn run(query: &Query, config: &Config) -> crate::Result<Vec<Composition>> {
-    let mut comps = Vec::<Composition>::new();
-    let update_fn = |update| {
-        if let SearchUpdate::Comp(comp) = update {
-            comps.push(comp);
-        }
-    };
-    let abort_flag = Arc::new(AtomicBool::new(true));
-    SearchData::new(query, config)?.search(abort_flag, update_fn);
-    Ok(comps)
 }

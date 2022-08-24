@@ -356,23 +356,23 @@ impl CompPrinter {
         method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
     ) -> Self {
         Self {
-            length_width: query.length_range.end().to_string().len(),
+            length_width: query.length_range().end().to_string().len(),
             method_counts: query
-                .methods
+                .methods()
                 .iter()
                 .zip_eq(method_count_ranges)
                 .map(|(method, count_range)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
                     let max_count_width = count_range.end().to_string().len();
-                    let max_width = max_count_width.max(method.shorthand.len());
-                    (max_width, method.shorthand.clone())
+                    let max_width = max_count_width.max(method.shorthand().len());
+                    (max_width, method.shorthand().to_owned())
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
-                .then(|| query.part_head_group.effective_stage().num_bells()),
+                .then(|| query.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(&query.music_types))
+                .map(|d| d.col_width(query.music_types()))
                 .collect_vec(),
 
             query,
@@ -452,7 +452,7 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&query.music_types, comp.music_counts()),
+                &music_display.display_counts(query.music_types(), comp.music_counts()),
                 *col_width,
             );
             s.push(' ');
