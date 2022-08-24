@@ -7,6 +7,7 @@ use crate::{
     CallIdx, Query,
 };
 use bit_vec::BitVec;
+use ordered_float::OrderedFloat;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
@@ -140,6 +141,8 @@ fn link_score(
     link: &crate::graph::Link,
     query: &Query,
 ) -> Score {
+    const ZERO: Score = OrderedFloat(0.0);
+
     let is_splice = match (&link.from, &link.to) {
         // A link between chunks is a splice iff c2's RowIdx directly
         // follows from c1's (i.e. it's the same method and is one row
@@ -159,11 +162,11 @@ fn link_score(
         _ => false,
     };
     let call_weight = match link.call {
-        Some(idx) => query.calls[idx].weight,
-        None => 0.0, // Plain leads have no weight
+        Some(idx) => Score::from(query.calls[idx].weight),
+        None => ZERO, // Plain leads have no weight
     };
-    let splice_weight = if is_splice { query.splice_weight } else { 0.0 };
-    Score::from((call_weight + splice_weight) * query.num_parts() as f32)
+    let splice_weight = if is_splice { query.splice_weight } else { ZERO };
+    (call_weight + splice_weight) * query.num_parts() as f32
 }
 
 index_vec::define_index_type! { pub struct ChunkIdx = usize; }

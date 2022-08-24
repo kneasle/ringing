@@ -34,7 +34,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, query.total_length_range()) {
+    let refined_len_range = match matching_lengths(&possible_lengths, &query.length_range) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -46,7 +46,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.length_range.clone(),
+                requested_range: query.length_range(),
                 next_shorter_len: next_smaller.map(TotalLength::as_usize),
                 next_longer_len: next_larger.map(TotalLength::as_usize),
             });
@@ -503,7 +503,7 @@ fn refine_method_counts(
     }
 
     // Refine the ranges
-    let matching_lengths = matching_lengths(possible_lengths, min_len..=max_len);
+    let matching_lengths = matching_lengths(possible_lengths, &(min_len..=max_len));
     log::trace!(
         "  Matching lengths: {} < {}{} <= {} <= {}{} < {}",
         match matching_lengths.next_smaller {
@@ -682,7 +682,7 @@ struct LengthMatches {
 /// Refine the length range based on what lengths are actually possible, returning an
 /// [`Error`](crate::Error) if no lengths are possible.  For example, a peal of T/D Major will have
 /// its length refined from `5000..=5200` to `5024..=5186`.
-fn matching_lengths(lengths: &[TotalLength], range: RangeInclusive<TotalLength>) -> LengthMatches {
+fn matching_lengths(lengths: &[TotalLength], range: &RangeInclusive<TotalLength>) -> LengthMatches {
     let mut next_smaller = None;
     let mut min = None;
     let mut max = None;

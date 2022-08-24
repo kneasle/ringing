@@ -284,7 +284,7 @@ impl CompPrefix {
                 return None;
             }
             // Add/subtract weights from the splices over the part head
-            score += (data.query.num_parts() - 1) as f32 * data.query.splice_weight;
+            score += data.query.splice_weight * (data.query.num_parts() - 1) as f32;
         }
 
         // Now we know the composition is valid, construct it and return

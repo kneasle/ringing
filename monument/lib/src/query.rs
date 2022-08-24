@@ -22,10 +22,9 @@ use crate::{
 /// Compare this to [`Config`](crate::Config), which determines _how_ those compositions are
 /// generated (and therefore determines how quickly the results are generated).
 #[derive(Debug, Clone)]
-// TODO: Use internal types
 pub struct Query {
     // GENERAL
-    pub(crate) length_range: RangeInclusive<usize>,
+    pub(crate) length_range: RangeInclusive<TotalLength>,
     pub(crate) stage: Stage,
     pub(crate) num_comps: usize,
     pub(crate) allow_false: bool, // TODO: Rename to `require_truth`
@@ -33,7 +32,7 @@ pub struct Query {
     // METHODS & CALLING
     pub(crate) methods: MethodVec<Method>,
     pub(crate) splice_style: SpliceStyle,
-    pub(crate) splice_weight: f32,
+    pub(crate) splice_weight: Score,
     pub(crate) calls: CallVec<Call>,
     pub(crate) call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
 
@@ -45,7 +44,7 @@ pub struct Query {
     pub(crate) part_head_group: PartHeadGroup,
     /// [`Score`]s applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
-    pub(crate) ch_weights: Vec<(Mask, f32)>,
+    pub(crate) ch_weights: Vec<(Mask, Score)>,
 
     // MUSIC
     pub(crate) music_types: MusicTypeVec<MusicType>,
@@ -54,19 +53,14 @@ pub struct Query {
 }
 
 impl Query {
-    /// Same as [`Query::length_range`], but with the lengths represented as [`TotalLength`]s.
-    pub(crate) fn total_length_range(&self) -> RangeInclusive<TotalLength> {
-        let start = TotalLength::new(*self.length_range.start());
-        let end = self.max_length();
-        start..=end
-    }
-
     pub(crate) fn max_length(&self) -> TotalLength {
-        TotalLength::new(*self.length_range.end())
+        *self.length_range.end()
     }
 
     pub fn length_range(&self) -> RangeInclusive<usize> {
-        self.length_range.clone()
+        let start = self.length_range.start().as_usize();
+        let end = self.length_range.end().as_usize();
+        start..=end
     }
 
     pub fn methods(&self) -> &MethodVec<Method> {
@@ -294,24 +288,24 @@ impl QueryBuilder {
 
     /// Create a new `QueryBuilder` with a custom length range
     pub fn new(stage: Stage, length: Length) -> Self {
-        let length_range = match length {
-            Length::Practice => 0..=300,
-            Length::QuarterPeal => 1250..=1350,
-            Length::HalfPeal => 2500..=2600,
-            Length::Peal => 5000..=5200,
-            Length::Range(range) => range,
+        let (min_length, max_length) = match length {
+            Length::Practice => (0, 300),
+            Length::QuarterPeal => (1250, 1350),
+            Length::HalfPeal => (2500, 2600),
+            Length::Peal => (5000, 5200),
+            Length::Range(range) => (*range.start(), *range.end()),
         };
 
         QueryBuilder {
             query: Query {
-                length_range,
+                length_range: TotalLength::new(min_length)..=TotalLength::new(max_length),
                 num_comps: 100,
                 allow_false: false,
                 stage,
 
                 methods: MethodVec::new(),
                 splice_style: SpliceStyle::LeadLabels,
-                splice_weight: 0.0,
+                splice_weight: OrderedFloat(0.0),
                 calls: CallVec::new(),
                 call_display_style: CallDisplayStyle::CallingPositions(stage.tenor()),
 
@@ -357,7 +351,7 @@ impl QueryBuilder {
     /// Sets the score applied every time the conductor would have to call a method splice.  If
     /// unset, defaults to `0.0`.
     pub fn splice_weight(mut self, weight: f32) -> Self {
-        self.query.splice_weight = weight;
+        self.query.splice_weight = OrderedFloat(weight);
         self
     }
 
@@ -397,7 +391,11 @@ impl QueryBuilder {
     /// Weights applied to every [`Row`] of every course which contains a lead head which satisfies
     /// the corresponding [`Mask`].
     pub fn course_head_weights(mut self, weights: impl IntoIterator<Item = (Mask, f32)>) -> Self {
-        self.query.ch_weights.extend(weights);
+        self.query.ch_weights.extend(
+            weights
+                .into_iter()
+                .map(|(mask, weight)| (mask, OrderedFloat(weight))),
+        );
         self
     }
 
