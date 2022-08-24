@@ -28,7 +28,11 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Composition, Progress, SearchUpdate};
+use monument::{
+    query::Query,
+    search::{Progress, SearchData, SearchUpdate},
+    Composition,
+};
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -74,7 +78,7 @@ pub fn run(
     config.leak_search_memory = env == Environment::Cli;
 
     // Build all the data structures for the search
-    let search = monument::SearchData::new(&query, &config)?;
+    let search = SearchData::new(&query, &config)?;
     let comp_printer = CompPrinter::new(query.clone(), search.method_count_ranges());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 

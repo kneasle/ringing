@@ -1,146 +1,115 @@
+//! Monument's search routines.  Some parts are made public for users who want more control over
+//! searches.
+
 use std::{
-    collections::BinaryHeap,
-    sync::atomic::{AtomicBool, Ordering},
+    ops::RangeInclusive,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use crate::{
-    prove_length::RefinedRanges, utils::TotalLength, Config, Progress, Query, SearchUpdate,
+    prove_length::{prove_lengths, RefinedRanges},
+    query::Query,
+    Composition, Config,
 };
 
+mod best_first;
 mod graph;
 mod prefix;
 
-use graph::Graph;
-
-use self::prefix::CompPrefix;
-
-const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
-const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
-
-/// Searches a [`Graph`](m_gr::Graph) for compositions
-pub(crate) fn search(
-    query: &Query,
-    config: &Config,
-    graph: &crate::graph::Graph,
-    refined_ranges: &RefinedRanges,
-    mut update_fn: impl FnMut(SearchUpdate),
-    abort_flag: &AtomicBool,
-) {
-    // Build the graph and populate the `SearchData`
-    let search_data = SearchData {
-        graph: self::graph::Graph::new(graph, query),
-        ranges: refined_ranges,
-        query,
-    };
-
-    // Initialise the frontier to just the start chunks
-    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph);
-
-    let mut iter_count = 0;
-    let mut num_comps = 0;
-
-    macro_rules! send_progress_update {
-        (truncating_queue = $truncating_queue: expr) => {
-            send_progress_update(
-                &frontier,
-                &mut update_fn,
-                iter_count,
-                num_comps,
-                $truncating_queue,
-            );
-        };
-    }
-
-    // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
-    // frontier).  This is best-first search (and can be A* depending on the cost function used).
-    while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(&search_data, &mut frontier);
-
-        // Submit new compositions when they're generated
-        if let Some(comp) = maybe_comp {
-            update_fn(SearchUpdate::Comp(comp));
-            num_comps += 1;
-
-            if num_comps == search_data.query.num_comps {
-                break; // Stop the search once we've got enough comps
-            }
-        }
-
-        // If the queue gets too long, then halve its size
-        if frontier.len() >= config.queue_limit {
-            send_progress_update!(truncating_queue = true);
-            truncate_heap(&mut frontier, config.queue_limit / 2);
-            send_progress_update!(truncating_queue = false);
-        }
-
-        iter_count += 1;
-
-        // Check for abort every so often
-        if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
-            update_fn(SearchUpdate::Aborting);
-            break;
-        }
-
-        // Send stats every so often
-        if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
-            send_progress_update!(truncating_queue = false);
-        }
-    }
-
-    // Always send a final update before finishing
-    send_progress_update!(truncating_queue = false);
-
-    // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
-    // don't care about leaking because the Monument process is about to terminate and the OS will
-    // clean up the memory anyway.
-    if config.leak_search_memory {
-        std::mem::forget(search_data);
-        std::mem::forget(frontier);
-    }
-}
-
-fn send_progress_update(
-    frontier: &BinaryHeap<CompPrefix>,
-    update_fn: &mut impl FnMut(SearchUpdate),
-    iter_count: usize,
-    num_comps: usize,
-    truncating_queue: bool,
-) {
-    let mut total_len = 0u64; // NOTE: We have use `u64` here to avoid overflow
-    let mut max_length = TotalLength::ZERO;
-    frontier.iter().for_each(|n| {
-        total_len += n.length().as_usize() as u64;
-        max_length = max_length.max(n.length());
-    });
-    update_fn(SearchUpdate::Progress(Progress {
-        iter_count,
-        num_comps,
-
-        queue_len: frontier.len(),
-        avg_length: if frontier.is_empty() {
-            0.0 // Avoid returning `NaN` if the frontier is empty
-        } else {
-            total_len as f32 / frontier.len() as f32
-        },
-        max_length: max_length.as_usize(),
-
-        truncating_queue,
-    }));
-}
-
-fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
-    let heap = std::mem::take(heap_ref);
-    let mut chunks = heap.into_vec();
-    chunks.sort_by(|a, b| b.cmp(a)); // Sort highest score first
-    if len < chunks.len() {
-        chunks.drain(len..);
-    }
-    *heap_ref = BinaryHeap::from(chunks);
-}
-
-/// Static, immutable data used for prefix expansion
-struct SearchData<'a> {
-    graph: self::graph::Graph,
+/// Immutable data required for a [`Query`] to run.
+///
+/// This is useful if you want to use the data before starting the full search (e.g. to access
+/// computed method count ranges).
+#[derive(Debug)]
+pub struct SearchData<'a> {
     query: &'a Query,
-    ranges: &'a RefinedRanges,
+    config: &'a Config,
+    // TODO: Reintroduce this to make the fast graph sparser
+    // source_graph: crate::graph::Graph,
+    refined_ranges: RefinedRanges,
+    graph: self::graph::Graph,
+}
+
+impl<'a> SearchData<'a> {
+    pub fn new(query: &'a Query, config: &'a Config) -> crate::Result<Self> {
+        // Build and optimise the graph
+        let mut source_graph = crate::graph::Graph::unoptimised(query, config)?;
+        source_graph.optimise(query);
+        // Prove which lengths are impossible, and use that to refine the length and method count
+        // ranges
+        let refined_ranges = prove_lengths(&source_graph, query)?;
+        // Create a fast-to-traverse copy of the graph
+        let graph = self::graph::Graph::new(&source_graph, query);
+
+        Ok(Self {
+            query,
+            config,
+            refined_ranges,
+            graph,
+        })
+    }
+
+    pub fn search(&self, abort_flag: Arc<AtomicBool>, update_fn: impl FnMut(SearchUpdate)) {
+        // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
+        // We want this to be sequentially consistent to make sure that the worker threads don't
+        // see the previous value (which could be 'true').
+        abort_flag.store(false, Ordering::SeqCst);
+        best_first::search(self, update_fn, &abort_flag);
+    }
+
+    /// Returns an iterator which yields the refined method count ranges for each
+    /// [`Method`](crate::query::Method) in the [`Query`].
+    pub fn method_count_ranges(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
+        self.refined_ranges
+            .method_counts
+            .iter()
+            .map(|range| range.start().as_usize()..=range.end().as_usize())
+    }
+}
+
+/// Status/progress update for a search
+#[derive(Debug)]
+pub enum SearchUpdate {
+    /// A new composition has been found
+    Comp(Composition),
+    /// A thread is sending a status update
+    Progress(Progress),
+    /// The search is being aborted
+    Aborting,
+}
+
+/// How much of a search has been completed so far
+#[derive(Debug)]
+pub struct Progress {
+    /// How many chunks have been expanded so far
+    pub iter_count: usize,
+    /// How many comps have been generated so far
+    pub num_comps: usize,
+
+    /// The current length of the A* queue
+    pub queue_len: usize,
+    /// The average length of a composition prefix in the queue
+    pub avg_length: f32,
+    /// The length of the longest composition prefix in the queue
+    pub max_length: usize,
+
+    /// `true` if the search is currently truncating the queue to save memory
+    pub truncating_queue: bool,
+}
+
+impl Progress {
+    /// The [`Progress`] made by a search which hasn't started yet
+    pub const START: Self = Self {
+        iter_count: 0,
+        num_comps: 0,
+
+        queue_len: 0,
+        avg_length: 0.0,
+        max_length: 0,
+
+        truncating_queue: false,
+    };
 }

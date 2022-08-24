@@ -16,8 +16,8 @@ use crate::{
 };
 
 use super::{
-    graph::{ChunkIdx, StartIdx, SuccIdx},
-    Graph, SearchData,
+    graph::{ChunkIdx, Graph, StartIdx, SuccIdx},
+    SearchData,
 };
 
 /// The prefix of a composition.  These are ordered by average score per row.
@@ -181,7 +181,7 @@ impl CompPrefix {
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
 
-        let max_length = *data.ranges.length.end();
+        let max_length = *data.refined_ranges.length.end();
         for (succ_idx, link) in chunk.succs.iter_enumerated() {
             let rotation = part_head * link.ph_rotation;
             let score = score + link.score;
@@ -201,7 +201,7 @@ impl CompPrefix {
                 }
                 if !method_counts_after_chunk.is_feasible(
                     (max_length - length_after_succ).as_usize(),
-                    data.ranges.method_counts.as_raw_slice(),
+                    data.refined_ranges.method_counts.as_raw_slice(),
                 ) {
                     continue; // Can't recover the method balance before running out of rows
                 }
@@ -232,7 +232,7 @@ impl CompPrefix {
     fn check_comp(&self, data: &SearchData) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
-        if !data.ranges.length.contains(&self.length) {
+        if !data.refined_ranges.length.contains(&self.length) {
             return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
@@ -242,7 +242,7 @@ impl CompPrefix {
         // removing those extra rows could make the method count infeasible.
         if !self
             .method_counts
-            .is_feasible(0, data.ranges.method_counts.as_raw_slice())
+            .is_feasible(0, data.refined_ranges.method_counts.as_raw_slice())
         {
             return None; // Comp doesn't have the required method balance
         }

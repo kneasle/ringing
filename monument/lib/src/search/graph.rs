@@ -23,9 +23,9 @@ pub(super) struct Chunk {
     pub id: crate::graph::ChunkId,
 
     pub score: Score,
-    pub music_counts: Counts, // PERF: This is only used when reconstructing compositions
+    pub music_counts: Counts, // PERF: Not used in search
 
-    pub per_part_length: PerPartLength,
+    pub per_part_length: PerPartLength, // PERF: Not used in search
     pub total_length: TotalLength,
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
