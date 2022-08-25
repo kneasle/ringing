@@ -10,8 +10,8 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    utils::TotalLength,
-    MethodIdx, MethodVec, OptionalRangeInclusive, Query,
+    query::{MethodIdx, MethodVec, Query},
+    utils::{OptionalRangeInclusive, TotalLength},
 };
 
 const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;

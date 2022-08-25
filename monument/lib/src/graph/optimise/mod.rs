@@ -8,11 +8,11 @@ use std::{
     time::Instant,
 };
 
-use crate::{utils::FrontierItem, Query};
+use crate::{query::Query, utils::FrontierItem};
 
 use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide, TotalLength};
 
-use self::Direction::{Backward, Forward};
+use Direction::{Backward, Forward};
 
 impl Graph {
     /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
@@ -306,7 +306,7 @@ mod passes {
 
     use crate::{
         graph::{ChunkId, Graph, TotalLength},
-        Query,
+        query::Query,
     };
 
     use super::{DirectionalView, Pass};

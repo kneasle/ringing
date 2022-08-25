@@ -17,8 +17,8 @@ use bellframe::Row;
 
 use crate::{
     group::PhRotation,
+    query::{CallIdx, MethodIdx},
     utils::{Counts, MusicBreakdown, PerPartLength, TotalLength},
-    CallIdx, MethodIdx,
 };
 
 /// A 'prototype' chunk graph that is (relatively) inefficient to traverse but easy to modify.  This

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::{
     graph::LinkSide,
     group::{PartHead, PhRotation},
+    query::{CallIdx, Query},
     utils::{Counts, PerPartLength, Score, TotalLength},
-    CallIdx, Query,
 };
 use bit_vec::BitVec;
 use ordered_float::OrderedFloat;

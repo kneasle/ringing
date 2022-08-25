@@ -12,7 +12,7 @@ use std::{
 use crate::{
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
-    Composition, Config,
+    Composition,
 };
 
 mod best_first;
@@ -112,4 +112,41 @@ impl Progress {
 
         truncating_queue: false,
     };
+}
+
+/// Configuration parameters for a [`Search`](SearchData) which **don't** change which compositions
+/// are generated.
+#[derive(Debug, Clone)]
+pub struct Config {
+    /* General */
+    /// Number of threads used to generate compositions.  If `None`, this uses the number of
+    /// **physical** CPU cores (i.e. ignoring hyper-threading).
+    pub thread_limit: Option<usize>,
+
+    /* Graph Generation */
+    /// The maximum graph size, in chunks.  If a search would produce a graph bigger than this, it
+    /// is aborted.
+    pub graph_size_limit: usize,
+
+    /* Search */
+    /// The maximum number of [`Composition`] prefixes stored simultaneously whilst searching.
+    pub queue_limit: usize,
+    /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
+    /// This massively improves the termination speed (because all individual allocations don't
+    /// need to be freed), but only makes sense for the CLI, where Monument will do exactly one
+    /// search run before terminating (thus returning the memory to the OS anyway).
+    pub leak_search_memory: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            thread_limit: None,
+
+            graph_size_limit: 100_000,
+
+            queue_limit: 10_000_000,
+            leak_search_memory: false,
+        }
+    }
 }

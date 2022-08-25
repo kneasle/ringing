@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     graph::{Graph, LinkSide},
-    Query,
+    query::Query,
 };
 
 /// Removes dangling references from the [`Graph`]

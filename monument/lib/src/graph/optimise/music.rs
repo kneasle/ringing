@@ -5,8 +5,8 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
+    query::Query,
     utils::MusicBreakdown,
-    Query,
 };
 
 /// How many chunks will be searched to determine which chunk patterns generate the required music
