@@ -15,4 +15,3 @@ mod utils;
 pub use composition::Composition;
 pub use error::{Error, Result};
 pub use search::{Config, Progress, SearchData, SearchUpdate};
-pub use utils::OptionalRangeInclusive;

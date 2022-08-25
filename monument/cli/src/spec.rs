@@ -9,12 +9,9 @@ use bellframe::{
 };
 use colored::Colorize;
 use itertools::Itertools;
-use monument::{
-    query::{
-        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, Query, QueryBuilder,
-        SpliceStyle,
-    },
-    OptionalRangeInclusive,
+use monument::query::{
+    Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, OptionalRangeInclusive,
+    Query, QueryBuilder, SpliceStyle,
 };
 use serde::Deserialize;
 

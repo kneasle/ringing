@@ -5,10 +5,7 @@ use bellframe::{
     Bell, RowBuf, Stage,
 };
 use itertools::Itertools;
-use monument::{
-    query::{MusicType, MusicTypeIdx, MusicTypeVec, StrokeSet},
-    OptionalRangeInclusive,
-};
+use monument::query::{MusicType, MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, StrokeSet};
 use serde::Deserialize;
 
 use crate::utils::OptRangeInclusive;

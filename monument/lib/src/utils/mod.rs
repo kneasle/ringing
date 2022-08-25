@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    ops::{Add, AddAssign, Range},
+    ops::{Add, AddAssign},
 };
 
 use bellframe::{Row, RowBuf, Stage, Stroke};
@@ -16,41 +16,6 @@ pub(crate) use lengths::{PerPartLength, TotalLength};
 
 /// The [`Score`] used to determine which [`Composition`]s are better than others.
 pub(crate) type Score = ordered_float::OrderedFloat<f32>;
-
-/// An inclusive range where each side is optionally bounded.
-///
-/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
-/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
-/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct OptionalRangeInclusive {
-    pub min: Option<usize>,
-    pub max: Option<usize>,
-}
-
-impl OptionalRangeInclusive {
-    /// Returns `true` if at least one of `min` or `max` is set
-    pub fn is_set(self) -> bool {
-        self.min.is_some() || self.max.is_some()
-    }
-
-    /// Applies [`Option::or`] to both `min` and `max`
-    pub fn or(self, other: Self) -> Self {
-        Self {
-            min: self.min.or(other.min),
-            max: self.max.or(other.max),
-        }
-    }
-
-    pub fn or_range(self, other: &Range<usize>) -> Range<usize> {
-        let min = self.min.unwrap_or(other.start);
-        let max = self
-            .max
-            .map(|x| x + 1) // +1 because `OptRange` is inclusive
-            .unwrap_or(other.end);
-        min..max
-    }
-}
 
 /// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]

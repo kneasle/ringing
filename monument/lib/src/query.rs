@@ -1,7 +1,7 @@
 //! Instructions for Monument about what compositions should be generated.
 
 use std::{
-    ops::RangeInclusive,
+    ops::{Range, RangeInclusive},
     sync::{atomic::AtomicBool, Arc},
 };
 
@@ -13,7 +13,7 @@ use crate::{
     group::PartHeadGroup,
     search::{SearchData, SearchUpdate},
     utils::{PerPartLength, Score, TotalLength},
-    Composition, Config, OptionalRangeInclusive,
+    Composition, Config,
 };
 
 /// Specification for what [`Composition`]s should be generated.  These should be created using a
@@ -208,31 +208,6 @@ impl MusicType {
     }
 }
 
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum StrokeSet {
-    Hand,
-    Back,
-    Both,
-}
-
-impl StrokeSet {
-    pub(crate) fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
-        }
-    }
-}
-
-impl Default for StrokeSet {
-    fn default() -> Self {
-        StrokeSet::Both
-    }
-}
-
 /////////////
 // BUILDER //
 /////////////
@@ -412,6 +387,66 @@ impl QueryBuilder {
     pub fn start_stroke(mut self, stroke: Stroke) -> Self {
         self.query.start_stroke = stroke;
         self
+    }
+}
+
+/// An inclusive range where each side is optionally bounded.
+///
+/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
+/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OptionalRangeInclusive {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+
+impl OptionalRangeInclusive {
+    /// Returns `true` if at least one of `min` or `max` is set
+    pub fn is_set(self) -> bool {
+        self.min.is_some() || self.max.is_some()
+    }
+
+    /// Applies [`Option::or`] to both `min` and `max`
+    pub fn or(self, other: Self) -> Self {
+        Self {
+            min: self.min.or(other.min),
+            max: self.max.or(other.max),
+        }
+    }
+
+    pub fn or_range(self, other: &Range<usize>) -> Range<usize> {
+        let min = self.min.unwrap_or(other.start);
+        let max = self
+            .max
+            .map(|x| x + 1) // +1 because `OptRange` is inclusive
+            .unwrap_or(other.end);
+        min..max
+    }
+}
+
+/// A set of at least one [`Stroke`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl StrokeSet {
+    pub(crate) fn contains(self, stroke: Stroke) -> bool {
+        match self {
+            Self::Both => true,
+            Self::Hand => stroke == Stroke::Hand,
+            Self::Back => stroke == Stroke::Back,
+        }
+    }
+}
+
+impl Default for StrokeSet {
+    fn default() -> Self {
+        StrokeSet::Both
     }
 }
 
