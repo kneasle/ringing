@@ -13,7 +13,7 @@ use crate::{
     group::PartHeadGroup,
     search::{SearchData, SearchUpdate},
     utils::{PerPartLength, Score, TotalLength},
-    Composition, Config, OptRange,
+    Composition, Config, OptionalRangeInclusive,
 };
 
 /// Specification for what [`Composition`]s should be generated.  These should be created using a
@@ -97,7 +97,7 @@ pub struct Method {
     pub shorthand: String,
 
     /// The number of rows of this method must fit within this range
-    pub count_range: OptRange,
+    pub count_range: OptionalRangeInclusive,
     /// The indices in which we can start a composition during this `Method`.  `None` means any
     /// index is allowed (provided the CH masks are satisfied).  These are interpreted modulo the
     /// lead length of the method.
@@ -179,7 +179,7 @@ pub struct MusicType {
     pub strokes: StrokeSet,
 
     pub weight: Score,
-    pub count_range: OptRange,
+    pub count_range: OptionalRangeInclusive,
 }
 
 impl MusicType {
@@ -187,7 +187,7 @@ impl MusicType {
         patterns: Vec<Pattern>,
         stroke_set: StrokeSet,
         weight: f32,
-        count_range: OptRange,
+        count_range: OptionalRangeInclusive,
     ) -> Self {
         Self {
             patterns,

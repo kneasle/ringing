@@ -11,7 +11,7 @@ use itertools::Itertools;
 use crate::{
     graph::{ChunkId, Graph, LinkSide, RowIdx},
     utils::TotalLength,
-    MethodIdx, MethodVec, OptRange, Query,
+    MethodIdx, MethodVec, OptionalRangeInclusive, Query,
 };
 
 const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;
@@ -423,7 +423,7 @@ fn method_bounds(
     total_len_range: &RangeInclusive<TotalLength>,
     bound: Bound,
 ) -> MethodVec<(BoundType, TotalLength)> {
-    let get_bound = |range: OptRange| -> Option<usize> {
+    let get_bound = |range: OptionalRangeInclusive| -> Option<usize> {
         match bound {
             Bound::Min => range.min,
             Bound::Max => range.max,

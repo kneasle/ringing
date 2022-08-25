@@ -17,19 +17,18 @@ pub(crate) use lengths::{PerPartLength, TotalLength};
 /// The [`Score`] used to determine which [`Composition`]s are better than others.
 pub(crate) type Score = ordered_float::OrderedFloat<f32>;
 
-/// An inclusive range where each side is optionally bounded.  This is essentially a combination of
-/// [`RangeInclusive`](std::ops::RangeInclusive) (`min..=max`),
-/// [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
-/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and
-/// [`RangeFull`](std::ops::RangeFull) (`..`) in a format that can be easily parsed from TOML with
-/// Serde.
+/// An inclusive range where each side is optionally bounded.
+///
+/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
+/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
 #[derive(Debug, Clone, Copy, Default)]
-pub struct OptRange {
+pub struct OptionalRangeInclusive {
     pub min: Option<usize>,
     pub max: Option<usize>,
 }
 
-impl OptRange {
+impl OptionalRangeInclusive {
     /// Returns `true` if at least one of `min` or `max` is set
     pub fn is_set(self) -> bool {
         self.min.is_some() || self.max.is_some()

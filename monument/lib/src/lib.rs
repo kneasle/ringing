@@ -14,7 +14,7 @@ mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use utils::OptRange; // TODO: Not pub
+pub use utils::OptionalRangeInclusive;
 
 use query::{CallIdx, MethodIdx, MethodVec, Query};
 

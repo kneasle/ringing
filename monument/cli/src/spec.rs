@@ -14,7 +14,7 @@ use monument::{
         Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, Query, QueryBuilder,
         SpliceStyle,
     },
-    OptRange,
+    OptionalRangeInclusive,
 };
 use serde::Deserialize;
 
@@ -209,7 +209,7 @@ impl Spec {
 
         // Generate extra method data
         let shorthands = default_shorthands(&loaded_methods);
-        let global_method_count = OptRange::from(self.method_count);
+        let global_method_count = OptionalRangeInclusive::from(self.method_count);
         // Combine method data
         let mut methods = MethodVec::new();
         #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
@@ -233,7 +233,8 @@ impl Spec {
                 inner: method,
                 ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
-                count_range: OptRange::from(common.count_range).or(global_method_count),
+                count_range: OptionalRangeInclusive::from(common.count_range)
+                    .or(global_method_count),
                 start_indices,
                 end_indices: common
                     .end_indices

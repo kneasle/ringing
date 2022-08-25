@@ -10,7 +10,7 @@ use bellframe::{Mask, RowBuf, Stage};
 #[allow(unused_imports)] // Only used for doc comments
 use crate::query::{Call, Method, MusicType, Query};
 
-use crate::OptRange;
+use crate::OptionalRangeInclusive;
 
 /// Alias for `Result<T, monument::Error>`
 pub type Result<T> = std::result::Result<T, Error>;
@@ -60,7 +60,7 @@ pub enum Error {
     /// Some method range isn't achievable
     UnachievableMethodCount {
         method_name: String,
-        requested_range: OptRange,
+        requested_range: OptionalRangeInclusive,
         next_shorter_len: Option<usize>,
         next_longer_len: Option<usize>,
     },

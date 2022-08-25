@@ -7,7 +7,7 @@ use bellframe::{
 use itertools::Itertools;
 use monument::{
     query::{MusicType, MusicTypeIdx, MusicTypeVec, StrokeSet},
-    OptRange,
+    OptionalRangeInclusive,
 };
 use serde::Deserialize;
 
@@ -285,7 +285,12 @@ fn music_type_runs(
                 };
                 // Add `MusicType` for the front/back/internal count
                 music_types.push((
-                    MusicType::new(patterns.clone(), common.strokes, 0.0, OptRange::default()),
+                    MusicType::new(
+                        patterns.clone(),
+                        common.strokes,
+                        0.0,
+                        OptionalRangeInclusive::default(),
+                    ),
                     Some(MusicTypeDisplay {
                         full_name: String::new(),
                         pattern: Some((pattern_name.clone(), position)),
@@ -307,7 +312,7 @@ fn music_type_runs(
                     all_patterns,
                     common.strokes,
                     common.weight,
-                    OptRange::default(),
+                    OptionalRangeInclusive::default(),
                 ),
                 Some(MusicTypeDisplay {
                     full_name: String::new(),
@@ -318,7 +323,7 @@ fn music_type_runs(
     }
 
     // If we need to enforce a count, create a single `MusicType` containing all run lengths
-    let count_range = OptRange::from(common.count_range);
+    let count_range = OptionalRangeInclusive::from(common.count_range);
     let need_to_add_weight = music_types.is_empty();
     if count_range.is_set() || need_to_add_weight {
         let patterns = lengths
@@ -347,8 +352,8 @@ fn music_type_patterns(
     common: &MusicCommon,
     stage: Stage,
 ) -> anyhow::Result<Vec<(MusicType, Option<MusicTypeDisplay>)>> {
-    let individual_count = OptRange::from(count_each);
-    let combined_count = OptRange::from(common.count_range);
+    let individual_count = OptionalRangeInclusive::from(count_each);
+    let combined_count = OptionalRangeInclusive::from(common.count_range);
     // Parse patterns
     let mut patterns = Vec::new();
     for pattern_string in pattern_strings {
@@ -512,7 +517,7 @@ fn music_type_preset(
             combined_patterns,
             common.strokes,
             common.weight, // Add weight only to the combined `MusicType`
-            OptRange::from(common.count_range),
+            OptionalRangeInclusive::from(common.count_range),
         ),
         music_type_display(PatternPosition::Total),
     )];
@@ -523,7 +528,7 @@ fn music_type_preset(
                 front_patterns,
                 common.strokes,
                 0.0, // Weight is accounted for by the combined `MusicType`
-                OptRange::default(),
+                OptionalRangeInclusive::default(),
             ),
             music_type_display(PatternPosition::Front),
         ));
@@ -532,7 +537,7 @@ fn music_type_preset(
                 back_patterns,
                 common.strokes,
                 0.0, // Weight is accounted for by the combined `MusicType`
-                OptRange::default(),
+                OptionalRangeInclusive::default(),
             ),
             music_type_display(PatternPosition::Back),
         ));

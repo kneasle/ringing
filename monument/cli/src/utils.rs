@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use bellframe::Stroke;
-use monument::OptRange;
+use monument::OptionalRangeInclusive;
 use serde::Deserialize;
 
-/// A version of [`OptRange`] which allows for convenient deserialisation from a single number
-/// (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
+/// A version of [`OptionalRangeInclusive`] which allows for convenient deserialisation from a
+/// single number (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum OptRangeInclusive {
@@ -25,13 +25,13 @@ impl Default for OptRangeInclusive {
     }
 }
 
-impl From<OptRangeInclusive> for OptRange {
+impl From<OptRangeInclusive> for OptionalRangeInclusive {
     fn from(r: OptRangeInclusive) -> Self {
         let (min, max) = match r {
             OptRangeInclusive::SingleNumber(n) => (Some(n), Some(n)),
             OptRangeInclusive::Range { min, max } => (min, max),
         };
-        OptRange { min, max }
+        OptionalRangeInclusive { min, max }
     }
 }
 
