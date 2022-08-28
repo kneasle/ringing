@@ -9,9 +9,12 @@ use bellframe::{
 };
 use colored::Colorize;
 use itertools::Itertools;
-use monument::query::{
-    Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, OptionalRangeInclusive,
-    Query, QueryBuilder, SpliceStyle,
+use monument::{
+    query::{
+        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec,
+        OptionalRangeInclusive, Query, QueryBuilder, SpliceStyle,
+    },
+    search::Config,
 };
 use serde::Deserialize;
 
@@ -155,8 +158,8 @@ impl Spec {
         crate::utils::parse_toml(toml_string)
     }
 
-    pub fn config(&self, opts: &crate::args::Options) -> monument::Config {
-        let mut config = monument::Config {
+    pub fn config(&self, opts: &crate::args::Options) -> Config {
+        let mut config = Config {
             thread_limit: opts.num_threads,
             ..Default::default()
         };

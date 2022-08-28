@@ -1,5 +1,11 @@
-//! Monument's search routines.  Some parts are made public for users who want more control over
-//! searches.
+//! API for interacting with searches as they are running.
+//!
+//! If you just want an easy way to drive Monument, look at
+//! [`QueryBuilder::run`](crate::query::QueryBuilder::run) and
+//! [`QueryBuilder::run_with_config`](crate::query::QueryBuilder::run_with_config).
+//!
+//! If you do genuinely need control over a running [`Search`] (e.g. to update the UI as searches
+//! are running), see the [`Search`] type for docs and examples.
 
 use std::{
     ops::RangeInclusive,

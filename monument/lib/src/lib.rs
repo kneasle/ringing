@@ -8,9 +8,10 @@
 //!
 //! # Description
 //!
-//! Given a [`Query`](query::Query) describing constraints, Monument will run a [`Search`] to find
-//! [`Composition`]s which satisfy the constraints of the query.  The query also describes what
-//! features make a composition 'good' and Monument will attempt to maximise that.
+//! Given a [`Query`](query::Query) describing constraints, Monument will run a
+//! [`Search`](search::Search) to find [`Composition`]s which satisfy the constraints of the query.
+//! The query also describes what features make a composition 'good' and Monument will attempt to
+//! maximise that.
 //!
 //! Unlike other composition generators such as SMC, Monument does not attempt to exhaustively
 //! search the space of possible compositions.  Instead, it aims to generate very good compositions
@@ -39,9 +40,8 @@ mod graph;
 mod group;
 mod prove_length;
 pub mod query;
-mod search;
+pub mod search;
 mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use search::{Config, Progress, Search, Update};

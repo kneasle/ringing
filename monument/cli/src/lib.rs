@@ -25,7 +25,11 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Composition, Progress, Search, Update};
+use monument::{
+    query::Query,
+    search::{Progress, Search, Update},
+    Composition,
+};
 use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;

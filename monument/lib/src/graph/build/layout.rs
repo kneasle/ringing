@@ -11,8 +11,8 @@ use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
     query::{CallIdx, MethodIdx, MethodVec, Query, SpliceStyle},
+    search::Config,
     utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
-    Config,
 };
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};

@@ -16,8 +16,8 @@ use itertools::Itertools;
 use crate::{
     group::{PartHeadGroup, PhRotation},
     query::{self, CallVec, MethodVec, Query, StrokeSet},
+    search::Config,
     utils::{Boundary, Counts, MusicBreakdown},
-    Config,
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};

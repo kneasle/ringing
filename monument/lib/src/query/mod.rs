@@ -18,8 +18,9 @@ pub use builder::{Length, QueryBuilder};
 /// Specification for what [`Composition`](crate::Composition)s should be generated.  These should
 /// be created using a [`QueryBuilder`].
 ///
-/// Compare this to [`Config`](crate::Config), which determines _how_ those compositions are
-/// generated (and therefore determines how quickly the results are generated).
+/// Compare this to [`search::Config`](crate::search::Config), which determines _how_ those
+/// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the
+/// results are generated).
 #[derive(Debug, Clone)]
 pub struct Query {
     // GENERAL

@@ -5,7 +5,12 @@ use std::ops::RangeInclusive;
 use bellframe::{Mask, Row, RowBuf, Stage, Stroke};
 use ordered_float::OrderedFloat;
 
-use crate::{group::PartHeadGroup, utils::TotalLength, Composition, Config, Search, Update};
+use crate::{
+    group::PartHeadGroup,
+    search::{Config, Search, Update},
+    utils::TotalLength,
+    Composition,
+};
 
 use super::{CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, Query, SpliceStyle};
 
