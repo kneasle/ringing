@@ -16,7 +16,7 @@ use itertools::Itertools;
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
 use crate::{
     graph::{Chunk, ChunkId, PerPartLength, RowIdx},
-    MethodVec, Query,
+    query::{MethodVec, Query},
 };
 
 /// Set the falseness links for some [`Chunk`]s, removing any which are false against themselves.

@@ -10,14 +10,14 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Graph, LinkSide, RowIdx},
+    query::{MethodIdx, MethodVec, OptionalRangeInclusive, Query},
     utils::TotalLength,
-    MethodIdx, MethodVec, OptRange, Query,
 };
 
 const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;
 
-#[non_exhaustive] // Make sure that any `RefinedRanges` must come from `prove_lengths`
-pub struct RefinedRanges {
+#[derive(Debug)]
+pub(crate) struct RefinedRanges {
     pub length: RangeInclusive<TotalLength>,
     pub method_counts: MethodVec<RangeInclusive<TotalLength>>,
 }
@@ -34,7 +34,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, query.len_range.clone()) {
+    let refined_len_range = match matching_lengths(&possible_lengths, &query.length_range) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -46,9 +46,9 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.len_range.clone(),
-                next_shorter_len: next_smaller,
-                next_longer_len: next_larger,
+                requested_range: query.length_range(),
+                next_shorter_len: next_smaller.map(TotalLength::as_usize),
+                next_longer_len: next_larger.map(TotalLength::as_usize),
             });
         }
     };
@@ -154,7 +154,7 @@ fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
                 }
                 // If this is the first end-length to be too long, then there's no point
                 // continuing the search (which otherwise would never finish)
-                if length > *query.len_range.end() {
+                if length > query.max_length() {
                     break;
                 }
             }
@@ -252,14 +252,14 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 
     // Compute the starts
     let mut starts = HashSet::<SimpleChunk>::new();
-    for (_start_link, start_chunk_id) in graph.starts() {
+    for (_start_link, start_chunk_id) in &graph.starts {
         starts.extend(get_simple_chunks(start_chunk_id));
     }
 
     // Compute the simplified graph
     let mut successors =
         HashMap::<SimpleChunk, HashSet<(TotalLength, LinkSide<SimpleChunk>)>>::new();
-    for (id, chunk) in graph.chunks() {
+    for (id, chunk) in &graph.chunks {
         for simple_chunk in get_simple_chunks(id) {
             let successors = successors.entry(simple_chunk).or_default();
 
@@ -267,12 +267,12 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
             for (_id, succ_link) in chunk.succ_links(graph) {
                 match &succ_link.to {
                     LinkSide::StartOrEnd => {
-                        successors.insert((chunk.total_length(), LinkSide::StartOrEnd));
+                        successors.insert((chunk.total_length, LinkSide::StartOrEnd));
                     }
                     LinkSide::Chunk(succ_id) => {
                         for succ_simple_chunk in get_simple_chunks(succ_id) {
                             successors
-                                .insert((chunk.total_length(), LinkSide::Chunk(succ_simple_chunk)));
+                                .insert((chunk.total_length, LinkSide::Chunk(succ_simple_chunk)));
                         }
                     }
                 }
@@ -292,7 +292,7 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 /// perfectly accurate.
 fn possible_method_counts(
     method_idx: MethodIdx,
-    method: &crate::Method,
+    method: &crate::query::Method,
     graph: &Graph,
     query: &Query,
 ) -> Vec<TotalLength> {
@@ -334,7 +334,7 @@ fn possible_method_counts(
     let mut end_counts = HashSet::new();
     let mut interior_counts = HashSet::new();
     let mut start_end_counts = HashSet::new(); // Counts of chunks which are both starts & ends
-    for (id, chunk) in graph.chunks() {
+    for (id, chunk) in &graph.chunks {
         let only_starts = chunk.pred_links(graph).all(|(_id, link)| link.is_start());
         let any_starts = chunk.pred_links(graph).any(|(_id, link)| link.is_start());
         let only_ends = chunk.succ_links(graph).all(|(_id, link)| link.is_end());
@@ -365,7 +365,7 @@ fn possible_method_counts(
             (false, true) => &mut end_counts,
             (false, false) => &mut interior_counts,
         };
-        count_group.insert(chunk.total_length());
+        count_group.insert(chunk.total_length);
     }
 
     log::trace!("  Start       counts: {:?}", start_counts);
@@ -393,7 +393,7 @@ fn possible_method_counts(
             continue; // Don't bother adding to a length we've seen before
         }
         counts.push(count);
-        if count > *query.len_range.end() {
+        if count > query.max_length() {
             break; // Stop searching as soon as we find one length that's above our limit
         }
         // Add every possible interior length to this
@@ -423,7 +423,7 @@ fn method_bounds(
     total_len_range: &RangeInclusive<TotalLength>,
     bound: Bound,
 ) -> MethodVec<(BoundType, TotalLength)> {
-    let get_bound = |range: OptRange| -> Option<usize> {
+    let get_bound = |range: OptionalRangeInclusive| -> Option<usize> {
         match bound {
             Bound::Min => range.min,
             Bound::Max => range.max,
@@ -472,7 +472,7 @@ fn refine_method_counts(
     (min_type, mut min_len): (BoundType, TotalLength),
     (max_type, mut max_len): (BoundType, TotalLength),
     possible_lengths: &[TotalLength],
-    method: &crate::Method,
+    method: &crate::query::Method,
 ) -> crate::Result<RangeInclusive<TotalLength>> {
     use BoundType::{Explicit as Expl, Preferred as Pref};
 
@@ -503,7 +503,7 @@ fn refine_method_counts(
     }
 
     // Refine the ranges
-    let matching_lengths = matching_lengths(possible_lengths, min_len..=max_len);
+    let matching_lengths = matching_lengths(possible_lengths, &(min_len..=max_len));
     log::trace!(
         "  Matching lengths: {} < {}{} <= {} <= {}{} < {}",
         match matching_lengths.next_smaller {
@@ -557,8 +557,8 @@ fn refine_method_counts(
                     return Err(crate::Error::UnachievableMethodCount {
                         method_name: method.title().to_owned(),
                         requested_range: method.count_range,
-                        next_shorter_len: next_smaller,
-                        next_longer_len: next_larger,
+                        next_shorter_len: next_smaller.map(TotalLength::as_usize),
+                        next_longer_len: next_larger.map(TotalLength::as_usize),
                     });
                 }
             }
@@ -652,16 +652,16 @@ fn check_final_bounds(
     if max_total_method_count < min_length {
         // Even if all the method bounds are maxed out, we still can't reach the minimum range
         return Err(crate::Error::TooLittleMethodCount {
-            max_total_method_count,
-            min_length,
+            max_total_method_count: max_total_method_count.as_usize(),
+            min_length: min_length.as_usize(),
         });
     }
     if min_total_method_count > max_length {
         // Even if the maximum length is rung, we don't have enough rows to satisfy the method
         // counts
         return Err(crate::Error::TooMuchMethodCount {
-            min_total_method_count,
-            max_length,
+            min_total_method_count: min_total_method_count.as_usize(),
+            max_length: max_length.as_usize(),
         });
     }
 
@@ -682,7 +682,7 @@ struct LengthMatches {
 /// Refine the length range based on what lengths are actually possible, returning an
 /// [`Error`](crate::Error) if no lengths are possible.  For example, a peal of T/D Major will have
 /// its length refined from `5000..=5200` to `5024..=5186`.
-fn matching_lengths(lengths: &[TotalLength], range: RangeInclusive<TotalLength>) -> LengthMatches {
+fn matching_lengths(lengths: &[TotalLength], range: &RangeInclusive<TotalLength>) -> LengthMatches {
     let mut next_smaller = None;
     let mut min = None;
     let mut max = None;

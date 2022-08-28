@@ -9,15 +9,16 @@ use bellframe::Row;
 use bit_vec::BitVec;
 
 use crate::{
+    composition::{Composition, PathElem},
     graph::LinkSide,
-    music::Score,
-    utils::{group::PartHead, Counts, TotalLength},
-    Comp, PathElem, SpliceStyle,
+    group::PartHead,
+    query::SpliceStyle,
+    utils::{Counts, Score, TotalLength},
 };
 
 use super::{
-    graph::{ChunkIdx, StartIdx, SuccIdx},
-    Graph, SearchData,
+    graph::{ChunkIdx, Graph, StartIdx, SuccIdx},
+    Search,
 };
 
 /// The prefix of a composition.  These are ordered by average score per row.
@@ -146,7 +147,11 @@ impl Deref for CompPrefix {
 
 impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
-    pub(super) fn expand(self, data: &SearchData, frontier: &mut BinaryHeap<Self>) -> Option<Comp> {
+    pub(super) fn expand(
+        self,
+        data: &Search,
+        frontier: &mut BinaryHeap<Self>,
+    ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
@@ -177,7 +182,7 @@ impl CompPrefix {
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
 
-        let max_length = *data.ranges.length.end();
+        let max_length = *data.refined_ranges.length.end();
         for (succ_idx, link) in chunk.succs.iter_enumerated() {
             let rotation = part_head * link.ph_rotation;
             let score = score + link.score;
@@ -197,7 +202,7 @@ impl CompPrefix {
                 }
                 if !method_counts_after_chunk.is_feasible(
                     (max_length - length_after_succ).as_usize(),
-                    data.ranges.method_counts.as_raw_slice(),
+                    data.refined_ranges.method_counts.as_raw_slice(),
                 ) {
                     continue; // Can't recover the method balance before running out of rows
                 }
@@ -225,10 +230,10 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &SearchData) -> Option<Comp> {
+    fn check_comp(&self, data: &Search) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
-        if !data.ranges.length.contains(&self.length) {
+        if !data.refined_ranges.length.contains(&self.length) {
             return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
@@ -238,7 +243,7 @@ impl CompPrefix {
         // removing those extra rows could make the method count infeasible.
         if !self
             .method_counts
-            .is_feasible(0, data.ranges.method_counts.as_raw_slice())
+            .is_feasible(0, data.refined_ranges.method_counts.as_raw_slice())
         {
             return None; // Comp doesn't have the required method balance
         }
@@ -256,7 +261,7 @@ impl CompPrefix {
         // Handle splices over the part head
         let mut score = self.score;
         let is_splice = first_elem.method != last_elem.method
-            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(data.query);
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
         let splice_over_part_head = data.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
@@ -268,7 +273,7 @@ impl CompPrefix {
                 .unwrap();
             let end_labels = data.query.methods[last_elem.method]
                 .first_lead()
-                .get_annot(last_elem.end_sub_lead_idx(data.query))
+                .get_annot(last_elem.end_sub_lead_idx(&data.query))
                 .unwrap();
             let is_valid_splice = start_labels.iter().any(|label| end_labels.contains(label));
             if !is_valid_splice {
@@ -279,11 +284,11 @@ impl CompPrefix {
                 return None;
             }
             // Add/subtract weights from the splices over the part head
-            score += (data.query.num_parts() - 1) as f32 * data.query.splice_weight;
+            score += data.query.splice_weight * (data.query.num_parts() - 1) as f32;
         }
 
         // Now we know the composition is valid, construct it and return
-        let comp = Comp {
+        let comp = Composition {
             path,
 
             part_head: self.part_head,
@@ -291,16 +296,15 @@ impl CompPrefix {
             method_counts: self.method_counts.clone(),
             music_counts,
             total_score: score,
-            avg_score: score / self.length.as_usize() as f32,
         };
         // Sanity check that the composition is true
         if !data.query.allow_false {
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length.as_usize());
-            for row in comp.rows(data.query).rows() {
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
+            for row in comp.rows(&data.query).rows() {
                 if !rows_so_far.insert(row) {
                     panic!(
                         "Generated false composition ({})",
-                        comp.call_string(data.query)
+                        comp.call_string(&data.query)
                     );
                 }
             }
@@ -311,7 +315,7 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &SearchData) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(&self, data: &Search) -> (Vec<PathElem>, Counts) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = self.path.flatten();
 

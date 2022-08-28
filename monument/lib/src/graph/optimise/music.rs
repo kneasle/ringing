@@ -5,8 +5,8 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
-    music::Breakdown,
-    Query,
+    query::Query,
+    utils::MusicBreakdown,
 };
 
 /// How many chunks will be searched to determine which chunk patterns generate the required music
@@ -30,11 +30,12 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     // The `(ChunkId, Chunk)` pairs of chunks which contribute to the types of music that we care
     // about.
     let (required_chunks, non_required_chunks) = graph
-        .chunks()
+        .chunks
+        .iter()
         .filter(|(_id, chunk)| {
             min_music_counts
                 .iter()
-                .any(|(ty_idx, _)| chunk.music().counts[*ty_idx] > 0)
+                .any(|(ty_idx, _)| chunk.music.counts[*ty_idx] > 0)
         })
         .map(|(id, chunk)| (id, chunk))
         .partition::<Vec<_>, _>(|(_id, chunk)| chunk.required);
@@ -44,14 +45,14 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     for (idx, min) in &min_music_counts {
         required_music_counts[*idx] = *min;
     }
-    let mut counts_needed_from_non_required_chunks = Breakdown {
+    let mut counts_needed_from_non_required_chunks = MusicBreakdown {
         score: OrderedFloat(0.0),
         counts: required_music_counts.into(),
     };
     for (_id, chunk) in required_chunks {
         // Non-required chunks aren't required to get music which the required chunks can already
         // achieve
-        counts_needed_from_non_required_chunks.saturating_sub_assign(chunk.music());
+        counts_needed_from_non_required_chunks.saturating_sub_assign(&chunk.music);
     }
 
     // Do tree search over the non-required interesting chunks, determining which combinations of
@@ -78,7 +79,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
     let no_required_chunks = new_required_chunks.is_empty();
     log::debug!("required: {:?}", new_required_chunks);
     for required_id in new_required_chunks {
-        graph.get_chunk_mut(&required_id).unwrap().required = true;
+        graph.chunks.get_mut(&required_id).unwrap().required = true;
     }
 
     // If there aren't any chunks to mark as required, then we can pick a chunk to condition on and
@@ -92,7 +93,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
 /// Remove any chunk which exceeds the max count for any music type.  Usually this max count will be
 /// 0 (i.e. any chunks with that music should be removed).
 pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query) {
-    let mut counts_from_required_chunks = Breakdown::zero(query.music_types.len());
+    let mut counts_from_required_chunks = MusicBreakdown::zero(query.music_types.len());
     for chunk in graph.chunks.values() {
         if chunk.required {
             counts_from_required_chunks += &chunk.music;
@@ -122,7 +123,7 @@ pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query
 /// `chunk_patterns`.
 // TODO: Why is this returning duplicates?
 fn search_chunk_combinations<'gr>(
-    counts_needed_from_non_required_chunks: &Breakdown,
+    counts_needed_from_non_required_chunks: &MusicBreakdown,
     non_required_chunks: &[(&'gr ChunkId, &'gr Chunk)],
 ) -> Vec<HashSet<&'gr ChunkId>> {
     let mut chunk_patterns = Vec::<HashSet<&ChunkId>>::new();
@@ -144,7 +145,7 @@ fn search_chunk_combinations<'gr>(
 fn search_chunks<'iter, 'graph: 'iter>(
     mut chunks: impl Iterator<Item = &'iter (&'graph ChunkId, &'graph Chunk)> + Clone,
 
-    counts_needed: &Breakdown,
+    counts_needed: &MusicBreakdown,
     non_required_chunks: &[(&'graph ChunkId, &'graph Chunk)],
 
     chunks_used: &mut HashSet<&'graph ChunkId>,
@@ -179,7 +180,7 @@ fn search_chunks<'iter, 'graph: 'iter>(
         iters_left,
     );
 
-    for false_id in chunk.false_chunks() {
+    for false_id in &chunk.false_chunks {
         if chunks_used.contains(false_id) {
             return; // Don't add this chunk if it's false
         }
@@ -187,7 +188,7 @@ fn search_chunks<'iter, 'graph: 'iter>(
 
     // Add the chunk
     chunks_used.insert(id);
-    let counts_needed_with_this_chunk = counts_needed.saturating_sub(chunk.music());
+    let counts_needed_with_this_chunk = counts_needed.saturating_sub(&chunk.music);
     // Continue searching, assuming that this chunk is used
     search_chunks(
         chunks.clone(),

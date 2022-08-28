@@ -15,19 +15,22 @@ pub mod utils;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
+    ops::RangeInclusive,
     path::PathBuf,
     str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{Comp, Progress, Query, QueryUpdate, RefinedRanges};
+use monument::{
+    query::Query,
+    search::{Progress, Search, Update},
+    Composition,
+};
+use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -62,10 +65,8 @@ pub fn run(
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
-
     // Convert the `Spec` into a `Layout` and other data required for running a search
-    log::debug!("Generating query");
-    let query = Arc::new(spec.lower(&source)?);
+    let (query, music_displays) = spec.lower(&source)?;
     debug_print!(Query, query);
 
     let mut config = spec.config(options);
@@ -74,61 +75,39 @@ pub fn run(
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     config.leak_search_memory = env == Environment::Cli;
 
-    // Optimise the graph(s)
-    let mut graph = query
-        .unoptimised_graph(&config)
-        .map_err(anyhow::Error::msg)?;
-    debug_print!(Graph, graph);
-    query.optimise_graph(&mut graph, &config);
-    let refined_ranges = query.refine_ranges(&graph).map_err(anyhow::Error::msg)?;
+    // Build all the data structures for the search
+    let search = Arc::new(Search::new(Query::clone(&query), config)?);
+    let comp_printer =
+        CompPrinter::new(query.clone(), music_displays, search.method_count_ranges());
+    let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);
     }
 
-    // Thread-safe data for the query engine
-    let abort_flag = Arc::new(AtomicBool::new(false));
-    let comps = Arc::new(Mutex::new(Vec::<Comp>::new()));
-    let comp_printer = CompPrinter::new(query.clone(), &refined_ranges);
-    let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
-
-    // Intercept `ctrl-C` if running in CLI mode
+    // In CLI mode, attach `ctrl-C` to the abort flag
     if env == Environment::Cli {
-        let abort_flag = abort_flag.clone();
-        let handler = move || abort_flag.store(true, Ordering::Relaxed);
-        if let Err(e) = ctrlc::set_handler(handler) {
+        let search = Arc::clone(&search);
+        if let Err(e) = ctrlc::set_handler(move || search.signal_abort()) {
             log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
-
-    // Run the search
-    let update_fn = {
-        let comps = comps.clone();
-        move |update| {
-            if let Some(comp) = update_logger.log(update) {
-                comps.lock().unwrap().push(comp);
-            }
+    // Run the search, collecting the compositions as the search runs
+    let mut comps = Vec::<Composition>::new();
+    search.run(|update| {
+        if let Some(comp) = update_logger.log(update) {
+            comps.push(comp);
         }
-    };
-    Query::search(
-        &query,
-        graph,
-        refined_ranges,
-        &config,
-        update_fn,
-        &abort_flag,
-    );
-
-    // Recover and sort the compositions, then return the query
-    let mut comps = comps.lock().unwrap().to_vec();
+    });
+    // Once the search has completed, sort the compositions and return
     use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.avg_score)));
+    comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.average_score())));
     Ok(Some(QueryResult {
         comps,
         query,
         comp_printer,
         duration: start_time.elapsed(),
-        aborted: abort_flag.load(Ordering::SeqCst),
+        aborted: search.was_aborted(),
     }))
 }
 
@@ -158,7 +137,7 @@ pub enum Source<'a> {
 
 #[derive(Debug, Clone)]
 pub struct QueryResult {
-    pub comps: Vec<Comp>,
+    pub comps: Vec<Composition>,
     pub query: Arc<Query>,
     pub duration: Duration,
     pub aborted: bool,
@@ -244,11 +223,11 @@ impl SingleLineProgressLogger {
         }
     }
 
-    fn log(&mut self, update: QueryUpdate) -> Option<Comp> {
+    fn log(&mut self, update: Update) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
-                QueryUpdate::Comp(c) => Some(c),
+                Update::Comp(c) => Some(c),
                 _ => None,
             };
         }
@@ -284,12 +263,13 @@ impl SingleLineProgressLogger {
         comp
     }
 
-    /// Given a new update, update `self` and return the [`Comp`] (if one has just been generated)
-    fn update_progress(&mut self, update: QueryUpdate) -> Option<Comp> {
+    /// Given a new update, update `self` and return the [`Composition`] (if one has just been
+    /// generated)
+    fn update_progress(&mut self, update: Update) -> Option<Composition> {
         match update {
-            QueryUpdate::Comp(comp) => return Some(comp),
-            QueryUpdate::Progress(progress) => self.last_progress = progress,
-            QueryUpdate::Aborting => self.is_aborting = true,
+            Update::Comp(comp) => return Some(comp),
+            Update::Progress(progress) => self.last_progress = progress,
+            Update::Aborting => self.is_aborting = true,
         }
         None
     }
@@ -345,6 +325,7 @@ impl SingleLineProgressLogger {
 #[derive(Debug, Clone)]
 struct CompPrinter {
     query: Arc<Query>,
+    music_displays: Vec<MusicDisplay>,
 
     /// The maximum width of a composition's (total) length
     length_width: usize,
@@ -363,29 +344,33 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(query: Arc<Query>, refine_ranges: &RefinedRanges) -> Self {
+    fn new(
+        query: Arc<Query>,
+        music_displays: Vec<MusicDisplay>,
+        method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
+    ) -> Self {
         Self {
-            length_width: query.len_range.end().as_usize().to_string().len(),
+            length_width: query.length_range().end().to_string().len(),
             method_counts: query
-                .methods
+                .methods()
                 .iter()
-                .zip_eq(&refine_ranges.method_counts)
-                .map(|(method, refined_count_range)| {
+                .zip_eq(method_count_ranges)
+                .map(|(method, count_range)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = refined_count_range.end().as_usize().to_string().len();
-                    let max_width = max_count_width.max(method.shorthand.len());
-                    (max_width, method.shorthand.clone())
+                    let max_count_width = count_range.end().to_string().len();
+                    let max_width = max_count_width.max(method.shorthand().len());
+                    (max_width, method.shorthand().to_owned())
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)
-                .then(|| query.part_head_group.effective_stage().num_bells()),
-            music_widths: query
-                .music_displays
+                .then(|| query.effective_part_head_stage().num_bells()),
+            music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(&query.music_types))
+                .map(|d| d.col_width(query.music_types()))
                 .collect_vec(),
 
             query,
+            music_displays,
         }
     }
 
@@ -422,12 +407,10 @@ impl CompPrinter {
         }
         // Music
         s.push_str("  music  ");
-        if !self.query.music_displays.is_empty() {
+        if !self.music_displays.is_empty() {
             s.push(' ');
         }
-        for (music_display, col_width) in
-            self.query.music_displays.iter().zip_eq(&self.music_widths)
-        {
+        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
             s.push_str("  ");
             write_centered_text(&mut s, &music_display.name, *col_width);
             s.push(' ');
@@ -437,15 +420,15 @@ impl CompPrinter {
         s
     }
 
-    fn comp_string(&self, comp: &Comp) -> String {
+    fn comp_string(&self, comp: &Composition) -> String {
         let query = &self.query;
 
         // Length
-        let mut s = format!("{:>width$} ", comp.length, width = self.length_width);
+        let mut s = format!("{:>width$} ", comp.length(), width = self.length_width);
         // Method counts (for spliced)
         if self.method_counts.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self.method_counts.iter().zip_eq(comp.method_counts.iter()) {
+            for ((width, _), count) in self.method_counts.iter().zip_eq(comp.method_counts()) {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
         }
@@ -456,22 +439,27 @@ impl CompPrinter {
         }
         // Music
         write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();
-        if !self.query.music_displays.is_empty() {
+        if !self.music_displays.is_empty() {
             s.push(':');
         }
-        for (music_display, col_width) in
-            self.query.music_displays.iter().zip_eq(&self.music_widths)
-        {
+        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&query.music_types, comp.music_counts.as_slice()),
+                &music_display.display_counts(query.music_types(), comp.music_counts()),
                 *col_width,
             );
             s.push(' ');
         }
         // avg score, call string
-        write!(s, "| {:>9.6} | {}", comp.avg_score, comp.call_string(query)).unwrap();
+        write!(
+            s,
+            "| {:>9.6} | {}",
+            comp.average_score(),
+            comp.call_string(query)
+        )
+        .unwrap();
+
         s
     }
 }

@@ -1,10 +1,3 @@
-//! Code to generate the layout of [`Chunk`](crate::graph::Chunk)s.  All this computes is which
-//! ranges of rows can be rung and how they can be linked togeter.
-
-//////////////////
-// CHUNK LAYOUT //
-//////////////////
-
 use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet},
@@ -16,8 +9,10 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
-    utils::{group::PhRotation, Boundary, FrontierItem, PerPartLength, TotalLength},
-    CallIdx, Config, MethodIdx, MethodVec, Query, SpliceStyle,
+    group::PhRotation,
+    query::{CallIdx, MethodIdx, MethodVec, Query, SpliceStyle},
+    search::Config,
+    utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
 };
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
@@ -78,7 +73,7 @@ pub(super) fn chunk_lengths<'q>(
 
         // Stop expanding if the shortest path from rounds to the end of the chunk takes longer
         // than the max comp length
-        if min_distance_after_chunk > *query.len_range.end() {
+        if min_distance_after_chunk > query.max_length() {
             continue;
         }
 

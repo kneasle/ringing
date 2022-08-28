@@ -1,6 +1,6 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
-use monument::{Call, CallVec};
+use monument::query::{Call, CallVec};
 use serde::Deserialize;
 
 const DEFAULT_BOB_WEIGHT: f32 = -1.8;

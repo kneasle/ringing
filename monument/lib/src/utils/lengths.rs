@@ -3,21 +3,19 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
-use super::group::PartHeadGroup;
-
 /// A length **in one part** of the composition.  This and [`TotalLength`] allow the compiler to
 /// disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
-pub struct PerPartLength(u32);
+pub(crate) struct PerPartLength(u32);
 
 /// The combined length **across all parts**.  This and [`PerPartLength`] allow the compiler to
 /// disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TotalLength(u32);
+pub(crate) struct TotalLength(u32);
 
 impl PerPartLength {
-    pub fn as_total(self, part_heads: &PartHeadGroup) -> TotalLength {
+    pub fn as_total(self, part_heads: &crate::group::PartHeadGroup) -> TotalLength {
         TotalLength(self.0 * part_heads.size() as u32)
     }
 }
@@ -29,10 +27,6 @@ macro_rules! impl_length {
 
             pub fn new(l: usize) -> Self {
                 Self(l as u32)
-            }
-
-            pub fn as_u32(self) -> u32 {
-                self.0
             }
 
             pub fn as_usize(self) -> usize {

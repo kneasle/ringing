@@ -14,19 +14,17 @@ use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
-    music::{Breakdown, StrokeSet},
-    utils::{
-        group::{PartHeadGroup, PhRotation},
-        Boundary, Counts,
-    },
-    CallVec, Config, Method, MethodVec, Query,
+    group::{PartHeadGroup, PhRotation},
+    query::{self, CallVec, MethodVec, Query, StrokeSet},
+    search::Config,
+    utils::{Boundary, Counts, MusicBreakdown},
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub fn new(query: &Query, config: &Config) -> crate::Result<Self> {
+    pub fn unoptimised(query: &Query, config: &Config) -> crate::Result<Self> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 
@@ -106,14 +104,14 @@ impl Graph {
             "Graph build completed in {:.3?} ({} chunks and {} links)",
             graph_build_start.elapsed(),
             chunks.len(),
-            links.map.len(),
+            links.len(),
         );
 
         // Compute start/end links
         use LinkSide::*;
         let mut starts = Vec::new();
         let mut ends = Vec::new();
-        for (link_id, link) in &links.map {
+        for (link_id, link) in links.iter() {
             match (&link.from, &link.to) {
                 (StartOrEnd, Chunk(chunk_id)) => starts.push((*link_id, chunk_id.clone())),
                 (Chunk(chunk_id), StartOrEnd) => ends.push((*link_id, chunk_id.clone())),
@@ -216,8 +214,6 @@ fn check_query(query: &Query) -> crate::Result<()> {
 fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
     Chunk {
-        label: String::new(),
-
         per_part_length,
         total_length,
         // All the length goes to the method rung in this chunk
@@ -231,12 +227,9 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         predecessors: Vec::new(),
         successors: Vec::new(),
         false_chunks: Vec::new(),
-        music: Breakdown::zero(0),
-        duffer: false,
+        music: MusicBreakdown::zero(0),
 
         // Used by optimisation passes
-        lb_distance_from_non_duffer: TotalLength::ZERO,
-        lb_distance_to_non_duffer: TotalLength::ZERO,
         required: false,
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,
@@ -262,7 +255,7 @@ fn get_start_strokes(
     // considers the `start_row` to be part of the composition (so that leads go from lead head to
     // end, inclusive), so we need to invert `query.start_row` to convert.
     let stroke_of_start_row = !query.start_stroke;
-    for link in links.map.values() {
+    for link in links.values() {
         if let (LinkSide::StartOrEnd, LinkSide::Chunk(id)) = (&link.from, &link.to) {
             frontier.push((id.clone(), stroke_of_start_row));
         }
@@ -307,7 +300,7 @@ fn count_scores(
     // Always set music to `0`s, even if the chunk is unreachable.  If we don't, then an
     // optimisation pass could see this chunk and run `zip_eq` on the `MusicType`s, thus causing a
     // panic.
-    chunk.music = Breakdown::zero(query.music_types.len());
+    chunk.music = MusicBreakdown::zero(query.music_types.len());
 
     let start_stroke = match start_strokes {
         Some(map) => match map.get(id) {
@@ -332,7 +325,7 @@ fn count_scores(
             plain_course.get_row(index).unwrap()
         });
         // Count weight from music
-        chunk.music += &Breakdown::from_rows(
+        chunk.music += &MusicBreakdown::from_rows(
             row_iter,
             &lead_head_in_part,
             query.music_types.as_raw_slice(),
@@ -404,7 +397,7 @@ impl<'query> ChunkEquivalenceMap<'query> {
 /// Cached data about a single [`Method`], used to speed up chunk generation.
 #[derive(Debug)]
 struct MethodData<'query> {
-    method: &'query Method,
+    method: &'query query::Method,
     plain_course: Block<bellframe::method::RowAnnot<'query>>,
     lead_head_masks: Vec<Mask>,
     start_indices: Vec<usize>,
@@ -412,7 +405,7 @@ struct MethodData<'query> {
 }
 
 impl<'query> MethodData<'query> {
-    fn new(method: &'query Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
+    fn new(method: &'query query::Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();
@@ -518,7 +511,7 @@ fn fixed_bells(query: &Query) -> Vec<(Bell, usize)> {
 
 /// Returns the place bells which are always preserved by plain leads and all calls of a single
 /// method (e.g. hunt bells in non-variable-hunt compositions).
-fn fixed_bells_of_method(method: &crate::Method, calls: &CallVec<crate::Call>) -> HashSet<Bell> {
+fn fixed_bells_of_method(method: &query::Method, calls: &CallVec<query::Call>) -> HashSet<Bell> {
     // Start the set with the bells which are fixed by the plain lead of every method
     let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
     for call in calls {
@@ -533,7 +526,7 @@ fn fixed_bells_of_method(method: &crate::Method, calls: &CallVec<crate::Call>) -
 // by placing the call at this location.
 fn filter_bells_fixed_by_call(
     method: &bellframe::Method,
-    call: &crate::Call,
+    call: &query::Call,
     set: &mut HashSet<Bell>,
 ) {
     // Note that all calls are required to only substitute one piece of place notation.

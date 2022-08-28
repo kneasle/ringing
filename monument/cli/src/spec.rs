@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, time::Duration};
+use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, sync::Arc, time::Duration};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -10,15 +10,17 @@ use bellframe::{
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    music::MusicType,
-    utils::{group::PartHeadGroup, TotalLength},
-    Call, CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptRange, Query, SpliceStyle,
+    query::{
+        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec,
+        OptionalRangeInclusive, Query, QueryBuilder, SpliceStyle,
+    },
+    search::Config,
 };
 use serde::Deserialize;
 
 use crate::{
     calls::{check_for_duplicate_call_names, BaseCalls, SpecificCall},
-    music::{BaseMusic, MusicSpec},
+    music::{BaseMusic, MusicDisplay, MusicSpec},
     utils::OptRangeInclusive,
     Source,
 };
@@ -101,12 +103,6 @@ pub struct Spec {
     /// The [`Stroke`] of the first row of the composition
     #[serde(default = "crate::utils::handstroke")]
     start_stroke: Stroke,
-    /// The value for `non_duffer` given to music types when none is explicitly given
-    // TODO: Uncomment these when implementing non-duffers
-    // #[serde(default = "get_true")]
-    // default_non_duffer: bool,
-    /// The most consecutive rows of duffer chunks.
-    max_duffer_rows: Option<usize>,
 
     /* COURSES */
     /// The [`Row`] which starts the composition.  When computing falseness and music, this **is**
@@ -162,8 +158,8 @@ impl Spec {
         crate::utils::parse_toml(toml_string)
     }
 
-    pub fn config(&self, opts: &crate::args::Options) -> monument::Config {
-        let mut config = monument::Config {
+    pub fn config(&self, opts: &crate::args::Options) -> Config {
+        let mut config = Config {
             thread_limit: opts.num_threads,
             ..Default::default()
         };
@@ -177,7 +173,8 @@ impl Spec {
     }
 
     /// 'Lower' this `Spec`ification into a [`Query`].
-    pub fn lower(&self, source: &Source) -> anyhow::Result<Query> {
+    pub fn lower(&self, source: &Source) -> anyhow::Result<(Arc<Query>, Vec<MusicDisplay>)> {
+        log::debug!("Generating query");
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
@@ -211,12 +208,8 @@ impl Spec {
         let calls = self.calls(stage)?;
 
         // Generate extra method data
-        let shorthands = monument::utils::default_shorthands(
-            loaded_methods
-                .iter()
-                .map(|(m, common)| (m.title(), common.shorthand.as_deref())),
-        );
-        let global_method_count = OptRange::from(self.method_count);
+        let shorthands = default_shorthands(&loaded_methods);
+        let global_method_count = OptionalRangeInclusive::from(self.method_count);
         // Combine method data
         let mut methods = MethodVec::new();
         #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
@@ -236,11 +229,12 @@ impl Spec {
                 None => vec![0],
             };
 
-            methods.push(monument::Method {
+            methods.push(monument::query::Method {
                 inner: method,
                 ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
                 shorthand,
-                count_range: OptRange::from(common.count_range).or(global_method_count),
+                count_range: OptionalRangeInclusive::from(common.count_range)
+                    .or(global_method_count),
                 start_indices,
                 end_indices: common
                     .end_indices
@@ -259,36 +253,36 @@ impl Spec {
             CallDisplayStyle::Positional
         };
 
-        // Build this layout into a `Graph`
-        Ok(Query {
-            len_range: (&self.length).into(),
-            num_comps: self.num_comps,
-            allow_false: self.allow_false,
-            stage,
+        // Build the `Query`
+        let length = monument::query::Length::Range(self.length.range.clone());
+        let query_builder = QueryBuilder::new(stage, length)
+            .num_comps(self.num_comps)
+            .allow_false(self.allow_false)
+            // Methods/calls
+            .add_methods(methods)
+            .splice_style(self.splice_style)
+            .splice_weight(self.splice_weight)
+            .add_calls(calls.into_iter().map(Call::from))
+            .call_display_style(call_display_style)
+            // Courses
+            .start_end_rows(
+                parse_row("start row", &self.start_row, stage)?,
+                parse_row("end row", &self.end_row, stage)?,
+            )
+            .part_head(&part_head)
+            .course_head_weights(ch_weights)
+            // Music
+            .music_types(music_types)
+            .start_stroke(self.start_stroke);
 
-            methods,
-            call_display_style,
-            calls: calls.into_iter().map(Call::from).collect(),
-            splice_style: self.splice_style,
-
-            start_row: parse_row("start row", &self.start_row, stage)?,
-            end_row: parse_row("end row", &self.end_row, stage)?,
-            part_head_group: PartHeadGroup::new(&part_head),
-            ch_weights,
-            splice_weight: self.splice_weight,
-
-            music_types,
-            music_displays,
-            start_stroke: self.start_stroke,
-            max_duffer_rows: self.max_duffer_rows.map(TotalLength::new),
-        })
+        Ok((Arc::new(query_builder.build()), music_displays))
     }
 
     fn music(
         &self,
         source: &Source,
         stage: Stage,
-    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<monument::music::MusicDisplay>)> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
         // Load TOML for the music file
         let music_file_buffer;
         let music_file_str = match (&self.music_file, source) {
@@ -594,6 +588,21 @@ impl MethodSpec {
     }
 }
 
+/// Given a set of method titles and possible shorthands, compute shorthands for the methods which
+/// don't already have defaults.
+fn default_shorthands(methods: &[(bellframe::Method, MethodCommon)]) -> Vec<String> {
+    methods
+        .iter()
+        .map(|(method, common)| match &common.shorthand {
+            Some(shorthand) => shorthand.to_owned(),
+            // Use the first character of the method name as a shorthand
+            //
+            // TODO: Implement a smarter system that can resolve conflicts?
+            None => method.title().chars().next().unwrap().to_string(),
+        })
+        .collect_vec()
+}
+
 ////////////////////
 // ERROR MESSAGES //
 ////////////////////
@@ -726,7 +735,6 @@ mod length {
         ops::{Range, RangeInclusive},
     };
 
-    use monument::utils::TotalLength;
     use serde::{
         de::{Error, MapAccess, Visitor},
         Deserialize, Deserializer,
@@ -744,16 +752,6 @@ mod length {
     #[repr(transparent)]
     pub(super) struct Length {
         pub(super) range: RangeInclusive<usize>,
-    }
-
-    // Convert Length to a ranges
-    impl From<&Length> for RangeInclusive<TotalLength> {
-        #[inline(always)]
-        fn from(l: &Length) -> RangeInclusive<TotalLength> {
-            let start = TotalLength::new(*l.range.start());
-            let end = TotalLength::new(*l.range.end());
-            start..=end
-        }
     }
 
     /////////////

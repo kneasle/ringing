@@ -7,7 +7,7 @@ use super::TotalLength;
 /// A collection of counts of something, usually instances of music types or rows of a given
 /// method.  Addition/subtraction is performed element-wise.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Counts(Vec<usize>);
+pub(crate) struct Counts(Vec<usize>);
 
 impl Counts {
     /// Creates a set of `Counts` where every count is 0.
@@ -54,7 +54,7 @@ impl Counts {
 
     /// Determine the feasibility of getting every count within `target_range`, whilst distributing
     /// at most `max_count_left` counts.  This is used for pruning on method splices.
-    pub fn is_feasible(
+    pub(crate) fn is_feasible(
         &self,
         max_count_left: usize,
         target_ranges: &[RangeInclusive<TotalLength>],

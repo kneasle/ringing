@@ -1,25 +1,35 @@
 use std::collections::HashSet;
 
-use crate::{graph::Graph, Query};
+use crate::{
+    graph::{Graph, LinkSide},
+    query::Query,
+};
 
 /// Removes dangling references from the [`Graph`]
 pub(super) fn remove_dangling_refs(graph: &mut Graph, _query: &Query) {
-    // Cloned set of which `ChunkID`s are in the graph.  We need to clone these, because otherwise
-    // we'd have to borrow the chunk map whilst mutably iterating over it.
-    let chunk_ids = graph.ids().cloned().collect::<HashSet<_>>();
-
-    graph.remove_dangling_starts();
-    graph.remove_dangling_ends();
-    graph.remove_dangling_links();
-    let link_ids = graph.links.keys().collect::<HashSet<_>>();
-    // Strip chunk refs (i.e. predecessor, successor or falseness)
-    for (_id, chunk) in graph.chunks_mut() {
-        chunk
-            .successors_mut()
-            .retain(|link| link_ids.contains(link));
-        chunk
-            .predecessors_mut()
-            .retain(|link| link_ids.contains(link));
-        chunk.false_chunks_mut().retain(|id| chunk_ids.contains(id));
+    // Strip dangling starts and ends
+    for starts_or_ends in [&mut graph.starts, &mut graph.ends] {
+        starts_or_ends.retain(|(_link_id, chunk_id)| graph.chunks.contains_key(chunk_id));
+    }
+    // Strip links with dangling from/to refs
+    graph.links.retain(|_link_id, link| {
+        if let LinkSide::Chunk(from_id) = &link.from {
+            if !graph.chunks.contains_key(from_id) {
+                return false;
+            }
+        }
+        if let LinkSide::Chunk(to_id) = &link.to {
+            if !graph.chunks.contains_key(to_id) {
+                return false;
+            }
+        }
+        true // Both from/to are non-dangling
+    });
+    // Strip dangling chunk refs (i.e. predecessor, successor or falseness)
+    let chunk_ids = graph.chunks.keys().cloned().collect::<HashSet<_>>();
+    for chunk in graph.chunks.values_mut() {
+        chunk.successors.retain(|l| graph.links.contains(*l));
+        chunk.predecessors.retain(|l| graph.links.contains(*l));
+        chunk.false_chunks.retain(|id| chunk_ids.contains(id));
     }
 }
