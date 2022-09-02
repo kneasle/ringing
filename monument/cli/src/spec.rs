@@ -615,10 +615,10 @@ fn default_shorthands(methods: &[(bellframe::Method, MethodCommon)]) -> Vec<Stri
 ///   or "{suggestions[1]}" ({diff for suggestions[1]})
 ///   or ...
 /// ```
-fn method_suggestion_message(title: &str, mut suggestions: Vec<(&str, usize)>) -> String {
+fn method_suggestion_message(title: &str, mut suggestions: Vec<(String, usize)>) -> String {
     // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
     // deterministic (and, by extension, keeps the tests deterministic).
-    suggestions.sort_by_key(|&(name, edit_dist)| (edit_dist, name));
+    suggestions.sort_by_key(|(name, edit_dist)| (*edit_dist, name.clone()));
 
     let mut message = format!(
         "Can't find {:?} in the Central Council method library.",
@@ -643,7 +643,7 @@ fn method_suggestion_message(title: &str, mut suggestions: Vec<(&str, usize)>) -
             message,
             "{:?} ({})",
             suggested_title,
-            difference::Changeset::new(title, suggested_title, "")
+            difference::Changeset::new(title, &suggested_title, "")
         )
         .unwrap();
         is_first_suggestion = false;
