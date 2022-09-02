@@ -187,13 +187,13 @@ fn check_query(query: &Query) -> crate::Result<()> {
     //
     // For every CH mask ...
     for method in &query.methods {
-        for mask_in_first_part in &method.ch_masks {
+        for mask_in_first_part in &method.courses {
             // ... for every part ...
             for part_head in query.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some CH mask
                 let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
-                    .ch_masks
+                    .courses
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
@@ -409,7 +409,7 @@ impl<'query> MethodData<'query> {
         // Convert *course* head masks into *lead* head masks (course heads are convenient for the
         // user, but the whole graph is based on lead heads).
         let mut lead_head_masks = HashSet::new();
-        'mask_loop: for ch_mask in &method.ch_masks {
+        'mask_loop: for ch_mask in &method.courses {
             let mut ch_masks_with_fixed_bells = ch_mask.to_owned();
             // Add the fixed bells to this CH mask
             for (bell, pos) in fixed_bells {

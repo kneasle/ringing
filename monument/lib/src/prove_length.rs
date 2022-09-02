@@ -233,7 +233,7 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
         .map(|method| {
             let mut lead_head_masks = HashSet::new();
             for lead_head in method.lead_head().closure() {
-                for ch_mask in &method.ch_masks {
+                for ch_mask in &method.courses {
                     lead_head_masks.insert(ch_mask * &lead_head);
                 }
             }

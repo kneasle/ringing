@@ -867,7 +867,7 @@
     "error_message": "Can't have CRUs on less than 7 bells"
   },
   "test/cases/error-messages.md: no-methods": {
-    "error_message": "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`."
+    "error_message": "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
   },
   "test/cases/error-messages.md: part-head-parse::1": {
     "error_message": "Can't parse part head \"13\": bell '2' is missing"

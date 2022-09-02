@@ -17,6 +17,27 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// The different ways that a [`Search`](crate::search::Search) can fail.
 #[derive(Debug)]
 pub enum Error {
+    /* QUERY BUILD ERRORS */
+    /// The given `title` couldn't be found in the Central Council library.  Each `suggestions` is
+    /// paired with its 'edit distance' (i.e. a metric of how different it is from the requested
+    /// `title`)
+    MethodNotFound {
+        title: String,
+        suggestions: Vec<(String, usize)>,
+    },
+    /// Some method's place notation failed to parse
+    MethodPnParse {
+        name: String,
+        place_notation_string: String,
+        error: bellframe::place_not::PnBlockParseError,
+    },
+    /// Some course mask couldn't be parsed.
+    CustomCourseMaskParse {
+        method_title: String,
+        mask_str: String,
+        error: bellframe::mask::ParseError,
+    },
+
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
@@ -77,6 +98,28 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            /* QUERY BUILD ERRORS */
+            Error::MethodNotFound { title, suggestions } => write!(
+                f,
+                "No method called {:?} in the Central Council library.  Do you mean {:?}?",
+                title, suggestions[0]
+            ),
+            Error::MethodPnParse {
+                name,
+                place_notation_string: _,
+                error,
+            } => write!(f, "Error parsing place notation for {:?}: {}", name, error),
+            Error::CustomCourseMaskParse {
+                method_title,
+                mask_str,
+                error,
+            } => write!(
+                f,
+                "Error parsing course mask {} for method {:?}: {}",
+                mask_str, method_title, error
+            ),
+
+            /* QUERY VERIFICATION ERRORS */
             Error::DifferentStartEndRowInMultipart => {
                 write!(f, "Start/end rows must be the same for multipart comps")
             }

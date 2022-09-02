@@ -13,7 +13,7 @@ use crate::{
     utils::{PerPartLength, Score, TotalLength},
 };
 
-pub use builder::{Length, QueryBuilder};
+pub use builder::{Length, MethodBuilder, QueryBuilder};
 
 /// Specification for what [`Composition`](crate::Composition)s should be generated.  These should
 /// be created using a [`QueryBuilder`].
@@ -107,7 +107,7 @@ pub struct Method {
     /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
     /// length of the method.
     pub end_indices: Option<Vec<isize>>,
-    pub ch_masks: Vec<Mask>,
+    pub courses: Vec<Mask>,
 }
 
 impl Method {
@@ -221,6 +221,13 @@ pub struct OptionalRangeInclusive {
 }
 
 impl OptionalRangeInclusive {
+    /// An [`OptionalRangeInclusive`] which is unbounded at both ends.  Equivalent to
+    /// `OptionalRangeInclusive { min: None, max: None }`.
+    pub const OPEN: Self = Self {
+        min: None,
+        max: None,
+    };
+
     /// Returns `true` if at least one of `min` or `max` is set
     pub fn is_set(self) -> bool {
         self.min.is_some() || self.max.is_some()

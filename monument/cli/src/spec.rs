@@ -11,7 +11,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        Call, CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec,
+        Call, CallDisplayStyle, CallVec, MethodBuilder, MethodVec, MusicType, MusicTypeVec,
         OptionalRangeInclusive, Query, QueryBuilder, SpliceStyle,
     },
     search::Config,
@@ -66,6 +66,17 @@ pub struct Spec {
     /// Score which is applied for every change of method.  Defaults to `0.0`
     #[serde(default)]
     splice_weight: f32,
+    /// Set to `true` to allow comps to not start at the lead head.
+    #[serde(default)]
+    snap_start: bool,
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
+    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
+    start_indices: Option<Vec<isize>>,
+    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
+    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
+    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
+    end_indices: Option<Vec<isize>>,
 
     /* CALLS */
     /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
@@ -129,19 +140,6 @@ pub struct Spec {
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
-
-    /* STARTS/ENDS */
-    /// Set to `true` to allow comps to not start at the lead head.
-    #[serde(default)]
-    snap_start: bool,
-    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
-    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
-    start_indices: Option<Vec<isize>>,
-    /// Which indices within a lead should the composition be allowed to start.  If unspecified,
-    /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
-    /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
-    end_indices: Option<Vec<isize>>,
 }
 
 impl Spec {
@@ -175,6 +173,21 @@ impl Spec {
     /// 'Lower' this `Spec`ification into a [`Query`].
     pub fn lower(&self, source: &Source) -> anyhow::Result<(Arc<Query>, Vec<MusicDisplay>)> {
         log::debug!("Generating query");
+
+        // Build the methods first so that we can compute the overall `Stage` *before* parsing
+        // everything else.
+        let method_builders: MethodVec<_> = self
+            .methods
+            .iter()
+            .chain(self.method.as_ref())
+            .cloned()
+            .map(MethodSpec::into_builder)
+            .collect::<anyhow::Result<_>>()?;
+        let length = monument::query::Length::Range(self.length.range.clone());
+        let mut query_builder =
+            QueryBuilder::new(method_builders, length).map_err(improve_error_message)?;
+        let stage = query_builder.get_stage();
+
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
             .methods
@@ -184,16 +197,6 @@ impl Spec {
         if let Some(m) = &self.method {
             loaded_methods.push(m.gen_method(self.base_calls)?);
         }
-        // Combine the methods' stages to get the overall stage
-        let stage = loaded_methods
-            .iter()
-            .map(|(m, _)| m.stage())
-            .max()
-            .ok_or_else(|| {
-                anyhow::Error::msg(
-                    "No methods specified.  Try e.g. `method = \"Bristol Surprise Major\"`.",
-                )
-            })?;
         let calling_bell = match self.calling_bell {
             Some(v) => Bell::from_number(v).ok_or_else(|| {
                 anyhow::Error::msg("Invalid calling bell: bell number 0 doesn't exist.")
@@ -208,15 +211,15 @@ impl Spec {
         let calls = self.calls(stage)?;
 
         // Generate extra method data
-        let shorthands = default_shorthands(&loaded_methods);
         let global_method_count = OptionalRangeInclusive::from(self.method_count);
         // Combine method data
         let mut methods = MethodVec::new();
         #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
-        for ((method, common), shorthand) in loaded_methods.into_iter().zip_eq(shorthands) {
+        for (method, common) in loaded_methods.into_iter() {
             let override_ch_masks = common
                 .course_heads
-                .map(|chs| parse_ch_masks(&chs, stage))
+                .as_deref()
+                .map(|strings| parse_ch_masks(strings, stage))
                 .transpose()?;
             // Determine the start_indices
             let custom_start_indices = common
@@ -231,8 +234,8 @@ impl Spec {
 
             methods.push(monument::query::Method {
                 inner: method,
-                ch_masks: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
-                shorthand,
+                courses: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
+                shorthand: String::new(),
                 count_range: OptionalRangeInclusive::from(common.count_range)
                     .or(global_method_count),
                 start_indices,
@@ -247,35 +250,62 @@ impl Spec {
         let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
         let (music_types, music_displays) = self.music(source, stage)?;
         // TODO: Make this configurable
+        // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
             CallDisplayStyle::CallingPositions(calling_bell)
         } else {
             CallDisplayStyle::Positional
         };
 
-        // Build the `Query`
-        let length = monument::query::Length::Range(self.length.range.clone());
-        let query_builder = QueryBuilder::new(stage, length)
-            .num_comps(self.num_comps)
-            .allow_false(self.allow_false)
-            // Methods/calls
-            .add_methods(methods)
-            .splice_style(self.splice_style)
-            .splice_weight(self.splice_weight)
-            .add_calls(calls.into_iter().map(Call::from))
-            .call_display_style(call_display_style)
-            // Courses
-            .start_end_rows(
-                parse_row("start row", &self.start_row, stage)?,
-                parse_row("end row", &self.end_row, stage)?,
-            )
-            .part_head(&part_head)
-            .course_head_weights(ch_weights)
-            // Music
-            .music_types(music_types)
-            .start_stroke(self.start_stroke);
+        // General params
+        query_builder.num_comps = self.num_comps;
+        query_builder.require_truth = !self.allow_false;
+        // Methods
+        query_builder.default_method_count = self.method_count.into();
+        if let Some(indices) = &self.start_indices {
+            query_builder.default_start_indices = indices.clone();
+        }
+        query_builder.default_end_indices = self.end_indices.clone();
+        query_builder.splice_style = self.splice_style;
+        query_builder.splice_weight = self.splice_weight;
+        // Calls
+        query_builder.custom_calls = calls.into_iter().map(monument::query::Call::from).collect();
+        query_builder.call_display_style = call_display_style;
+        // Courses
+        query_builder.start_row = parse_row("start row", &self.start_row, stage)?;
+        query_builder.end_row = parse_row("end row", &self.end_row, stage)?;
+        query_builder.part_head = part_head;
+        query_builder.courses = match &self.course_heads {
+            // If the user specifies some courses, use them
+            Some(ch_strings) => Some(parse_ch_masks(ch_strings, stage)?),
+            // If the user specifies no courses but sets `split_tenors` then force every course
+            None if self.split_tenors => Some(vec![Mask::empty(stage)]),
+            // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
+            // 'tenors' which are unaffected by the part head).
+            None => None,
+        };
+        query_builder.course_weights = ch_weights;
+        // Music
+        query_builder.music_types = music_types;
+        query_builder.start_stroke = self.start_stroke;
 
-        Ok((Arc::new(query_builder.build()), music_displays))
+        let query = query_builder.build()?;
+
+        // Warn when using plain bob calls in Stedman or Grandsire
+        for method in query.methods() {
+            if self.base_calls != BaseCalls::None {
+                match method.name() {
+                    // TODO: More precisely, we should check for Grandsire-like methods
+                    "Grandsire" | "Stedman" => log::warn!(
+                        "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
+                        method.name()
+                    ),
+                    _ => {}
+                }
+            }
+        }
+
+        Ok((Arc::new(query), music_displays))
     }
 
     fn music(
@@ -307,7 +337,6 @@ impl Spec {
             }
             (None, _) => None,
         };
-
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
         crate::music::generate_music(&self.music, self.base_music, music_file_str, stage)
     }
@@ -337,8 +366,14 @@ impl Spec {
         part_head: &Row,
     ) -> anyhow::Result<Vec<Mask>> {
         Ok(if let Some(ch_mask_strings) = &self.course_heads {
-            // Always use custom masks if set
-            parse_ch_masks(ch_mask_strings, stage)?
+            let mut masks = Vec::with_capacity(ch_mask_strings.len());
+            for s in ch_mask_strings {
+                masks.push(
+                    Mask::parse_with_stage(s, stage)
+                        .map_err(|e| mask_parse_error("course head mask", s, e))?,
+                );
+            }
+            masks
         } else if self.split_tenors || !part_head.is_fixed(calling_bell) {
             // If either the part head doesn't preserve the calling bell (e.g. in cyclic spliced) or
             // `split_tenors = true`, then allow any course
@@ -412,12 +447,14 @@ fn parse_row(name: &str, s: &str, stage: Stage) -> Result<RowBuf, anyhow::Error>
 }
 
 fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
-    ch_mask_strings
-        .iter()
-        .map(|s| {
-            Mask::parse_with_stage(s, stage).map_err(|e| mask_parse_error("course head mask", s, e))
-        })
-        .collect()
+    let mut masks = Vec::with_capacity(ch_mask_strings.len());
+    for s in ch_mask_strings {
+        masks.push(
+            Mask::parse_with_stage(s, stage)
+                .map_err(|e| mask_parse_error("course head mask", s, e))?,
+        );
+    }
+    Ok(masks)
 }
 
 /// Generate the course head mask representing the tenors together.  This corresponds to
@@ -497,9 +534,53 @@ impl LeadLabels {
             Self::Many(indices) => indices,
         }
     }
+
+    fn into_indices(self) -> Vec<isize> {
+        match self {
+            Self::JustOne(idx) => vec![idx],
+            Self::Many(indices) => indices,
+        }
+    }
 }
 
 impl MethodSpec {
+    fn into_builder(self) -> anyhow::Result<MethodBuilder> {
+        let (mut method_builder, common) = match self {
+            MethodSpec::JustTitle(title) => (MethodBuilder::with_title(title), None),
+            MethodSpec::FromCcLib { title, common } => {
+                (MethodBuilder::with_title(title), Some(common))
+            }
+            MethodSpec::Custom {
+                name,
+                place_notation,
+                stage,
+                common,
+            } => (
+                MethodBuilder::with_custom_pn(name, place_notation, stage),
+                Some(common),
+            ),
+        };
+        if let Some(common) = common {
+            method_builder.custom_shorthand = common.shorthand;
+            method_builder.override_count_range = common.count_range.into();
+            method_builder.override_courses = common.course_heads;
+            method_builder.override_start_indices = common.start_indices;
+            method_builder.override_end_indices = common.end_indices;
+            if common.lead_locations.is_some() {
+                return Err(anyhow::Error::msg(
+                    "`methods.lead_locations` has been renamed to `labels`",
+                ));
+            }
+            if let Some(labels) = common.labels {
+                method_builder.lead_labels = labels
+                    .into_iter()
+                    .map(|(label, locs)| (label, locs.into_indices()))
+                    .collect();
+            }
+        }
+        Ok(method_builder)
+    }
+
     fn gen_method(
         &self,
         base_calls: BaseCalls,
@@ -515,7 +596,7 @@ impl MethodSpec {
                         method.name()
                     );
                     log::warn!("In general, Grandsire and Stedman aren't very well supported yet.");
-                    log::warn!("You're welcome to try, but be wary that weird things may happen.");
+                    log::warn!("You're welcome to try using them, but be wary that weird things may happen.");
                     // Pause so that the user can register the warnings
                     std::thread::sleep(Duration::from_secs_f32(2.0));
                 }
@@ -550,7 +631,7 @@ impl MethodSpec {
         if let Some(common) = self.common() {
             if common.lead_locations.is_some() {
                 return Err(anyhow::Error::msg(
-                    "`methods.lead_locations` has been renamed to `labels`",
+                    "`lead_locations` has been renamed to `labels`",
                 ));
             }
         }
@@ -588,24 +669,37 @@ impl MethodSpec {
     }
 }
 
-/// Given a set of method titles and possible shorthands, compute shorthands for the methods which
-/// don't already have defaults.
-fn default_shorthands(methods: &[(bellframe::Method, MethodCommon)]) -> Vec<String> {
-    methods
-        .iter()
-        .map(|(method, common)| match &common.shorthand {
-            Some(shorthand) => shorthand.to_owned(),
-            // Use the first character of the method name as a shorthand
-            //
-            // TODO: Implement a smarter system that can resolve conflicts?
-            None => method.title().chars().next().unwrap().to_string(),
-        })
-        .collect_vec()
-}
-
 ////////////////////
 // ERROR MESSAGES //
 ////////////////////
+
+/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
+/// error message with a more verbose coloured one.
+fn improve_error_message(error: monument::Error) -> anyhow::Error {
+    let message = match error {
+        monument::Error::MethodNotFound { title, suggestions } => {
+            method_suggestion_message(&title, suggestions)
+        }
+        monument::Error::MethodPnParse {
+            name,
+            place_notation_string,
+            error,
+        } => pn_parse_err_msg(&name, &place_notation_string, error),
+        /*
+        monument::Error::CustomCourseMaskParse {
+            method_title,
+            mask_str,
+            error,
+        } => mask_parse_error(mask_kind, string, e),
+        */
+        monument::Error::NoMethods => {
+            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
+                .to_owned()
+        }
+        e => e.to_string(),
+    };
+    anyhow::Error::msg(message)
+}
 
 /// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
 /// The message looks something like the following:
@@ -706,7 +800,7 @@ fn mask_parse_error(
     string: &str,
     e: bellframe::mask::ParseError,
 ) -> anyhow::Error {
-    anyhow::Error::msg(format!("Can't parse {} {:?}: {}", mask_kind, string, e))
+    anyhow::Error::msg(format!("Can't parse {mask_kind} {string:?}: {e}"))
 }
 
 /////////////
