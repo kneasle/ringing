@@ -3,7 +3,10 @@
 use std::{collections::HashMap, ops::RangeInclusive};
 
 use bellframe::{
-    method::LABEL_LEAD_END, method_lib::QueryError, Mask, MethodLib, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END,
+    method_lib::QueryError,
+    music::{Elem, Pattern},
+    Mask, MethodLib, RowBuf, Stage, Stroke,
 };
 use hmap::hmap;
 use ordered_float::OrderedFloat;
@@ -55,7 +58,7 @@ pub struct QueryBuilder {
 }
 
 impl QueryBuilder {
-    /* LENGTHS */
+    /* START */
 
     /// Create a new `QueryBuilder` with a custom length range
     // TODO: Store the error until `self.build`
@@ -114,6 +117,32 @@ impl QueryBuilder {
     pub fn get_stage(&self) -> Stage {
         self.stage
     }
+
+    /* SETTERS */
+
+    /// Adds [`course_weights`](Self::course_weights) representing every handbell pair coursing,
+    /// each with the given `weight`.
+    pub fn handbell_coursing_weight(mut self, weight: f32) -> Self {
+        if weight == 0.0 {
+            return self; // Ignore weights of zero
+        }
+        // For every handbell pair ...
+        for right_bell in self.stage.bells().step_by(2) {
+            let left_bell = right_bell + 1;
+            // ... add patterns for `*<left><right>` and `*<right><left>`
+            for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
+                let pattern =
+                    Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], self.stage)
+                        .expect("Handbell patterns should always be valid regexes");
+                let mask = Mask::from_pattern(&pattern)
+                    .expect("Handbell patterns should only have one `*`");
+                self.course_weights.push((mask, weight));
+            }
+        }
+        self
+    }
+
+    /* FINISH */
 
     /// Finish building and run the search with the default [`Config`], blocking until the required
     /// compositions have been generated.

@@ -317,6 +317,7 @@ fn count_scores(
         None => Stroke::Back,
     };
     let plain_course = &method_datas[id.method].plain_course;
+    let lead_heads = method_datas[id.method].method.lead_head().closure();
 
     for part_head in query.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
@@ -331,11 +332,18 @@ fn count_scores(
             query.music_types.as_raw_slice(),
             start_stroke,
         );
-        // Count weight from CH masks
+        // Count weight from `course_weights`.  `course_weights` apply to every row of every course
+        // which contains a lead head matching that mask, so we have to transpose the mask by every
+        // lead head to check every lead in the course.  For example, for Plain Bob lead-head
+        // methods, `xxxxxx78` will expand into masks
+        // `[xxxxxx78, xxxxx8x7, xxx8x7xx, x8x7xxxx, x78xxxxx, xx7x8xxx, xxxx7x8x]` (every one of
+        // those leads is included in the course for `xxxxxx78`)
         for (mask, weight) in &query.course_weights {
-            if mask.matches(&lead_head_in_part) {
-                // Weight applies to each row
-                chunk.music.score += *weight * chunk.per_part_length.as_usize() as f32;
+            for lead_head in &lead_heads {
+                if (mask * lead_head).matches(&lead_head_in_part) {
+                    // Weight applies to each row
+                    chunk.music.score += *weight * chunk.per_part_length.as_usize() as f32;
+                }
             }
         }
     }

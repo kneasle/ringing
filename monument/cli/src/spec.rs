@@ -1,18 +1,12 @@
-use std::{collections::HashMap, fmt::Write, ops::Deref, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, fmt::Write, path::PathBuf, sync::Arc};
 
-use bellframe::{
-    method::LABEL_LEAD_END,
-    method_lib::QueryError,
-    music::{Elem, Pattern},
-    place_not::PnBlockParseError,
-    Bell, Mask, MethodLib, Row, RowBuf, Stage, Stroke,
-};
+use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke};
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        Call, CallDisplayStyle, CallVec, MethodBuilder, MethodVec, MusicType, MusicTypeVec,
-        OptionalRangeInclusive, Query, QueryBuilder, SpliceStyle,
+        Call, CallDisplayStyle, CallVec, MethodBuilder, MethodVec, MusicType, MusicTypeVec, Query,
+        QueryBuilder, SpliceStyle,
     },
     search::Config,
 };
@@ -26,6 +20,9 @@ use crate::{
 };
 
 use self::length::Length;
+
+#[allow(unused_imports)] // Only used for doc comments
+use bellframe::Row;
 
 /// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
@@ -189,14 +186,6 @@ impl Spec {
         let stage = query_builder.get_stage();
 
         // Lower `MethodSpec`s into `bellframe::Method`s.
-        let mut loaded_methods: Vec<(bellframe::Method, MethodCommon)> = self
-            .methods
-            .iter()
-            .map(|m_spec| MethodSpec::gen_method(m_spec, self.base_calls))
-            .collect::<anyhow::Result<_>>()?;
-        if let Some(m) = &self.method {
-            loaded_methods.push(m.gen_method(self.base_calls)?);
-        }
         let calling_bell = match self.calling_bell {
             Some(v) => Bell::from_number(v).ok_or_else(|| {
                 anyhow::Error::msg("Invalid calling bell: bell number 0 doesn't exist.")
@@ -207,47 +196,8 @@ impl Spec {
         // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
         // `layout::new::Method`s
         let part_head = parse_row("part head", &self.part_head, stage)?;
-        let ch_masks = self.ch_masks(stage, calling_bell, &part_head)?;
         let calls = self.calls(stage)?;
 
-        // Generate extra method data
-        let global_method_count = OptionalRangeInclusive::from(self.method_count);
-        // Combine method data
-        let mut methods = MethodVec::new();
-        #[allow(clippy::or_fun_call)] // `{start,end}_indices.as_ref()` is really cheap
-        for (method, common) in loaded_methods.into_iter() {
-            let override_ch_masks = common
-                .course_heads
-                .as_deref()
-                .map(|strings| parse_ch_masks(strings, stage))
-                .transpose()?;
-            // Determine the start_indices
-            let custom_start_indices = common
-                .start_indices
-                .as_ref()
-                .or(self.start_indices.as_ref());
-            let start_indices = match custom_start_indices {
-                Some(custom) => custom.clone(),
-                None if self.snap_start => vec![2],
-                None => vec![0],
-            };
-
-            methods.push(monument::query::Method {
-                inner: method,
-                courses: override_ch_masks.unwrap_or_else(|| ch_masks.clone()),
-                shorthand: String::new(),
-                count_range: OptionalRangeInclusive::from(common.count_range)
-                    .or(global_method_count),
-                start_indices,
-                end_indices: common
-                    .end_indices
-                    .as_ref()
-                    .or(self.end_indices.as_ref())
-                    .cloned(),
-            });
-        }
-
-        let ch_weights = self.ch_weights(stage, methods.iter().map(Deref::deref))?;
         let (music_types, music_displays) = self.music(source, stage)?;
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
@@ -262,9 +212,12 @@ impl Spec {
         query_builder.require_truth = !self.allow_false;
         // Methods
         query_builder.default_method_count = self.method_count.into();
-        if let Some(indices) = &self.start_indices {
-            query_builder.default_start_indices = indices.clone();
-        }
+        query_builder.default_start_indices = match &self.start_indices {
+            Some(indices) => indices.clone(),
+            // TODO: Compute actual snaps for multi-treble-dodge methods
+            None if self.snap_start => vec![2],
+            None => vec![0],
+        };
         query_builder.default_end_indices = self.end_indices.clone();
         query_builder.splice_style = self.splice_style;
         query_builder.splice_weight = self.splice_weight;
@@ -284,7 +237,8 @@ impl Spec {
             // 'tenors' which are unaffected by the part head).
             None => None,
         };
-        query_builder.course_weights = ch_weights;
+        query_builder.course_weights = self.parse_ch_weights(stage)?;
+        query_builder = query_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
         query_builder.music_types = music_types;
         query_builder.start_stroke = self.start_stroke;
@@ -359,54 +313,8 @@ impl Spec {
         Ok(call_specs)
     }
 
-    fn ch_masks(
-        &self,
-        stage: Stage,
-        calling_bell: Bell,
-        part_head: &Row,
-    ) -> anyhow::Result<Vec<Mask>> {
-        Ok(if let Some(ch_mask_strings) = &self.course_heads {
-            let mut masks = Vec::with_capacity(ch_mask_strings.len());
-            for s in ch_mask_strings {
-                masks.push(
-                    Mask::parse_with_stage(s, stage)
-                        .map_err(|e| mask_parse_error("course head mask", s, e))?,
-                );
-            }
-            masks
-        } else if self.split_tenors || !part_head.is_fixed(calling_bell) {
-            // If either the part head doesn't preserve the calling bell (e.g. in cyclic spliced) or
-            // `split_tenors = true`, then allow any course
-            vec![Mask::empty(stage)]
-        } else {
-            // If `split_tenors = false` and no custom masks are set, then default to
-            // tenors-together
-            vec![tenors_together_mask(stage)]
-        })
-    }
-
-    fn ch_weights<'m>(
-        &self,
-        stage: Stage,
-        methods: impl IntoIterator<Item = &'m bellframe::Method>,
-    ) -> anyhow::Result<Vec<(Mask, f32)>> {
-        // Get the set of lead heads, so we can expand each CH lead mask to every matching CH mask
-        // (i.e. compute each lead head within that course).  For example, CH lead mask `*34` would
-        // expand into:
-        // `[xxxxxx34, xxxxx4x3, xxx4x3xx, x4x3xxxx, x34xxxxx, xx3x4xxx, xxxx3x4x, xxxxx3x4]`
-        let lead_heads = methods
-            .into_iter()
-            .flat_map(|m| m.lead_head().closure())
-            .unique()
-            .collect_vec();
+    fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
         let mut weights = Vec::new();
-        // Closure to a weight pattern for every CH which contains a lead which matches `mask`
-        let mut add_ch_pattern = |mask: &Mask, weight: f32| {
-            for lh in &lead_heads {
-                weights.push((mask * lh, weight));
-            }
-        };
-
         // Add explicit patterns from the `ch_weights` parameter
         for pattern in &self.ch_weights {
             // Extract a (slice of patterns, weight)
@@ -419,22 +327,7 @@ impl Spec {
             for mask_str in ch_masks {
                 let mask = Mask::parse_with_stage(mask_str, stage)
                     .map_err(|e| mask_parse_error("course head weight", mask_str, e))?;
-                add_ch_pattern(&mask, *weight);
-            }
-        }
-        // Add patterns from `handbell_coursing_weight`
-        if self.handbell_coursing_weight != 0.0 {
-            for right_bell in stage.bells().step_by(2) {
-                let left_bell = right_bell + 1;
-                // For every handbell pair, we need patterns for `*<left><right>` and `*<right><left>`
-                for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
-                    let pattern =
-                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage)
-                            .expect("Handbell patterns should always be valid regexes");
-                    let mask = Mask::from_pattern(&pattern)
-                        .expect("Handbell patterns should only have one `*`");
-                    add_ch_pattern(&mask, self.handbell_coursing_weight);
-                }
+                weights.push((mask, *weight));
             }
         }
         Ok(weights)
@@ -455,20 +348,6 @@ fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Ve
         );
     }
     Ok(masks)
-}
-
-/// Generate the course head mask representing the tenors together.  This corresponds to
-/// `xxxxxx7890ET...` (or just the tenor for [`Stage`]s below Triples).
-fn tenors_together_mask(stage: Stage) -> Mask {
-    let mut fixed_bells = vec![];
-    if stage <= Stage::MINOR {
-        // On Minor or below, only fix the tenor
-        fixed_bells.push(stage.tenor());
-    } else {
-        // On Triples and above, fix >=7 (i.e. skip the first 6 bells)
-        fixed_bells.extend(stage.bells().skip(6));
-    }
-    Mask::with_fixed_bells(stage, fixed_bells)
 }
 
 ///////////////
@@ -528,13 +407,6 @@ pub enum LeadLabels {
 }
 
 impl LeadLabels {
-    fn as_slice(&self) -> &[isize] {
-        match self {
-            Self::JustOne(idx) => std::slice::from_ref(idx),
-            Self::Many(indices) => indices,
-        }
-    }
-
     fn into_indices(self) -> Vec<isize> {
         match self {
             Self::JustOne(idx) => vec![idx],
@@ -579,93 +451,6 @@ impl MethodSpec {
             }
         }
         Ok(method_builder)
-    }
-
-    fn gen_method(
-        &self,
-        base_calls: BaseCalls,
-    ) -> anyhow::Result<(bellframe::Method, MethodCommon)> {
-        let mut method = self.get_method_without_labels()?;
-
-        if base_calls != BaseCalls::None {
-            match method.name() {
-                // TODO: More precisely, we should check for Grandsire-like methods
-                "Grandsire" | "Stedman" => {
-                    log::warn!(
-                        "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
-                        method.name()
-                    );
-                    log::warn!("In general, Grandsire and Stedman aren't very well supported yet.");
-                    log::warn!("You're welcome to try using them, but be wary that weird things may happen.");
-                    // Pause so that the user can register the warnings
-                    std::thread::sleep(Duration::from_secs_f32(2.0));
-                }
-                _ => {}
-            }
-        }
-
-        let lead_len = method.lead_len() as isize;
-        for (label, indices) in self.get_labels()? {
-            for idx in indices.as_slice() {
-                let wrapped_index = ((idx % lead_len) + lead_len) % lead_len;
-                // This cast is OK because we used % twice to guarantee a positive index
-                method.add_label(wrapped_index as usize, label.clone());
-            }
-        }
-
-        let common = self
-            .common()
-            .map_or_else(MethodCommon::default, MethodCommon::clone);
-        Ok((method, common))
-    }
-
-    fn common(&self) -> Option<&MethodCommon> {
-        match self {
-            Self::JustTitle(_) => None,
-            Self::FromCcLib { common, .. } => Some(common),
-            Self::Custom { common, .. } => Some(common),
-        }
-    }
-
-    fn get_labels(&self) -> anyhow::Result<HashMap<String, LeadLabels>> {
-        if let Some(common) = self.common() {
-            if common.lead_locations.is_some() {
-                return Err(anyhow::Error::msg(
-                    "`lead_locations` has been renamed to `labels`",
-                ));
-            }
-        }
-        Ok(self
-            .common()
-            .and_then(|c| c.labels.clone())
-            .unwrap_or_else(default_lead_labels))
-    }
-
-    /// Attempt to generate a new [`Method`] with no labels
-    fn get_method_without_labels(&self) -> anyhow::Result<bellframe::Method> {
-        match self {
-            MethodSpec::FromCcLib { title, .. } | MethodSpec::JustTitle(title) => {
-                let lib = MethodLib::cc_lib().ok_or_else(|| {
-                    anyhow::Error::msg("Central Council method library can't be loaded.")
-                })?;
-                lib.get_by_title_with_suggestions(title, 5)
-                    .map_err(|err| match err {
-                        QueryError::PnParseErr { .. } => {
-                            panic!("Method lib contains invalid place notation")
-                        }
-                        QueryError::NotFound(suggestions) => {
-                            anyhow::Error::msg(method_suggestion_message(title, suggestions))
-                        }
-                    })
-            }
-            MethodSpec::Custom {
-                name,
-                stage,
-                place_notation,
-                ..
-            } => bellframe::Method::from_place_not_string(name.clone(), *stage, place_notation)
-                .map_err(|e| anyhow::Error::msg(pn_parse_err_msg(name, place_notation, e))),
-        }
     }
 }
 
@@ -809,14 +594,6 @@ fn mask_parse_error(
 
 fn default_num_comps() -> usize {
     100
-}
-
-/// By default, add a label "LE" on the 0th row (i.e. when the place notation repeats, usually the
-/// lead end).
-fn default_lead_labels() -> HashMap<String, LeadLabels> {
-    let mut labels = HashMap::new();
-    labels.insert(LABEL_LEAD_END.to_owned(), LeadLabels::JustOne(0));
-    labels
 }
 
 ////////////

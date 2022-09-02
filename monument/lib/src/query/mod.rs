@@ -38,7 +38,7 @@ pub struct Query {
 
     // COURSES
     //
-    // (CH masks are defined on each `Method`)
+    // NOTE: Course masks are defined on each `Method`
     pub(crate) start_row: RowBuf,
     pub(crate) end_row: RowBuf,
     pub(crate) part_head_group: PartHeadGroup,
