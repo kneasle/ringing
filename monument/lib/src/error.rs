@@ -5,7 +5,7 @@ use std::{
     ops::RangeInclusive,
 };
 
-use bellframe::{Mask, RowBuf, Stage};
+use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
@@ -61,6 +61,14 @@ pub enum Error {
         call_name: String,
         calling_position_len: usize,
         stage: Stage,
+    },
+    /// Two [`Call`]s have the same lead location and name
+    DuplicateCall {
+        symbol_type: &'static str,
+        symbol: String,
+        label: String,
+        pn1: PlaceNot,
+        pn2: PlaceNot,
     },
 
     /* GRAPH BUILD ERRORS */
@@ -165,6 +173,17 @@ impl Display for Error {
                     mask_in_other_part
                 )
             }
+            Error::DuplicateCall {
+                symbol_type,
+                symbol,
+                label,
+                pn1,
+                pn2,
+            } => write!(
+                f,
+                "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
+                symbol_type, symbol, label, pn1, pn2
+            ),
 
             /* GRAPH BUILD ERRORS */
             Error::SizeLimit(limit) => write!(

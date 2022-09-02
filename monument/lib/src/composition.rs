@@ -154,7 +154,7 @@ impl Composition {
             if let Some(call_idx) = elem.call {
                 let last_non_leftover_row = first_part.rows().next_back().unwrap();
                 let new_leftover_row =
-                    last_non_leftover_row * query.calls[call_idx].place_not.transposition();
+                    last_non_leftover_row * query.calls[call_idx].place_notation.transposition();
                 first_part
                     .leftover_row_mut()
                     .copy_from(&new_leftover_row)

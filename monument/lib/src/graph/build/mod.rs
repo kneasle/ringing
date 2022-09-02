@@ -10,12 +10,12 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{Bell, Block, Mask, Row, RowBuf, Stroke};
+use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
     group::{PartHeadGroup, PhRotation},
-    query::{self, CallVec, MethodVec, Query, StrokeSet},
+    query::{self, Call, CallVec, MethodVec, Query, StrokeSet},
     search::Config,
     utils::{Boundary, Counts, MusicBreakdown},
 };
@@ -129,85 +129,6 @@ impl Graph {
             ends,
         })
     }
-}
-
-/// Check a [`Query`] for obvious errors before starting to build the [`Graph`]
-fn check_query(query: &Query) -> crate::Result<()> {
-    // Different start/end rows aren't well defined for multi-parts
-    if query.is_multipart() && query.start_row != query.end_row {
-        return Err(crate::Error::DifferentStartEndRowInMultipart);
-    }
-
-    // Two methods using the same shorthand
-    for (i1, m1) in query.methods.iter_enumerated() {
-        for m2 in &query.methods[..i1] {
-            if m1.shorthand == m2.shorthand {
-                return Err(crate::Error::DuplicateShorthand {
-                    shorthand: m1.shorthand.clone(),
-                    title1: m1.title().to_owned(),
-                    title2: m2.title().to_owned(),
-                });
-            }
-        }
-    }
-
-    // Too short calling positions
-    for call in &query.calls {
-        if call.calling_positions.len() != query.stage.num_bells() {
-            return Err(crate::Error::WrongCallingPositionsLength {
-                call_name: call.debug_symbol.clone(),
-                calling_position_len: call.calling_positions.len(),
-                stage: query.stage,
-            });
-        }
-    }
-
-    // Calls referring to non-existent labels
-    let mut defined_labels = HashSet::<&String>::new();
-    for m in &query.methods {
-        for annot in m.plain_course().annots() {
-            defined_labels.extend(annot.labels);
-        }
-    }
-    for call in &query.calls {
-        for lead_label in [&call.label_from, &call.label_to] {
-            if !defined_labels.contains(lead_label) {
-                return Err(crate::Error::UndefinedLabel {
-                    call_name: call.debug_symbol.clone(),
-                    label: lead_label.clone(),
-                });
-            }
-        }
-    }
-
-    // Course head masks which don't exist in other parts
-    //
-    // TODO: Remove this?
-    // TODO: Make this refer to lead head masks
-    //
-    // For every CH mask ...
-    for method in &query.methods {
-        for mask_in_first_part in &method.courses {
-            // ... for every part ...
-            for part_head in query.part_head_group.rows() {
-                // ... check that the CH mask in that part is covered by some CH mask
-                let mask_in_other_part = part_head * mask_in_first_part;
-                let is_covered = method
-                    .courses
-                    .iter()
-                    .any(|mask| mask_in_other_part.is_subset_of(mask));
-                if !is_covered {
-                    return Err(crate::Error::NoCourseHeadInPart {
-                        mask_in_first_part: mask_in_first_part.clone(),
-                        part_head: part_head.to_owned(),
-                        mask_in_other_part,
-                    });
-                }
-            }
-        }
-    }
-
-    Ok(())
 }
 
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
@@ -347,6 +268,131 @@ fn count_scores(
             }
         }
     }
+}
+
+////////////////////
+// QUERY CHECKING //
+////////////////////
+
+/// Check a [`Query`] for obvious errors before starting to build the [`Graph`]
+fn check_query(query: &Query) -> crate::Result<()> {
+    // Different start/end rows aren't well defined for multi-parts
+    if query.is_multipart() && query.start_row != query.end_row {
+        return Err(crate::Error::DifferentStartEndRowInMultipart);
+    }
+
+    // Two methods using the same shorthand
+    for (i1, m1) in query.methods.iter_enumerated() {
+        for m2 in &query.methods[..i1] {
+            if m1.shorthand == m2.shorthand {
+                return Err(crate::Error::DuplicateShorthand {
+                    shorthand: m1.shorthand.clone(),
+                    title1: m1.title().to_owned(),
+                    title2: m2.title().to_owned(),
+                });
+            }
+        }
+    }
+
+    // Too short calling positions
+    for call in &query.calls {
+        if call.calling_positions.len() != query.stage.num_bells() {
+            return Err(crate::Error::WrongCallingPositionsLength {
+                call_name: call.debug_symbol.clone(),
+                calling_position_len: call.calling_positions.len(),
+                stage: query.stage,
+            });
+        }
+    }
+
+    // Calls referring to non-existent labels
+    let mut defined_labels = HashSet::<&String>::new();
+    for m in &query.methods {
+        for annot in m.plain_course().annots() {
+            defined_labels.extend(annot.labels);
+        }
+    }
+    for call in &query.calls {
+        for lead_label in [&call.label_from, &call.label_to] {
+            if !defined_labels.contains(lead_label) {
+                return Err(crate::Error::UndefinedLabel {
+                    call_name: call.debug_symbol.clone(),
+                    label: lead_label.clone(),
+                });
+            }
+        }
+    }
+
+    // Two calls with the same name at the same lead location
+    check_for_duplicate_call_names(query, CallSymbolType::Display)?;
+    check_for_duplicate_call_names(query, CallSymbolType::Debug)?;
+
+    // Course head masks which don't exist in other parts
+    //
+    // TODO: Remove this?
+    // TODO: Make this refer to lead head masks
+    //
+    // For every CH mask ...
+    for method in &query.methods {
+        for mask_in_first_part in &method.courses {
+            // ... for every part ...
+            for part_head in query.part_head_group.rows() {
+                // ... check that the CH mask in that part is covered by some CH mask
+                let mask_in_other_part = part_head * mask_in_first_part;
+                let is_covered = method
+                    .courses
+                    .iter()
+                    .any(|mask| mask_in_other_part.is_subset_of(mask));
+                if !is_covered {
+                    return Err(crate::Error::NoCourseHeadInPart {
+                        mask_in_first_part: mask_in_first_part.clone(),
+                        part_head: part_head.to_owned(),
+                        mask_in_other_part,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Check for two [`Call`]s which assign the same `symbol` at the same `label`.
+fn check_for_duplicate_call_names(query: &Query, symbol_type: CallSymbolType) -> crate::Result<()> {
+    let sorted_calls = query
+        .calls
+        .iter()
+        .map(|call: &Call| -> (&str, &str, &PlaceNot) {
+            let symbol = match symbol_type {
+                CallSymbolType::Debug => &call.debug_symbol,
+                CallSymbolType::Display => &call.display_symbol,
+            };
+            (symbol, &call.label_from, &call.place_notation)
+        })
+        .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
+    for ((sym1, label1, pn1), (sym2, label2, pn2)) in sorted_calls.tuple_windows() {
+        if sym1 == sym2 && label1 == label2 {
+            return Err(crate::Error::DuplicateCall {
+                symbol_type: match symbol_type {
+                    CallSymbolType::Debug => "debug",
+                    CallSymbolType::Display => "display",
+                },
+                symbol: sym1.to_owned(),
+                label: label1.to_owned(),
+                pn1: pn1.clone(),
+                pn2: pn2.clone(),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// `enum` of the different types of symbol given to a [`super::Call`] (i.e. `display_symbol` or
+/// `debug_symbol`).
+#[derive(Debug, Clone, Copy)]
+enum CallSymbolType {
+    Debug,
+    Display,
 }
 
 ///////////////
@@ -549,7 +595,7 @@ fn filter_bells_fixed_by_call(
         let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
         // The row after a call in this location in the _first lead_
         let mut row_after_call = row_before_call.to_owned();
-        call.place_not.permute(&mut row_after_call).unwrap();
+        call.place_notation.permute(&mut row_after_call).unwrap();
 
         // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
         // `row_after_no_call`.  These should be removed from the set, because they are no longer

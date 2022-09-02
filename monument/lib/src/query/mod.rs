@@ -13,7 +13,7 @@ use crate::{
     utils::{PerPartLength, Score, TotalLength},
 };
 
-pub use builder::{Length, MethodBuilder, QueryBuilder};
+pub use builder::*;
 
 /// Specification for what [`Composition`](crate::Composition)s should be generated.  These should
 /// be created using a [`QueryBuilder`].
@@ -148,16 +148,16 @@ impl Default for SpliceStyle {
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
 pub struct Call {
-    pub display_symbol: String,
-    pub debug_symbol: String,
-    pub calling_positions: Vec<String>,
+    pub(crate) display_symbol: String,
+    pub(crate) debug_symbol: String,
+    pub(crate) calling_positions: Vec<String>,
 
-    pub label_from: String,
-    pub label_to: String,
+    pub(crate) label_from: String,
+    pub(crate) label_to: String,
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
-    pub place_not: PlaceNot,
+    pub(crate) place_notation: PlaceNot,
 
-    pub weight: f32,
+    pub(crate) weight: Score,
 }
 
 /// How the calls in a given composition should be displayed

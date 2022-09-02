@@ -5,15 +5,15 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        Call, CallDisplayStyle, CallVec, MethodBuilder, MethodVec, MusicType, MusicTypeVec, Query,
-        QueryBuilder, SpliceStyle,
+        CallDisplayStyle, MethodBuilder, MethodVec, MusicType, MusicTypeVec, Query, QueryBuilder,
+        SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
     search::Config,
 };
 use serde::Deserialize;
 
 use crate::{
-    calls::{check_for_duplicate_call_names, BaseCalls, SpecificCall},
+    calls::{BaseCalls, CustomCall},
     music::{BaseMusic, MusicDisplay, MusicSpec},
     utils::OptRangeInclusive,
     Source,
@@ -96,7 +96,7 @@ pub struct Spec {
     single_weight: Option<f32>,
     /// Which calls to use in the compositions
     #[serde(default)]
-    calls: Vec<SpecificCall>,
+    calls: Vec<CustomCall>,
 
     /* MUSIC */
     /// Adds preset music patterns to the scoring.  If you truly want no music (e.g. to search for
@@ -196,7 +196,6 @@ impl Spec {
         // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
         // `layout::new::Method`s
         let part_head = parse_row("part head", &self.part_head, stage)?;
-        let calls = self.calls(stage)?;
 
         let (music_types, music_displays) = self.music(source, stage)?;
         // TODO: Make this configurable
@@ -222,7 +221,13 @@ impl Spec {
         query_builder.splice_style = self.splice_style;
         query_builder.splice_weight = self.splice_weight;
         // Calls
-        query_builder.custom_calls = calls.into_iter().map(monument::query::Call::from).collect();
+        query_builder.base_calls = self.base_calls()?;
+        query_builder.custom_calls = self
+            .calls
+            .iter()
+            .cloned()
+            .map(|specific_call| specific_call.into_call_builder(stage))
+            .collect::<anyhow::Result<_>>()?;
         query_builder.call_display_style = call_display_style;
         // Courses
         query_builder.start_row = parse_row("start row", &self.start_row, stage)?;
@@ -262,6 +267,46 @@ impl Spec {
         Ok((Arc::new(query), music_displays))
     }
 
+    /// Convert [`crate::calls::BaseCalls`] into an [`Option`]`<`[`monument::query::BaseCalls`]`>`.
+    /// Also check that `bobs_only` and `singles_only` aren't set at the same time.
+    fn base_calls(&self) -> anyhow::Result<Option<monument::query::BaseCalls>> {
+        /* Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight */
+
+        /// Any value of `{bob,single}_weight` smaller than this will trigger a warning to set
+        /// `{single,bob}s_only = true`.
+        const BIG_NEGATIVE_WEIGHT: f32 = -100.0;
+
+        if let Some(w) = self.bob_weight {
+            if w <= BIG_NEGATIVE_WEIGHT {
+                log::warn!("It looks like you're trying to make a singles only composition; consider using `singles_only = true` explicitly.");
+            }
+        }
+        if let Some(w) = self.single_weight {
+            if w <= BIG_NEGATIVE_WEIGHT {
+                log::warn!("It looks like you're trying to make a bobs only composition; consider using `bobs_only = true` explicitly.");
+            }
+        }
+
+        /* Check that `{bobs,singles}_only` aren't set at the same time */
+        if self.bobs_only && self.singles_only {
+            return Err(anyhow::Error::msg(
+                "Composition can't be both `bobs_only` and `singles_only`",
+            ));
+        }
+
+        /* Convert the base_calls */
+        Ok(self
+            .base_calls
+            .as_monument_type()
+            .map(|ty| monument::query::BaseCalls {
+                ty,
+                bob_weight: (!self.singles_only)
+                    .then_some(self.bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
+                single_weight: (!self.bobs_only)
+                    .then_some(self.single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
+            }))
+    }
+
     fn music(
         &self,
         source: &Source,
@@ -293,24 +338,6 @@ impl Spec {
         };
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
         crate::music::generate_music(&self.music, self.base_music, music_file_str, stage)
-    }
-
-    fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<Call>> {
-        // Generate a full set of calls
-        let mut call_specs = self.base_calls.create_calls(
-            stage,
-            self.bobs_only,
-            self.singles_only,
-            self.bob_weight,
-            self.single_weight,
-        )?;
-        for specific_call in &self.calls {
-            call_specs.push(specific_call.create_call(stage)?);
-        }
-        // Check for duplicate debug or display symbols
-        check_for_duplicate_call_names(&call_specs, "display", |call| &call.display_symbol)?;
-        check_for_duplicate_call_names(&call_specs, "debug", |call| &call.debug_symbol)?;
-        Ok(call_specs)
     }
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
