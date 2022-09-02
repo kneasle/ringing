@@ -1,15 +1,13 @@
 # `handbell_coursing_weight` used as a shorthand (see `handbell.toml` for an identical version which
 # expresses this explicitly).
 
-length = { min = 0, max = 180 }
-num_comps = 500 # 453 comps are possible, so asking for 500 will force Monument to produce
-                # consistent output
+length = { min = 0, max = 250 }
 method = "Plain Bob Major"
 split_tenors = true
 base_music = "none"
 
 bob_weight = -4
-single_weight = -7
+bobs_only = true
 
 handbell_coursing_weight = 0.1
 
