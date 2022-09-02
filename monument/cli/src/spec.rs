@@ -431,7 +431,7 @@ fn tenors_together_mask(stage: Stage) -> Mask {
         // On Triples and above, fix >=7 (i.e. skip the first 6 bells)
         fixed_bells.extend(stage.bells().skip(6));
     }
-    Mask::fix_bells(stage, fixed_bells)
+    Mask::with_fixed_bells(stage, fixed_bells)
 }
 
 ///////////////
