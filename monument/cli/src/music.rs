@@ -77,9 +77,6 @@ pub struct MusicCommon {
     /// Possibly unbounded range of counts which are allowed in this music type
     #[serde(rename = "count", default)]
     count_range: OptRangeInclusive,
-    /// If `true`, then any chunks containing this music will be marked as 'non-duffer'
-    // TODO: Uncomment when implementing non-duffers
-    // non_duffer: Option<bool>,
     /// Which strokes this music can apply to
     #[serde(rename = "stroke", default)]
     strokes: StrokeSet,
