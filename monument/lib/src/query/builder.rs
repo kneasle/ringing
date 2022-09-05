@@ -20,7 +20,8 @@ use crate::{
 };
 
 use super::{
-    CallDisplayStyle, CallVec, MethodVec, MusicTypeVec, OptionalRangeInclusive, Query, SpliceStyle,
+    CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, OptionalRangeInclusive, Query,
+    SpliceStyle, StrokeSet,
 };
 
 #[allow(unused_imports)] // Only used for doc comments
@@ -48,7 +49,7 @@ pub struct QueryBuilder {
     pub call_display_style: CallDisplayStyle,
 
     /* MUSIC */
-    pub music_types: MusicTypeVec<super::MusicType>,
+    music_types: MusicTypeVec<super::MusicType>,
     pub start_stroke: Stroke,
 
     /* COURSES */
@@ -121,6 +122,13 @@ impl QueryBuilder {
     }
 
     /* SETTERS */
+
+    /// Add [`MusicTypeBuilder`]s from the given [`Iterator`].
+    pub fn music_types(mut self, music_types: impl IntoIterator<Item = MusicTypeBuilder>) -> Self {
+        self.music_types
+            .extend(music_types.into_iter().map(|ty| ty.music_type));
+        self
+    }
 
     /// Adds [`course_weights`](Self::course_weights) representing every handbell pair coursing,
     /// each with the given `weight`.
@@ -729,6 +737,51 @@ mod tests {
                 super::default_calling_positions(&PlaceNot::parse(pn_str, *stage).unwrap());
             assert_eq!(positions, *exp_positions);
         }
+    }
+}
+
+///////////
+// MUSIC //
+///////////
+
+pub struct MusicTypeBuilder {
+    music_type: super::MusicType,
+}
+
+impl MusicTypeBuilder {
+    pub fn new(patterns: impl IntoIterator<Item = Pattern>) -> Self {
+        Self {
+            music_type: MusicType {
+                patterns: patterns.into_iter().collect_vec(),
+                strokes: StrokeSet::Both,
+                weight: Score::from(1.0),
+                count_range: OptionalRangeInclusive::OPEN,
+            },
+        }
+    }
+
+    /// Set the weight of each instance of this music type.  If unset, defaults to `1.0`.
+    pub fn weight(mut self, weight: f32) -> Self {
+        self.music_type.weight = Score::from(weight);
+        self
+    }
+
+    /// Sets this music type to only be scored at [backstrokes](bellframe::Stroke::Back).
+    pub fn at_backstroke(mut self) -> Self {
+        self.music_type.strokes = StrokeSet::Back;
+        self
+    }
+
+    /// Sets this music type to only be scored at [handstrokes](bellframe::Stroke::Hand).
+    pub fn at_handstroke(mut self) -> Self {
+        self.music_type.strokes = StrokeSet::Hand;
+        self
+    }
+
+    /// Sets range constraints for this music type.  By default, no constraints are enforced.
+    pub fn count_range(mut self, range: OptionalRangeInclusive) -> Self {
+        self.music_type.count_range = range;
+        self
     }
 }
 

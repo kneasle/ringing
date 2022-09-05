@@ -5,8 +5,8 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        CallDisplayStyle, MethodBuilder, MethodVec, MusicType, MusicTypeVec, Query, QueryBuilder,
-        SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
+        CallDisplayStyle, MethodBuilder, MethodVec, MusicTypeBuilder, MusicTypeVec, Query,
+        QueryBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
     search::Config,
 };
@@ -245,8 +245,8 @@ impl Spec {
         query_builder.course_weights = self.parse_ch_weights(stage)?;
         query_builder = query_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
-        query_builder.music_types = music_types;
         query_builder.start_stroke = self.start_stroke;
+        query_builder = query_builder.music_types(music_types);
 
         let query = query_builder.build()?;
 
@@ -311,7 +311,7 @@ impl Spec {
         &self,
         source: &Source,
         stage: Stage,
-    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicTypeBuilder>, Vec<MusicDisplay>)> {
         // Load TOML for the music file
         let music_file_buffer;
         let music_file_str = match (&self.music_file, source) {

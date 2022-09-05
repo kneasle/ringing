@@ -9,7 +9,7 @@ use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{Call, Method, MusicType, Query};
+use crate::query::{Call, Method, MusicTypeBuilder, Query};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -74,8 +74,8 @@ pub enum Error {
     /* GRAPH BUILD ERRORS */
     /// The given maximum graph size limit was reached
     SizeLimit(usize),
-    /// The same chunk of ringing could start at two different strokes, and some [`MusicType`]
-    /// relies on the strokes always being the same
+    /// The same chunk of ringing could start at two different strokes, and some
+    /// [`MusicTypeBuilder`] relies on the strokes always being the same
     InconsistentStroke,
 
     /* LENGTH PROVING ERRORS */

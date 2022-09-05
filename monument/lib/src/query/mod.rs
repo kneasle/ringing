@@ -5,7 +5,6 @@ mod builder;
 use std::ops::{Range, RangeInclusive};
 
 use bellframe::{music::Pattern, Bell, Mask, PlaceNot, RowBuf, Stage, Stroke};
-use ordered_float::OrderedFloat;
 use serde::Deserialize;
 
 use crate::{
@@ -68,8 +67,12 @@ impl Query {
         &self.methods
     }
 
-    pub fn music_types(&self) -> &MusicTypeVec<MusicType> {
-        &self.music_types
+    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeIdx> + '_ {
+        self.music_types.iter_enumerated().map(|(id, _)| id)
+    }
+
+    pub fn max_music_count(&self, id: &MusicTypeIdx) -> usize {
+        self.music_types[*id].max_count().unwrap_or(usize::MAX)
     }
 
     pub fn is_spliced(&self) -> bool {
@@ -175,29 +178,14 @@ pub enum CallDisplayStyle {
 
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
-pub struct MusicType {
-    pub patterns: Vec<Pattern>,
-    pub strokes: StrokeSet,
-
-    pub weight: Score,
-    pub count_range: OptionalRangeInclusive,
+pub(crate) struct MusicType {
+    pub(crate) patterns: Vec<Pattern>,
+    pub(crate) strokes: StrokeSet,
+    pub(crate) weight: Score,
+    pub(crate) count_range: OptionalRangeInclusive,
 }
 
 impl MusicType {
-    pub fn new(
-        patterns: Vec<Pattern>,
-        stroke_set: StrokeSet,
-        weight: f32,
-        count_range: OptionalRangeInclusive,
-    ) -> Self {
-        Self {
-            patterns,
-            weight: OrderedFloat(weight),
-            count_range,
-            strokes: stroke_set,
-        }
-    }
-
     /// Return the total number of possible instances of this music type, or `None` if the
     /// computation caused `usize` to overflow.
     pub fn max_count(&self) -> Option<usize> {

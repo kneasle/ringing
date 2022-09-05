@@ -366,7 +366,7 @@ impl CompPrinter {
                 .then(|| query.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(query.music_types()))
+                .map(|d| d.col_width(&query))
                 .collect_vec(),
 
             query,
@@ -446,7 +446,7 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(query.music_types(), comp.music_counts()),
+                &music_display.display_counts(query, comp.music_counts()),
                 *col_width,
             );
             s.push(' ');

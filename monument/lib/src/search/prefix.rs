@@ -7,6 +7,7 @@ use std::{
 
 use bellframe::Row;
 use bit_vec::BitVec;
+use itertools::Itertools;
 
 use crate::{
     composition::{Composition, PathElem},
@@ -294,7 +295,13 @@ impl CompPrefix {
             part_head: self.part_head,
             length: self.length,
             method_counts: self.method_counts.clone(),
-            music_counts,
+            music_counts: data
+                .query
+                .music_types
+                .iter_enumerated()
+                .zip_eq(music_counts.iter())
+                .map(|((id, _), count)| (id, *count))
+                .collect(),
             total_score: score,
         };
         // Sanity check that the composition is true
