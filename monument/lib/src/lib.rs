@@ -57,4 +57,5 @@ mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
+pub use query::SearchBuilder;
 pub use search::{Config, Progress, Search, Update};

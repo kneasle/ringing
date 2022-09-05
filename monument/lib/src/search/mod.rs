@@ -1,5 +1,9 @@
 //! Monument's search routines, along with the code for interacting with in-flight [`Search`]es.
 
+mod best_first;
+mod graph;
+mod prefix;
+
 use std::{
     ops::RangeInclusive,
     sync::{
@@ -16,18 +20,16 @@ use crate::{
     Composition,
 };
 
-mod best_first;
-mod graph;
-mod prefix;
+#[allow(unused_imports)] // Only used for doc comments
+use crate::SearchBuilder;
 
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use
-/// [`QueryBuilder::run`](crate::query::QueryBuilder::run) or
-/// [`QueryBuilder::run_with_config`](crate::query::QueryBuilder::run_with_config).  Both of those
-/// will deal with handling the [`Search`] for you.
+/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
+/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
+/// you.
 #[derive(Debug)]
 pub struct Search {
     /* Data */
@@ -193,7 +195,7 @@ impl Progress {
 
 /// Configuration options for a [`Search`].
 ///
-/// Unlike the options set by [`QueryBuilder`](crate::query::QueryBuilder), `Config` options
+/// Unlike the options set by [`SearchBuilder`], `Config` options
 /// **don't** change which [`Composition`]s are generated.
 #[derive(Debug, Clone)]
 pub struct Config {

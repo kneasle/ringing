@@ -5,10 +5,10 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, QueryBuilder, SpliceStyle,
+        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, SpliceStyle,
         DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    Config, Search,
+    Config, Search, SearchBuilder,
 };
 use serde::Deserialize;
 
@@ -173,7 +173,7 @@ impl Spec {
             .collect::<anyhow::Result<Vec<_>>>()?;
         let length = monument::query::Length::Range(self.length.range.clone());
         let mut query_builder =
-            QueryBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
+            SearchBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
         let stage = query_builder.get_stage();
 
         // Lower `MethodSpec`s into `bellframe::Method`s.

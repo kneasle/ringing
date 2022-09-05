@@ -1,4 +1,4 @@
-//! Code for the [`QueryBuilder`] API for creating [`Search`]es.
+//! Code for the [`SearchBuilder`] API for creating [`Search`]es.
 
 use std::{collections::HashMap, ops::RangeInclusive};
 
@@ -28,7 +28,7 @@ use super::{
 use bellframe::Row;
 
 /// Builder API for creating [`Search`]es.
-pub struct QueryBuilder {
+pub struct SearchBuilder {
     /* GENERAL */
     length_range: RangeInclusive<TotalLength>,
     pub num_comps: usize,
@@ -60,12 +60,12 @@ pub struct QueryBuilder {
     pub course_weights: Vec<(Mask, f32)>,
 }
 
-impl QueryBuilder {
+impl SearchBuilder {
     /* START */
 
     /// Start building a [`Search`] with the given [`MethodBuilder`]s and [`Length`] range.  The
     /// [`MethodBuilder`]s will be assigned unique [`MethodId`]s, but you won't know which ones
-    /// apply to which unless you build a [`MethodSet`] and use [`QueryBuilder::with_method_set`].
+    /// apply to which unless you build a [`MethodSet`] and use [`SearchBuilder::with_method_set`].
     pub fn with_methods(
         methods: impl IntoIterator<Item = MethodBuilder>,
         length: Length,
@@ -76,7 +76,7 @@ impl QueryBuilder {
         Self::with_method_set(method_set, length)
     }
 
-    /// Create a new `QueryBuilder` with the given [`MethodBuilder`]s and [`Length`] range.
+    /// Create a new `SearchBuilder` with the given [`MethodBuilder`]s and [`Length`] range.
     pub fn with_method_set(method_set: MethodSet, length: Length) -> crate::Result<Self> {
         let method_builders = method_set.vec;
 
@@ -102,7 +102,7 @@ impl QueryBuilder {
         };
         let length_range = TotalLength::new(min_length)..=TotalLength::new(max_length);
 
-        Ok(QueryBuilder {
+        Ok(SearchBuilder {
             stage,
             length_range,
             num_comps: 100,
@@ -368,30 +368,30 @@ impl MethodBuilder {
         self
     }
 
-    /// Override the globally set [`method_count`](QueryBuilder::default_method_count) for just this
+    /// Override the globally set [`method_count`](SearchBuilder::default_method_count) for just this
     /// method.
     pub fn count_range(mut self, range: OptionalRangeInclusive) -> Self {
         self.override_count_range = range;
         self
     }
 
-    /// Override the globally set [`start_indices`](QueryBuilder::default_start_indices) for just
-    /// this method.  As with [`QueryBuilder::default_start_indices`], these indices are taken
+    /// Override the globally set [`start_indices`](SearchBuilder::default_start_indices) for just
+    /// this method.  As with [`SearchBuilder::default_start_indices`], these indices are taken
     /// modulo the method's lead length.
     pub fn start_indices(mut self, indices: Vec<isize>) -> Self {
         self.override_start_indices = Some(indices);
         self
     }
 
-    /// Override the globally set [`end_indices`](QueryBuilder::default_end_indices) for just this
-    /// method.  As with [`QueryBuilder::default_end_indices`], these indices are taken modulo the
+    /// Override the globally set [`end_indices`](SearchBuilder::default_end_indices) for just this
+    /// method.  As with [`SearchBuilder::default_end_indices`], these indices are taken modulo the
     /// method's lead length.
     pub fn end_indices(mut self, indices: Vec<isize>) -> Self {
         self.override_end_indices = Some(indices);
         self
     }
 
-    /// Override [`QueryBuilder::courses`] to specify which courses are allowed for this method.
+    /// Override [`SearchBuilder::courses`] to specify which courses are allowed for this method.
     pub fn courses(mut self, courses: Vec<String>) -> Self {
         self.override_courses = Some(courses);
         self
