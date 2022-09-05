@@ -1,4 +1,4 @@
-//! Code for the [`QueryBuilder`] API for creating [`Query`]s.
+//! Code for the [`QueryBuilder`] API for creating [`Search`]es.
 
 use std::{collections::HashMap, ops::RangeInclusive};
 
@@ -27,7 +27,7 @@ use super::{
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
 
-/// Builder API for creating [`Query`]s.
+/// Builder API for creating [`Search`]es.
 pub struct QueryBuilder {
     /* GENERAL */
     length_range: RangeInclusive<TotalLength>,
@@ -63,7 +63,7 @@ pub struct QueryBuilder {
 impl QueryBuilder {
     /* START */
 
-    /// Start building a [`Query`] with the given [`MethodBuilder`]s and [`Length`] range.  The
+    /// Start building a [`Search`] with the given [`MethodBuilder`]s and [`Length`] range.  The
     /// [`MethodBuilder`]s will be assigned unique [`MethodId`]s, but you won't know which ones
     /// apply to which unless you build a [`MethodSet`] and use [`QueryBuilder::with_method_set`].
     pub fn with_methods(
@@ -130,7 +130,7 @@ impl QueryBuilder {
         })
     }
 
-    /// Gets the [`Stage`] of the [`Query`] being built.  All extra components ([`Mask`]s,
+    /// Gets the [`Stage`] of the [`Search`] being built.  All extra components ([`Mask`]s,
     /// [`Row`]s, etc.) must all have this [`Stage`], or the builder will panic.
     pub fn get_stage(&self) -> Stage {
         self.stage
@@ -169,6 +169,11 @@ impl QueryBuilder {
 
     /* FINISH */
 
+    /// Finish building and start the [`Search`].
+    pub fn build(self, config: Config) -> crate::Result<Search> {
+        Search::new(self.into_query()?, config)
+    }
+
     /// Finish building and run the search with the default [`Config`], blocking until the required
     /// compositions have been generated.
     pub fn run(self) -> crate::Result<Vec<Composition>> {
@@ -184,12 +189,12 @@ impl QueryBuilder {
                 comps.push(comp);
             }
         };
-        Search::new(self.build()?, config)?.run(update_fn);
+        Search::new(self.into_query()?, config)?.run(update_fn);
         Ok(comps)
     }
 
-    /// Finish building and return the [`Query`].
-    pub fn build(self) -> crate::Result<Query> {
+    /// Finish building and construct the resulting [`Query`]
+    fn into_query(self) -> crate::Result<Query> {
         let Self {
             stage,
             length_range,
@@ -462,7 +467,7 @@ fn default_shorthand(title: &str) -> String {
         .to_string()
 }
 
-/// A set of methods used by a [`Query`].
+/// A set of methods used in a [`Search`].
 pub struct MethodSet {
     vec: MethodVec<MethodBuilder>,
 }
@@ -852,7 +857,7 @@ impl MusicTypeBuilder {
 // MISC TYPES //
 ////////////////
 
-/// The length range of a [`Query`].
+/// The length range of a [`Search`].
 pub enum Length {
     /// Practice night touch.  Equivalent to `Range(0..=300)`.
     Practice,

@@ -8,9 +8,11 @@ use std::{
     },
 };
 
+use bellframe::Stage;
+
 use crate::{
     prove_length::{prove_lengths, RefinedRanges},
-    query::{MethodId, Query},
+    query::{MethodId, MusicTypeIdx, Query},
     Composition,
 };
 
@@ -46,7 +48,7 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub fn new(query: Query, config: Config) -> crate::Result<Self> {
+    pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
         let mut source_graph = crate::graph::Graph::unoptimised(&query, &config)?;
         source_graph.optimise(&query);
@@ -82,18 +84,66 @@ impl Search {
     pub fn signal_abort(&self) {
         self.abort_flag.store(true, Ordering::Relaxed);
     }
+
+    /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
+    pub fn was_aborted(&self) -> bool {
+        self.abort_flag.load(Ordering::SeqCst)
+    }
 }
 
 impl Search {
+    pub fn length_range(&self) -> RangeInclusive<usize> {
+        self.query.length_range_usize()
+    }
+
+    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
+        &self.query.methods[id.index]
+    }
+
+    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
+        &self.query.methods[id.index].shorthand
+    }
+
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: &MethodId) -> RangeInclusive<usize> {
         let range = &self.refined_ranges.method_counts[id.index];
         range.start().as_usize()..=range.end().as_usize()
     }
 
-    /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
-    pub fn was_aborted(&self) -> bool {
-        self.abort_flag.load(Ordering::SeqCst)
+    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
+        self.query
+            .methods
+            .iter_enumerated()
+            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
+    }
+
+    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeIdx> + '_ {
+        self.query.music_types.iter_enumerated().map(|(id, _)| id)
+    }
+
+    pub fn max_music_count(&self, id: &MusicTypeIdx) -> usize {
+        self.query.music_types[*id]
+            .max_count()
+            .unwrap_or(usize::MAX)
+    }
+
+    pub fn is_spliced(&self) -> bool {
+        self.query.is_spliced()
+    }
+
+    pub fn num_parts(&self) -> usize {
+        self.query.num_parts()
+    }
+
+    /// Does this `Query` generate [`Composition`](crate::Composition)s with more than one part?
+    pub fn is_multipart(&self) -> bool {
+        self.query.is_multipart()
+    }
+
+    /// Gets the [`effective_stage`](bellframe::Row::effective_stage) of the part heads used in
+    /// this `Query`.  The short form of every possible part head will be exactly this length.
+    pub fn effective_part_head_stage(&self) -> Stage {
+        self.query.part_head_group.effective_stage()
     }
 }
 
@@ -143,8 +193,8 @@ impl Progress {
 
 /// Configuration options for a [`Search`].
 ///
-/// Unlike the options in a [`Query`], `Config` options **don't** change which [`Composition`]s are
-/// generated.
+/// Unlike the options set by [`QueryBuilder`](crate::query::QueryBuilder), `Config` options
+/// **don't** change which [`Composition`]s are generated.
 #[derive(Debug, Clone)]
 pub struct Config {
     /* General */

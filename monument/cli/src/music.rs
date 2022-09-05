@@ -5,8 +5,9 @@ use bellframe::{
     Bell, RowBuf, Stage,
 };
 use itertools::Itertools;
-use monument::query::{
-    MusicTypeBuilder, MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, Query, StrokeSet,
+use monument::{
+    query::{MusicTypeBuilder, MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, StrokeSet},
+    Search,
 };
 use serde::Deserialize;
 
@@ -584,24 +585,24 @@ impl MusicDisplay {
 
     /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
     /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
-    pub fn col_width(&self, query: &Query) -> usize {
-        let all_zeros = query
+    pub fn col_width(&self, search: &Search) -> usize {
+        let all_zeros = search
             .music_type_ids()
             .map(|id| (id, 0))
             .collect::<HashMap<_, _>>();
         // We always pad the counts as much as required, so displaying a set of 0s results in a
         // maximum-width string (i.e. all output strings are the same length)
-        let max_count_width = self.display_counts(query, &all_zeros).len();
+        let max_count_width = self.display_counts(search, &all_zeros).len();
         max_count_width.max(self.name.len())
     }
 
     /// Generate a compact string representing a given set of music counts
-    pub fn display_counts(&self, query: &Query, counts: &HashMap<MusicTypeIdx, usize>) -> String {
+    pub fn display_counts(&self, search: &Search, counts: &HashMap<MusicTypeIdx, usize>) -> String {
         let mut s = String::new();
 
         // Add total count
         if let Some(total_idx) = &self.source_total {
-            write_music_count(&mut s, query, counts, total_idx);
+            write_music_count(&mut s, search, counts, total_idx);
         }
 
         // Add specific counts (if there are any)
@@ -627,7 +628,7 @@ impl MusicDisplay {
                     }
                     is_first_count = false;
                     // Add the number
-                    write_music_count(&mut s, query, counts, music_type_idx);
+                    write_music_count(&mut s, search, counts, music_type_idx);
                     s.push(position_char);
                 }
             }
@@ -644,13 +645,13 @@ impl MusicDisplay {
 /// repeated).
 fn write_music_count(
     s: &mut String,
-    query: &Query,
+    search: &Search,
     counts: &HashMap<MusicTypeIdx, usize>,
     id: &MusicTypeIdx,
 ) {
     // `min(4)` because we don't expect more than 9999 instances of a music type, even
     // if more theoretically exist
-    let max_count_width = query.max_music_count(id).to_string().len().min(4);
+    let max_count_width = search.max_music_count(id).to_string().len().min(4);
     write!(s, "{:>width$}", counts[id], width = max_count_width).unwrap();
 }
 

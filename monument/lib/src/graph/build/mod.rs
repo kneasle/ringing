@@ -24,7 +24,7 @@ use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, Tot
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub fn unoptimised(query: &Query, config: &Config) -> crate::Result<Self> {
+    pub(crate) fn unoptimised(query: &Query, config: &Config) -> crate::Result<Self> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 

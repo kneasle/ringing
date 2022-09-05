@@ -8,10 +8,10 @@
 //!
 //! # Description
 //!
-//! Given a [`Query`](query::Query) describing constraints, Monument will run a
-//! [`Search`](search::Search) to find [`Composition`]s which satisfy the constraints of the query.
-//! The query also describes what features make a composition 'good' and Monument will attempt to
-//! maximise that.
+//! Monument is a **composing engine**.  This means it is designed to run
+//! [`Search`](search::Search)es to find [`Composition`]s which satisfy some set of constraints
+//! (length, methods/calls used, etc.).  One can also describe what features make a [`Composition`]
+//! 'good' and Monument will attempt to maximise them.
 //!
 //! Unlike other composition generators such as SMC, Monument does not attempt to exhaustively
 //! search the space of possible compositions.  Instead, it aims to generate very good compositions
@@ -44,7 +44,7 @@
 // TODO: Add example
 
 #![deny(clippy::all)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
 mod composition;
 mod error;

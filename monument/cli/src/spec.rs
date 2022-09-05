@@ -5,10 +5,10 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, Query, QueryBuilder,
-        SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
+        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, QueryBuilder, SpliceStyle,
+        DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    Config,
+    Config, Search,
 };
 use serde::Deserialize;
 
@@ -153,22 +153,13 @@ impl Spec {
         crate::utils::parse_toml(toml_string)
     }
 
-    pub fn config(&self, opts: &crate::args::Options) -> Config {
-        let mut config = Config {
-            thread_limit: opts.num_threads,
-            ..Default::default()
-        };
-        if let Some(limit) = opts.graph_size_limit.or(self.graph_size_limit) {
-            config.graph_size_limit = limit;
-        }
-        if let Some(limit) = opts.queue_limit.or(self.queue_limit) {
-            config.queue_limit = limit;
-        }
-        config
-    }
-
-    /// 'Lower' this `Spec`ification into a [`Query`].
-    pub fn lower(&self, source: &Source) -> anyhow::Result<(Arc<Query>, Vec<MusicDisplay>)> {
+    /// 'Lower' this `Spec`ification into a [`Search`].
+    pub fn lower(
+        &self,
+        source: &Source,
+        opts: &crate::args::Options,
+        leak_search_memory: bool,
+    ) -> anyhow::Result<(Arc<Search>, Vec<MusicDisplay>)> {
         log::debug!("Generating query");
 
         // Build the methods first so that we can compute the overall `Stage` *before* parsing
@@ -248,10 +239,11 @@ impl Spec {
         query_builder.start_stroke = self.start_stroke;
         query_builder = query_builder.music_types(music_types);
 
-        let query = query_builder.build()?;
+        // Build the search
+        let search = query_builder.build(self.config(opts, leak_search_memory))?;
 
         // Warn when using plain bob calls in Stedman or Grandsire
-        for (_id, method, _shorthand) in query.methods() {
+        for (_id, method, _shorthand) in search.methods() {
             if self.base_calls != BaseCalls::None {
                 match method.name() {
                     // TODO: More precisely, we should check for Grandsire-like methods
@@ -264,7 +256,22 @@ impl Spec {
             }
         }
 
-        Ok((Arc::new(query), music_displays))
+        Ok((Arc::new(search), music_displays))
+    }
+
+    fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
+        let mut config = Config {
+            thread_limit: opts.num_threads,
+            leak_search_memory,
+            ..Default::default()
+        };
+        if let Some(limit) = opts.graph_size_limit.or(self.graph_size_limit) {
+            config.graph_size_limit = limit;
+        }
+        if let Some(limit) = opts.queue_limit.or(self.queue_limit) {
+            config.queue_limit = limit;
+        }
+        config
     }
 
     /// Convert [`crate::calls::BaseCalls`] into an [`Option`]`<`[`monument::query::BaseCalls`]`>`.

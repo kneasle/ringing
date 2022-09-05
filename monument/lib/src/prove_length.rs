@@ -46,7 +46,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.length_range(),
+                requested_range: query.length_range_usize(),
                 next_shorter_len: next_smaller.map(TotalLength::as_usize),
                 next_longer_len: next_larger.map(TotalLength::as_usize),
             });

@@ -21,7 +21,7 @@ pub use builder::*;
 /// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the
 /// results are generated).
 #[derive(Debug, Clone)]
-pub struct Query {
+pub(crate) struct Query {
     // GENERAL
     pub(crate) length_range: RangeInclusive<TotalLength>,
     pub(crate) stage: Stage,
@@ -57,51 +57,22 @@ impl Query {
         *self.length_range.end()
     }
 
-    pub fn length_range(&self) -> RangeInclusive<usize> {
+    pub(crate) fn length_range_usize(&self) -> RangeInclusive<usize> {
         let start = self.length_range.start().as_usize();
         let end = self.length_range.end().as_usize();
         start..=end
     }
 
-    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
-        &self.methods[id.index]
-    }
-
-    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
-        &self.methods[id.index].shorthand
-    }
-
-    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
-        self.methods
-            .iter_enumerated()
-            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
-    }
-
-    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeIdx> + '_ {
-        self.music_types.iter_enumerated().map(|(id, _)| id)
-    }
-
-    pub fn max_music_count(&self, id: &MusicTypeIdx) -> usize {
-        self.music_types[*id].max_count().unwrap_or(usize::MAX)
-    }
-
-    pub fn is_spliced(&self) -> bool {
+    pub(crate) fn is_spliced(&self) -> bool {
         self.methods.len() > 1
     }
 
-    pub fn num_parts(&self) -> usize {
+    pub(crate) fn num_parts(&self) -> usize {
         self.part_head_group.size()
     }
 
-    /// Does this `Query` generate [`Composition`](crate::Composition)s with more than one part?
-    pub fn is_multipart(&self) -> bool {
+    pub(crate) fn is_multipart(&self) -> bool {
         self.num_parts() > 1
-    }
-
-    /// Gets the [`effective_stage`](bellframe::Row::effective_stage) of the part heads used in
-    /// this `Query`.  The short form of every possible part head will be exactly this length.
-    pub fn effective_part_head_stage(&self) -> Stage {
-        self.part_head_group.effective_stage()
     }
 }
 
@@ -126,7 +97,7 @@ impl Default for SpliceStyle {
     }
 }
 
-/// The unique identifier for a method within a [`Query`].
+/// The unique identifier for a method in a [`Search`](crate::Search).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MethodId {
     pub(crate) index: MethodIdx,

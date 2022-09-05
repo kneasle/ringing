@@ -24,7 +24,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{query::Query, Composition, Progress, Search, Update};
+use monument::{Composition, Progress, Search, Update};
 use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
@@ -60,19 +60,16 @@ pub fn run(
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
-    // Convert the `Spec` into a `Layout` and other data required for running a search
-    let (query, music_displays) = spec.lower(&source)?;
-    debug_print!(Query, query);
-
-    let mut config = spec.config(options);
     // If running in CLI mode, don't `drop` any of the search data structures, since Monument will
     // exit shortly after the search terminates.  With the `Arc`-based data structures, this is
     // seriously beneficial - it shaves many seconds off Monument's total running time.
-    config.leak_search_memory = env == Environment::Cli;
+    let leak_search_memory = env == Environment::Cli;
+    // Convert the `Spec` into a `Layout` and other data required for running a search
+    let (search, music_displays) = spec.lower(&source, options, leak_search_memory)?;
+    debug_print!(Query, search);
 
     // Build all the data structures for the search
-    let search = Arc::new(Search::new(Query::clone(&query), config)?);
-    let comp_printer = CompPrinter::new(query.clone(), music_displays, &search);
+    let comp_printer = CompPrinter::new(music_displays, search.clone());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -98,10 +95,11 @@ pub fn run(
     comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.average_score())));
     Ok(Some(QueryResult {
         comps,
-        query,
         comp_printer,
         duration: start_time.elapsed(),
         aborted: search.was_aborted(),
+
+        search,
     }))
 }
 
@@ -132,7 +130,7 @@ pub enum Source<'a> {
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     pub comps: Vec<Composition>,
-    pub query: Arc<Query>,
+    pub search: Arc<Search>,
     pub duration: Duration,
     pub aborted: bool,
 
@@ -318,7 +316,7 @@ impl SingleLineProgressLogger {
 
 #[derive(Debug, Clone)]
 struct CompPrinter {
-    query: Arc<Query>,
+    search: Arc<Search>,
     music_displays: Vec<MusicDisplay>,
 
     /// The maximum width of a composition's (total) length
@@ -338,10 +336,10 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(query: Arc<Query>, music_displays: Vec<MusicDisplay>, search: &Search) -> Self {
+    fn new(music_displays: Vec<MusicDisplay>, search: Arc<Search>) -> Self {
         Self {
-            length_width: query.length_range().end().to_string().len(),
-            method_counts: query
+            length_width: search.length_range().end().to_string().len(),
+            method_counts: search
                 .methods()
                 .map(|(id, _method, shorthand)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
@@ -350,14 +348,14 @@ impl CompPrinter {
                     (max_width, shorthand.to_owned())
                 })
                 .collect_vec(),
-            part_head_width: (query.num_parts() > 2)
-                .then(|| query.effective_part_head_stage().num_bells()),
+            part_head_width: (search.num_parts() > 2)
+                .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(&query))
+                .map(|d| d.col_width(&search))
                 .collect_vec(),
 
-            query,
+            search,
             music_displays,
         }
     }
@@ -432,7 +430,7 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.query, comp.music_counts()),
+                &music_display.display_counts(&self.search, comp.music_counts()),
                 *col_width,
             );
             s.push(' ');
