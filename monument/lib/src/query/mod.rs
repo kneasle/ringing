@@ -97,20 +97,19 @@ impl Query {
 
 #[derive(Debug, Clone)]
 pub struct Method {
-    pub inner: bellframe::Method,
-    pub shorthand: String,
+    pub(crate) inner: bellframe::Method,
+    pub(crate) shorthand: String,
 
     /// The number of rows of this method must fit within this range
-    pub count_range: OptionalRangeInclusive,
-    /// The indices in which we can start a composition during this `Method`.  `None` means any
-    /// index is allowed (provided the CH masks are satisfied).  These are interpreted modulo the
-    /// lead length of the method.
-    pub start_indices: Vec<isize>,
+    pub(crate) count_range: OptionalRangeInclusive,
+    /// The indices in which we can start a composition during this `Method`.  These are
+    /// interpreted modulo the lead length of the method.
+    pub(crate) start_indices: Vec<isize>,
     /// The indices in which we can end a composition during this `Method`.  `None` means any index
     /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
     /// length of the method.
-    pub end_indices: Option<Vec<isize>>,
-    pub courses: Vec<Mask>,
+    pub(crate) end_indices: Option<Vec<isize>>,
+    pub(crate) courses: Vec<Mask>,
 }
 
 impl Method {
