@@ -8,7 +8,7 @@ use monument::{
         CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, Query, QueryBuilder,
         SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    search::Config,
+    Config,
 };
 use serde::Deserialize;
 

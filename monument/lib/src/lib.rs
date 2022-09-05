@@ -52,8 +52,9 @@ mod graph;
 mod group;
 mod prove_length;
 pub mod query;
-pub mod search;
+mod search;
 mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
+pub use search::{Config, Progress, Search, Update};
