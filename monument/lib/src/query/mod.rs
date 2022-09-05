@@ -149,7 +149,7 @@ impl Default for SpliceStyle {
 
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
-pub struct Call {
+pub(crate) struct Call {
     pub(crate) display_symbol: String,
     pub(crate) debug_symbol: String,
     pub(crate) calling_positions: Vec<String>,
@@ -268,8 +268,8 @@ impl Default for StrokeSet {
 //////////////////////
 
 index_vec::define_index_type! { pub struct MethodIdx = usize; }
-index_vec::define_index_type! { pub struct CallIdx = usize; }
+index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
 index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
 pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
 pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

@@ -459,9 +459,8 @@ pub struct CallBuilder {
 }
 
 impl CallBuilder {
-    /// Starts building a [`Call`](crate::query::Call) which replaces the
-    /// [lead end](LABEL_LEAD_END) with a given [`PlaceNot`]ation and is displayed with the given
-    /// `symbol`.
+    /// Starts building a call which replaces the [lead end](LABEL_LEAD_END) with a given
+    /// [`PlaceNot`]ation and is displayed with the given `symbol`.
     pub fn new(symbol: impl Into<String>, place_notation: PlaceNot) -> Self {
         Self {
             symbol: symbol.into(),
@@ -506,8 +505,8 @@ impl CallBuilder {
         self
     }
 
-    /// Sets the label marking where this [`Call`](super::Call) can be placed.  If unset, all
-    /// calls are applied to the [lead end](LABEL_LEAD_END).
+    /// Sets the label marking where this call can be placed.  If unset, all calls are applied to
+    /// the [lead end](LABEL_LEAD_END).
     pub fn label(mut self, label: impl Into<String>) -> Self {
         let label = label.into();
         self.label_from = label.clone();
@@ -515,14 +514,14 @@ impl CallBuilder {
         self
     }
 
-    /// Makes this [`Call`](super::Call) go `to` a different label than it goes `from`.
+    /// Makes this call go `to` a different label than it goes `from`.
     pub fn label_from_to(mut self, from: impl Into<String>, to: impl Into<String>) -> Self {
         self.label_from = from.into();
         self.label_to = to.into();
         self
     }
 
-    /// Sets the weight which is added every time this [`Call`](super::Call) is used.
+    /// Sets the weight which is added every time this call is used.
     pub fn weight(mut self, weight: f32) -> Self {
         self.weight = weight;
         self

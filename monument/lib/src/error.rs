@@ -9,7 +9,7 @@ use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{Call, Method, MusicTypeBuilder, Query};
+use crate::query::{CallBuilder, Method, MusicTypeBuilder, Query};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -41,7 +41,7 @@ pub enum Error {
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
-    /// Some [`Call`] refers to a label that doesn't exist
+    /// Some [`CallBuilder`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
     /// [`Query`] didn't define any [`Method`]s
     NoMethods,
@@ -56,13 +56,13 @@ pub enum Error {
         part_head: RowBuf,
         mask_in_other_part: Mask,
     },
-    /// Some [`Call`] doesn't have enough calling positions to cover the [`Stage`]
+    /// Some [`CallBuilder`] doesn't have enough calling positions to cover the [`Stage`]
     WrongCallingPositionsLength {
         call_name: String,
         calling_position_len: usize,
         stage: Stage,
     },
-    /// Two [`Call`]s have the same lead location and name
+    /// Two [`CallBuilder`]s have the same lead location and name
     DuplicateCall {
         symbol_type: &'static str,
         symbol: String,
