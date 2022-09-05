@@ -6,8 +6,9 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    query::{MusicTypeBuilder, MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, StrokeSet},
-    Search,
+    builder::MusicTypeBuilder,
+    query::{MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, StrokeSet},
+    InProgressSearch,
 };
 use serde::Deserialize;
 
@@ -585,7 +586,7 @@ impl MusicDisplay {
 
     /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
     /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
-    pub fn col_width(&self, search: &Search) -> usize {
+    pub fn col_width(&self, search: &InProgressSearch) -> usize {
         let all_zeros = search
             .music_type_ids()
             .map(|id| (id, 0))
@@ -597,7 +598,11 @@ impl MusicDisplay {
     }
 
     /// Generate a compact string representing a given set of music counts
-    pub fn display_counts(&self, search: &Search, counts: &HashMap<MusicTypeIdx, usize>) -> String {
+    pub fn display_counts(
+        &self,
+        search: &InProgressSearch,
+        counts: &HashMap<MusicTypeIdx, usize>,
+    ) -> String {
         let mut s = String::new();
 
         // Add total count
@@ -645,7 +650,7 @@ impl MusicDisplay {
 /// repeated).
 fn write_music_count(
     s: &mut String,
-    search: &Search,
+    search: &InProgressSearch,
     counts: &HashMap<MusicTypeIdx, usize>,
     id: &MusicTypeIdx,
 ) {

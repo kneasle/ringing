@@ -14,14 +14,13 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     group::PartHeadGroup,
+    query::{
+        self, CallDisplayStyle, CallVec, MethodId, MethodVec, MusicTypeVec, OptionalRangeInclusive,
+        Query, SpliceStyle, StrokeSet,
+    },
     search::{Config, InProgressSearch, Update},
     utils::{Score, TotalLength},
     Composition,
-};
-
-use super::{
-    CallDisplayStyle, CallVec, MethodId, MethodVec, MusicType, MusicTypeVec,
-    OptionalRangeInclusive, Query, SpliceStyle, StrokeSet,
 };
 
 #[allow(unused_imports)] // Only used for doc comments
@@ -49,7 +48,7 @@ pub struct Search {
     pub call_display_style: CallDisplayStyle,
 
     /* MUSIC */
-    music_types: MusicTypeVec<super::MusicType>,
+    music_types: MusicTypeVec<query::MusicType>,
     pub start_stroke: Stroke,
 
     /* COURSES */
@@ -264,7 +263,7 @@ impl Search {
                 None => courses.clone(),
             };
             // Add the method, falling back on any defaults if necessary
-            built_methods.push(super::Method {
+            built_methods.push(query::Method {
                 shorthand: method_builder
                     .custom_shorthand
                     .unwrap_or_else(|| default_shorthand(bellframe_method.title())),
@@ -597,8 +596,8 @@ impl CallBuilder {
     }
 
     /// Builds a [`CallBuilder`] into a [`crate::query::Call`].
-    fn build(self) -> super::Call {
-        super::Call {
+    fn build(self) -> query::Call {
+        query::Call {
             debug_symbol: self.debug_symbol.unwrap_or_else(|| self.symbol.clone()),
             display_symbol: self.symbol,
             calling_positions: self
@@ -637,7 +636,7 @@ pub enum BaseCallType {
 }
 
 impl BaseCalls {
-    fn into_calls(self, stage: Stage) -> Vec<super::Call> {
+    fn into_calls(self, stage: Stage) -> Vec<query::Call> {
         let n = stage.num_bells_u8();
 
         let mut calls = Vec::new();
@@ -675,14 +674,14 @@ impl Default for BaseCalls {
     }
 }
 
-/// Create a [`super::Call`] which replaces the lead end with a given [`PlaceNot`]
+/// Create a [`query::Call`] which replaces the lead end with a given [`PlaceNot`]
 fn lead_end_call(
     place_not: PlaceNot,
     display_symbol: &str,
     debug_symbol: &str,
     weight: f32,
-) -> super::Call {
-    super::Call {
+) -> query::Call {
+    query::Call {
         display_symbol: display_symbol.to_owned(),
         debug_symbol: debug_symbol.to_owned(),
         calling_positions: default_calling_positions(&place_not),
@@ -813,13 +812,13 @@ mod tests {
 ///////////
 
 pub struct MusicTypeBuilder {
-    music_type: super::MusicType,
+    music_type: query::MusicType,
 }
 
 impl MusicTypeBuilder {
     pub fn new(patterns: impl IntoIterator<Item = Pattern>) -> Self {
         Self {
-            music_type: MusicType {
+            music_type: query::MusicType {
                 patterns: patterns.into_iter().collect_vec(),
                 strokes: StrokeSet::Both,
                 weight: Score::from(1.0),

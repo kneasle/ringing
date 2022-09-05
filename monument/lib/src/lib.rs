@@ -49,6 +49,7 @@
 #![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
+pub mod builder;
 mod composition;
 mod error;
 mod graph;
@@ -58,7 +59,7 @@ pub mod query;
 mod search;
 mod utils;
 
+pub use builder::Search;
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use query::Search;
 pub use search::{Config, InProgressSearch, Progress, Update};

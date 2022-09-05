@@ -1,7 +1,5 @@
 //! Instructions for Monument about what compositions should be generated.
 
-mod builder;
-
 use std::ops::{Range, RangeInclusive};
 
 use bellframe::{music::Pattern, Bell, Mask, PlaceNot, RowBuf, Stage, Stroke};
@@ -12,10 +10,7 @@ use crate::{
     utils::{PerPartLength, Score, TotalLength},
 };
 
-pub use builder::*;
-
-/// Specification for what [`Composition`](crate::Composition)s should be generated.  These should
-/// be created using a [`QueryBuilder`].
+/// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
 ///
 /// Compare this to [`search::Config`](crate::search::Config), which determines _how_ those
 /// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the

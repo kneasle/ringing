@@ -4,10 +4,8 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    query::{
-        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, SpliceStyle,
-        DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
-    },
+    builder::{MethodBuilder, MusicTypeBuilder, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
+    query::{CallDisplayStyle, MusicTypeVec, SpliceStyle},
     Config, InProgressSearch, Search,
 };
 use serde::Deserialize;
@@ -171,7 +169,7 @@ impl Spec {
             .cloned()
             .map(MethodSpec::into_builder)
             .collect::<anyhow::Result<Vec<_>>>()?;
-        let length = monument::query::Length::Range(self.length.range.clone());
+        let length = monument::builder::Length::Range(self.length.range.clone());
         let mut query_builder =
             Search::with_methods(method_builders, length).map_err(improve_error_message)?;
         let stage = query_builder.get_stage();
@@ -276,7 +274,7 @@ impl Spec {
 
     /// Convert [`crate::calls::BaseCalls`] into an [`Option`]`<`[`monument::query::BaseCalls`]`>`.
     /// Also check that `bobs_only` and `singles_only` aren't set at the same time.
-    fn base_calls(&self) -> anyhow::Result<Option<monument::query::BaseCalls>> {
+    fn base_calls(&self) -> anyhow::Result<Option<monument::builder::BaseCalls>> {
         /* Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight */
 
         /// Any value of `{bob,single}_weight` smaller than this will trigger a warning to set
@@ -305,7 +303,7 @@ impl Spec {
         Ok(self
             .base_calls
             .as_monument_type()
-            .map(|ty| monument::query::BaseCalls {
+            .map(|ty| monument::builder::BaseCalls {
                 ty,
                 bob_weight: (!self.singles_only)
                     .then_some(self.bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),

@@ -7,9 +7,9 @@ use std::{
 
 use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
-use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{CallBuilder, MethodBuilder, MusicTypeBuilder, Search};
+use crate::builder::{CallBuilder, MethodBuilder, MusicTypeBuilder, Search};
+use crate::query::OptionalRangeInclusive;
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;

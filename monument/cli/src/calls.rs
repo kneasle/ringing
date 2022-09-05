@@ -1,6 +1,6 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
-use monument::query::{BaseCallType, CallBuilder, DEFAULT_MISC_CALL_WEIGHT};
+use monument::builder::{BaseCallType, CallBuilder, DEFAULT_MISC_CALL_WEIGHT};
 use serde::Deserialize;
 
 /// The values of the `base_calls` attribute
