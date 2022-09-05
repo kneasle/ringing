@@ -21,14 +21,26 @@
 //! can't be exhausted in the time left in the universe, so waiting a few minutes for very good
 //! (but maybe not optimal) compositions seems like a very good deal.
 //!
-//! In fact, composing in general is so hard (NP-hard, in fact) that it's impossible to have an
-//! engine that is both consistently fast and guarantees optimality.  Thus, any promise of speed is
-//! a best-effort not a guarantee, and there will always be searches which are too complex for
-//! Monument to handle.  Such must be true of any engine.
+//! Composing in general is so hard ([NP-hard](https://en.wikipedia.org/wiki/NP-hardness), in fact)
+//! that it's impossible to have an engine that is both consistently fast and guarantees
+//! optimality.  Thus, any promise of speed is a best-effort not a guarantee, and there will always
+//! be searches which are too complex for Monument to handle.  Such must be true of any engine.
 //!
-//! **NOTE:** Monument's API is still very much work-in-progress.  Parts like the
-//! [`QueryBuilder`](query::QueryBuilder) API need work, but to make progress I need more of an
-//! idea of how those APIs will be used.
+//! # Status
+//!
+//! This library is roughly in **alpha** stage of readiness.  Most pieces are working, but there
+//! are a few major points that need addressing before Monument can be embedded in other projects
+//! without major pain:
+//!
+//! 1. The API is very much work-in-progress.  The critical issue here is that the CLI is the only
+//!    consumer of Monument's API, so I need to try embedding it so I can get a proper feel for
+//!    what the library feels like to use.  The API will likely become increasingly stable until
+//!    v1.0.0 is reached, at which point backward compatibility will be guaranteed.
+//! 2. Currently, Monument's search routine uses potentially unbounded amounts of memory.  It is
+//!    possible to control the usage using the [`Config::queue_limit`](search::Config::queue_limit)
+//!    parameter, but this is at best a proxy for memory usage.  Soon™, `queue_limit` will be
+//!    replaced with a proper memory limit: the search routine will set `queue_limit` internally to
+//!    make sure the memory usage is bounded.
 // TODO: Add example
 
 #![deny(clippy::all)]
