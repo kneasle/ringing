@@ -1,4 +1,4 @@
-//! Code for the [`SearchBuilder`] API for creating [`Search`]es.
+//! Code for the API for creating [`Search`]es.
 
 use std::{collections::HashMap, ops::RangeInclusive};
 
@@ -14,7 +14,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     group::PartHeadGroup,
-    search::{Config, Search, Update},
+    search::{Config, InProgressSearch, Update},
     utils::{Score, TotalLength},
     Composition,
 };
@@ -27,8 +27,8 @@ use super::{
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
 
-/// Builder API for creating [`Search`]es.
-pub struct SearchBuilder {
+/// Builder API for constructing searches.
+pub struct Search {
     /* GENERAL */
     length_range: RangeInclusive<TotalLength>,
     pub num_comps: usize,
@@ -60,12 +60,12 @@ pub struct SearchBuilder {
     pub course_weights: Vec<(Mask, f32)>,
 }
 
-impl SearchBuilder {
+impl Search {
     /* START */
 
     /// Start building a [`Search`] with the given [`MethodBuilder`]s and [`Length`] range.  The
     /// [`MethodBuilder`]s will be assigned unique [`MethodId`]s, but you won't know which ones
-    /// apply to which unless you build a [`MethodSet`] and use [`SearchBuilder::with_method_set`].
+    /// apply to which unless you build a [`MethodSet`] and use [`Search::with_method_set`].
     pub fn with_methods(
         methods: impl IntoIterator<Item = MethodBuilder>,
         length: Length,
@@ -102,7 +102,7 @@ impl SearchBuilder {
         };
         let length_range = TotalLength::new(min_length)..=TotalLength::new(max_length);
 
-        Ok(SearchBuilder {
+        Ok(Search {
             stage,
             length_range,
             num_comps: 100,
@@ -170,8 +170,8 @@ impl SearchBuilder {
     /* FINISH */
 
     /// Finish building and start the [`Search`].
-    pub fn build(self, config: Config) -> crate::Result<Search> {
-        Search::new(self.into_query()?, config)
+    pub fn build(self, config: Config) -> crate::Result<InProgressSearch> {
+        InProgressSearch::new(self.into_query()?, config)
     }
 
     /// Finish building and run the search with the default [`Config`], blocking until the required
@@ -189,7 +189,7 @@ impl SearchBuilder {
                 comps.push(comp);
             }
         };
-        Search::new(self.into_query()?, config)?.run(update_fn);
+        InProgressSearch::new(self.into_query()?, config)?.run(update_fn);
         Ok(comps)
     }
 
@@ -368,30 +368,30 @@ impl MethodBuilder {
         self
     }
 
-    /// Override the globally set [`method_count`](SearchBuilder::default_method_count) for just this
+    /// Override the globally set [`method_count`](Search::default_method_count) for just this
     /// method.
     pub fn count_range(mut self, range: OptionalRangeInclusive) -> Self {
         self.override_count_range = range;
         self
     }
 
-    /// Override the globally set [`start_indices`](SearchBuilder::default_start_indices) for just
-    /// this method.  As with [`SearchBuilder::default_start_indices`], these indices are taken
-    /// modulo the method's lead length.
+    /// Override the globally set [`start_indices`](Search::default_start_indices) for just
+    /// this method.  As with [`Search::default_start_indices`], these indices are taken modulo the
+    /// method's lead length.
     pub fn start_indices(mut self, indices: Vec<isize>) -> Self {
         self.override_start_indices = Some(indices);
         self
     }
 
-    /// Override the globally set [`end_indices`](SearchBuilder::default_end_indices) for just this
-    /// method.  As with [`SearchBuilder::default_end_indices`], these indices are taken modulo the
+    /// Override the globally set [`end_indices`](Search::default_end_indices) for just this
+    /// method.  As with [`Search::default_end_indices`], these indices are taken modulo the
     /// method's lead length.
     pub fn end_indices(mut self, indices: Vec<isize>) -> Self {
         self.override_end_indices = Some(indices);
         self
     }
 
-    /// Override [`SearchBuilder::courses`] to specify which courses are allowed for this method.
+    /// Override [`Search::courses`] to specify which courses are allowed for this method.
     pub fn courses(mut self, courses: Vec<String>) -> Self {
         self.override_courses = Some(courses);
         self

@@ -9,12 +9,12 @@ use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{CallBuilder, MethodBuilder, MusicTypeBuilder, SearchBuilder};
+use crate::query::{CallBuilder, MethodBuilder, MusicTypeBuilder, Search};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// The different ways that a [`Search`](crate::search::Search) can fail.
+/// The different ways that a [`Search`] can fail.
 #[derive(Debug)]
 pub enum Error {
     /* QUERY BUILD ERRORS */
@@ -43,7 +43,7 @@ pub enum Error {
     DifferentStartEndRowInMultipart,
     /// Some [`CallBuilder`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// [`SearchBuilder`] didn't define any [`MethodBuilder`]s
+    /// The [`Search`] didn't define any [`MethodBuilder`]s
     NoMethods,
     /// Two [`MethodBuilder`]s use the same shorthand
     DuplicateShorthand {

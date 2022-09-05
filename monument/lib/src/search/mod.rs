@@ -1,4 +1,4 @@
-//! Monument's search routines, along with the code for interacting with in-flight [`Search`]es.
+//! Monument's search routines, along with the code for interacting with [`InProgressSearch`]es.
 
 mod best_first;
 mod graph;
@@ -21,17 +21,17 @@ use crate::{
 };
 
 #[allow(unused_imports)] // Only used for doc comments
-use crate::SearchBuilder;
+use crate::Search;
 
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
-/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
-/// you.
+/// want to run a (hopefully quick) search, use [`Search::run`] or [`Search::run_with_config`].
+/// Both of those will deal with handling the [`Search`] for you.
+// TODO: Better name?
 #[derive(Debug)]
-pub struct Search {
+pub struct InProgressSearch {
     /* Data */
     query: Arc<Query>,
     config: Config,
@@ -43,7 +43,7 @@ pub struct Search {
     abort_flag: AtomicBool,
 }
 
-impl Search {
+impl InProgressSearch {
     /// Create a new `Search` which generates [`Composition`]s according to the given [`Query`].
     /// This also verifies that the [`Query`] makes sense; if not, an [`Error`](crate::Error)
     /// describing the problem is returned.
@@ -60,7 +60,7 @@ impl Search {
         // Create a fast-to-traverse copy of the graph
         let graph = self::graph::Graph::new(&source_graph, &query);
 
-        Ok(Search {
+        Ok(InProgressSearch {
             query: Arc::new(query),
             config,
             refined_ranges,
@@ -93,7 +93,7 @@ impl Search {
     }
 }
 
-impl Search {
+impl InProgressSearch {
     pub fn length_range(&self) -> RangeInclusive<usize> {
         self.query.length_range_usize()
     }
@@ -149,7 +149,7 @@ impl Search {
     }
 }
 
-/// Update message from an in-flight [`Search`].
+/// Update message from an [`InProgressSearch`].
 #[derive(Debug)]
 pub enum Update {
     /// A new composition has been found
@@ -195,8 +195,8 @@ impl Progress {
 
 /// Configuration options for a [`Search`].
 ///
-/// Unlike the options set by [`SearchBuilder`], `Config` options
-/// **don't** change which [`Composition`]s are generated.
+/// `Config` *won't* change which compositions are generated, unlike the parameters set by
+/// [`Search`]'s builder API.
 #[derive(Debug, Clone)]
 pub struct Config {
     /* General */
