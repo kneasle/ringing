@@ -9,8 +9,9 @@ use bellframe::Mask;
 use itertools::Itertools;
 
 use crate::{
+    builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    query::{MethodIdx, MethodVec, OptionalRangeInclusive, Query},
+    query::{MethodIdx, MethodVec, Query},
     utils::TotalLength,
 };
 

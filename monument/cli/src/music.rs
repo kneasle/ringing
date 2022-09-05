@@ -6,8 +6,8 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    builder::MusicTypeBuilder,
-    query::{MusicTypeIdx, MusicTypeVec, OptionalRangeInclusive, StrokeSet},
+    builder::{MusicTypeBuilder, OptionalRangeInclusive},
+    query::{MusicTypeIdx, MusicTypeVec, StrokeSet},
     InProgressSearch,
 };
 use serde::Deserialize;

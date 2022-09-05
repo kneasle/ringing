@@ -4,8 +4,11 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{MethodBuilder, MusicTypeBuilder, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
-    query::{CallDisplayStyle, MusicTypeVec, SpliceStyle},
+    builder::{
+        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT,
+        DEFAULT_SINGLE_WEIGHT,
+    },
+    query::MusicTypeVec,
     Config, InProgressSearch, Search,
 };
 use serde::Deserialize;

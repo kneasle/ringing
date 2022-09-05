@@ -1,23 +1,24 @@
 //! Code for the API for creating [`Search`]es.
 
-use std::{collections::HashMap, ops::RangeInclusive};
+use std::{
+    collections::HashMap,
+    ops::{Range, RangeInclusive},
+};
 
 use bellframe::{
     method::LABEL_LEAD_END,
     method_lib::QueryError,
     music::{Elem, Pattern},
-    Mask, MethodLib, PlaceNot, RowBuf, Stage, Stroke,
+    Bell, Mask, MethodLib, PlaceNot, RowBuf, Stage, Stroke,
 };
 use hmap::hmap;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use serde::Deserialize;
 
 use crate::{
     group::PartHeadGroup,
-    query::{
-        self, CallDisplayStyle, CallVec, MethodId, MethodVec, MusicTypeVec, OptionalRangeInclusive,
-        Query, SpliceStyle, StrokeSet,
-    },
+    query::{self, CallVec, MethodIdx, MethodVec, MusicTypeVec, Query, StrokeSet},
     search::{Config, InProgressSearch, Update},
     utils::{Score, TotalLength},
     Composition,
@@ -446,24 +447,27 @@ impl MethodBuilder {
     }
 }
 
-enum MethodSource {
-    /// A method with this title should be found in the Central Council's method library.
-    Title(String),
-    /// The method should be loaded from some custom place notation
-    CustomPn {
-        name: String,
-        pn_str: String,
-        stage: Stage, // TODO: Make stage optional
-    },
+/// The different styles of spliced that can be generated
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
+pub enum SpliceStyle {
+    /// Splices could happen at any lead label
+    #[serde(rename = "leads")]
+    LeadLabels,
+    /// Splices only happen at calls
+    #[serde(rename = "calls")]
+    Calls,
 }
 
-/// Get a default shorthand given a method's title.
-fn default_shorthand(title: &str) -> String {
-    title
-        .chars()
-        .next()
-        .expect("Can't have empty method title")
-        .to_string()
+impl Default for SpliceStyle {
+    fn default() -> Self {
+        Self::LeadLabels
+    }
+}
+
+/// The unique identifier for a method in a [`Search`](crate::Search).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MethodId {
+    pub(crate) index: MethodIdx,
 }
 
 /// A set of methods used in a [`Search`].
@@ -503,6 +507,26 @@ where
             vec: iter.into_iter().collect(),
         }
     }
+}
+
+enum MethodSource {
+    /// A method with this title should be found in the Central Council's method library.
+    Title(String),
+    /// The method should be loaded from some custom place notation
+    CustomPn {
+        name: String,
+        pn_str: String,
+        stage: Stage, // TODO: Make stage optional
+    },
+}
+
+/// Get a default shorthand given a method's title.
+fn default_shorthand(title: &str) -> String {
+    title
+        .chars()
+        .next()
+        .expect("Can't have empty method title")
+        .to_string()
 }
 
 ///////////
@@ -611,6 +635,15 @@ impl CallBuilder {
             weight: Score::from(self.weight),
         }
     }
+}
+
+/// How the calls in a given composition should be displayed
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallDisplayStyle {
+    /// Calls should be displayed as a count since the last course head
+    Positional,
+    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`]
+    CallingPositions(Bell),
 }
 
 ////////////////
@@ -868,4 +901,46 @@ pub enum Length {
     Peal,
     /// Custom range
     Range(RangeInclusive<usize>),
+}
+
+/// An inclusive range where each side is optionally bounded.
+///
+/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
+/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OptionalRangeInclusive {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+
+impl OptionalRangeInclusive {
+    /// An [`OptionalRangeInclusive`] which is unbounded at both ends.  Equivalent to
+    /// `OptionalRangeInclusive { min: None, max: None }`.
+    pub const OPEN: Self = Self {
+        min: None,
+        max: None,
+    };
+
+    /// Returns `true` if at least one of `min` or `max` is set
+    pub fn is_set(self) -> bool {
+        self.min.is_some() || self.max.is_some()
+    }
+
+    /// Applies [`Option::or`] to both `min` and `max`
+    pub fn or(self, other: Self) -> Self {
+        Self {
+            min: self.min.or(other.min),
+            max: self.max.or(other.max),
+        }
+    }
+
+    pub fn or_range(self, other: &Range<usize>) -> Range<usize> {
+        let min = self.min.unwrap_or(other.start);
+        let max = self
+            .max
+            .map(|x| x + 1) // +1 because `OptRange` is inclusive
+            .unwrap_or(other.end);
+        min..max
+    }
 }

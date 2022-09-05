@@ -5,8 +5,9 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use bellframe::{Block, Row, RowBuf};
 
 use crate::{
+    builder::{CallDisplayStyle, MethodId},
     group::PartHead,
-    query::{CallDisplayStyle, CallIdx, MethodId, MethodIdx, MethodVec, MusicTypeIdx, Query},
+    query::{CallIdx, MethodIdx, MethodVec, MusicTypeIdx, Query},
     utils::{Counts, PerPartLength, Score, TotalLength},
 };
 

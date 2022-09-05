@@ -15,8 +15,9 @@ use std::{
 use bellframe::Stage;
 
 use crate::{
+    builder::MethodId,
     prove_length::{prove_lengths, RefinedRanges},
-    query::{MethodId, MusicTypeIdx, Query},
+    query::{MusicTypeIdx, Query},
     Composition,
 };
 

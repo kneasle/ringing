@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use bellframe::Stroke;
-use monument::query::OptionalRangeInclusive;
+use monument::builder::OptionalRangeInclusive;
 use serde::Deserialize;
 
 /// A version of [`OptionalRangeInclusive`] which allows for convenient deserialisation from a

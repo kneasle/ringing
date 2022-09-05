@@ -10,10 +10,10 @@ use bit_vec::BitVec;
 use itertools::Itertools;
 
 use crate::{
+    builder::SpliceStyle,
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
-    query::SpliceStyle,
     utils::{Counts, Score, TotalLength},
 };
 

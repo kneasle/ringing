@@ -8,11 +8,12 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
+    builder::SpliceStyle,
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    query::{CallIdx, MethodIdx, MethodVec, Query, SpliceStyle},
-    search::Config,
+    query::{CallIdx, MethodIdx, MethodVec, Query},
     utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
+    Config,
 };
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
