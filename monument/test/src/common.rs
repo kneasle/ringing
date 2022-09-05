@@ -783,12 +783,10 @@ impl Comp {
     fn new(source: &Composition, query: &Query) -> Self {
         Self {
             length: source.length(),
-            string: source.call_string(query),
+            string: source.call_string(),
             avg_score: Self::round_score(source.average_score()),
             // Only store part heads for multi-part strings
-            part_head: query
-                .is_multipart()
-                .then(|| source.part_head(query).to_string()),
+            part_head: query.is_multipart().then(|| source.part_head().to_string()),
         }
     }
 }

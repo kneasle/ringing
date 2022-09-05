@@ -303,16 +303,15 @@ impl CompPrefix {
                 .map(|((id, _), count)| (id, *count))
                 .collect(),
             total_score: score,
+
+            query: data.query.clone(),
         };
         // Sanity check that the composition is true
         if data.query.require_truth {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
-            for row in comp.rows(&data.query).rows() {
+            for row in comp.rows().rows() {
                 if !rows_so_far.insert(row) {
-                    panic!(
-                        "Generated false composition ({})",
-                        comp.call_string(&data.query)
-                    );
+                    panic!("Generated false composition ({})", comp.call_string());
                 }
             }
         }

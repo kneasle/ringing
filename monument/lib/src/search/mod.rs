@@ -2,7 +2,10 @@
 
 use std::{
     ops::RangeInclusive,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use crate::{
@@ -26,7 +29,7 @@ mod prefix;
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    query: Query,
+    query: Arc<Query>,
     config: Config,
     // TODO: Reintroduce this to make the search graph smaller
     // source_graph: crate::graph::Graph,
@@ -54,7 +57,7 @@ impl Search {
         let graph = self::graph::Graph::new(&source_graph, &query);
 
         Ok(Search {
-            query,
+            query: Arc::new(query),
             config,
             refined_ranges,
             graph,

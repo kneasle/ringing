@@ -95,7 +95,7 @@ pub fn run(
     });
     // Once the search has completed, sort the compositions and return
     use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.average_score())));
+    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.average_score())));
     Ok(Some(QueryResult {
         comps,
         query,
@@ -409,8 +409,6 @@ impl CompPrinter {
     }
 
     fn comp_string(&self, comp: &Composition) -> String {
-        let query = &self.query;
-
         // Length
         let mut s = format!("{:>width$} ", comp.length(), width = self.length_width);
         // Method counts (for spliced)
@@ -423,10 +421,10 @@ impl CompPrinter {
         s.push('|');
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
-            write!(s, " {} |", ShortRow(comp.part_head(query))).unwrap();
+            write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -434,7 +432,7 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(query, comp.music_counts()),
+                &music_display.display_counts(&self.query, comp.music_counts()),
                 *col_width,
             );
             s.push(' ');
@@ -444,7 +442,7 @@ impl CompPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string(query)
+            comp.call_string()
         )
         .unwrap();
 
