@@ -97,7 +97,7 @@ impl Mask {
     /// # Panics
     ///
     /// Panics if any of the [`Bell`] are outside the [`Stage`] of this [`Mask`].
-    pub fn fix_bells(stage: Stage, fixed_bells: impl IntoIterator<Item = Bell>) -> Self {
+    pub fn with_fixed_bells(stage: Stage, fixed_bells: impl IntoIterator<Item = Bell>) -> Self {
         let mut new_mask = Self::empty(stage);
         for b in fixed_bells {
             // SAFETY: bells are only ever fixed to their own locations, so can't be fixed in two

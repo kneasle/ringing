@@ -62,7 +62,7 @@ impl QueryBuilder {
             query: Query {
                 length_range: TotalLength::new(min_length)..=TotalLength::new(max_length),
                 num_comps: 100,
-                allow_false: false,
+                require_truth: true,
                 stage,
 
                 methods: MethodVec::new(),
@@ -74,7 +74,7 @@ impl QueryBuilder {
                 start_row: RowBuf::rounds(stage),
                 end_row: RowBuf::rounds(stage),
                 part_head_group: PartHeadGroup::one_part(stage),
-                ch_weights: Vec::new(),
+                course_weights: Vec::new(),
 
                 music_types: MusicTypeVec::new(),
                 start_stroke: Stroke::Hand,
@@ -92,7 +92,7 @@ impl QueryBuilder {
 
     /// Allow Monument to generate false [`Composition`]s.  By default, Monument requires truth.
     pub fn allow_false(mut self, allow_false: bool) -> Self {
-        self.query.allow_false = allow_false;
+        self.query.require_truth = !allow_false;
         self
     }
 
@@ -153,7 +153,7 @@ impl QueryBuilder {
     /// Weights applied to every [`Row`] of every course which contains a lead head which satisfies
     /// the corresponding [`Mask`].
     pub fn course_head_weights(mut self, weights: impl IntoIterator<Item = (Mask, f32)>) -> Self {
-        self.query.ch_weights.extend(
+        self.query.course_weights.extend(
             weights
                 .into_iter()
                 .map(|(mask, weight)| (mask, OrderedFloat(weight))),

@@ -27,7 +27,7 @@ pub struct Query {
     pub(crate) length_range: RangeInclusive<TotalLength>,
     pub(crate) stage: Stage,
     pub(crate) num_comps: usize,
-    pub(crate) allow_false: bool, // TODO: Rename to `require_truth`
+    pub(crate) require_truth: bool,
 
     // METHODS & CALLING
     pub(crate) methods: MethodVec<Method>,
@@ -44,7 +44,7 @@ pub struct Query {
     pub(crate) part_head_group: PartHeadGroup,
     /// [`Score`]s applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
-    pub(crate) ch_weights: Vec<(Mask, Score)>,
+    pub(crate) course_weights: Vec<(Mask, Score)>,
 
     // MUSIC
     pub(crate) music_types: MusicTypeVec<MusicType>,

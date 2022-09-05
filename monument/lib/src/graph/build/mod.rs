@@ -74,7 +74,7 @@ impl Graph {
         );
 
         // Assign falseness links
-        if !query.allow_false {
+        if query.require_truth {
             falseness::set_links(
                 &mut chunks,
                 &mut chunk_equiv_map,
@@ -332,7 +332,7 @@ fn count_scores(
             start_stroke,
         );
         // Count weight from CH masks
-        for (mask, weight) in &query.ch_weights {
+        for (mask, weight) in &query.course_weights {
             if mask.matches(&lead_head_in_part) {
                 // Weight applies to each row
                 chunk.music.score += *weight * chunk.per_part_length.as_usize() as f32;

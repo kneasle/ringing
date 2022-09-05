@@ -61,11 +61,11 @@ impl MethodLib {
     /// along with their [Levenstein edit
     /// distance](https://en.wikipedia.org/wiki/Levenshtein_distance) from the requested title.
     /// These are sorted with the closest results first
-    pub fn get_by_title_with_suggestions<'s>(
-        &'s self,
+    pub fn get_by_title_with_suggestions(
+        &self,
         title: &str,
         num_suggestions: usize,
-    ) -> Result<Method, QueryError<Vec<(&'s str, usize)>>> {
+    ) -> Result<Method, QueryError<Vec<(String, usize)>>> {
         let lower_case_title = title.to_lowercase();
         self.get_by_title(&lower_case_title).map_err(|e| {
             e.map_not_found(|()| self.generate_suggestions(&lower_case_title, num_suggestions))
@@ -73,11 +73,11 @@ impl MethodLib {
     }
 
     /// Generate a list of method title suggestions based on the Levenstein edit from a given title
-    fn generate_suggestions<'lib>(
-        &'lib self,
+    fn generate_suggestions(
+        &self,
         lower_case_title: &str,
         num_suggestions: usize,
-    ) -> Vec<(&'lib str, usize)> {
+    ) -> Vec<(String, usize)> {
         /// A new-type over the suggestions, which is ordered by the edit distance
         #[derive(Debug, Clone, Copy)]
         // Forcing `repr` transparent will make sure that the memory layout is identical to `(&str,
@@ -134,7 +134,7 @@ impl MethodLib {
         best_suggestions.reverse();
         best_suggestions
             .into_iter()
-            .map(|Suggestion(vs)| vs)
+            .map(|Suggestion((title, edit_distance))| (title.to_owned(), edit_distance))
             .collect_vec()
     }
 

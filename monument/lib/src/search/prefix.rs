@@ -298,7 +298,7 @@ impl CompPrefix {
             total_score: score,
         };
         // Sanity check that the composition is true
-        if !data.query.allow_false {
+        if data.query.require_truth {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
             for row in comp.rows(&data.query).rows() {
                 if !rows_so_far.insert(row) {
