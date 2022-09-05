@@ -5,8 +5,8 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     query::{
-        CallDisplayStyle, MethodBuilder, MethodVec, MusicTypeBuilder, MusicTypeVec, Query,
-        QueryBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
+        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, MusicTypeVec, Query, QueryBuilder,
+        SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
     search::Config,
 };
@@ -173,16 +173,16 @@ impl Spec {
 
         // Build the methods first so that we can compute the overall `Stage` *before* parsing
         // everything else.
-        let method_builders: MethodVec<_> = self
+        let method_builders = self
             .methods
             .iter()
             .chain(self.method.as_ref())
             .cloned()
             .map(MethodSpec::into_builder)
-            .collect::<anyhow::Result<_>>()?;
+            .collect::<anyhow::Result<Vec<_>>>()?;
         let length = monument::query::Length::Range(self.length.range.clone());
         let mut query_builder =
-            QueryBuilder::new(method_builders, length).map_err(improve_error_message)?;
+            QueryBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
         let stage = query_builder.get_stage();
 
         // Lower `MethodSpec`s into `bellframe::Method`s.
@@ -251,7 +251,7 @@ impl Spec {
         let query = query_builder.build()?;
 
         // Warn when using plain bob calls in Stedman or Grandsire
-        for method in query.methods() {
+        for (_id, method, _shorthand) in query.methods() {
             if self.base_calls != BaseCalls::None {
                 match method.name() {
                     // TODO: More precisely, we should check for Grandsire-like methods

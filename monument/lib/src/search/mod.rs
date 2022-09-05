@@ -14,7 +14,7 @@ use std::{
 
 use crate::{
     prove_length::{prove_lengths, RefinedRanges},
-    query::Query,
+    query::{MethodId, Query},
     Composition,
 };
 
@@ -89,13 +89,10 @@ impl Search {
 }
 
 impl Search {
-    /// Returns an iterator which yields the refined method count ranges for each
-    /// [`Method`](crate::query::Method) in the [`Query`].
-    pub fn method_count_ranges(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
-        self.refined_ranges
-            .method_counts
-            .iter()
-            .map(|range| range.start().as_usize()..=range.end().as_usize())
+    /// Gets the range of counts required of the given [`MethodId`].
+    pub fn method_count_range(&self, id: &MethodId) -> RangeInclusive<usize> {
+        let range = &self.refined_ranges.method_counts[id.index];
+        range.start().as_usize()..=range.end().as_usize()
     }
 
     /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).

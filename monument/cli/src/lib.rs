@@ -4,7 +4,7 @@
 //! in exactly the same way as Monument itself.
 
 #![deny(clippy::all)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
 pub mod args;
 pub mod calls;
@@ -15,7 +15,6 @@ pub mod utils;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
-    ops::RangeInclusive,
     path::PathBuf,
     str::FromStr,
     sync::Arc,
@@ -77,8 +76,7 @@ pub fn run(
 
     // Build all the data structures for the search
     let search = Arc::new(Search::new(Query::clone(&query), config)?);
-    let comp_printer =
-        CompPrinter::new(query.clone(), music_displays, search.method_count_ranges());
+    let comp_printer = CompPrinter::new(query.clone(), music_displays, &search);
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -344,22 +342,16 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(
-        query: Arc<Query>,
-        music_displays: Vec<MusicDisplay>,
-        method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
-    ) -> Self {
+    fn new(query: Arc<Query>, music_displays: Vec<MusicDisplay>, search: &Search) -> Self {
         Self {
             length_width: query.length_range().end().to_string().len(),
             method_counts: query
                 .methods()
-                .iter()
-                .zip_eq(method_count_ranges)
-                .map(|(method, count_range)| {
+                .map(|(id, _method, shorthand)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = count_range.end().to_string().len();
-                    let max_width = max_count_width.max(method.shorthand().len());
-                    (max_width, method.shorthand().to_owned())
+                    let max_count_width = search.method_count_range(&id).end().to_string().len();
+                    let max_width = max_count_width.max(shorthand.len());
+                    (max_width, shorthand.to_owned())
                 })
                 .collect_vec(),
             part_head_width: (query.num_parts() > 2)

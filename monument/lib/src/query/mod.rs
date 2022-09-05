@@ -63,8 +63,18 @@ impl Query {
         start..=end
     }
 
-    pub fn methods(&self) -> &MethodVec<Method> {
-        &self.methods
+    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
+        &self.methods[id.index]
+    }
+
+    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
+        &self.methods[id.index].shorthand
+    }
+
+    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
+        self.methods
+            .iter_enumerated()
+            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeIdx> + '_ {
@@ -95,40 +105,9 @@ impl Query {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Method {
-    pub(crate) inner: bellframe::Method,
-    pub(crate) shorthand: String,
-
-    /// The number of rows of this method must fit within this range
-    pub(crate) count_range: OptionalRangeInclusive,
-    /// The indices in which we can start a composition during this `Method`.  These are
-    /// interpreted modulo the lead length of the method.
-    pub(crate) start_indices: Vec<isize>,
-    /// The indices in which we can end a composition during this `Method`.  `None` means any index
-    /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
-    /// length of the method.
-    pub(crate) end_indices: Option<Vec<isize>>,
-    pub(crate) courses: Vec<Mask>,
-}
-
-impl Method {
-    pub fn shorthand(&self) -> &str {
-        &self.shorthand
-    }
-
-    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
-    }
-}
-
-impl std::ops::Deref for Method {
-    type Target = bellframe::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
+/////////////
+// METHODS //
+/////////////
 
 /// The different styles of spliced that can be generated
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
@@ -146,6 +125,48 @@ impl Default for SpliceStyle {
         Self::LeadLabels
     }
 }
+
+/// The unique identifier for a method within a [`Query`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MethodId {
+    pub(crate) index: MethodIdx,
+}
+
+/// A `Method` used in a [`Query`].
+#[derive(Debug, Clone)]
+pub(crate) struct Method {
+    pub inner: bellframe::Method,
+    pub shorthand: String,
+
+    /// The number of rows of this method must fit within this range
+    pub count_range: OptionalRangeInclusive,
+    /// The indices in which we can start a composition during this `Method`.  These are
+    /// interpreted modulo the lead length of the method.
+    pub start_indices: Vec<isize>,
+    /// The indices in which we can end a composition during this `Method`.  `None` means any index
+    /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
+    /// length of the method.
+    pub end_indices: Option<Vec<isize>>,
+    pub courses: Vec<Mask>,
+}
+
+impl Method {
+    pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+        (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
+}
+
+impl std::ops::Deref for Method {
+    type Target = bellframe::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+///////////
+// CALLS //
+///////////
 
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
@@ -196,6 +217,35 @@ impl MusicType {
     }
 }
 
+/// A set of at least one [`Stroke`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl StrokeSet {
+    pub(crate) fn contains(self, stroke: Stroke) -> bool {
+        match self {
+            Self::Both => true,
+            Self::Hand => stroke == Stroke::Hand,
+            Self::Back => stroke == Stroke::Back,
+        }
+    }
+}
+
+impl Default for StrokeSet {
+    fn default() -> Self {
+        StrokeSet::Both
+    }
+}
+
+////////////////
+// MISC TYPES //
+////////////////
+
 /// An inclusive range where each side is optionally bounded.
 ///
 /// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
@@ -238,38 +288,9 @@ impl OptionalRangeInclusive {
     }
 }
 
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum StrokeSet {
-    Hand,
-    Back,
-    Both,
-}
-
-impl StrokeSet {
-    pub(crate) fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
-        }
-    }
-}
-
-impl Default for StrokeSet {
-    fn default() -> Self {
-        StrokeSet::Both
-    }
-}
-
-//////////////////////
-// TYPE DEFINITIONS //
-//////////////////////
-
-index_vec::define_index_type! { pub struct MethodIdx = usize; }
+index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
 index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
 index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
-pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
+pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
 pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
 pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

@@ -9,7 +9,7 @@ use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::query::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{CallBuilder, Method, MusicTypeBuilder, Query};
+use crate::query::{CallBuilder, MethodBuilder, MusicTypeBuilder, Query};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -43,9 +43,9 @@ pub enum Error {
     DifferentStartEndRowInMultipart,
     /// Some [`CallBuilder`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// [`Query`] didn't define any [`Method`]s
+    /// [`Query`] didn't define any [`MethodBuilder`]s
     NoMethods,
-    /// Two [`Method`]s use the same shorthand
+    /// Two [`MethodBuilder`]s use the same shorthand
     DuplicateShorthand {
         shorthand: String,
         title1: String,

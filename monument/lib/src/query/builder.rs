@@ -20,8 +20,8 @@ use crate::{
 };
 
 use super::{
-    CallDisplayStyle, CallVec, MethodVec, MusicType, MusicTypeVec, OptionalRangeInclusive, Query,
-    SpliceStyle, StrokeSet,
+    CallDisplayStyle, CallVec, MethodId, MethodVec, MusicType, MusicTypeVec,
+    OptionalRangeInclusive, Query, SpliceStyle, StrokeSet,
 };
 
 #[allow(unused_imports)] // Only used for doc comments
@@ -63,8 +63,23 @@ pub struct QueryBuilder {
 impl QueryBuilder {
     /* START */
 
-    /// Create a new `QueryBuilder` with a custom length range
-    pub fn new(method_builders: MethodVec<MethodBuilder>, length: Length) -> crate::Result<Self> {
+    /// Start building a [`Query`] with the given [`MethodBuilder`]s and [`Length`] range.  The
+    /// [`MethodBuilder`]s will be assigned unique [`MethodId`]s, but you won't know which ones
+    /// apply to which unless you build a [`MethodSet`] and use [`QueryBuilder::with_method_set`].
+    pub fn with_methods(
+        methods: impl IntoIterator<Item = MethodBuilder>,
+        length: Length,
+    ) -> crate::Result<Self> {
+        let method_set = MethodSet {
+            vec: methods.into_iter().collect(),
+        };
+        Self::with_method_set(method_set, length)
+    }
+
+    /// Create a new `QueryBuilder` with the given [`MethodBuilder`]s and [`Length`] range.
+    pub fn with_method_set(method_set: MethodSet, length: Length) -> crate::Result<Self> {
+        let method_builders = method_set.vec;
+
         // Process methods
         if method_builders.is_empty() {
             return Err(crate::Error::NoMethods);
@@ -299,7 +314,7 @@ impl QueryBuilder {
 
 const NUM_METHOD_SUGGESTIONS: usize = 10;
 
-/// Builder API for a [`Method`](super::Method).
+/// Builder API for a method.
 pub struct MethodBuilder {
     source: MethodSource,
     // TODO: Add builder API for these fields
@@ -313,13 +328,13 @@ pub struct MethodBuilder {
 }
 
 impl MethodBuilder {
-    /// Start building a [`Method`](super::Method) which should be loaded from the Central Council
-    /// library.
+    /// Create a new [`MethodBuilder`] by loading a method from the Central Council library by its
+    /// [`title`](bellframe::Method::title).
     pub fn with_title(title: String) -> Self {
         Self::new(MethodSource::Title(title))
     }
 
-    /// Start building a [`Method`](super::Method) from custom place notation.
+    /// Create a new [`MethodBuilder`] with custom place notation.
     pub fn with_custom_pn(name: String, pn_str: String, stage: Stage) -> Self {
         Self::new(MethodSource::CustomPn {
             name,
@@ -341,7 +356,7 @@ impl MethodBuilder {
         }
     }
 
-    /// Force use of a specific shorthand for this [`Method`](super::Method).  By default, the
+    /// Force use of a specific shorthand for this [`MethodBuilder`].  By default, the
     /// first character of the method's title will be used as a shorthand.
     pub fn shorthand(mut self, shorthand: String) -> Self {
         self.custom_shorthand = Some(shorthand);
@@ -382,6 +397,16 @@ impl MethodBuilder {
     pub fn lead_labels(mut self, labels: HashMap<String, Vec<isize>>) -> Self {
         self.lead_labels = labels;
         self
+    }
+
+    /// Finishes building and adds `self` to the supplied [`MethodSet`], returning the [`MethodId`]
+    /// now used to refer to this [`MethodBuilder`].
+    ///
+    /// This is equivalent to [`MethodSet::add`], but makes for cleaner code.
+    // TODO: Code example
+    #[allow(clippy::should_implement_trait)]
+    pub fn add(self, set: &mut MethodSet) -> MethodId {
+        set.add(self)
     }
 
     /// Create a [`bellframe::Method`] representing this method.
@@ -435,6 +460,45 @@ fn default_shorthand(title: &str) -> String {
         .next()
         .expect("Can't have empty method title")
         .to_string()
+}
+
+/// A set of methods used by a [`Query`].
+pub struct MethodSet {
+    vec: MethodVec<MethodBuilder>,
+}
+
+impl MethodSet {
+    /// Creates a `MethodSet` containing no methods.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a [`MethodBuilder`] to this set, returning its unique [`MethodId`].
+    ///
+    /// You can also use [`MethodBuilder::add`], which usually makes for cleaner code.
+    pub fn add(&mut self, method: MethodBuilder) -> MethodId {
+        let index = self.vec.push(method);
+        MethodId { index }
+    }
+}
+
+impl Default for MethodSet {
+    fn default() -> Self {
+        Self {
+            vec: MethodVec::new(),
+        }
+    }
+}
+
+impl<I> From<I> for MethodSet
+where
+    I: IntoIterator<Item = MethodBuilder>,
+{
+    fn from(iter: I) -> Self {
+        Self {
+            vec: iter.into_iter().collect(),
+        }
+    }
 }
 
 ///////////
