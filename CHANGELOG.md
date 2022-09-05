@@ -1,3 +1,20 @@
+## (Unreleased)
+
+### Monument
+- (#138) Heavily clean up the API of the `monument` library.  This PR focusses on removing as much
+    API surface as possible, so that the remaining API can be made as easy as possible to use.  With
+    some more attention, it should be possible to embed the `monument` library into programs other
+    than its CLI interface.
+- (#140) Rename some fields of `Query` (which, after #138, are no longer exposed externally)
+
+### BellFrame
+- (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.
+- (#140) Don't return borrowed data in the error from `MethodLib::get_by_title_with_suggestions`.
+
+---
+
+
+
 ## 31st July 2022
 
 ### Monument v0.11.0
