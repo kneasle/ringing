@@ -764,14 +764,14 @@ impl MusicTypeDisplay {
                 (xs_in_prefix, xs_in_suffix, PatternPosition::Total)
             }
         } else {
-            // At this point, we know that `pattern` contains at most one `*`, and that it is in one of
-            // the suffix or prefix
+            // At this point, we know that `pattern` contains at most one `*`, and that it is in
+            // one of the suffix or prefix
             let num_stars = pattern.elems().iter().filter(|e| e.is_star()).count();
             assert!(num_stars <= 1);
             assert!(!star_in_pattern);
 
-            // Since there can be at most one `*`, we can expand that single `*` into a series of `x`s,
-            // and use that to compute the exact lengths of the suffix and prefix.
+            // Since there can be at most one `*`, we can expand that single `*` into a series of
+            // `x`s, and use that to compute the exact lengths of the suffix and prefix.
             //
             // The length of the star is the number of bells missing once every other element in the
             // pattern is accounted for.
@@ -780,11 +780,11 @@ impl MusicTypeDisplay {
             let suffix_len = xs_in_suffix + if star_in_suffix { star_len } else { 0 };
 
             match prefix_len.cmp(&suffix_len) {
-                // If the central pattern is equally far from the front and back, then we can't give it a
-                // position
+                // If the central pattern is equally far from the front and back, then we can't
+                // give it a position
                 Ordering::Equal => return None,
-                // Otherwise, we assume that the pattern is attached to the closer end of the row, so we
-                // assign those `x`s to be part of the pattern.
+                // Otherwise, we assume that the pattern is attached to the closer end of the row,
+                // so we assign those `x`s to be part of the pattern.
                 //
                 // Prefix is shorter, and is included in the pattern
                 Ordering::Less => (prefix_len, 0, PatternPosition::Front),
