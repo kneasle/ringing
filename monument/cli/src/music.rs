@@ -7,7 +7,7 @@ use bellframe::{
 use itertools::Itertools;
 use monument::{
     builder::{MusicTypeBuilder, OptionalRangeInclusive},
-    query::{MusicTypeIdx, MusicTypeVec, StrokeSet},
+    query::{MusicTypeIdx, MusicTypeVec},
     InProgressSearch,
 };
 use serde::Deserialize;
@@ -215,6 +215,21 @@ impl Default for MusicCommon {
             show: true,
             name: None,
         }
+    }
+}
+
+/// A set of at least one [`Stroke`]
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl Default for StrokeSet {
+    fn default() -> Self {
+        StrokeSet::Both
     }
 }
 

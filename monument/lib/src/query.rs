@@ -3,7 +3,6 @@
 use std::ops::RangeInclusive;
 
 use bellframe::{music::Pattern, Mask, PlaceNot, RowBuf, Stage, Stroke};
-use serde::Deserialize;
 
 use crate::{
     builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
@@ -143,7 +142,7 @@ pub(crate) struct MusicType {
 impl MusicType {
     /// Return the total number of possible instances of this music type, or `None` if the
     /// computation caused `usize` to overflow.
-    pub fn max_count(&self) -> Option<usize> {
+    pub(crate) fn max_count(&self) -> Option<usize> {
         let mut sum = 0;
         for r in &self.patterns {
             sum += r.num_matching_rows()?;
@@ -153,9 +152,8 @@ impl MusicType {
 }
 
 /// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum StrokeSet {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StrokeSet {
     Hand,
     Back,
     Both,
@@ -168,12 +166,6 @@ impl StrokeSet {
             Self::Hand => stroke == Stroke::Hand,
             Self::Back => stroke == Stroke::Back,
         }
-    }
-}
-
-impl Default for StrokeSet {
-    fn default() -> Self {
-        StrokeSet::Both
     }
 }
 
