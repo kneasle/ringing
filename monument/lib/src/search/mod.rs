@@ -1,39 +1,41 @@
-//! API for interacting with searches as they are running.
-//!
-//! If you just want an easy way to drive Monument, look at
-//! [`QueryBuilder::run`](crate::query::QueryBuilder::run) and
-//! [`QueryBuilder::run_with_config`](crate::query::QueryBuilder::run_with_config).
-//!
-//! If you do genuinely need control over a running [`Search`] (e.g. to update the UI as searches
-//! are running), see the [`Search`] type for docs and examples.
-
-use std::{
-    ops::RangeInclusive,
-    sync::atomic::{AtomicBool, Ordering},
-};
-
-use crate::{
-    prove_length::{prove_lengths, RefinedRanges},
-    query::Query,
-    Composition,
-};
+//! Monument's search routines, along with the code for interacting with in-progress [`Search`]es.
 
 mod best_first;
 mod graph;
 mod prefix;
 
+use std::{
+    ops::RangeInclusive,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
+
+use bellframe::Stage;
+
+use crate::{
+    builder::{MethodId, MusicTypeId},
+    prove_length::{prove_lengths, RefinedRanges},
+    query::Query,
+    Composition,
+};
+
+#[allow(unused_imports)] // Only used for doc comments
+use crate::SearchBuilder;
+
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use
-/// [`QueryBuilder::run`](crate::query::QueryBuilder::run) or
-/// [`QueryBuilder::run_with_config`](crate::query::QueryBuilder::run_with_config).  Both of those
-/// will deal with handling the [`Search`] for you.
+/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
+/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
+/// you.
+// TODO: Better name?
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    query: Query,
+    query: Arc<Query>,
     config: Config,
     // TODO: Reintroduce this to make the search graph smaller
     // source_graph: crate::graph::Graph,
@@ -50,7 +52,7 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub fn new(query: Query, config: Config) -> crate::Result<Self> {
+    pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
         let mut source_graph = crate::graph::Graph::unoptimised(&query, &config)?;
         source_graph.optimise(&query);
@@ -61,7 +63,7 @@ impl Search {
         let graph = self::graph::Graph::new(&source_graph, &query);
 
         Ok(Search {
-            query,
+            query: Arc::new(query),
             config,
             refined_ranges,
             graph,
@@ -86,17 +88,6 @@ impl Search {
     pub fn signal_abort(&self) {
         self.abort_flag.store(true, Ordering::Relaxed);
     }
-}
-
-impl Search {
-    /// Returns an iterator which yields the refined method count ranges for each
-    /// [`Method`](crate::query::Method) in the [`Query`].
-    pub fn method_count_ranges(&self) -> impl Iterator<Item = RangeInclusive<usize>> + '_ {
-        self.refined_ranges
-            .method_counts
-            .iter()
-            .map(|range| range.start().as_usize()..=range.end().as_usize())
-    }
 
     /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
     pub fn was_aborted(&self) -> bool {
@@ -104,7 +95,66 @@ impl Search {
     }
 }
 
-/// Update message from an in-flight [`Search`].
+impl Search {
+    pub fn length_range(&self) -> RangeInclusive<usize> {
+        self.query.length_range_usize()
+    }
+
+    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
+        &self.query.methods[id.index]
+    }
+
+    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
+        &self.query.methods[id.index].shorthand
+    }
+
+    /// Gets the range of counts required of the given [`MethodId`].
+    pub fn method_count_range(&self, id: &MethodId) -> RangeInclusive<usize> {
+        let range = &self.refined_ranges.method_counts[id.index];
+        range.start().as_usize()..=range.end().as_usize()
+    }
+
+    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
+        self.query
+            .methods
+            .iter_enumerated()
+            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
+    }
+
+    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
+        self.query
+            .music_types
+            .iter_enumerated()
+            .map(|(index, _)| MusicTypeId { index })
+    }
+
+    pub fn max_music_count(&self, id: &MusicTypeId) -> usize {
+        self.query.music_types[id.index]
+            .max_count()
+            .unwrap_or(usize::MAX)
+    }
+
+    pub fn is_spliced(&self) -> bool {
+        self.query.is_spliced()
+    }
+
+    pub fn num_parts(&self) -> usize {
+        self.query.num_parts()
+    }
+
+    /// Does this `Query` generate [`Composition`](crate::Composition)s with more than one part?
+    pub fn is_multipart(&self) -> bool {
+        self.query.is_multipart()
+    }
+
+    /// Gets the [`effective_stage`](bellframe::Row::effective_stage) of the part heads used in
+    /// this `Query`.  The short form of every possible part head will be exactly this length.
+    pub fn effective_part_head_stage(&self) -> Stage {
+        self.query.part_head_group.effective_stage()
+    }
+}
+
+/// Update message from an in-progress [`Search`].
 #[derive(Debug)]
 pub enum Update {
     /// A new composition has been found
@@ -150,8 +200,8 @@ impl Progress {
 
 /// Configuration options for a [`Search`].
 ///
-/// Unlike the options in a [`Query`], `Config` options **don't** change which [`Composition`]s are
-/// generated.
+/// `Config` *won't* change which compositions are generated, unlike the parameters set by
+/// [`Search`]'s builder API.
 #[derive(Debug, Clone)]
 pub struct Config {
     /* General */

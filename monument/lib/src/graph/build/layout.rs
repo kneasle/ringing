@@ -8,11 +8,12 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
+    builder::SpliceStyle,
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    query::{CallIdx, MethodIdx, MethodVec, Query, SpliceStyle},
-    search::Config,
+    query::{CallIdx, MethodIdx, MethodVec, Query},
     utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
+    Config,
 };
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
@@ -344,7 +345,8 @@ impl LinkLookupTable {
                                 .plain_course
                                 .get_row(dist_from_lead_head - 1)
                                 .unwrap();
-                            let row_after_call = row_before_call * call.place_not.transposition();
+                            let row_after_call =
+                                row_before_call * call.place_notation.transposition();
 
                             create_links(
                                 dist_from_lead_head,

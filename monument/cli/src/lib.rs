@@ -4,7 +4,7 @@
 //! in exactly the same way as Monument itself.
 
 #![deny(clippy::all)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
 pub mod args;
 pub mod calls;
@@ -15,7 +15,6 @@ pub mod utils;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
-    ops::RangeInclusive,
     path::PathBuf,
     str::FromStr,
     sync::Arc,
@@ -25,11 +24,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{
-    query::Query,
-    search::{Progress, Search, Update},
-    Composition,
-};
+use monument::{Composition, Progress, Search, Update};
 use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
@@ -65,20 +60,16 @@ pub fn run(
     // Generate & debug print the TOML file specifying the search
     let spec = Spec::from_source(&source)?;
     debug_print!(Spec, spec);
-    // Convert the `Spec` into a `Layout` and other data required for running a search
-    let (query, music_displays) = spec.lower(&source)?;
-    debug_print!(Query, query);
-
-    let mut config = spec.config(options);
     // If running in CLI mode, don't `drop` any of the search data structures, since Monument will
     // exit shortly after the search terminates.  With the `Arc`-based data structures, this is
     // seriously beneficial - it shaves many seconds off Monument's total running time.
-    config.leak_search_memory = env == Environment::Cli;
+    let leak_search_memory = env == Environment::Cli;
+    // Convert the `Spec` into a `Layout` and other data required for running a search
+    let (search, music_displays) = spec.lower(&source, options, leak_search_memory)?;
+    debug_print!(Query, search);
 
     // Build all the data structures for the search
-    let search = Arc::new(Search::new(Query::clone(&query), config)?);
-    let comp_printer =
-        CompPrinter::new(query.clone(), music_displays, search.method_count_ranges());
+    let comp_printer = CompPrinter::new(music_displays, search.clone());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -101,13 +92,14 @@ pub fn run(
     });
     // Once the search has completed, sort the compositions and return
     use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score(&query)), OF(comp.average_score())));
+    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.average_score())));
     Ok(Some(QueryResult {
         comps,
-        query,
         comp_printer,
         duration: start_time.elapsed(),
         aborted: search.was_aborted(),
+
+        search,
     }))
 }
 
@@ -138,7 +130,7 @@ pub enum Source<'a> {
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     pub comps: Vec<Composition>,
-    pub query: Arc<Query>,
+    pub search: Arc<Search>,
     pub duration: Duration,
     pub aborted: bool,
 
@@ -324,7 +316,7 @@ impl SingleLineProgressLogger {
 
 #[derive(Debug, Clone)]
 struct CompPrinter {
-    query: Arc<Query>,
+    search: Arc<Search>,
     music_displays: Vec<MusicDisplay>,
 
     /// The maximum width of a composition's (total) length
@@ -344,32 +336,26 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(
-        query: Arc<Query>,
-        music_displays: Vec<MusicDisplay>,
-        method_count_ranges: impl Iterator<Item = RangeInclusive<usize>>,
-    ) -> Self {
+    fn new(music_displays: Vec<MusicDisplay>, search: Arc<Search>) -> Self {
         Self {
-            length_width: query.length_range().end().to_string().len(),
-            method_counts: query
+            length_width: search.length_range().end().to_string().len(),
+            method_counts: search
                 .methods()
-                .iter()
-                .zip_eq(method_count_ranges)
-                .map(|(method, count_range)| {
+                .map(|(id, _method, shorthand)| {
                     // TODO: Once integer logarithms become stable, use `.log10() + 1`
-                    let max_count_width = count_range.end().to_string().len();
-                    let max_width = max_count_width.max(method.shorthand().len());
-                    (max_width, method.shorthand().to_owned())
+                    let max_count_width = search.method_count_range(&id).end().to_string().len();
+                    let max_width = max_count_width.max(shorthand.len());
+                    (max_width, shorthand.to_owned())
                 })
                 .collect_vec(),
-            part_head_width: (query.num_parts() > 2)
-                .then(|| query.effective_part_head_stage().num_bells()),
+            part_head_width: (search.num_parts() > 2)
+                .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(query.music_types()))
+                .map(|d| d.col_width(&search))
                 .collect_vec(),
 
-            query,
+            search,
             music_displays,
         }
     }
@@ -421,8 +407,6 @@ impl CompPrinter {
     }
 
     fn comp_string(&self, comp: &Composition) -> String {
-        let query = &self.query;
-
         // Length
         let mut s = format!("{:>width$} ", comp.length(), width = self.length_width);
         // Method counts (for spliced)
@@ -435,10 +419,10 @@ impl CompPrinter {
         s.push('|');
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
-            write!(s, " {} |", ShortRow(comp.part_head(query))).unwrap();
+            write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score(query)).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -446,7 +430,7 @@ impl CompPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(query.music_types(), comp.music_counts()),
+                &music_display.display_counts(&self.search, comp.music_counts()),
                 *col_width,
             );
             s.push(' ');
@@ -456,7 +440,7 @@ impl CompPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string(query)
+            comp.call_string()
         )
         .unwrap();
 

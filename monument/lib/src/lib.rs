@@ -8,10 +8,10 @@
 //!
 //! # Description
 //!
-//! Given a [`Query`](query::Query) describing constraints, Monument will run a
-//! [`Search`](search::Search) to find [`Composition`]s which satisfy the constraints of the query.
-//! The query also describes what features make a composition 'good' and Monument will attempt to
-//! maximise that.
+//! Monument is a **composing engine**.  This means it is designed to run [`Search`]es to find
+//! [`Composition`]s which satisfy some set of constraints (length, methods/calls used, etc.).  One
+//! can also describe what features make a [`Composition`] 'good' and Monument will attempt to
+//! maximise them.
 //!
 //! Unlike other composition generators such as SMC, Monument does not attempt to exhaustively
 //! search the space of possible compositions.  Instead, it aims to generate very good compositions
@@ -21,27 +21,45 @@
 //! can't be exhausted in the time left in the universe, so waiting a few minutes for very good
 //! (but maybe not optimal) compositions seems like a very good deal.
 //!
-//! In fact, composing in general is so hard (NP-hard, in fact) that it's impossible to have an
-//! engine that is both consistently fast and guarantees optimality.  Thus, any promise of speed is
-//! a best-effort not a guarantee, and there will always be searches which are too complex for
-//! Monument to handle.  Such must be true of any engine.
+//! Composing in general is so hard ([NP-hard](https://en.wikipedia.org/wiki/NP-hardness), in fact)
+//! that it's impossible to have an engine that is both consistently fast and guarantees
+//! optimality.  Thus, any promise of speed is a best-effort not a guarantee, and there will always
+//! be searches which are too complex for Monument to handle.  Such must be true of any engine.
 //!
-//! **NOTE:** Monument's API is still very much work-in-progress.  Parts like the
-//! [`QueryBuilder`](query::QueryBuilder) API need work, but to make progress I need more of an
-//! idea of how those APIs will be used.
+//! # Status
+//!
+//! This library is roughly in **alpha** stage of readiness.  Most pieces are working, but there
+//! are a few major points that need addressing before Monument can be embedded in other projects
+//! without major pain:
+//!
+//! 1. The API is very much work-in-progress.  The critical issue here is that this library
+//!    currently has only one consumer (the CLI) and therefore its API has been heavily bent by the
+//!    needs of a CLI.  Before I'm happy to let others use this library, I need to try embedding it
+//!    so I can get a proper feel for what the library feels like to use.
+//! 2. Currently, Monument's search routine uses potentially unbounded amounts of memory.  This is
+//!    basically acceptable for a simple CLI tool, but is completely unacceptable when being
+//!    embedded into larger applications - you simply cannot have your program be nuked by
+//!    the OS because a library exhausted the system's memory.  It is currently possible to control
+//!    the usage using the [`Config::queue_limit`](search::Config::queue_limit) parameter, but this
+//!    is at best a proxy for memory usage.  Soon™, `queue_limit` will be replaced with a proper
+//!    memory limit: the search routine will set `queue_limit` internally to make sure the memory
+//!    usage is bounded.
 // TODO: Add example
 
 #![deny(clippy::all)]
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
+pub mod builder;
 mod composition;
 mod error;
 mod graph;
 mod group;
 mod prove_length;
-pub mod query;
-pub mod search;
+mod query;
+mod search;
 mod utils;
 
+pub use builder::SearchBuilder;
 pub use composition::Composition;
 pub use error::{Error, Result};
+pub use search::{Config, Progress, Search, Update};

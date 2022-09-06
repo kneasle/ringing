@@ -422,6 +422,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hmap"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92fbd0445bda1ac099b76a3fbad67668f915f1873cc1d9b47c02889211fa1ace"
+
+[[package]]
 name = "http"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -648,6 +654,7 @@ dependencies = [
  "bellframe",
  "bit-vec",
  "gcd",
+ "hmap",
  "index_vec",
  "itertools",
  "log",
@@ -666,6 +673,7 @@ dependencies = [
  "ctrlc",
  "difference",
  "goldilocks-json-fmt",
+ "hmap",
  "itertools",
  "kneasle_ringing_utils",
  "log",

@@ -5,24 +5,45 @@ use std::{
     ops::RangeInclusive,
 };
 
-use bellframe::{Mask, RowBuf, Stage};
+use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
-use crate::query::OptionalRangeInclusive;
+use crate::builder::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::query::{Call, Method, MusicType, Query};
+use crate::builder::{Call, Method, MusicType, SearchBuilder};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// The different ways that a [`Search`](crate::search::Search) can fail.
+/// The different ways that Monument can fail.
 #[derive(Debug)]
 pub enum Error {
+    /* QUERY BUILD ERRORS */
+    /// The given `title` couldn't be found in the Central Council library.  Each `suggestions` is
+    /// paired with its 'edit distance' (i.e. a metric of how different it is from the requested
+    /// `title`)
+    MethodNotFound {
+        title: String,
+        suggestions: Vec<(String, usize)>,
+    },
+    /// Some method's place notation failed to parse
+    MethodPnParse {
+        name: String,
+        place_notation_string: String,
+        error: bellframe::place_not::PnBlockParseError,
+    },
+    /// Some course mask couldn't be parsed.
+    CustomCourseMaskParse {
+        method_title: String,
+        mask_str: String,
+        error: bellframe::mask::ParseError,
+    },
+
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
     /// Some [`Call`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// [`Query`] didn't define any [`Method`]s
+    /// The [`SearchBuilder`] didn't define any [`Method`]s
     NoMethods,
     /// Two [`Method`]s use the same shorthand
     DuplicateShorthand {
@@ -41,12 +62,20 @@ pub enum Error {
         calling_position_len: usize,
         stage: Stage,
     },
+    /// Two [`Call`]s have the same lead location and name
+    DuplicateCall {
+        symbol_type: &'static str,
+        symbol: String,
+        label: String,
+        pn1: PlaceNot,
+        pn2: PlaceNot,
+    },
 
     /* GRAPH BUILD ERRORS */
     /// The given maximum graph size limit was reached
     SizeLimit(usize),
-    /// The same chunk of ringing could start at two different strokes, and some [`MusicType`]
-    /// relies on the strokes always being the same
+    /// The same chunk of ringing could start at two different strokes, and some
+    /// [`MusicType`] relies on the strokes always being the same
     InconsistentStroke,
 
     /* LENGTH PROVING ERRORS */
@@ -77,6 +106,28 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            /* QUERY BUILD ERRORS */
+            Error::MethodNotFound { title, suggestions } => write!(
+                f,
+                "No method called {:?} in the Central Council library.  Do you mean {:?}?",
+                title, suggestions[0]
+            ),
+            Error::MethodPnParse {
+                name,
+                place_notation_string: _,
+                error,
+            } => write!(f, "Error parsing place notation for {:?}: {}", name, error),
+            Error::CustomCourseMaskParse {
+                method_title,
+                mask_str,
+                error,
+            } => write!(
+                f,
+                "Error parsing course mask {} for method {:?}: {}",
+                mask_str, method_title, error
+            ),
+
+            /* QUERY VERIFICATION ERRORS */
             Error::DifferentStartEndRowInMultipart => {
                 write!(f, "Start/end rows must be the same for multipart comps")
             }
@@ -122,6 +173,17 @@ impl Display for Error {
                     mask_in_other_part
                 )
             }
+            Error::DuplicateCall {
+                symbol_type,
+                symbol,
+                label,
+                pn1,
+                pn2,
+            } => write!(
+                f,
+                "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
+                symbol_type, symbol, label, pn1, pn2
+            ),
 
             /* GRAPH BUILD ERRORS */
             Error::SizeLimit(limit) => write!(

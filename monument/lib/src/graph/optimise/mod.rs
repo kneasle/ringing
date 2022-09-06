@@ -17,7 +17,7 @@ use Direction::{Backward, Forward};
 impl Graph {
     /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
     /// made.
-    pub fn optimise(&mut self, query: &Query) {
+    pub(crate) fn optimise(&mut self, query: &Query) {
         const ITERATION_LIMIT: usize = 20;
 
         let passes = passes::default();

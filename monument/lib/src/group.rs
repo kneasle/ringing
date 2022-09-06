@@ -43,11 +43,6 @@ impl PartHeadGroup {
         }
     }
 
-    /// Create a new `PartHeadGroup` with only one part (with a part head of [`RowBuf::rounds`]).
-    pub fn one_part(stage: Stage) -> Self {
-        Self::new(&RowBuf::rounds(stage))
-    }
-
     /// Return the maximum [`effective_stage`](Row::effective_stage) of every [`Row`] in this
     /// `PartHeadGroup`
     pub fn effective_stage(&self) -> Stage {

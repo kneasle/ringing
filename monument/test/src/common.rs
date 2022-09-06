@@ -11,7 +11,6 @@ use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
 use itertools::Itertools;
-use monument::{query::Query, Composition};
 use monument_cli::{DebugOption, Environment};
 use ordered_float::OrderedFloat;
 use path_slash::PathExt;
@@ -398,11 +397,7 @@ fn run_test(case: UnrunTestCase) -> RunTestCase {
             assert!(!no_search);
             // Convert compositions and sort them by score, resolving tiebreaks using the comp string.
             // This guarantees a consistent ordering even if Monument's output order is non-deterministic
-            let mut comps = result
-                .comps
-                .iter()
-                .map(|c| Comp::new(c, &result.query))
-                .collect_vec();
+            let mut comps = result.comps.iter().map(Comp::new).collect_vec();
             comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
             ActualResult::Comps(comps)
         }
@@ -780,15 +775,14 @@ impl Comp {
 }
 
 impl Comp {
-    fn new(source: &Composition, query: &Query) -> Self {
+    fn new(source: &monument::Composition) -> Self {
+        let is_multipart = !source.part_head().is_rounds();
         Self {
             length: source.length(),
-            string: source.call_string(query),
+            string: source.call_string(),
             avg_score: Self::round_score(source.average_score()),
             // Only store part heads for multi-part strings
-            part_head: query
-                .is_multipart()
-                .then(|| source.part_head(query).to_string()),
+            part_head: is_multipart.then(|| source.part_head().to_string()),
         }
     }
 }

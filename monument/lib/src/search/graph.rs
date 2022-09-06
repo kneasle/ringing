@@ -162,7 +162,7 @@ fn link_score(
         _ => false,
     };
     let call_weight = match link.call {
-        Some(idx) => Score::from(query.calls[idx].weight),
+        Some(idx) => query.calls[idx].weight,
         None => ZERO, // Plain leads have no weight
     };
     let splice_weight = if is_splice { query.splice_weight } else { ZERO };

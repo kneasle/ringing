@@ -7,12 +7,13 @@ use std::{
 
 use bellframe::Row;
 use bit_vec::BitVec;
+use itertools::Itertools;
 
 use crate::{
+    builder::{MusicTypeId, SpliceStyle},
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
-    query::SpliceStyle,
     utils::{Counts, Score, TotalLength},
 };
 
@@ -294,18 +295,23 @@ impl CompPrefix {
             part_head: self.part_head,
             length: self.length,
             method_counts: self.method_counts.clone(),
-            music_counts,
+            music_counts: data
+                .query
+                .music_types
+                .iter_enumerated()
+                .zip_eq(music_counts.iter())
+                .map(|((index, _), count)| (MusicTypeId { index }, *count))
+                .collect(),
             total_score: score,
+
+            query: data.query.clone(),
         };
         // Sanity check that the composition is true
         if data.query.require_truth {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
-            for row in comp.rows(&data.query).rows() {
+            for row in comp.rows().rows() {
                 if !rows_so_far.insert(row) {
-                    panic!(
-                        "Generated false composition ({})",
-                        comp.call_string(&data.query)
-                    );
+                    panic!("Generated false composition ({})", comp.call_string());
                 }
             }
         }

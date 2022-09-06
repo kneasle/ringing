@@ -9,8 +9,9 @@ use bellframe::Mask;
 use itertools::Itertools;
 
 use crate::{
+    builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    query::{MethodIdx, MethodVec, OptionalRangeInclusive, Query},
+    query::{MethodIdx, MethodVec, Query},
     utils::TotalLength,
 };
 
@@ -46,7 +47,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.length_range(),
+                requested_range: query.length_range_usize(),
                 next_shorter_len: next_smaller.map(TotalLength::as_usize),
                 next_longer_len: next_larger.map(TotalLength::as_usize),
             });
@@ -233,7 +234,7 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
         .map(|method| {
             let mut lead_head_masks = HashSet::new();
             for lead_head in method.lead_head().closure() {
-                for ch_mask in &method.ch_masks {
+                for ch_mask in &method.courses {
                     lead_head_masks.insert(ch_mask * &lead_head);
                 }
             }
