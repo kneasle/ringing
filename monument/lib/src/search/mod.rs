@@ -15,9 +15,9 @@ use std::{
 use bellframe::Stage;
 
 use crate::{
-    builder::MethodId,
+    builder::{MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
-    query::{MusicTypeIdx, Query},
+    query::Query,
     Composition,
 };
 
@@ -120,12 +120,15 @@ impl InProgressSearch {
             .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
     }
 
-    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeIdx> + '_ {
-        self.query.music_types.iter_enumerated().map(|(id, _)| id)
+    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
+        self.query
+            .music_types
+            .iter_enumerated()
+            .map(|(index, _)| MusicTypeId { index })
     }
 
-    pub fn max_music_count(&self, id: &MusicTypeIdx) -> usize {
-        self.query.music_types[*id]
+    pub fn max_music_count(&self, id: &MusicTypeId) -> usize {
+        self.query.music_types[id.index]
             .max_count()
             .unwrap_or(usize::MAX)
     }

@@ -18,7 +18,7 @@ use serde::Deserialize;
 
 use crate::{
     group::PartHeadGroup,
-    query::{self, CallVec, MethodIdx, MethodVec, MusicTypeVec, Query, StrokeSet},
+    query::{self, CallVec, MethodIdx, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
     search::{Config, InProgressSearch, Update},
     utils::{Score, TotalLength},
     Composition,
@@ -883,6 +883,20 @@ impl MusicTypeBuilder {
         self.music_type.count_range = range;
         self
     }
+
+    /// Finish building and add this music type to a [`Search`], returning its unique
+    /// [`MusicTypeId`].
+    #[allow(clippy::should_implement_trait)]
+    pub fn add(self, search: &mut Search) -> MusicTypeId {
+        let index = search.music_types.push(self.music_type);
+        MusicTypeId { index }
+    }
+}
+
+/// The unique identifier for a music type in a [`Search`](crate::Search).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MusicTypeId {
+    pub(crate) index: MusicTypeIdx,
 }
 
 ////////////////

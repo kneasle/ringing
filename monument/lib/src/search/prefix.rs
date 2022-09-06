@@ -10,7 +10,7 @@ use bit_vec::BitVec;
 use itertools::Itertools;
 
 use crate::{
-    builder::SpliceStyle,
+    builder::{MusicTypeId, SpliceStyle},
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
@@ -300,7 +300,7 @@ impl CompPrefix {
                 .music_types
                 .iter_enumerated()
                 .zip_eq(music_counts.iter())
-                .map(|((id, _), count)| (id, *count))
+                .map(|((index, _), count)| (MusicTypeId { index }, *count))
                 .collect(),
             total_score: score,
 

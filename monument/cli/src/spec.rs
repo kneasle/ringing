@@ -5,10 +5,8 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     builder::{
-        CallDisplayStyle, MethodBuilder, MusicTypeBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT,
-        DEFAULT_SINGLE_WEIGHT,
+        CallDisplayStyle, MethodBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    query::MusicTypeVec,
     Config, InProgressSearch, Search,
 };
 use serde::Deserialize;
@@ -173,9 +171,9 @@ impl Spec {
             .map(MethodSpec::into_builder)
             .collect::<anyhow::Result<Vec<_>>>()?;
         let length = monument::builder::Length::Range(self.length.range.clone());
-        let mut query_builder =
+        let mut search_builder =
             Search::with_methods(method_builders, length).map_err(improve_error_message)?;
-        let stage = query_builder.get_stage();
+        let stage = search_builder.get_stage();
 
         // Lower `MethodSpec`s into `bellframe::Method`s.
         let calling_bell = match self.calling_bell {
@@ -189,7 +187,7 @@ impl Spec {
         // `layout::new::Method`s
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
-        let (music_types, music_displays) = self.music(source, stage)?;
+        let music_displays = self.music(source, &mut search_builder)?;
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
@@ -199,33 +197,33 @@ impl Spec {
         };
 
         // General params
-        query_builder.num_comps = self.num_comps;
-        query_builder.require_truth = !self.allow_false;
+        search_builder.num_comps = self.num_comps;
+        search_builder.require_truth = !self.allow_false;
         // Methods
-        query_builder.default_method_count = self.method_count.into();
-        query_builder.default_start_indices = match &self.start_indices {
+        search_builder.default_method_count = self.method_count.into();
+        search_builder.default_start_indices = match &self.start_indices {
             Some(indices) => indices.clone(),
             // TODO: Compute actual snaps for multi-treble-dodge methods
             None if self.snap_start => vec![2],
             None => vec![0],
         };
-        query_builder.default_end_indices = self.end_indices.clone();
-        query_builder.splice_style = self.splice_style;
-        query_builder.splice_weight = self.splice_weight;
+        search_builder.default_end_indices = self.end_indices.clone();
+        search_builder.splice_style = self.splice_style;
+        search_builder.splice_weight = self.splice_weight;
         // Calls
-        query_builder.base_calls = self.base_calls()?;
-        query_builder.custom_calls = self
+        search_builder.base_calls = self.base_calls()?;
+        search_builder.custom_calls = self
             .calls
             .iter()
             .cloned()
             .map(|specific_call| specific_call.into_call_builder(stage))
             .collect::<anyhow::Result<_>>()?;
-        query_builder.call_display_style = call_display_style;
+        search_builder.call_display_style = call_display_style;
         // Courses
-        query_builder.start_row = parse_row("start row", &self.start_row, stage)?;
-        query_builder.end_row = parse_row("end row", &self.end_row, stage)?;
-        query_builder.part_head = part_head;
-        query_builder.courses = match &self.course_heads {
+        search_builder.start_row = parse_row("start row", &self.start_row, stage)?;
+        search_builder.end_row = parse_row("end row", &self.end_row, stage)?;
+        search_builder.part_head = part_head;
+        search_builder.courses = match &self.course_heads {
             // If the user specifies some courses, use them
             Some(ch_strings) => Some(parse_ch_masks(ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
@@ -234,14 +232,13 @@ impl Spec {
             // 'tenors' which are unaffected by the part head).
             None => None,
         };
-        query_builder.course_weights = self.parse_ch_weights(stage)?;
-        query_builder = query_builder.handbell_coursing_weight(self.handbell_coursing_weight);
+        search_builder.course_weights = self.parse_ch_weights(stage)?;
+        search_builder = search_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
-        query_builder.start_stroke = self.start_stroke;
-        query_builder = query_builder.music_types(music_types);
+        search_builder.start_stroke = self.start_stroke;
 
         // Build the search
-        let search = query_builder.build(self.config(opts, leak_search_memory))?;
+        let search = search_builder.build(self.config(opts, leak_search_memory))?;
 
         // Warn when using plain bob calls in Stedman or Grandsire
         for (_id, method, _shorthand) in search.methods() {
@@ -315,11 +312,7 @@ impl Spec {
             }))
     }
 
-    fn music(
-        &self,
-        source: &Source,
-        stage: Stage,
-    ) -> anyhow::Result<(MusicTypeVec<MusicTypeBuilder>, Vec<MusicDisplay>)> {
+    fn music(&self, source: &Source, search: &mut Search) -> anyhow::Result<Vec<MusicDisplay>> {
         // Load TOML for the music file
         let music_file_buffer;
         let music_file_str = match (&self.music_file, source) {
@@ -345,7 +338,7 @@ impl Spec {
             (None, _) => None,
         };
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
-        crate::music::generate_music(&self.music, self.base_music, music_file_str, stage)
+        crate::music::generate_music(&self.music, self.base_music, music_file_str, search)
     }
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {

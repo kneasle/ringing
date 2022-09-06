@@ -5,9 +5,9 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use bellframe::{Block, Row, RowBuf};
 
 use crate::{
-    builder::{CallDisplayStyle, MethodId},
+    builder::{CallDisplayStyle, MethodId, MusicTypeId},
     group::PartHead,
-    query::{CallIdx, MethodIdx, MethodVec, MusicTypeIdx, Query},
+    query::{CallIdx, MethodIdx, MethodVec, Query},
     utils::{Counts, PerPartLength, Score, TotalLength},
 };
 
@@ -27,7 +27,7 @@ pub struct Composition {
     /// The number of rows generated of each method
     pub(crate) method_counts: Counts,
     /// The number of counts generated of each [`MusicTypeBuilder`]
-    pub(crate) music_counts: HashMap<MusicTypeIdx, usize>,
+    pub(crate) music_counts: HashMap<MusicTypeId, usize>,
 
     /// The [`Query`] which generated this [`Composition`]
     pub(crate) query: Arc<Query>,
@@ -199,7 +199,7 @@ impl Composition {
     pub fn music_score(&self) -> f32 {
         self.music_counts
             .iter()
-            .map(|(id, count)| f32::from(self.query.music_types[*id].weight) * *count as f32)
+            .map(|(id, count)| f32::from(self.query.music_types[id.index].weight) * *count as f32)
             .sum::<f32>()
     }
 
@@ -210,7 +210,7 @@ impl Composition {
     }
 
     /// The number of *instances* of each [`MusicTypeBuilder`] in the [`Search`].
-    pub fn music_counts(&self) -> &HashMap<MusicTypeIdx, usize> {
+    pub fn music_counts(&self) -> &HashMap<MusicTypeId, usize> {
         &self.music_counts
     }
 }

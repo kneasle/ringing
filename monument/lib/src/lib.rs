@@ -55,7 +55,7 @@ mod error;
 mod graph;
 mod group;
 mod prove_length;
-pub mod query;
+mod query;
 mod search;
 mod utils;
 

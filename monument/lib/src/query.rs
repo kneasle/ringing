@@ -78,23 +78,23 @@ impl Query {
 /// A `Method` used in a [`Query`].
 #[derive(Debug, Clone)]
 pub(crate) struct Method {
-    pub inner: bellframe::Method,
-    pub shorthand: String,
+    pub(crate) inner: bellframe::Method,
+    pub(crate) shorthand: String,
 
     /// The number of rows of this method must fit within this range
-    pub count_range: OptionalRangeInclusive,
+    pub(crate) count_range: OptionalRangeInclusive,
     /// The indices in which we can start a composition during this `Method`.  These are
     /// interpreted modulo the lead length of the method.
-    pub start_indices: Vec<isize>,
+    pub(crate) start_indices: Vec<isize>,
     /// The indices in which we can end a composition during this `Method`.  `None` means any index
     /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
     /// length of the method.
-    pub end_indices: Option<Vec<isize>>,
-    pub courses: Vec<Mask>,
+    pub(crate) end_indices: Option<Vec<isize>>,
+    pub(crate) courses: Vec<Mask>,
 }
 
 impl Method {
-    pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
 }
@@ -175,7 +175,7 @@ impl StrokeSet {
 
 index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
 index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
-index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
+index_vec::define_index_type! { pub(crate) struct MusicTypeIdx = usize; }
 pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
 pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
+pub(crate) type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
