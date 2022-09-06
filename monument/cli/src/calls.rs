@@ -1,6 +1,6 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
-use monument::builder::{BaseCallType, CallBuilder, DEFAULT_MISC_CALL_WEIGHT};
+use monument::builder::{BaseCallType, Call, DEFAULT_MISC_CALL_WEIGHT};
 use serde::Deserialize;
 
 /// The values of the `base_calls` attribute
@@ -55,7 +55,7 @@ pub enum CallLabel {
 }
 
 impl CustomCall {
-    pub(crate) fn into_call_builder(self, stage: Stage) -> anyhow::Result<CallBuilder> {
+    pub(crate) fn into_call_builder(self, stage: Stage) -> anyhow::Result<Call> {
         let place_notation = PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
             anyhow::Error::msg(format!(
                 "Can't parse place notation {:?} for call {:?}: {}",
@@ -74,7 +74,7 @@ impl CustomCall {
             CallLabel::Different { from, to } => (from, to),
         };
 
-        let builder = CallBuilder::new(self.symbol, place_notation)
+        let builder = Call::new(self.symbol, place_notation)
             .maybe_debug_symbol(self.debug_symbol)
             .maybe_calling_positions(
                 self.calling_positions

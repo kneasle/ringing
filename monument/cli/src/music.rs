@@ -6,7 +6,7 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    builder::{MusicTypeBuilder, MusicTypeId, OptionalRangeInclusive},
+    builder::{MusicType, MusicTypeId, OptionalRangeInclusive},
     Search, SearchBuilder,
 };
 use serde::Deserialize;
@@ -238,7 +238,7 @@ impl Default for StrokeSet {
 ////////////////////////////////
 
 impl MusicSpec {
-    /// Generates a [`MusicTypeBuilder`] representing `self`.
+    /// Generates a [`MusicType`] representing `self`.
     fn to_music_types(
         &self,
         search_builder: &mut SearchBuilder,
@@ -574,7 +574,7 @@ fn music_type_preset(
 
 /// How music counts can be displayed.
 ///
-/// This could take its counts from multiple [`MusicTypeBuilder`]s, and takes a few forms:
+/// This could take its counts from multiple [`MusicType`]s, and takes a few forms:
 /// 1. Just a total count: e.g. `*5678: 23`
 /// 2. Just a breakdown: e.g. `5678s: 24f,81i,24b`
 /// 3. A breakdown and a total count: e.g. `4-runs: 312 (73f,132i,107b)`
@@ -585,19 +585,19 @@ pub struct MusicDisplay {
     /// The name used to identify this type of music
     pub name: String,
 
-    /// The index of the [`MusicTypeBuilder`] which provides the total count
+    /// The index of the [`MusicType`] which provides the total count
     pub source_total: Option<MusicTypeId>,
 
-    /// The index of the [`MusicTypeBuilder`] which provides the count off the front
+    /// The index of the [`MusicType`] which provides the count off the front
     pub source_front: Option<MusicTypeId>,
-    /// The index of the [`MusicTypeBuilder`] which provides the internal count
+    /// The index of the [`MusicType`] which provides the internal count
     pub source_internal: Option<MusicTypeId>,
-    /// The index of the [`MusicTypeBuilder`] which provides the count off the back
+    /// The index of the [`MusicType`] which provides the count off the back
     pub source_back: Option<MusicTypeId>,
 }
 
 impl MusicDisplay {
-    /// Creates a new [`MusicDisplay`] with no corresponding [`MusicTypeBuilder`]s
+    /// Creates a new [`MusicDisplay`] with no corresponding [`MusicType`]s
     pub fn empty(name: String) -> Self {
         Self {
             name,
@@ -666,7 +666,7 @@ impl MusicDisplay {
     }
 }
 
-/// Prints the width of the largest count possible for a [`MusicTypeBuilder`] (assuming that rows can't be
+/// Prints the width of the largest count possible for a [`MusicType`] (assuming that rows can't be
 /// repeated).
 fn write_music_count(
     s: &mut String,
@@ -680,14 +680,14 @@ fn write_music_count(
     write!(s, "{:>width$}", counts[id], width = max_count_width).unwrap();
 }
 
-/// The way a [`MusicTypeBuilder`] should be displayed
+/// The way a [`MusicType`] should be displayed
 #[derive(Debug, Clone)]
 struct MusicTypeDisplay {
-    /// A specific full name given to this [`MusicTypeBuilder`], used when this row isn't part of a
+    /// A specific full name given to this [`MusicType`], used when this row isn't part of a
     /// combined pattern.  Usually this is the compressed pattern (e.g. `*5678`) or a specific name,
     /// like `"87s at back"` or `"Queens"`.
     full_name: String,
-    /// The [`MusicTypeBuilder`] is a pattern applied to one end of the [`Row`].  For example:
+    /// The [`MusicType`] is a pattern applied to one end of the [`Row`].  For example:
     /// - `5678*`    will be given `Some(("5678", PatternPosition::Front))`
     /// - `*x5678x*` will be given `Some(("5678", PatternPosition::Internal))`
     /// - `*5678`    will be given `Some(("5678", PatternPosition::Back))`
@@ -819,9 +819,9 @@ impl MusicTypeDisplay {
     }
 }
 
-/// Given a list of [`MusicTypeBuilder`]s annotated with how to display each of them (i.e. a
+/// Given a list of [`MusicType`]s annotated with how to display each of them (i.e. a
 /// [`MusicTypeDisplay`]), provide an independent list of [`monument::music::MusicDisplay`]s, which
-/// describe how to display **all** the [`MusicTypeBuilder`]s.
+/// describe how to display **all** the [`MusicType`]s.
 ///
 /// This generates a more compact output by combining the same pattern in different locations (e.g.
 /// 4-bell runs/5678s/6578s can be either front/internal/back).
@@ -862,7 +862,7 @@ fn compute_music_displays(
                     *source = Some(music_type_id);
                 }
                 // If this pattern has no position, we always create a new [`MusicDisplay`] with
-                // this [`MusicTypeBuilder`] as the total
+                // this [`MusicType`] as the total
                 None => music_displays.push(MusicDisplay {
                     name: full_name,
                     source_total: Some(music_type_id),
@@ -932,9 +932,7 @@ impl SearchBuilderExt for SearchBuilder {
         weight: f32,
         range: OptionalRangeInclusive,
     ) -> MusicTypeId {
-        let builder = MusicTypeBuilder::new(patterns)
-            .weight(weight)
-            .count_range(range);
+        let builder = MusicType::new(patterns).weight(weight).count_range(range);
         let builder = match strokes {
             StrokeSet::Hand => builder.at_handstroke(),
             StrokeSet::Back => builder.at_backstroke(),

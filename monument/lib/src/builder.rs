@@ -1,4 +1,4 @@
-//! Code for the API for creating [`Search`]es.
+//! Builder API for constructing [`Search`]es.
 
 use std::{
     collections::HashMap,
@@ -36,7 +36,7 @@ pub struct SearchBuilder {
     stage: Stage,
 
     /* METHODS */
-    methods: MethodVec<(bellframe::Method, MethodBuilder)>,
+    methods: MethodVec<(bellframe::Method, Method)>,
     pub default_method_count: OptionalRangeInclusive,
     pub default_start_indices: Vec<isize>,
     pub default_end_indices: Option<Vec<isize>>, // `None` means 'any index'
@@ -45,7 +45,7 @@ pub struct SearchBuilder {
 
     /* CALLS */
     pub base_calls: Option<BaseCalls>,
-    pub custom_calls: Vec<CallBuilder>,
+    pub custom_calls: Vec<Call>,
     pub call_display_style: CallDisplayStyle,
 
     /* MUSIC */
@@ -63,11 +63,11 @@ pub struct SearchBuilder {
 impl SearchBuilder {
     /* START */
 
-    /// Start building a [`Search`] with the given [`MethodBuilder`]s and [`Length`] range.  The
-    /// [`MethodBuilder`]s will be assigned unique [`MethodId`]s, but you won't know which ones
+    /// Start building a [`Search`] with the given [`Method`]s and [`Length`] range.  The
+    /// [`Method`]s will be assigned unique [`MethodId`]s, but you won't know which ones
     /// apply to which unless you build a [`MethodSet`] and use [`SearchBuilder::with_method_set`].
     pub fn with_methods(
-        methods: impl IntoIterator<Item = MethodBuilder>,
+        methods: impl IntoIterator<Item = Method>,
         length: Length,
     ) -> crate::Result<Self> {
         let method_set = MethodSet {
@@ -76,7 +76,7 @@ impl SearchBuilder {
         Self::with_method_set(method_set, length)
     }
 
-    /// Create a new `SearchBuilder` with the given [`MethodBuilder`]s and [`Length`] range.
+    /// Create a new `SearchBuilder` with the given [`Method`]s and [`Length`] range.
     pub fn with_method_set(method_set: MethodSet, length: Length) -> crate::Result<Self> {
         let method_builders = method_set.vec;
 
@@ -138,8 +138,8 @@ impl SearchBuilder {
 
     /* SETTERS */
 
-    /// Add [`MusicTypeBuilder`]s from the given [`Iterator`].
-    pub fn music_types(mut self, music_types: impl IntoIterator<Item = MusicTypeBuilder>) -> Self {
+    /// Add [`MusicType`]s from the given [`Iterator`].
+    pub fn music_types(mut self, music_types: impl IntoIterator<Item = MusicType>) -> Self {
         self.music_types
             .extend(music_types.into_iter().map(|ty| ty.music_type));
         self
@@ -235,7 +235,7 @@ impl SearchBuilder {
             )]
         });
 
-        // Convert each `MethodBuilder` into a `query::Method`, falling back on any defaults when
+        // Convert each `Method` into a `query::Method`, falling back on any defaults when
         // unspecified.
         let mut built_methods = MethodVec::new();
         for (mut bellframe_method, method_builder) in methods {
@@ -286,7 +286,7 @@ impl SearchBuilder {
         if let Some(base_calls) = base_calls {
             calls.extend(base_calls.into_calls(stage));
         }
-        calls.extend(custom_calls.into_iter().map(CallBuilder::build));
+        calls.extend(custom_calls.into_iter().map(Call::build));
 
         Ok(Query {
             length_range,
@@ -320,7 +320,7 @@ impl SearchBuilder {
 const NUM_METHOD_SUGGESTIONS: usize = 10;
 
 /// Builder API for a method.
-pub struct MethodBuilder {
+pub struct Method {
     source: MethodSource,
     // TODO: Add builder API for these fields
     pub lead_labels: HashMap<String, Vec<isize>>,
@@ -332,14 +332,14 @@ pub struct MethodBuilder {
     pub override_courses: Option<Vec<String>>, // TODO: Allow these to be pre-parsed
 }
 
-impl MethodBuilder {
-    /// Create a new [`MethodBuilder`] by loading a method from the Central Council library by its
+impl Method {
+    /// Create a new [`Method`] by loading a method from the Central Council library by its
     /// [`title`](bellframe::Method::title).
     pub fn with_title(title: String) -> Self {
         Self::new(MethodSource::Title(title))
     }
 
-    /// Create a new [`MethodBuilder`] with custom place notation.
+    /// Create a new [`Method`] with custom place notation.
     pub fn with_custom_pn(name: String, pn_str: String, stage: Stage) -> Self {
         Self::new(MethodSource::CustomPn {
             name,
@@ -361,7 +361,7 @@ impl MethodBuilder {
         }
     }
 
-    /// Force use of a specific shorthand for this [`MethodBuilder`].  By default, the
+    /// Force use of a specific shorthand for this [`Method`].  By default, the
     /// first character of the method's title will be used as a shorthand.
     pub fn shorthand(mut self, shorthand: String) -> Self {
         self.custom_shorthand = Some(shorthand);
@@ -405,7 +405,7 @@ impl MethodBuilder {
     }
 
     /// Finishes building and adds `self` to the supplied [`MethodSet`], returning the [`MethodId`]
-    /// now used to refer to this [`MethodBuilder`].
+    /// now used to refer to this [`Method`].
     ///
     /// This is equivalent to [`MethodSet::add`], but makes for cleaner code.
     // TODO: Code example
@@ -472,7 +472,7 @@ pub struct MethodId {
 
 /// A set of methods used in a [`Search`].
 pub struct MethodSet {
-    vec: MethodVec<MethodBuilder>,
+    vec: MethodVec<Method>,
 }
 
 impl MethodSet {
@@ -481,10 +481,10 @@ impl MethodSet {
         Self::default()
     }
 
-    /// Add a [`MethodBuilder`] to this set, returning its unique [`MethodId`].
+    /// Add a [`Method`] to this set, returning its unique [`MethodId`].
     ///
-    /// You can also use [`MethodBuilder::add`], which usually makes for cleaner code.
-    pub fn add(&mut self, method: MethodBuilder) -> MethodId {
+    /// You can also use [`Method::add`], which usually makes for cleaner code.
+    pub fn add(&mut self, method: Method) -> MethodId {
         let index = self.vec.push(method);
         MethodId { index }
     }
@@ -500,7 +500,7 @@ impl Default for MethodSet {
 
 impl<I> From<I> for MethodSet
 where
-    I: IntoIterator<Item = MethodBuilder>,
+    I: IntoIterator<Item = Method>,
 {
     fn from(iter: I) -> Self {
         Self {
@@ -538,7 +538,7 @@ pub const DEFAULT_BOB_WEIGHT: f32 = -1.8;
 pub const DEFAULT_SINGLE_WEIGHT: f32 = -2.3;
 pub const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
 
-pub struct CallBuilder {
+pub struct Call {
     symbol: String,
     debug_symbol: Option<String>,
     calling_positions: Option<Vec<String>>,
@@ -550,7 +550,7 @@ pub struct CallBuilder {
     weight: f32,
 }
 
-impl CallBuilder {
+impl Call {
     /// Starts building a call which replaces the [lead end](LABEL_LEAD_END) with a given
     /// [`PlaceNot`]ation and is displayed with the given `symbol`.
     pub fn new(symbol: impl Into<String>, place_notation: PlaceNot) -> Self {
@@ -574,7 +574,7 @@ impl CallBuilder {
         self
     }
 
-    /// If passed `Some(_)`, the behaviour is the same as [`CallBuilder::debug_symbol`]; if `None`
+    /// If passed `Some(_)`, the behaviour is the same as [`Call::debug_symbol`]; if `None`
     /// is passed, the behaviour is reverted to the default (using the same symbol for debug and
     /// display).
     pub fn maybe_debug_symbol<T: Into<String>>(mut self, symbol: Option<T>) -> Self {
@@ -590,7 +590,7 @@ impl CallBuilder {
         self
     }
 
-    /// If `Some(_)` is passed, behaves the same as [`CallBuilder::calling_positions`].  If `None`
+    /// If `Some(_)` is passed, behaves the same as [`Call::calling_positions`].  If `None`
     /// is passed, the `calling_positions` are reverted to the default.
     pub fn maybe_calling_positions(mut self, positions: Option<Vec<String>>) -> Self {
         self.calling_positions = positions;
@@ -619,7 +619,7 @@ impl CallBuilder {
         self
     }
 
-    /// Builds a [`CallBuilder`] into a [`crate::query::Call`].
+    /// Builds a [`Call`] into a [`crate::query::Call`].
     fn build(self) -> query::Call {
         query::Call {
             debug_symbol: self.debug_symbol.unwrap_or_else(|| self.symbol.clone()),
@@ -844,11 +844,11 @@ mod tests {
 // MUSIC //
 ///////////
 
-pub struct MusicTypeBuilder {
+pub struct MusicType {
     music_type: query::MusicType,
 }
 
-impl MusicTypeBuilder {
+impl MusicType {
     pub fn new(patterns: impl IntoIterator<Item = Pattern>) -> Self {
         Self {
             music_type: query::MusicType {

@@ -4,9 +4,7 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{
-        CallDisplayStyle, MethodBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
-    },
+    builder::{CallDisplayStyle, Method, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
     Config, Search, SearchBuilder,
 };
 use serde::Deserialize;
@@ -448,19 +446,17 @@ impl LeadLabels {
 }
 
 impl MethodSpec {
-    fn into_builder(self) -> anyhow::Result<MethodBuilder> {
+    fn into_builder(self) -> anyhow::Result<Method> {
         let (mut method_builder, common) = match self {
-            MethodSpec::JustTitle(title) => (MethodBuilder::with_title(title), None),
-            MethodSpec::FromCcLib { title, common } => {
-                (MethodBuilder::with_title(title), Some(common))
-            }
+            MethodSpec::JustTitle(title) => (Method::with_title(title), None),
+            MethodSpec::FromCcLib { title, common } => (Method::with_title(title), Some(common)),
             MethodSpec::Custom {
                 name,
                 place_notation,
                 stage,
                 common,
             } => (
-                MethodBuilder::with_custom_pn(name, place_notation, stage),
+                Method::with_custom_pn(name, place_notation, stage),
                 Some(common),
             ),
         };

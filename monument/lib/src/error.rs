@@ -9,7 +9,7 @@ use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
 use crate::builder::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
-use crate::builder::{CallBuilder, MethodBuilder, MusicTypeBuilder, SearchBuilder};
+use crate::builder::{Call, Method, MusicType, SearchBuilder};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -41,11 +41,11 @@ pub enum Error {
     /* QUERY VERIFICATION ERRORS */
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
-    /// Some [`CallBuilder`] refers to a label that doesn't exist
+    /// Some [`Call`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// The [`SearchBuilder`] didn't define any [`MethodBuilder`]s
+    /// The [`SearchBuilder`] didn't define any [`Method`]s
     NoMethods,
-    /// Two [`MethodBuilder`]s use the same shorthand
+    /// Two [`Method`]s use the same shorthand
     DuplicateShorthand {
         shorthand: String,
         title1: String,
@@ -56,13 +56,13 @@ pub enum Error {
         part_head: RowBuf,
         mask_in_other_part: Mask,
     },
-    /// Some [`CallBuilder`] doesn't have enough calling positions to cover the [`Stage`]
+    /// Some [`Call`] doesn't have enough calling positions to cover the [`Stage`]
     WrongCallingPositionsLength {
         call_name: String,
         calling_position_len: usize,
         stage: Stage,
     },
-    /// Two [`CallBuilder`]s have the same lead location and name
+    /// Two [`Call`]s have the same lead location and name
     DuplicateCall {
         symbol_type: &'static str,
         symbol: String,
@@ -75,7 +75,7 @@ pub enum Error {
     /// The given maximum graph size limit was reached
     SizeLimit(usize),
     /// The same chunk of ringing could start at two different strokes, and some
-    /// [`MusicTypeBuilder`] relies on the strokes always being the same
+    /// [`MusicType`] relies on the strokes always being the same
     InconsistentStroke,
 
     /* LENGTH PROVING ERRORS */
