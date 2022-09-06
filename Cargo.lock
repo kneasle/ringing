@@ -673,6 +673,7 @@ dependencies = [
  "ctrlc",
  "difference",
  "goldilocks-json-fmt",
+ "hmap",
  "itertools",
  "kneasle_ringing_utils",
  "log",

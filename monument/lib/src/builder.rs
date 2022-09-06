@@ -322,14 +322,13 @@ const NUM_METHOD_SUGGESTIONS: usize = 10;
 /// Builder API for a method.
 pub struct Method {
     source: MethodSource,
-    // TODO: Add builder API for these fields
-    pub lead_labels: HashMap<String, Vec<isize>>,
+    lead_labels: HashMap<String, Vec<isize>>,
 
-    pub custom_shorthand: Option<String>,
-    pub override_count_range: OptionalRangeInclusive,
-    pub override_start_indices: Option<Vec<isize>>,
-    pub override_end_indices: Option<Vec<isize>>,
-    pub override_courses: Option<Vec<String>>, // TODO: Allow these to be pre-parsed
+    custom_shorthand: Option<String>,
+    override_count_range: OptionalRangeInclusive,
+    override_start_indices: Option<Vec<isize>>,
+    override_end_indices: Option<Vec<isize>>,
+    override_courses: Option<Vec<String>>,
 }
 
 impl Method {
@@ -361,10 +360,10 @@ impl Method {
         }
     }
 
-    /// Force use of a specific shorthand for this [`Method`].  By default, the
-    /// first character of the method's title will be used as a shorthand.
-    pub fn shorthand(mut self, shorthand: String) -> Self {
-        self.custom_shorthand = Some(shorthand);
+    /// Force use of a specific shorthand for this [`Method`].  If `None` is given, the first
+    /// character of the method's title will be used as a shorthand.
+    pub fn shorthand(mut self, shorthand: Option<String>) -> Self {
+        self.custom_shorthand = shorthand;
         self
     }
 
@@ -375,25 +374,32 @@ impl Method {
         self
     }
 
-    /// Override the globally set [`start_indices`](SearchBuilder::default_start_indices) for just
-    /// this method.  As with [`SearchBuilder::default_start_indices`], these indices are taken
-    /// modulo the method's lead length.
-    pub fn start_indices(mut self, indices: Vec<isize>) -> Self {
-        self.override_start_indices = Some(indices);
-        self
-    }
-
-    /// Override the globally set [`end_indices`](SearchBuilder::default_end_indices) for just this
-    /// method.  As with [`SearchBuilder::default_end_indices`], these indices are taken modulo the
+    /// Sets the sub-lead indices where this method is allowed to start.  If `None` is supplied,
+    /// this will fall back on the indices set by [`SearchBuilder::default_start_indices`].
+    ///
+    /// As with [`SearchBuilder::default_start_indices`], these indices are taken modulo the
     /// method's lead length.
-    pub fn end_indices(mut self, indices: Vec<isize>) -> Self {
-        self.override_end_indices = Some(indices);
+    pub fn start_indices(mut self, indices: Option<Vec<isize>>) -> Self {
+        self.override_start_indices = indices;
         self
     }
 
-    /// Override [`SearchBuilder::courses`] to specify which courses are allowed for this method.
-    pub fn courses(mut self, courses: Vec<String>) -> Self {
-        self.override_courses = Some(courses);
+    /// Sets the sub-lead indices where this method is allowed to finish.  If `None` is supplied,
+    /// this will fall back on the indices set by [`SearchBuilder::default_end_indices`] (**NOTE**:
+    /// the behaviour on `None` is different to [`SearchBuilder::default_end_indices`], where
+    /// `None` indicates that any end is allowed).
+    ///
+    /// As with [`SearchBuilder::default_end_indices`], these indices are taken modulo the
+    /// method's lead length.
+    pub fn end_indices(mut self, indices: Option<Vec<isize>>) -> Self {
+        self.override_end_indices = indices;
+        self
+    }
+
+    /// Specify which courses are allowed for this method.  If `None` is given, this will fall back
+    /// on the courses set by [`SearchBuilder::courses`].
+    pub fn courses(mut self, courses: Option<Vec<String>>) -> Self {
+        self.override_courses = courses;
         self
     }
 
@@ -447,13 +453,14 @@ impl Method {
     }
 }
 
-/// The different styles of spliced that can be generated
+/// The different styles of spliced that can be generated.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
 pub enum SpliceStyle {
-    /// Splices could happen at any lead label
+    /// Splices could happen at any lead label (usually just
+    /// [lead ends](bellframe::method::LABEL_LEAD_END)).
     #[serde(rename = "leads")]
     LeadLabels,
-    /// Splices only happen at calls
+    /// Splices only happen at calls.
     #[serde(rename = "calls")]
     Calls,
 }
@@ -464,13 +471,14 @@ impl Default for SpliceStyle {
     }
 }
 
-/// The unique identifier for a method in a [`Search`](crate::Search).
+/// The unique identifier for a [`Method`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MethodId {
     pub(crate) index: MethodIdx,
 }
 
-/// A set of methods used in a [`Search`].
+/// A set of [`Method`]s.
+// TODO: Remove this and add methods directly to `SearchBuilder`?
 pub struct MethodSet {
     vec: MethodVec<Method>,
 }
@@ -534,10 +542,15 @@ fn default_shorthand(title: &str) -> String {
 ///////////
 
 // TODO: More negative weights to calls
+
+/// Default weight given to bobs.
 pub const DEFAULT_BOB_WEIGHT: f32 = -1.8;
+/// Default weight given to singles.
 pub const DEFAULT_SINGLE_WEIGHT: f32 = -2.3;
+/// Default weight given to user-specified [`Call`]s.
 pub const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
 
+/// Builder API for a call.
 pub struct Call {
     symbol: String,
     debug_symbol: Option<String>,
@@ -637,12 +650,12 @@ impl Call {
     }
 }
 
-/// How the calls in a given composition should be displayed
+/// How the calls in a given composition should be displayed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CallDisplayStyle {
-    /// Calls should be displayed as a count since the last course head
+    /// Calls should be displayed as a count since the last course head.
     Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`]
+    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
     CallingPositions(Bell),
 }
 
@@ -650,6 +663,7 @@ pub enum CallDisplayStyle {
 // BASE CALLS //
 ////////////////
 
+/// Default bobs and singles created automatically by Monument.
 #[derive(Debug, Clone)]
 pub struct BaseCalls {
     /// The type of bobs and/or singles generated
@@ -660,6 +674,7 @@ pub struct BaseCalls {
     pub single_weight: Option<f32>,
 }
 
+/// The different types of [`BaseCalls`] that can be created.
 #[derive(Debug, Clone, Copy)]
 pub enum BaseCallType {
     /// `14` bobs and `1234` singles
@@ -844,6 +859,7 @@ mod tests {
 // MUSIC //
 ///////////
 
+/// A type of music that Monument should care about.
 pub struct MusicType {
     music_type: query::MusicType,
 }
@@ -893,7 +909,7 @@ impl MusicType {
     }
 }
 
-/// The unique identifier for a music type in a [`Search`](crate::Search).
+/// The unique identifier for a [`MusicType`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MusicTypeId {
     pub(crate) index: MusicTypeIdx,

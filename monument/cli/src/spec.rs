@@ -461,21 +461,25 @@ impl MethodSpec {
             ),
         };
         if let Some(common) = common {
-            method_builder.custom_shorthand = common.shorthand;
-            method_builder.override_count_range = common.count_range.into();
-            method_builder.override_courses = common.course_heads;
-            method_builder.override_start_indices = common.start_indices;
-            method_builder.override_end_indices = common.end_indices;
             if common.lead_locations.is_some() {
                 return Err(anyhow::Error::msg(
                     "`methods.lead_locations` has been renamed to `labels`",
                 ));
             }
+
+            method_builder = method_builder
+                .count_range(common.count_range.into())
+                .courses(common.course_heads)
+                .shorthand(common.shorthand)
+                .start_indices(common.start_indices)
+                .end_indices(common.end_indices);
             if let Some(labels) = common.labels {
-                method_builder.lead_labels = labels
-                    .into_iter()
-                    .map(|(label, locs)| (label, locs.into_indices()))
-                    .collect();
+                method_builder = method_builder.lead_labels(
+                    labels
+                        .into_iter()
+                        .map(|(label, locs)| (label, locs.into_indices()))
+                        .collect(),
+                );
             }
         }
         Ok(method_builder)
