@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     graph::{ChunkIdx, Graph, StartIdx, SuccIdx},
-    InProgressSearch,
+    Search,
 };
 
 /// The prefix of a composition.  These are ordered by average score per row.
@@ -150,7 +150,7 @@ impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
     pub(super) fn expand(
         self,
-        data: &InProgressSearch,
+        data: &Search,
         frontier: &mut BinaryHeap<Self>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
@@ -231,7 +231,7 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &InProgressSearch) -> Option<Composition> {
+    fn check_comp(&self, data: &Search) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !data.refined_ranges.length.contains(&self.length) {
@@ -321,7 +321,7 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &InProgressSearch) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(&self, data: &Search) -> (Vec<PathElem>, Counts) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = self.path.flatten();
 

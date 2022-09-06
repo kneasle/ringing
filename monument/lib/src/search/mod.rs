@@ -1,4 +1,4 @@
-//! Monument's search routines, along with the code for interacting with [`InProgressSearch`]es.
+//! Monument's search routines, along with the code for interacting with in-progress [`Search`]es.
 
 mod best_first;
 mod graph;
@@ -22,17 +22,18 @@ use crate::{
 };
 
 #[allow(unused_imports)] // Only used for doc comments
-use crate::Search;
+use crate::SearchBuilder;
 
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`Search::run`] or [`Search::run_with_config`].
-/// Both of those will deal with handling the [`Search`] for you.
+/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
+/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
+/// you.
 // TODO: Better name?
 #[derive(Debug)]
-pub struct InProgressSearch {
+pub struct Search {
     /* Data */
     query: Arc<Query>,
     config: Config,
@@ -44,7 +45,7 @@ pub struct InProgressSearch {
     abort_flag: AtomicBool,
 }
 
-impl InProgressSearch {
+impl Search {
     /// Create a new `Search` which generates [`Composition`]s according to the given [`Query`].
     /// This also verifies that the [`Query`] makes sense; if not, an [`Error`](crate::Error)
     /// describing the problem is returned.
@@ -61,7 +62,7 @@ impl InProgressSearch {
         // Create a fast-to-traverse copy of the graph
         let graph = self::graph::Graph::new(&source_graph, &query);
 
-        Ok(InProgressSearch {
+        Ok(Search {
             query: Arc::new(query),
             config,
             refined_ranges,
@@ -94,7 +95,7 @@ impl InProgressSearch {
     }
 }
 
-impl InProgressSearch {
+impl Search {
     pub fn length_range(&self) -> RangeInclusive<usize> {
         self.query.length_range_usize()
     }
@@ -153,7 +154,7 @@ impl InProgressSearch {
     }
 }
 
-/// Update message from an [`InProgressSearch`].
+/// Update message from an in-progress [`Search`].
 #[derive(Debug)]
 pub enum Update {
     /// A new composition has been found

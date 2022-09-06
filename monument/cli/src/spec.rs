@@ -7,7 +7,7 @@ use monument::{
     builder::{
         CallDisplayStyle, MethodBuilder, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    Config, InProgressSearch, Search,
+    Config, Search, SearchBuilder,
 };
 use serde::Deserialize;
 
@@ -158,7 +158,7 @@ impl Spec {
         source: &Source,
         opts: &crate::args::Options,
         leak_search_memory: bool,
-    ) -> anyhow::Result<(Arc<InProgressSearch>, Vec<MusicDisplay>)> {
+    ) -> anyhow::Result<(Arc<Search>, Vec<MusicDisplay>)> {
         log::debug!("Generating query");
 
         // Build the methods first so that we can compute the overall `Stage` *before* parsing
@@ -172,7 +172,7 @@ impl Spec {
             .collect::<anyhow::Result<Vec<_>>>()?;
         let length = monument::builder::Length::Range(self.length.range.clone());
         let mut search_builder =
-            Search::with_methods(method_builders, length).map_err(improve_error_message)?;
+            SearchBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
         let stage = search_builder.get_stage();
 
         // Lower `MethodSpec`s into `bellframe::Method`s.
@@ -312,7 +312,11 @@ impl Spec {
             }))
     }
 
-    fn music(&self, source: &Source, search: &mut Search) -> anyhow::Result<Vec<MusicDisplay>> {
+    fn music(
+        &self,
+        source: &Source,
+        search: &mut SearchBuilder,
+    ) -> anyhow::Result<Vec<MusicDisplay>> {
         // Load TOML for the music file
         let music_file_buffer;
         let music_file_str = match (&self.music_file, source) {

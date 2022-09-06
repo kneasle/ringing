@@ -59,7 +59,7 @@ mod query;
 mod search;
 mod utils;
 
-pub use builder::Search;
+pub use builder::SearchBuilder;
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use search::{Config, InProgressSearch, Progress, Update};
+pub use search::{Config, Progress, Search, Update};

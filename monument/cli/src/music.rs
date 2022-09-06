@@ -7,7 +7,7 @@ use bellframe::{
 use itertools::Itertools;
 use monument::{
     builder::{MusicTypeBuilder, MusicTypeId, OptionalRangeInclusive},
-    InProgressSearch, Search,
+    Search, SearchBuilder,
 };
 use serde::Deserialize;
 
@@ -111,7 +111,7 @@ pub fn generate_music(
     music_specs: &[MusicSpec],
     base_music: BaseMusic,
     music_file_str: Option<&str>,
-    search_builder: &mut Search,
+    search_builder: &mut SearchBuilder,
 ) -> anyhow::Result<Vec<MusicDisplay>> {
     let mut music_builder = MusicTypeFactory::new(search_builder);
 
@@ -134,11 +134,11 @@ pub fn generate_music(
 
 struct MusicTypeFactory<'a> {
     annot_music_types: Vec<(MusicTypeId, Option<MusicTypeDisplay>)>,
-    search_builder: &'a mut Search,
+    search_builder: &'a mut SearchBuilder,
 }
 
 impl<'a> MusicTypeFactory<'a> {
-    fn new(search_builder: &'a mut Search) -> Self {
+    fn new(search_builder: &'a mut SearchBuilder) -> Self {
         Self {
             annot_music_types: Vec::new(),
             search_builder,
@@ -241,7 +241,7 @@ impl MusicSpec {
     /// Generates a [`MusicTypeBuilder`] representing `self`.
     fn to_music_types(
         &self,
-        search_builder: &mut Search,
+        search_builder: &mut SearchBuilder,
     ) -> anyhow::Result<Vec<(MusicTypeId, Option<MusicTypeDisplay>)>> {
         // This function just delegates the work to one of `music_type_runs`,
         // `music_type_patterns` or `music_type_preset`.
@@ -282,7 +282,7 @@ fn music_type_runs(
     lengths: &[u8],
     internal: bool,
     common: &MusicCommon,
-    search_builder: &mut Search,
+    search_builder: &mut SearchBuilder,
 ) -> Vec<(MusicTypeId, Option<MusicTypeDisplay>)> {
     let stage = search_builder.get_stage();
 
@@ -370,7 +370,7 @@ fn music_type_patterns(
     pattern_strings: &[String],
     count_each: OptRangeInclusive,
     common: &MusicCommon,
-    search_builder: &mut Search,
+    search_builder: &mut SearchBuilder,
 ) -> anyhow::Result<Vec<(MusicTypeId, Option<MusicTypeDisplay>)>> {
     let individual_count = OptionalRangeInclusive::from(count_each);
     let combined_count = OptionalRangeInclusive::from(common.count_range);
@@ -431,7 +431,7 @@ fn music_type_patterns(
 fn music_type_preset(
     preset: MusicPreset,
     common: &MusicCommon,
-    search_builder: &mut Search,
+    search_builder: &mut SearchBuilder,
 ) -> anyhow::Result<Vec<(MusicTypeId, Option<MusicTypeDisplay>)>> {
     let stage = search_builder.get_stage();
 
@@ -610,7 +610,7 @@ impl MusicDisplay {
 
     /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
     /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
-    pub fn col_width(&self, search: &InProgressSearch) -> usize {
+    pub fn col_width(&self, search: &Search) -> usize {
         let all_zeros = search
             .music_type_ids()
             .map(|id| (id, 0))
@@ -622,11 +622,7 @@ impl MusicDisplay {
     }
 
     /// Generate a compact string representing a given set of music counts
-    pub fn display_counts(
-        &self,
-        search: &InProgressSearch,
-        counts: &HashMap<MusicTypeId, usize>,
-    ) -> String {
+    pub fn display_counts(&self, search: &Search, counts: &HashMap<MusicTypeId, usize>) -> String {
         let mut s = String::new();
 
         // Add total count
@@ -674,7 +670,7 @@ impl MusicDisplay {
 /// repeated).
 fn write_music_count(
     s: &mut String,
-    search: &InProgressSearch,
+    search: &Search,
     counts: &HashMap<MusicTypeId, usize>,
     id: &MusicTypeId,
 ) {
@@ -928,7 +924,7 @@ trait SearchBuilderExt {
     ) -> MusicTypeId;
 }
 
-impl SearchBuilderExt for Search {
+impl SearchBuilderExt for SearchBuilder {
     fn add_new_music_type(
         &mut self,
         patterns: Vec<Pattern>,

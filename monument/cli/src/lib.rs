@@ -24,7 +24,7 @@ use std::{
 use bellframe::row::ShortRow;
 use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
-use monument::{Composition, InProgressSearch, Progress, Update};
+use monument::{Composition, Progress, Search, Update};
 use music::MusicDisplay;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
@@ -130,7 +130,7 @@ pub enum Source<'a> {
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     pub comps: Vec<Composition>,
-    pub search: Arc<InProgressSearch>,
+    pub search: Arc<Search>,
     pub duration: Duration,
     pub aborted: bool,
 
@@ -316,7 +316,7 @@ impl SingleLineProgressLogger {
 
 #[derive(Debug, Clone)]
 struct CompPrinter {
-    search: Arc<InProgressSearch>,
+    search: Arc<Search>,
     music_displays: Vec<MusicDisplay>,
 
     /// The maximum width of a composition's (total) length
@@ -336,7 +336,7 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(music_displays: Vec<MusicDisplay>, search: Arc<InProgressSearch>) -> Self {
+    fn new(music_displays: Vec<MusicDisplay>, search: Arc<Search>) -> Self {
         Self {
             length_width: search.length_range().end().to_string().len(),
             method_counts: search

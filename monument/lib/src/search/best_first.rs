@@ -5,14 +5,14 @@ use std::{
 
 use crate::utils::TotalLength;
 
-use super::{prefix::CompPrefix, InProgressSearch, Progress, Update};
+use super::{prefix::CompPrefix, Progress, Search, Update};
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(
-    search_data: &InProgressSearch,
+    search_data: &Search,
     mut update_fn: impl FnMut(Update),
     abort_flag: &AtomicBool,
 ) {
