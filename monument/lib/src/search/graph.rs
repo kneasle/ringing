@@ -170,8 +170,8 @@ fn link_score(
 }
 
 index_vec::define_index_type! { pub struct ChunkIdx = usize; }
-index_vec::define_index_type! { pub struct StartIdx = usize; }
-index_vec::define_index_type! { pub struct SuccIdx = usize; }
+index_vec::define_index_type! { pub struct StartIdx = u32; }
+index_vec::define_index_type! { pub struct SuccIdx = u32; }
 type ChunkVec<T> = index_vec::IndexVec<ChunkIdx, T>;
 type StartVec<T> = index_vec::IndexVec<StartIdx, T>;
 type SuccVec<T> = index_vec::IndexVec<SuccIdx, T>;

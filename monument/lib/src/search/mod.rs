@@ -2,6 +2,7 @@
 
 mod best_first;
 mod graph;
+mod path;
 mod prefix;
 
 use std::{

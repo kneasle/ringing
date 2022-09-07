@@ -3,7 +3,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::utils::TotalLength;
+use crate::{search::path::Paths, utils::TotalLength};
 
 use super::{prefix::CompPrefix, Progress, Search, Update};
 
@@ -17,7 +17,8 @@ pub(crate) fn search(
     abort_flag: &AtomicBool,
 ) {
     // Initialise the frontier to just the start chunks
-    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph);
+    let mut paths = Paths::new();
+    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph, &mut paths);
 
     let mut iter_count = 0;
     let mut num_comps = 0;
@@ -37,7 +38,7 @@ pub(crate) fn search(
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
     while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(search_data, &mut frontier);
+        let maybe_comp = prefix.expand(search_data, &mut paths, &mut frontier);
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
@@ -53,6 +54,7 @@ pub(crate) fn search(
         if frontier.len() >= search_data.config.queue_limit {
             send_progress_update!(truncating_queue = true);
             truncate_heap(&mut frontier, search_data.config.queue_limit / 2);
+            paths.gc(frontier.iter().map(|prefix| prefix.path_head()));
             send_progress_update!(truncating_queue = false);
         }
 
