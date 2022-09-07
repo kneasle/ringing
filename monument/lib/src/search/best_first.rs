@@ -3,9 +3,11 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::{search::path::Paths, utils::TotalLength};
+use datasize::DataSize;
 
-use super::{prefix::CompPrefix, Progress, Search, Update};
+use crate::utils::TotalLength;
+
+use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
@@ -19,6 +21,9 @@ pub(crate) fn search(
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
     let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph, &mut paths);
+
+    // Number of bytes occupied by each `CompPrefix` in the frontier.
+    let prefix_size = frontier.peek().unwrap().size();
 
     let mut iter_count = 0;
     let mut num_comps = 0;
@@ -50,10 +55,12 @@ pub(crate) fn search(
             }
         }
 
-        // If the queue gets too long, then halve its size
-        if frontier.len() >= search_data.config.queue_limit {
+        // If we end up using too much memory, half the size of the queue and garbage-collect the
+        // paths.
+        let mem_usage = frontier.len() * prefix_size + paths.estimate_heap_size();
+        if mem_usage >= search_data.config.mem_limit {
             send_progress_update!(truncating_queue = true);
-            truncate_heap(&mut frontier, search_data.config.queue_limit / 2);
+            truncate_queue(frontier.len() / 2, &mut frontier);
             paths.gc(frontier.iter().map(|prefix| prefix.path_head()));
             send_progress_update!(truncating_queue = false);
         }
@@ -112,12 +119,12 @@ fn send_progress_update(
     }));
 }
 
-fn truncate_heap<T: Ord>(heap_ref: &mut BinaryHeap<T>, len: usize) {
-    let heap = std::mem::take(heap_ref);
+fn truncate_queue<T: Ord>(len: usize, queue: &mut BinaryHeap<T>) {
+    let heap = std::mem::take(queue);
     let mut chunks = heap.into_vec();
     chunks.sort_by(|a, b| b.cmp(a)); // Sort highest score first
     if len < chunks.len() {
         chunks.drain(len..);
     }
-    *heap_ref = BinaryHeap::from(chunks);
+    *queue = BinaryHeap::from(chunks);
 }

@@ -36,14 +36,6 @@
 //!    currently has only one consumer (the CLI) and therefore its API has been heavily bent by the
 //!    needs of a CLI.  Before I'm happy to let others use this library, I need to try embedding it
 //!    so I can get a proper feel for what the library feels like to use.
-//! 2. Currently, Monument's search routine uses potentially unbounded amounts of memory.  This is
-//!    basically acceptable for a simple CLI tool, but is completely unacceptable when being
-//!    embedded into larger applications - you simply cannot have your program be nuked by
-//!    the OS because a library exhausted the system's memory.  It is currently possible to control
-//!    the usage using the [`Config::queue_limit`](search::Config::queue_limit) parameter, but this
-//!    is at best a proxy for memory usage.  Soon™, `queue_limit` will be replaced with a proper
-//!    memory limit: the search routine will set `queue_limit` internally to make sure the memory
-//!    usage is bounded.
 // TODO: Add example
 
 #![deny(clippy::all)]

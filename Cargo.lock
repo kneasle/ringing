@@ -199,6 +199,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "datasize"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cdaf1625dae32ea757a4a98e6f59496bb4fe80a41efb0bd57e631f6cb341770"
+dependencies = [
+ "datasize_derive",
+]
+
+[[package]]
+name = "datasize_derive"
+version = "0.2.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1065db16e6dad1cfa0f50966d8405bb9f6d13f74f34d685b417f301cb32f1d86"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "difference"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -653,6 +673,7 @@ version = "0.11.0"
 dependencies = [
  "bellframe",
  "bit-vec",
+ "datasize",
  "gcd",
  "hmap",
  "index_vec",

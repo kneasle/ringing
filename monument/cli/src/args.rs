@@ -37,9 +37,10 @@ pub struct Options {
     /// cause an error.  Defaults to 100K.
     #[structopt(long)]
     pub graph_size_limit: Option<usize>,
-    /// The maximum number of prefixes that Monument will store at once.  Defaults to 10 million.
-    #[structopt(short = "Q", long)]
-    pub queue_limit: Option<usize>,
+    /// The maximum number of bytes of heap memory that Monument's search routine can allocate.
+    /// Defaults to 90% of what's available.
+    #[structopt(short = "M", long, parse(try_from_str = parse_big_int))]
+    pub mem_limit: Option<usize>,
 
     /// Debug options.  `spec`, `query`, `layout` and `graph` print the corresponding data
     /// structures.  `no-search` will run as normal but stop just before starting the full search.
@@ -60,4 +61,24 @@ impl CliArgs {
             _ => LevelFilter::Trace,         // -vvv (or more `v`s)
         }
     }
+}
+
+/// Parse a big integer like '100' or '140M'
+fn parse_big_int(s: &str) -> anyhow::Result<usize> {
+    let (last_char_idx, last_char) = s.char_indices().last().unwrap();
+    let mut number_string = &s[..last_char_idx];
+    let mut multiplier = 1usize;
+    match last_char {
+        'k' | 'K' => multiplier = 1_000,
+        'm' | 'M' => multiplier = 1_000_000,
+        'g' | 'G' => multiplier = 1_000_000_000,
+        't' | 'T' => multiplier = 1_000_000_000_000,
+        '0'..='9' => number_string = s, // Part of the number
+        _ => {
+            return Err(anyhow::Error::msg(
+                "Expected number with a multiplier from [KMGT]",
+            ));
+        }
+    }
+    Ok(number_string.parse::<usize>()? * multiplier)
 }

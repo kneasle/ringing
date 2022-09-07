@@ -157,7 +157,7 @@ take you to more in-depth docs about it.
 - [`length`](#length-required)
 - [`num_comps = 100`](#num_comps)
 - [`allow_false = false`](#allow_false)
-- [`queue_limit`](#queue_limit)
+- ~~[`queue_limit`](#queue_limit)~~ _(removed in v0.12.0)_
 - [`graph_size_limit`](#graph_size_limit)
 
 **Methods:**
@@ -176,7 +176,7 @@ take you to more in-depth docs about it.
 - [`calls = []`](#calls-2)
 
 **Music:**
-- ~[`default_music = true`](#default_music)~ _(since v0.8.0, replaced by `base_music` in v0.9.0)_
+- ~~[`default_music = true`](#default_music)~~ _(since v0.8.0, replaced by `base_music` in v0.9.0)_
 - [`base_music = "default"`](#base_music) _(since v0.9.0)_
 - [`music_file`](#music_file) (optional)
 - [`music = []`](#music-2)
@@ -188,7 +188,7 @@ take you to more in-depth docs about it.
 - [`split_tenors = false`](#split_tenors)
 - [`ch_weights = []`](#ch_weights)
 - [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
-- ~[`leadwise`](#leadwise) (default set by Monument)~ _(removed in v0.10.0)_
+- ~~[`leadwise`](#leadwise) (default set by Monument)~~ _(removed in v0.10.0)_
 
 **Starts/Ends:**
 - [`start_row = <rounds>`](#start_row-and-end_row) _(since v0.10.0)_

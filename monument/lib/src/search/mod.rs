@@ -6,6 +6,7 @@ mod path;
 mod prefix;
 
 use std::{
+    convert::TryInto,
     ops::RangeInclusive,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -217,9 +218,8 @@ pub struct Config {
     pub graph_size_limit: usize,
 
     /* Search */
-    /// The maximum number of [`Composition`] prefixes stored simultaneously whilst searching.
-    /// Hopefully this will soon be deprecated in favour of an explicit memory limit.
-    pub queue_limit: usize,
+    /// The maximum number of bytes of heap memory which the search routine is allowed to use.
+    pub mem_limit: usize,
     /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
     /// This massively improves the termination speed (because the search creates tons of small
     /// allocations which we now don't need to explicitly free) but only makes sense for the CLI,
@@ -235,7 +235,9 @@ impl Default for Config {
 
             graph_size_limit: 100_000,
 
-            queue_limit: 10_000_000,
+            mem_limit: 10_000_000_000u64
+                .try_into()
+                .unwrap_or(usize::MAX - 500_000_000), // TODO: Better default
             leak_search_memory: false,
         }
     }

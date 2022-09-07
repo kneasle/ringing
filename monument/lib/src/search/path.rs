@@ -1,3 +1,5 @@
+use datasize::DataSize;
+
 use super::graph::{StartIdx, SuccIdx};
 
 /// A container of prefix paths, stored as a linked-list style tree such that common prefixes are
@@ -187,6 +189,16 @@ impl Paths {
     }
 }
 
+impl DataSize for Paths {
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        std::mem::size_of::<Self>() + self.nodes.len() * std::mem::size_of::<u64>()
+    }
+}
+
 #[track_caller]
 fn as_high_31_bits(v: u32) -> u64 {
     assert_eq!(
@@ -199,5 +211,8 @@ fn as_high_31_bits(v: u32) -> u64 {
 
 const EMPTY_BIT_MASK: u64 = 1 << 63; // Bits `63..64`
 
-index_vec::define_index_type! { pub struct PathId = u32; }
+index_vec::define_index_type! {
+    #[derive(DataSize)]
+    pub struct PathId = u32;
+}
 const NULL_NODE_IDX: PathId = PathId::from_raw_unchecked(u32::MAX);

@@ -6,6 +6,7 @@ use std::{
 
 use bellframe::Row;
 use bit_vec::BitVec;
+use datasize::DataSize;
 use itertools::Itertools;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
-    utils::{Counts, Score, TotalLength},
+    utils::{div_rounding_up, Counts, Score, TotalLength},
 };
 
 use super::{
@@ -107,6 +108,14 @@ impl CompPrefix {
             length,
             avg_score: score / length.as_usize() as f32,
         }
+    }
+
+    /// Returns the number of bytes of memory occupied by `self`
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + std::mem::size_of::<PrefixInner>()
+            + div_rounding_up(self.inner.unringable_chunks.len(), 8)
+            + self.inner.method_counts.estimate_heap_size()
     }
 
     pub fn path_head(&self) -> PathId {

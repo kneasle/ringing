@@ -40,8 +40,6 @@ pub struct Spec {
     allow_false: bool,
 
     /* CONFIG OPTIONS */
-    /// If set, overrides `-Q`/`--queue-limit` CLI argument
-    queue_limit: Option<usize>,
     /// If set, overrides `--graph-size-limit` CLI argument
     graph_size_limit: Option<usize>,
 
@@ -264,8 +262,8 @@ impl Spec {
         if let Some(limit) = opts.graph_size_limit.or(self.graph_size_limit) {
             config.graph_size_limit = limit;
         }
-        if let Some(limit) = opts.queue_limit.or(self.queue_limit) {
-            config.queue_limit = limit;
+        if let Some(limit) = opts.mem_limit {
+            config.mem_limit = limit;
         }
         config
     }

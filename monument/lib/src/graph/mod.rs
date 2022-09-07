@@ -14,6 +14,7 @@ use std::{
 };
 
 use bellframe::Row;
+use datasize::DataSize;
 
 use crate::{
     group::PhRotation,
@@ -105,7 +106,7 @@ impl Link {
 
 /// What a `Link` points to.  This is either a [`StartOrEnd`](Self::StartOrEnd), or a specific
 /// [`Chunk`](Self::Chunk).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize)]
 pub(crate) enum LinkSide<Id> {
     StartOrEnd,
     Chunk(Id),
