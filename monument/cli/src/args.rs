@@ -25,8 +25,9 @@ pub struct CliArgs {
     pub quietness: usize,
 }
 
-/// Parameters passed directly into `monument_cli::run`, used to generated the [`monument::Config`]
-/// for the search.
+// Parameters passed directly into `monument_cli::run`, used to generated the [`monument::Config`]
+// for the search.  This isn't a doc-comment because doc comments overrides
+// `#[structopt(about = "...")]`.
 #[derive(Default, Debug, Clone, StructOpt)]
 pub struct Options {
     /// The maximum number of threads that Monument will use.
