@@ -678,10 +678,12 @@ dependencies = [
  "hmap",
  "index_vec",
  "itertools",
+ "kneasle_ringing_utils",
  "log",
  "num_cpus",
  "ordered-float",
  "serde",
+ "sysinfo",
 ]
 
 [[package]]
@@ -708,6 +710,7 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "structopt",
+ "sysinfo",
  "toml",
  "walkdir",
 ]
@@ -1293,6 +1296,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
+]
+
+[[package]]
+name = "sysinfo"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ae2421f3e16b3afd4aa692d23b83d0ba42ee9b0081d5deeb7d21428d7195fb1"
+dependencies = [
+ "cfg-if",
+ "core-foundation-sys",
+ "libc",
+ "ntapi",
+ "once_cell",
+ "rayon",
+ "winapi",
 ]
 
 [[package]]
