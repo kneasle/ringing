@@ -2,9 +2,11 @@
 
 mod best_first;
 mod graph;
+mod path;
 mod prefix;
 
 use std::{
+    convert::TryInto,
     ops::RangeInclusive,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -13,6 +15,8 @@ use std::{
 };
 
 use bellframe::Stage;
+use ringing_utils::BigNumInt;
+use sysinfo::SystemExt;
 
 use crate::{
     builder::{MethodId, MusicTypeId},
@@ -216,9 +220,9 @@ pub struct Config {
     pub graph_size_limit: usize,
 
     /* Search */
-    /// The maximum number of [`Composition`] prefixes stored simultaneously whilst searching.
-    /// Hopefully this will soon be deprecated in favour of an explicit memory limit.
-    pub queue_limit: usize,
+    /// The maximum number of bytes of heap memory which the search routine is allowed to use.
+    /// Defaults to 90% of available memory.
+    pub mem_limit: usize,
     /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
     /// This massively improves the termination speed (because the search creates tons of small
     /// allocations which we now don't need to explicitly free) but only makes sense for the CLI,
@@ -229,12 +233,30 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
+        // Use as a memory limit either 90% of available memory or 5GB if we can't access
+        // availability
+        let ideal_mem_limit = if sysinfo::System::IS_SUPPORTED {
+            (sysinfo::System::new_all().available_memory() as f32 * 0.9) as u64
+        } else {
+            5_000_000_000u64
+        };
+        // However, always use 500MB less than the memory that's accessible by the system (i.e. if
+        // we're running in 32-bit environments like WASM, we can't fill available memory so we
+        // just default to `2*32 - 500MB ~= 3.5GB`)
+        let pointer_size_limit = (usize::MAX as u64).saturating_sub(500_000_000);
+        let mem_limit: usize = ideal_mem_limit
+            .min(pointer_size_limit)
+            .try_into()
+            .expect("Memory limit should fit into `usize`");
+
+        log::info!("Limiting memory usage to {}B", BigNumInt(mem_limit));
+
         Self {
             thread_limit: None,
 
             graph_size_limit: 100_000,
 
-            queue_limit: 10_000_000,
+            mem_limit,
             leak_search_memory: false,
         }
     }

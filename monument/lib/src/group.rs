@@ -1,6 +1,7 @@
 use std::ops::{Deref, Mul, Not};
 
 use bellframe::{Row, RowBuf, Stage};
+use datasize::DataSize;
 use gcd::Gcd;
 
 /// A group of [`Row`]s, used to represent part heads.  Currently limited to cyclic groups (in the
@@ -18,7 +19,7 @@ pub struct PartHeadGroup {
 }
 
 /// A compact representation of a single `PartHead` within a [`PartHeadGroup`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DataSize)]
 pub struct PartHead {
     /// The index into the owning [`PartHeadGroup`]'s `part_heads` list.
     index: u8,

@@ -6,6 +6,7 @@ monument/test/.last-results.json
 
 # Where I store comps I'm working on that I don't want to show to everyone
 */comps/
+monument/bench/
 
 # All callgrind files
 **/callgrind*

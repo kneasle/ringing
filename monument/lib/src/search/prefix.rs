@@ -2,11 +2,11 @@ use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashSet},
     ops::Deref,
-    rc::Rc,
 };
 
 use bellframe::Row;
 use bit_vec::BitVec;
+use datasize::DataSize;
 use itertools::Itertools;
 
 use crate::{
@@ -14,11 +14,12 @@ use crate::{
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
-    utils::{Counts, Score, TotalLength},
+    utils::{div_rounding_up, Counts, Score, TotalLength},
 };
 
 use super::{
-    graph::{ChunkIdx, Graph, StartIdx, SuccIdx},
+    graph::{ChunkIdx, Graph},
+    path::{PathId, Paths},
     Search,
 };
 
@@ -39,8 +40,8 @@ pub(super) struct CompPrefix {
 
 #[derive(Debug, Clone)]
 pub(super) struct PrefixInner {
-    /// The path traced to this chunk
-    path: CompPath,
+    /// The last node in the path taken so far
+    path: PathId,
 
     /// The next [`LinkSide`] after chunk selection.  All other fields refer to the prefix up to
     /// **but not including** `next_link_side`.
@@ -63,7 +64,7 @@ pub(super) struct PrefixInner {
 impl CompPrefix {
     /// Given a index-based [`Graph`], return [`CompPrefix`]es representing each of the possible
     /// start links.
-    pub fn starts(graph: &Graph) -> BinaryHeap<Self> {
+    pub fn starts(graph: &Graph, paths: &mut Paths) -> BinaryHeap<Self> {
         // `BitVec` that marks every `Chunk` as ringable
         let all_chunks_ringable = BitVec::from_elem(graph.chunks.len(), false);
 
@@ -73,7 +74,7 @@ impl CompPrefix {
             .map(|(start_idx, &(chunk_idx, _link_id, rotation))| {
                 let chunk = &graph.chunks[chunk_idx];
                 Self::new(
-                    CompPath::Start(start_idx),
+                    paths.add_start(start_idx),
                     LinkSide::Chunk(chunk_idx),
                     rotation,
                     all_chunks_ringable.clone(),
@@ -87,7 +88,7 @@ impl CompPrefix {
 
     #[allow(clippy::too_many_arguments)]
     fn new(
-        path: CompPath,
+        path: PathId,
         next_link_side: LinkSide<ChunkIdx>,
         part_head: PartHead,
         unringable_chunks: BitVec,
@@ -107,6 +108,18 @@ impl CompPrefix {
             length,
             avg_score: score / length.as_usize() as f32,
         }
+    }
+
+    /// Returns the number of bytes of memory occupied by `self`
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + std::mem::size_of::<PrefixInner>()
+            + div_rounding_up(self.inner.unringable_chunks.len(), 8)
+            + self.inner.method_counts.estimate_heap_size()
+    }
+
+    pub fn path_head(&self) -> PathId {
+        self.path
     }
 
     pub fn length(&self) -> TotalLength {
@@ -151,12 +164,13 @@ impl CompPrefix {
     pub(super) fn expand(
         self,
         data: &Search,
+        paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
-            LinkSide::StartOrEnd => return self.check_comp(data),
+            LinkSide::StartOrEnd => return self.check_comp(data, paths),
         };
         let chunk = &data.graph.chunks[chunk_idx];
 
@@ -177,7 +191,6 @@ impl CompPrefix {
         } = *inner;
 
         // Compute the values for after `chunk`
-        let path = Rc::new(path);
         length += chunk.total_length;
         score += chunk.score;
         method_counts += &chunk.method_counts;
@@ -210,7 +223,7 @@ impl CompPrefix {
             }
 
             frontier.push(CompPrefix::new(
-                CompPath::Cons(path.clone(), succ_idx),
+                paths.add(path, succ_idx),
                 link.next,
                 rotation,
                 unringable_chunks.clone(), // PERF: Share these to save memory
@@ -231,7 +244,7 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &Search) -> Option<Composition> {
+    fn check_comp(&self, data: &Search, paths: &Paths) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !data.refined_ranges.length.contains(&self.length) {
@@ -255,7 +268,7 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */
 
-        let (path, music_counts) = self.flattened_path(data);
+        let (path, music_counts) = self.flattened_path(data, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
@@ -321,9 +334,9 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &Search) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(&self, data: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
-        let (start_idx, succ_idxs) = self.path.flatten();
+        let (start_idx, succ_idxs) = paths.flatten(self.path);
 
         let mut music_counts = Counts::zeros(data.query.music_types.len());
         let mut path = Vec::<PathElem>::new();
@@ -358,42 +371,5 @@ impl CompPrefix {
             part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
         (path, music_counts)
-    }
-}
-
-//////////////////////
-// LINKED-LIST PATH //
-//////////////////////
-
-/// A route through the composition graph, stored as a 'reversed' linked list (i.e. one where each
-/// chunk stores a reference to its _predecessor_ rather than its _successor_).  This allows for
-/// multiple compositions with the same prefix to share the data for that prefix.
-#[derive(Debug, Clone)]
-enum CompPath {
-    /// The start of a composition, along with the index within [`Graph::start_chunks`] of this
-    /// specific start
-    Start(StartIdx),
-    /// The composition follows the path in the [`Rc`], then follows the given link to reach the
-    /// given [`ChunkIdx`]
-    Cons(Rc<Self>, SuccIdx),
-}
-
-impl CompPath {
-    fn flatten(&self) -> (StartIdx, Vec<SuccIdx>) {
-        let mut path = Vec::new();
-        let start_idx = self.flatten_recursive(&mut path);
-        (start_idx, path)
-    }
-
-    /// Flatten `self` into `path`, returning the [`StartIdx`] encoding how this comp started
-    fn flatten_recursive(&self, path: &mut Vec<SuccIdx>) -> StartIdx {
-        match self {
-            Self::Start(start_link_id) => *start_link_id,
-            Self::Cons(lhs, succ_idx) => {
-                let start_link_id = lhs.flatten_recursive(path);
-                path.push(*succ_idx);
-                start_link_id
-            }
-        }
     }
 }
