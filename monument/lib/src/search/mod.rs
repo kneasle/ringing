@@ -221,7 +221,7 @@ pub struct Config {
 
     /* Search */
     /// The maximum number of bytes of heap memory which the search routine is allowed to use.
-    /// Defaults to 90% of available memory.
+    /// Defaults to 80% of available memory.
     pub mem_limit: usize,
     /// If `true`, the data structures used by searches will be leaked using [`std::mem::forget`].
     /// This massively improves the termination speed (because the search creates tons of small
@@ -233,10 +233,10 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        // Use as a memory limit either 90% of available memory or 5GB if we can't access
+        // Use as a memory limit either 80% of available memory or 5GB if we can't access
         // availability
         let ideal_mem_limit = if sysinfo::System::IS_SUPPORTED {
-            (sysinfo::System::new_all().available_memory() as f32 * 0.9) as u64
+            (sysinfo::System::new_all().available_memory() as f32 * 0.8) as u64
         } else {
             5_000_000_000u64
         };
