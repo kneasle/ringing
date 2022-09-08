@@ -6,6 +6,10 @@
     some more attention, it should be possible to embed the `monument` library into programs other
     than its CLI interface.
 - (#140) Rename some fields of `Query` (which, after #138, are no longer exposed externally)
+- (#142) Implement builder API to make `monument` easier to use as a library
+- (#142) Make `Query` private and build `Search`es directly.
+- (#143) Use explicit memory limit.  Set by `--mem-limit` or `-M`, defaults to 90% of available
+    system memory.
 
 ### BellFrame
 - (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.
