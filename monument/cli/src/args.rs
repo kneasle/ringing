@@ -39,7 +39,7 @@ pub struct Options {
     #[structopt(long)]
     pub graph_size_limit: Option<usize>,
     /// The maximum number of bytes of heap memory that Monument's search routine can allocate.
-    /// Defaults to 90% of what's available.
+    /// Defaults to 80% of what's available.
     #[structopt(short = "M", long, parse(try_from_str = parse_big_int))]
     pub mem_limit: Option<usize>,
 
