@@ -4,7 +4,10 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{CallDisplayStyle, Method, SpliceStyle, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
+    builder::{
+        CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
+        DEFAULT_SINGLE_WEIGHT,
+    },
     Config, Search, SearchBuilder,
 };
 use serde::Deserialize;
@@ -203,7 +206,10 @@ impl Spec {
             None if self.snap_start => vec![2],
             None => vec![0],
         };
-        search_builder.default_end_indices = self.end_indices.clone();
+        search_builder.default_end_indices = match &self.end_indices {
+            Some(idxs) => EndIndices::Specific(idxs.to_vec()),
+            None => EndIndices::Any,
+        };
         search_builder.splice_style = self.splice_style;
         search_builder.splice_weight = self.splice_weight;
         // Calls
@@ -221,7 +227,7 @@ impl Spec {
         search_builder.part_head = part_head;
         search_builder.courses = match &self.course_heads {
             // If the user specifies some courses, use them
-            Some(ch_strings) => Some(parse_ch_masks(ch_strings, stage)?),
+            Some(ch_strings) => Some(parse_masks(ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
             None if self.split_tenors => Some(vec![Mask::empty(stage)]),
             // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
@@ -367,9 +373,9 @@ fn parse_row(name: &str, s: &str, stage: Stage) -> Result<RowBuf, anyhow::Error>
         .map_err(|e| anyhow::Error::msg(format!("Can't parse {} {:?}: {}", name, s, e)))
 }
 
-fn parse_ch_masks(ch_mask_strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
-    let mut masks = Vec::with_capacity(ch_mask_strings.len());
-    for s in ch_mask_strings {
+fn parse_masks(strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
+    let mut masks = Vec::with_capacity(strings.len());
+    for s in strings {
         masks.push(
             Mask::parse_with_stage(s, stage)
                 .map_err(|e| mask_parse_error("course head mask", s, e))?,

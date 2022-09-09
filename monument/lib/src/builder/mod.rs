@@ -1,24 +1,22 @@
 //! Builder API for constructing [`Search`]es.
 
-use std::{
-    collections::HashMap,
-    ops::{Range, RangeInclusive},
-};
+mod methods;
+
+pub use self::methods::*;
+
+use std::ops::{Range, RangeInclusive};
 
 use bellframe::{
     method::LABEL_LEAD_END,
-    method_lib::QueryError,
     music::{Elem, Pattern},
-    Bell, Mask, MethodLib, PlaceNot, RowBuf, Stage, Stroke,
+    Bell, Mask, PlaceNot, RowBuf, Stage, Stroke,
 };
-use hmap::hmap;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use serde::Deserialize;
 
 use crate::{
     group::PartHeadGroup,
-    query::{self, CallVec, MethodIdx, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
+    query::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
     search::{Config, Search, Update},
     utils::{Score, TotalLength},
     Composition,
@@ -36,10 +34,10 @@ pub struct SearchBuilder {
     stage: Stage,
 
     /* METHODS */
-    methods: MethodVec<(bellframe::Method, Method)>,
+    methods: MethodVec<(bellframe::Method, self::Method)>,
     pub default_method_count: OptionalRangeInclusive,
     pub default_start_indices: Vec<isize>,
-    pub default_end_indices: Option<Vec<isize>>, // `None` means 'any index'
+    pub default_end_indices: EndIndices,
     pub splice_style: SpliceStyle,
     pub splice_weight: f32,
 
@@ -111,7 +109,7 @@ impl SearchBuilder {
             methods,
             default_method_count: OptionalRangeInclusive::OPEN,
             default_start_indices: vec![0], // Just 'normal' starts by default
-            default_end_indices: None,
+            default_end_indices: EndIndices::Any,
             splice_style: SpliceStyle::LeadLabels,
             splice_weight: 0.0,
 
@@ -235,58 +233,27 @@ impl SearchBuilder {
             )]
         });
 
-        // Convert each `Method` into a `query::Method`, falling back on any defaults when
-        // unspecified.
-        let mut built_methods = MethodVec::new();
-        for (mut bellframe_method, method_builder) in methods {
-            // Set lead locations for the `method`
-            for (label, indices) in method_builder.lead_labels {
-                for index in indices {
-                    let lead_len_i = bellframe_method.lead_len() as isize;
-                    let index = ((index % lead_len_i) + lead_len_i) % lead_len_i;
-                    bellframe_method.add_label(index as usize, label.clone());
-                }
-            }
-            // Parse the courses
-            let courses = match method_builder.override_courses {
-                Some(unparsed_courses) => unparsed_courses
-                    .into_iter()
-                    .map(|mask_str| {
-                        Mask::parse_with_stage(&mask_str, stage).map_err(|error| {
-                            crate::Error::CustomCourseMaskParse {
-                                method_title: bellframe_method.title().to_owned(),
-                                mask_str,
-                                error,
-                            }
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()?,
-                None => courses.clone(),
-            };
-            // Add the method, falling back on any defaults if necessary
-            built_methods.push(query::Method {
-                shorthand: method_builder
-                    .custom_shorthand
-                    .unwrap_or_else(|| default_shorthand(bellframe_method.title())),
-                count_range: method_builder.override_count_range.or(default_method_count),
-                start_indices: method_builder
-                    .override_start_indices
-                    .unwrap_or_else(|| default_start_indices.clone()),
-                end_indices: method_builder
-                    .override_end_indices
-                    .or_else(|| default_end_indices.clone()),
-                courses,
-
-                inner: bellframe_method,
-            });
-        }
-
         // Calls
         let mut calls = CallVec::new();
         if let Some(base_calls) = base_calls {
             calls.extend(base_calls.into_calls(stage));
         }
         calls.extend(custom_calls.into_iter().map(Call::build));
+        // Methods
+        let fixed_bells = self::methods::fixed_bells(&methods, &calls, &start_row, stage);
+        let mut built_methods = MethodVec::new();
+        for (bellframe_method, method_builder) in methods {
+            built_methods.push(method_builder.build(
+                bellframe_method,
+                &fixed_bells,
+                default_method_count,
+                &default_start_indices,
+                &default_end_indices,
+                &courses,
+                &part_head,
+                stage,
+            )?);
+        }
 
         Ok(Query {
             length_range,
@@ -299,6 +266,7 @@ impl SearchBuilder {
             splice_weight: OrderedFloat(splice_weight),
             calls,
             call_display_style,
+            fixed_bells,
 
             start_row,
             end_row,
@@ -311,230 +279,6 @@ impl SearchBuilder {
             start_stroke,
         })
     }
-}
-
-/////////////
-// METHODS //
-/////////////
-
-const NUM_METHOD_SUGGESTIONS: usize = 10;
-
-/// Builder API for a method.
-pub struct Method {
-    source: MethodSource,
-    lead_labels: HashMap<String, Vec<isize>>,
-
-    custom_shorthand: Option<String>,
-    override_count_range: OptionalRangeInclusive,
-    override_start_indices: Option<Vec<isize>>,
-    override_end_indices: Option<Vec<isize>>,
-    override_courses: Option<Vec<String>>,
-}
-
-impl Method {
-    /// Create a new [`Method`] by loading a method from the Central Council library by its
-    /// [`title`](bellframe::Method::title).
-    pub fn with_title(title: String) -> Self {
-        Self::new(MethodSource::Title(title))
-    }
-
-    /// Create a new [`Method`] with custom place notation.
-    pub fn with_custom_pn(name: String, pn_str: String, stage: Stage) -> Self {
-        Self::new(MethodSource::CustomPn {
-            name,
-            pn_str,
-            stage,
-        })
-    }
-
-    fn new(source: MethodSource) -> Self {
-        Self {
-            source,
-            lead_labels: hmap! { LABEL_LEAD_END.to_owned() => vec![0] },
-
-            custom_shorthand: None,
-            override_count_range: OptionalRangeInclusive::OPEN,
-            override_start_indices: None,
-            override_end_indices: None,
-            override_courses: None,
-        }
-    }
-
-    /// Force use of a specific shorthand for this [`Method`].  If `None` is given, the first
-    /// character of the method's title will be used as a shorthand.
-    pub fn shorthand(mut self, shorthand: Option<String>) -> Self {
-        self.custom_shorthand = shorthand;
-        self
-    }
-
-    /// Override the globally set [`method_count`](SearchBuilder::default_method_count) for just
-    /// this method.
-    pub fn count_range(mut self, range: OptionalRangeInclusive) -> Self {
-        self.override_count_range = range;
-        self
-    }
-
-    /// Sets the sub-lead indices where this method is allowed to start.  If `None` is supplied,
-    /// this will fall back on the indices set by [`SearchBuilder::default_start_indices`].
-    ///
-    /// As with [`SearchBuilder::default_start_indices`], these indices are taken modulo the
-    /// method's lead length.
-    pub fn start_indices(mut self, indices: Option<Vec<isize>>) -> Self {
-        self.override_start_indices = indices;
-        self
-    }
-
-    /// Sets the sub-lead indices where this method is allowed to finish.  If `None` is supplied,
-    /// this will fall back on the indices set by [`SearchBuilder::default_end_indices`] (**NOTE**:
-    /// the behaviour on `None` is different to [`SearchBuilder::default_end_indices`], where
-    /// `None` indicates that any end is allowed).
-    ///
-    /// As with [`SearchBuilder::default_end_indices`], these indices are taken modulo the
-    /// method's lead length.
-    pub fn end_indices(mut self, indices: Option<Vec<isize>>) -> Self {
-        self.override_end_indices = indices;
-        self
-    }
-
-    /// Specify which courses are allowed for this method.  If `None` is given, this will fall back
-    /// on the courses set by [`SearchBuilder::courses`].
-    pub fn courses(mut self, courses: Option<Vec<String>>) -> Self {
-        self.override_courses = courses;
-        self
-    }
-
-    /// Applies labels to [`Row`] indices within every lead of this method.  By default,
-    /// [`bellframe::method::LABEL_LEAD_END`] is at index `0` (i.e. the lead end).
-    pub fn lead_labels(mut self, labels: HashMap<String, Vec<isize>>) -> Self {
-        self.lead_labels = labels;
-        self
-    }
-
-    /// Finishes building and adds `self` to the supplied [`MethodSet`], returning the [`MethodId`]
-    /// now used to refer to this [`Method`].
-    ///
-    /// This is equivalent to [`MethodSet::add`], but makes for cleaner code.
-    // TODO: Code example
-    #[allow(clippy::should_implement_trait)]
-    pub fn add(self, set: &mut MethodSet) -> MethodId {
-        set.add(self)
-    }
-
-    /// Create a [`bellframe::Method`] representing this method.
-    fn bellframe_method(&self, cc_lib: &MethodLib) -> crate::Result<bellframe::Method> {
-        match &self.source {
-            MethodSource::Title(title) => cc_lib
-                .get_by_title_with_suggestions(title, NUM_METHOD_SUGGESTIONS)
-                .map_err(|err| match err {
-                    QueryError::PnParseErr { pn, error } => panic!(
-                        "Invalid pn `{}` in CC library entry for {}: {}",
-                        pn, title, error
-                    ),
-                    QueryError::NotFound(suggestions) => crate::Error::MethodNotFound {
-                        title: title.to_owned(),
-                        suggestions,
-                    },
-                }),
-            MethodSource::CustomPn {
-                name,
-                pn_str: place_notation_string,
-                stage,
-            } => bellframe::Method::from_place_not_string(
-                name.to_owned(),
-                *stage,
-                place_notation_string,
-            )
-            .map_err(|error| crate::Error::MethodPnParse {
-                name: name.to_owned(),
-                place_notation_string: place_notation_string.to_owned(),
-                error,
-            }),
-        }
-    }
-}
-
-/// The different styles of spliced that can be generated.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
-pub enum SpliceStyle {
-    /// Splices could happen at any lead label (usually just
-    /// [lead ends](bellframe::method::LABEL_LEAD_END)).
-    #[serde(rename = "leads")]
-    LeadLabels,
-    /// Splices only happen at calls.
-    #[serde(rename = "calls")]
-    Calls,
-}
-
-impl Default for SpliceStyle {
-    fn default() -> Self {
-        Self::LeadLabels
-    }
-}
-
-/// The unique identifier for a [`Method`].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MethodId {
-    pub(crate) index: MethodIdx,
-}
-
-/// A set of [`Method`]s.
-// TODO: Remove this and add methods directly to `SearchBuilder`?
-pub struct MethodSet {
-    vec: MethodVec<Method>,
-}
-
-impl MethodSet {
-    /// Creates a `MethodSet` containing no methods.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a [`Method`] to this set, returning its unique [`MethodId`].
-    ///
-    /// You can also use [`Method::add`], which usually makes for cleaner code.
-    pub fn add(&mut self, method: Method) -> MethodId {
-        let index = self.vec.push(method);
-        MethodId { index }
-    }
-}
-
-impl Default for MethodSet {
-    fn default() -> Self {
-        Self {
-            vec: MethodVec::new(),
-        }
-    }
-}
-
-impl<I> From<I> for MethodSet
-where
-    I: IntoIterator<Item = Method>,
-{
-    fn from(iter: I) -> Self {
-        Self {
-            vec: iter.into_iter().collect(),
-        }
-    }
-}
-
-enum MethodSource {
-    /// A method with this title should be found in the Central Council's method library.
-    Title(String),
-    /// The method should be loaded from some custom place notation
-    CustomPn {
-        name: String,
-        pn_str: String,
-        stage: Stage, // TODO: Make stage optional
-    },
-}
-
-/// Get a default shorthand given a method's title.
-fn default_shorthand(title: &str) -> String {
-    title
-        .chars()
-        .next()
-        .expect("Can't have empty method title")
-        .to_string()
 }
 
 ///////////
@@ -973,4 +717,12 @@ impl OptionalRangeInclusive {
             .unwrap_or(other.end);
         min..max
     }
+}
+
+/// Where in a lead can a method finish
+pub enum EndIndices {
+    /// The composition is allowed to end at any index
+    Any,
+    /// The composition can only finish at these indices (modulo the lead lengths)
+    Specific(Vec<isize>),
 }
