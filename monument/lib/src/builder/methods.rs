@@ -256,6 +256,7 @@ impl Method {
         default_start_indices: &[isize],
         default_end_indices: &EndIndices,
         allowed_course_masks: &[Mask],
+        non_duffer_courses: Option<&mut [Mask]>,
         part_head: &Row,
         stage: Stage,
     ) -> crate::Result<query::Method> {
@@ -277,6 +278,7 @@ impl Method {
         };
         let allowed_lead_masks =
             course_to_lead_masks(&bellframe_method, &mut allowed_course_masks, fixed_bells);
+
         // Compute the start/end indices
         let not_wrapped_start_indices = self
             .override_start_indices
@@ -316,6 +318,10 @@ impl Method {
             end_indices,
             allowed_course_masks,
             allowed_lead_masks,
+            non_duffer_lead_masks: non_duffer_courses.map_or_else(
+                || vec![Mask::empty(stage)], // `None` means all courses are non-duffers
+                |courses| course_to_lead_masks(&bellframe_method, courses, fixed_bells),
+            ),
 
             inner: bellframe_method,
         })

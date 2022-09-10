@@ -1,0 +1,5 @@
+length = { min = 0, max = 1600 }
+method = "Bristol Surprise Royal"
+base_calls = "far"
+non_duffer_courses = ["12345*", "15432*", "13254*", "14523*"]
+max_contiguous_duffer = 40

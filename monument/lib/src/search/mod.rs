@@ -35,7 +35,7 @@ use crate::SearchBuilder;
 /// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
 /// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
 /// you.
-// TODO: Better name?
+// TODO: Rename all instances from `data` to `search`
 #[derive(Debug)]
 pub struct Search {
     /* Data */
@@ -65,6 +65,7 @@ impl Search {
         let refined_ranges = prove_lengths(&source_graph, &query)?;
         // Create a fast-to-traverse copy of the graph
         let graph = self::graph::Graph::new(&source_graph, &query);
+        drop(source_graph);
 
         Ok(Search {
             query: Arc::new(query),

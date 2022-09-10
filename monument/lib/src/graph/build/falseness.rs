@@ -310,11 +310,11 @@ fn reduce_masks(
 /// x1xxxx87 -> [21436587, 21435687]
 ///
 /// This is useful because falseness can exist between two rows **only** if their 'group' masks are
-/// compatible.  For example, any rows of the form `xx1xx8x7` can't be false against a row of the
-/// form `x1xxx8x7` because the treble can't be in two places at once.  The time needed to compute
-/// falseness tables is quadratic in the sizes of the rows we have to cross-product together, so it
-/// is extremely worthwhile to split large groups of rows into many smaller groups which can be
-/// computed independently.
+/// [compatible](Mask::is_compatible_with).  For example, any rows of the form `xx1xx8x7` can't be false
+/// against a row of the form `x1xxx8x7` because the treble can't be in two places at once.  The
+/// time needed to compute falseness tables is quadratic in the sizes of the rows we have to
+/// cross-product together, so it is extremely worthwhile to split large groups of rows into many
+/// smaller groups which can be computed independently.
 ///
 /// In this loop, we also check for `ChunkRange`s which are 'self-false' (i.e. include some row
 /// multiple times).

@@ -135,6 +135,17 @@ pub struct Spec {
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
+
+    /* NO-DUFFERS */
+    /// Courses which should not be considered a 'duffer'.  If nothing is specified, all courses
+    /// are 'non-duffers'.
+    non_duffer_courses: Option<Vec<String>>,
+    /// The most contiguous [`Row`]s of duffer courses that are allowed between two non-duffer
+    /// courses.
+    max_contiguous_duffer: Option<usize>,
+    /// The most total [`Row`]s of duffer courses that can exist in the composition *in its
+    /// entirety*.
+    max_total_duffer: Option<usize>,
 }
 
 impl Spec {
@@ -186,7 +197,6 @@ impl Spec {
         // `layout::new::Method`s
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
-        let music_displays = self.music(source, &mut search_builder)?;
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
@@ -237,7 +247,14 @@ impl Spec {
         search_builder.course_weights = self.parse_ch_weights(stage)?;
         search_builder = search_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
+        let music_displays = self.music(source, &mut search_builder)?;
         search_builder.start_stroke = self.start_stroke;
+        // Non-duffer
+        if let Some(strings) = &self.non_duffer_courses {
+            search_builder.non_duffer_courses = Some(parse_masks(strings, stage)?);
+        }
+        search_builder.max_contiguous_duffer = self.max_contiguous_duffer;
+        search_builder.max_total_duffer = self.max_total_duffer;
 
         // Build the search
         let search = search_builder.build(self.config(opts, leak_search_memory))?;

@@ -29,6 +29,8 @@ pub(super) struct Chunk {
     pub method_counts: Counts,
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub min_len_to_rounds: TotalLength,
+    pub duffer: bool,
+    pub min_dist_to_non_duffer: TotalLength,
 
     // Indices must be aligned with those from the source graph
     pub succs: SuccVec<SuccLink>,
@@ -107,6 +109,9 @@ impl Graph {
                     total_length: source_chunk.total_length,
                     method_counts: source_chunk.method_counts.clone(),
                     min_len_to_rounds: source_chunk.lb_distance_to_rounds,
+
+                    duffer: source_chunk.duffer,
+                    min_dist_to_non_duffer: source_chunk.lb_distance_to_non_duffer,
 
                     succs,
                     falseness,

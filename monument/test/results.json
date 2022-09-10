@@ -2240,6 +2240,200 @@
       { "length": 224, "string": "YYYYYYY", "avg_score": 0.27230835 }
     ]
   },
+  "test/cases/non-duffer/contiguous-1.toml": {
+    "comps": [
+      { "length": 448, "string": "WHsWsHWHsWsH", "avg_score": 0.11071777 },
+      { "length": 448, "string": "sWsHWHsWsHWH", "avg_score": 0.11071777 },
+      { "length": 224, "string": "sWsHsWsH", "avg_score": 0.18661499 },
+      { "length": 224, "string": "WHWH", "avg_score": 0.19552612 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
+  "test/cases/non-duffer/contiguous-2.toml": {
+    "comps": [
+      { "length": 224, "string": "MWHMWH", "avg_score": 0.08123779 },
+      { "length": 288, "string": "BBsWsHBW", "avg_score": 0.12918091 },
+      { "length": 224, "string": "MHsMsH", "avg_score": 0.14196777 },
+      { "length": 224, "string": "MHMH", "avg_score": 0.14642334 },
+      { "length": 224, "string": "sWsHsWsH", "avg_score": 0.18661499 },
+      { "length": 224, "string": "WHWH", "avg_score": 0.19552612 },
+      { "length": 208, "string": "MBWsHsH", "avg_score": 0.20672607 },
+      { "length": 96, "string": "MBW", "avg_score": 0.2875061 },
+      { "length": 224, "string": "sHsH", "avg_score": 0.3187561 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
+  "test/cases/non-duffer/contiguous-3.toml": {
+    "comps": [
+      { "length": 720, "string": "BIBI", "avg_score": 0.15667725 },
+      { "length": 720, "string": "sBsIsBsI", "avg_score": 0.15805054 },
+      { "length": 360, "string": "", "avg_score": 0.3555603 }
+    ]
+  },
+  "test/cases/non-duffer/mixed-1.toml": {
+    "comps": [
+      { "length": 1312, "string": "MBWWHHBMMWWHHMH", "avg_score": 0.04800415 },
+      { "length": 1344, "string": "MHHMBWWHHMMBHMMH", "avg_score": 0.051483154 },
+      { "length": 1280, "string": "MHWWHHMBWWMWH", "avg_score": 0.052825928 },
+      { "length": 1280, "string": "MHHWHHMMBHMMH", "avg_score": 0.054382324 },
+      { "length": 1312, "string": "HWHWWHMMWHHMH", "avg_score": 0.05456543 },
+      { "length": 1280, "string": "HWHWWHBWWHHMH", "avg_score": 0.059051514 },
+      { "length": 1344, "string": "HWBMMHBHBW", "avg_score": 0.059509277 },
+      { "length": 1280, "string": "HHMMWWHMMBBWHBW", "avg_score": 0.060150146 },
+      { "length": 1312, "string": "HWHHBHMMWWHHMH", "avg_score": 0.060821533 },
+      { "length": 1344, "string": "HWBHMBBWHBW", "avg_score": 0.061157227 },
+      { "length": 1344, "string": "MBWWHHBHHMWMWWHH", "avg_score": 0.061157227 },
+      { "length": 1312, "string": "MHWBMHW", "avg_score": 0.061279297 },
+      { "length": 1280, "string": "MBHBHHMMWWHMMH", "avg_score": 0.061553955 },
+      { "length": 1344, "string": "MBHMBWWHHMMWHHMH", "avg_score": 0.06188965 },
+      { "length": 1344, "string": "MHHMWMMBHMMWWHH", "avg_score": 0.0625 },
+      { "length": 1280, "string": "MBHWHHMMWHHMH", "avg_score": 0.06295776 },
+      { "length": 1344, "string": "HWHHMBWWHHMMWHBW", "avg_score": 0.06414795 },
+      { "length": 1280, "string": "HWHHWHHMMWHBW", "avg_score": 0.06530762 },
+      { "length": 1344, "string": "HWBHMBBMWH", "avg_score": 0.06549072 },
+      { "length": 1344, "string": "HWHHBHHMMWWHMMH", "avg_score": 0.06549072 },
+      { "length": 1344, "string": "MBHBHBMBMWH", "avg_score": 0.06561279 },
+      { "length": 1312, "string": "MHHMWHHWMWWHH", "avg_score": 0.06600952 },
+      { "length": 1312, "string": "MBHMBWWHHBWWHHMH", "avg_score": 0.066467285 },
+      { "length": 1344, "string": "HWHHWHHMMWHHMH", "avg_score": 0.06680298 },
+      { "length": 1280, "string": "MBHBHHMBHMMWWHH", "avg_score": 0.06719971 },
+      { "length": 1312, "string": "HWHHMBWWHHBWWHBW", "avg_score": 0.0687561 },
+      { "length": 1280, "string": "HHMMWWHBWHHBHBW", "avg_score": 0.06951904 },
+      { "length": 1344, "string": "MBHWBBHHMH", "avg_score": 0.06994629 },
+      { "length": 1312, "string": "HHMMWWHMMHHBHBW", "avg_score": 0.070892334 },
+      { "length": 1312, "string": "HWHHWHHBWWHHMH", "avg_score": 0.071502686 },
+      { "length": 1344, "string": "MBHBHHBBMWH", "avg_score": 0.07156372 },
+      { "length": 1344, "string": "BBWHMMBBWHBW", "avg_score": 0.07171631 },
+      { "length": 1344, "string": "HWHHWBBHBW", "avg_score": 0.07217407 },
+      { "length": 1280, "string": "HWHHBHMMWWHMM", "avg_score": 0.07235718 },
+      { "length": 1280, "string": "WWHBHMMWWHHMH", "avg_score": 0.07312012 },
+      { "length": 1344, "string": "HWBMMBMHBW", "avg_score": 0.074401855 },
+      { "length": 1344, "string": "MBHBBMMBMWH", "avg_score": 0.07455444 },
+      { "length": 1280, "string": "HHWWHBMMWWHMM", "avg_score": 0.07467651 },
+      { "length": 1344, "string": "MBHBBMHHMH", "avg_score": 0.07513428 },
+      { "length": 1280, "string": "MWHMHWWHWWHH", "avg_score": 0.07531738 },
+      { "length": 1280, "string": "HWWHBHHMMWWHBW", "avg_score": 0.07562256 },
+      { "length": 1344, "string": "BBWHMMBBMWH", "avg_score": 0.076049805 },
+      { "length": 1344, "string": "BHMMHBBWHBW", "avg_score": 0.076049805 },
+      { "length": 1344, "string": "HWWHBHHMMWWHHMH", "avg_score": 0.07662964 },
+      { "length": 1312, "string": "MHMWWHWWHWWHH", "avg_score": 0.076690674 },
+      { "length": 1344, "string": "BBWWHMBBHMW", "avg_score": 0.07678223 },
+      { "length": 1312, "string": "HHMMWWHMMBMMHBW", "avg_score": 0.07699585 },
+      { "length": 1344, "string": "HWHHBBMHBW", "avg_score": 0.07739258 },
+      { "length": 1344, "string": "WHHBBMBMWH", "avg_score": 0.078125 },
+      { "length": 1312, "string": "HWHHWHHMMWHMM", "avg_score": 0.078186035 },
+      { "length": 1312, "string": "WWHWHHMMWHHMH", "avg_score": 0.078948975 },
+      { "length": 1280, "string": "BHMMHHMWMWWHH", "avg_score": 0.07937622 },
+      { "length": 1344, "string": "HWWHBBBWHBW", "avg_score": 0.07977295 },
+      { "length": 1280, "string": "HWWHBHHMMWMWH", "avg_score": 0.08016968 },
+      { "length": 1344, "string": "BHMMHBBMWH", "avg_score": 0.08035278 },
+      { "length": 1344, "string": "BBWHBWHHBHBW", "avg_score": 0.08065796 },
+      { "length": 1344, "string": "HWHHMBWWHHBWWHMM", "avg_score": 0.08123779 },
+      { "length": 1280, "string": "HWWHWWHHBWWHBW", "avg_score": 0.08187866 },
+      { "length": 1344, "string": "WWHMBWWHHBWWHHMH", "avg_score": 0.08200073 },
+      { "length": 1344, "string": "HWWHWWHHBWWHHMH", "avg_score": 0.08258057 },
+      { "length": 1344, "string": "MBHMBBBHMMH", "avg_score": 0.082733154 },
+      { "length": 1280, "string": "HWHHWHHBWWHMM", "avg_score": 0.08328247 },
+      { "length": 1280, "string": "WHHBHHMWMWWHH", "avg_score": 0.08328247 },
+      { "length": 1344, "string": "HWWHBBBMWH", "avg_score": 0.08407593 },
+      { "length": 1344, "string": "WHHBHBBMWH", "avg_score": 0.08407593 },
+      { "length": 1280, "string": "WWHWHHBWWHHMH", "avg_score": 0.08407593 },
+      { "length": 1280, "string": "BWHMMBWHBHHWWHH", "avg_score": 0.0843811 },
+      { "length": 1344, "string": "BHMWBBWHHW", "avg_score": 0.08557129 }
+    ]
+  },
+  "test/cases/non-duffer/mixed-2.toml": {
+    "comps": [
+      { "length": 1280, "string": "MHWWHHMBWWMWH", "avg_score": 0.052825928 },
+      { "length": 1280, "string": "HWHWWHBWWHHMH", "avg_score": 0.059051514 },
+      { "length": 1344, "string": "HWBMMHBHBW", "avg_score": 0.059509277 },
+      { "length": 1312, "string": "HWHHBHMMWWHHMH", "avg_score": 0.060821533 },
+      { "length": 1344, "string": "HWBHMBBWHBW", "avg_score": 0.061157227 },
+      { "length": 1312, "string": "MHWBMHW", "avg_score": 0.061279297 },
+      { "length": 1344, "string": "MBHMBWWHHMMWHHMH", "avg_score": 0.06188965 },
+      { "length": 1280, "string": "MBHWHHMMWHHMH", "avg_score": 0.06295776 },
+      { "length": 1344, "string": "HWHHMBWWHHMMWHBW", "avg_score": 0.06414795 },
+      { "length": 1280, "string": "HWHHWHHMMWHBW", "avg_score": 0.06530762 },
+      { "length": 1344, "string": "HWBHMBBMWH", "avg_score": 0.06549072 },
+      { "length": 1344, "string": "MBHBHBMBMWH", "avg_score": 0.06561279 },
+      { "length": 1312, "string": "MHHMWHHWMWWHH", "avg_score": 0.06600952 },
+      { "length": 1312, "string": "MBHMBWWHHBWWHHMH", "avg_score": 0.066467285 },
+      { "length": 1344, "string": "HWHHWHHMMWHHMH", "avg_score": 0.06680298 },
+      { "length": 1312, "string": "HWHHMBWWHHBWWHBW", "avg_score": 0.0687561 },
+      { "length": 1344, "string": "MBHWBBHHMH", "avg_score": 0.06994629 },
+      { "length": 1312, "string": "HWHHWHHBWWHHMH", "avg_score": 0.071502686 },
+      { "length": 1344, "string": "MBHBHHBBMWH", "avg_score": 0.07156372 },
+      { "length": 1344, "string": "BBWHMMBBWHBW", "avg_score": 0.07171631 },
+      { "length": 1344, "string": "HWHHWBBHBW", "avg_score": 0.07217407 },
+      { "length": 1280, "string": "HWHHBHMMWWHMM", "avg_score": 0.07235718 },
+      { "length": 1280, "string": "WWHBHMMWWHHMH", "avg_score": 0.07312012 },
+      { "length": 1344, "string": "HWBMMBMHBW", "avg_score": 0.074401855 },
+      { "length": 1344, "string": "MBHBBMMBMWH", "avg_score": 0.07455444 },
+      { "length": 1344, "string": "MBHBBMHHMH", "avg_score": 0.07513428 },
+      { "length": 1344, "string": "BBWHMMBBMWH", "avg_score": 0.076049805 },
+      { "length": 1344, "string": "BHMMHBBWHBW", "avg_score": 0.076049805 },
+      { "length": 1312, "string": "MHMWWHWWHWWHH", "avg_score": 0.076690674 },
+      { "length": 1344, "string": "HWHHBBMHBW", "avg_score": 0.07739258 },
+      { "length": 1344, "string": "WHHBBMBMWH", "avg_score": 0.078125 },
+      { "length": 1344, "string": "HWWHBBBWHBW", "avg_score": 0.07977295 },
+      { "length": 1344, "string": "BHMMHBBMWH", "avg_score": 0.08035278 },
+      { "length": 1344, "string": "BBWHBWHHBHBW", "avg_score": 0.08065796 },
+      { "length": 1344, "string": "HWHHMBWWHHBWWHMM", "avg_score": 0.08123779 },
+      { "length": 1344, "string": "WWHMBWWHHBWWHHMH", "avg_score": 0.08200073 },
+      { "length": 1344, "string": "MBHMBBBHMMH", "avg_score": 0.082733154 },
+      { "length": 1280, "string": "HWHHWHHBWWHMM", "avg_score": 0.08328247 },
+      { "length": 1344, "string": "HWWHBBBMWH", "avg_score": 0.08407593 },
+      { "length": 1344, "string": "WHHBHBBMWH", "avg_score": 0.08407593 },
+      { "length": 1280, "string": "WWHWHHBWWHHMH", "avg_score": 0.08407593 },
+      { "length": 1344, "string": "BHMWBBWHHW", "avg_score": 0.08557129 }
+    ]
+  },
+  "test/cases/non-duffer/strictly-no-duffers.toml": {
+    "comps": [
+      { "length": 224, "string": "MHsMsH", "avg_score": 0.14196777 },
+      { "length": 224, "string": "MHMH", "avg_score": 0.14642334 },
+      { "length": 208, "string": "MBWsHsH", "avg_score": 0.20672607 },
+      { "length": 96, "string": "MBW", "avg_score": 0.2875061 },
+      { "length": 224, "string": "sHsH", "avg_score": 0.3187561 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
+  "test/cases/non-duffer/total-1.toml": {
+    "comps": [
+      { "length": 224, "string": "sWsHsWsH", "avg_score": 0.18661499 },
+      { "length": 224, "string": "WHWH", "avg_score": 0.19552612 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
+  "test/cases/non-duffer/total-2.toml": {
+    "comps": [
+      { "length": 224, "string": "MWHMWH", "avg_score": 0.08123779 },
+      { "length": 288, "string": "BBsWsHBW", "avg_score": 0.12918091 },
+      { "length": 224, "string": "MHsMsH", "avg_score": 0.14196777 },
+      { "length": 224, "string": "MHMH", "avg_score": 0.14642334 },
+      { "length": 224, "string": "sWsHsWsH", "avg_score": 0.18661499 },
+      { "length": 224, "string": "WHWH", "avg_score": 0.19552612 },
+      { "length": 208, "string": "MBWsHsH", "avg_score": 0.20672607 },
+      { "length": 96, "string": "MBW", "avg_score": 0.2875061 },
+      { "length": 224, "string": "sHsH", "avg_score": 0.3187561 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
+  "test/cases/non-duffer/total-3.toml": {
+    "comps": [
+      { "length": 224, "string": "MWHMWH", "avg_score": 0.08123779 },
+      { "length": 208, "string": "BsWsMWH", "avg_score": 0.105773926 },
+      { "length": 288, "string": "BBsWsHBW", "avg_score": 0.12918091 },
+      { "length": 224, "string": "MHsMsH", "avg_score": 0.14196777 },
+      { "length": 224, "string": "MHMH", "avg_score": 0.14642334 },
+      { "length": 224, "string": "sWsHsWsH", "avg_score": 0.18661499 },
+      { "length": 224, "string": "WHWH", "avg_score": 0.19552612 },
+      { "length": 208, "string": "MBWsHsH", "avg_score": 0.20672607 },
+      { "length": 96, "string": "MBW", "avg_score": 0.2875061 },
+      { "length": 224, "string": "sHsH", "avg_score": 0.3187561 },
+      { "length": 112, "string": "", "avg_score": 0.5 }
+    ]
+  },
   "test/cases/overlapping-masks.toml": {
     "comps": [
       { "length": 288, "string": "MBW", "avg_score": 0.1166687 },
