@@ -186,7 +186,7 @@ type SimpleChunk = (RowIdx, Mask);
 /// ```text
 ///                           (start)
 ///                              │
-///   ╭───────────────────────╮  │
+///   ╭──────────>────────────╮  │
 ///   │                       V  V
 ///   │                   ┍━━━━━━━━━━┑
 ///   │                   │ 1xxxxx78 |
@@ -196,28 +196,28 @@ type SimpleChunk = (RowIdx, Mask);
 ///   │                │         V
 ///   │                │  ┍━━━━━━━━━━┑
 ///   │                │  │ 18x7xxxx |
-///   │                │  ┕━━━━━━━━━━┙
-///   │                │         │
+///   ^                │  ┕━━━━━━━━━━┙
+///   │                V         │
 ///   │                │         │ 2 leads
 ///   │                │         V
 ///   │                │  ┍━━━━━━━━━━┑
 ///   │        2 leads │  │ 1xxxx8x7 |
 ///   │     (a Before) │  ┕━━━━━━━━━━┙
-///   │                │      │  ╰──────────────╮
+///   │                │      │  ╰────────>─────╮
 ///   │                │      │                 │
 ///   │                │      │ 1 lead          │
-///   │                │      V                 │
+///   │                V      V                 │
 ///   │                │  ┍━━━━━━━━━━┑          │
 ///   │ 2 leads        │  │ 1xxx7x8x |          │
 ///   │                │  ┕━━━━━━━━━━┙          │ 2 *ROWS*
 ///   │                │         │              │
-///   │                ╰──────╮  │ 2 leads      │
+///   ^                ╰──────╮  │ 2 leads      V
 ///   │                       V  V              │
 ///   │                   ┍━━━━━━━━━━┑          │
 ///   │                   │ 178xxxxx |          │
 ///   │                   ┕━━━━━━━━━━┙          │
 ///   │                       │  │   2 leads    │
-///   ╰───────────────────────╯  ╰────────────╮ │
+///   ╰──────────<────────────╯  ╰────────────╮ │
 ///                                           V V
 ///                                          (end)
 /// ```
@@ -228,22 +228,9 @@ type SimpleChunk = (RowIdx, Mask);
 /// if it weren't cyclic, there'd be only 7 'chunks' per method (one for each position of the
 /// tenor).  Otherwise, we'd have 720 or 5040 chunks to process.
 fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
-    let lead_head_masks_by_method = query
-        .methods
-        .iter()
-        .map(|method| {
-            let mut lead_head_masks = HashSet::new();
-            for lead_head in method.lead_head().closure() {
-                for ch_mask in &method.courses {
-                    lead_head_masks.insert(ch_mask * &lead_head);
-                }
-            }
-            lead_head_masks
-        })
-        .collect::<MethodVec<_>>();
     let get_simple_chunks = |chunk_id: &ChunkId| -> Vec<SimpleChunk> {
         let mut simple_chunks = Vec::new();
-        for mask in &lead_head_masks_by_method[chunk_id.row_idx.method] {
+        for mask in &query.methods[chunk_id.row_idx.method].allowed_lead_masks {
             if mask.matches(&chunk_id.lead_head) {
                 simple_chunks.push((chunk_id.row_idx, mask.clone()));
             }

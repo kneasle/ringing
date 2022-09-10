@@ -11,6 +11,7 @@
 - (#143) Use explicit memory limit.  Set by `--mem-limit` or `-M`, defaults to ~~90%~~ 80% of
     available system memory.
 - (#145) Reduce memory limit from 90% to 80% of the available memory.
+- (#146) Merge fields of `graph::build::MethodData` into `query::Method`.
 
 ### BellFrame
 - (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.

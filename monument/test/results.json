@@ -763,7 +763,7 @@
     "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
   },
   "test/cases/error-messages.md: chs-not-in-other-parts": {
-    "error_message": "course head `xxxx7856` becomes `xxxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `xxxx7865` to `course_heads`"
+    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
   },
   "test/cases/error-messages.md: deprecation::lead_location-in-calls": {
     "error_message": "`calls.lead_location` has been renamed to `label`"

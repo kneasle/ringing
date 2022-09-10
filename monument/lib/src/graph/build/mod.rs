@@ -10,14 +10,14 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{Bell, Block, Mask, PlaceNot, Row, RowBuf, Stroke};
+use bellframe::{PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
     group::{PartHeadGroup, PhRotation},
-    query::{self, Call, CallVec, MethodVec, Query, StrokeSet},
+    query::{Call, Query, StrokeSet},
     search::Config,
-    utils::{Boundary, Counts, MusicBreakdown},
+    utils::{Counts, MusicBreakdown},
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};
@@ -30,17 +30,10 @@ impl Graph {
 
         check_query(query)?;
 
-        let fixed_bells = fixed_bells(query);
-        let method_datas = query
-            .methods
-            .iter()
-            .map(|m| MethodData::new(m, &fixed_bells, query))
-            .collect::<MethodVec<_>>();
-
         // Generate chunk layout
         let start = Instant::now();
         let (mut chunk_equiv_map, chunk_lengths, links) =
-            self::layout::chunk_lengths(query, &method_datas, config)?;
+            self::layout::chunk_lengths(query, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
         // TODO: Combine overlapping chunks
@@ -75,13 +68,7 @@ impl Graph {
 
         // Assign falseness links
         if query.require_truth {
-            falseness::set_links(
-                &mut chunks,
-                &mut chunk_equiv_map,
-                query,
-                &method_datas,
-                &fixed_bells,
-            );
+            falseness::set_links(&mut chunks, &mut chunk_equiv_map, query);
         }
 
         // Count music
@@ -96,7 +83,7 @@ impl Graph {
         }
         // Now we know the starting strokes, count the music on each chunk
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &method_datas, &start_strokes, query);
+            count_scores(id, chunk, &start_strokes, query);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -214,7 +201,6 @@ fn get_start_strokes(
 fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
-    method_datas: &MethodVec<MethodData>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
     query: &Query,
 ) {
@@ -237,8 +223,8 @@ fn count_scores(
         // start stroke
         None => Stroke::Back,
     };
-    let plain_course = &method_datas[id.method].plain_course;
-    let lead_heads = method_datas[id.method].method.lead_head().closure();
+    let plain_course = &query.methods[id.method].plain_course;
+    let lead_heads = query.methods[id.method].inner.lead_head().closure();
 
     for part_head in query.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
@@ -330,17 +316,16 @@ fn check_query(query: &Query) -> crate::Result<()> {
     // Course head masks which don't exist in other parts
     //
     // TODO: Remove this?
-    // TODO: Make this refer to lead head masks
     //
     // For every CH mask ...
     for method in &query.methods {
-        for mask_in_first_part in &method.courses {
+        for mask_in_first_part in &method.allowed_course_masks {
             // ... for every part ...
             for part_head in query.part_head_group.rows() {
-                // ... check that the CH mask in that part is covered by some CH mask
+                // ... check that the CH mask in that part is covered by some lead mask
                 let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
-                    .courses
+                    .allowed_lead_masks
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
@@ -445,167 +430,5 @@ impl<'query> ChunkEquivalenceMap<'query> {
         // Now normalise the ChunkId (by normalising its `lead_head` and preserving the row index)
         let (normalised_lead_head, rotation) = self.normalisation[&id.lead_head].clone();
         (ChunkId::new(normalised_lead_head, id.row_idx), rotation)
-    }
-}
-
-/// Cached data about a single [`Method`], used to speed up chunk generation.
-#[derive(Debug)]
-struct MethodData<'query> {
-    method: &'query query::Method,
-    plain_course: Block<bellframe::method::RowAnnot<'query>>,
-    lead_head_masks: Vec<Mask>,
-    start_indices: Vec<usize>,
-    end_indices: Vec<usize>,
-}
-
-impl<'query> MethodData<'query> {
-    fn new(method: &'query query::Method, fixed_bells: &[(Bell, usize)], query: &Query) -> Self {
-        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
-        // user, but the whole graph is based on lead heads).
-        let mut lead_head_masks = HashSet::new();
-        'mask_loop: for ch_mask in &method.courses {
-            let mut ch_masks_with_fixed_bells = ch_mask.to_owned();
-            // Add the fixed bells to this CH mask
-            for (bell, pos) in fixed_bells {
-                if ch_masks_with_fixed_bells.set_bell(*bell, *pos).is_err() {
-                    log::debug!(
-                        "Discarding CH mask {} because it fixes {} in the wrong place",
-                        ch_mask,
-                        bell
-                    );
-                    // Discard any CH masks which require fixed bells in impossible places
-                    continue 'mask_loop;
-                }
-            }
-            for lead_head in method.lead_head().closure() {
-                lead_head_masks.insert(&ch_masks_with_fixed_bells * &lead_head);
-            }
-        }
-        // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
-        // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
-        // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
-        // means that perfect duplicates have already been eliminated, so we only need to check for
-        // strict subset-ness.
-        let mut filtered_lead_head_masks = Vec::new();
-        for mask in &lead_head_masks {
-            let is_implied_by_another_mask = lead_head_masks
-                .iter()
-                .any(|mask2| mask.is_strict_subset_of(mask2));
-            if !is_implied_by_another_mask {
-                filtered_lead_head_masks.push(mask.clone());
-            }
-        }
-
-        // Compute exact `{start,end}indices`
-        let wrap_sub_lead_indices = |sub_lead_indices: &[isize]| -> Vec<usize> {
-            sub_lead_indices
-                .iter()
-                .map(|idx| {
-                    let lead_len_i = method.lead_len() as isize;
-                    (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
-                })
-                .collect_vec()
-        };
-        let mut start_indices = wrap_sub_lead_indices(&method.start_indices);
-        let mut end_indices = match &method.end_indices {
-            Some(indices) => wrap_sub_lead_indices(indices),
-            None => (0..method.lead_len()).collect_vec(),
-        };
-        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
-        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
-        // this, we set both `{start,end}_indices` to the union between `start_indices` and
-        // `end_indices`.
-        if query.is_multipart() {
-            let union = start_indices
-                .iter()
-                .filter(|idx| end_indices.contains(idx))
-                .copied()
-                .collect_vec();
-            start_indices = union.clone();
-            end_indices = union;
-        }
-
-        Self {
-            method,
-            plain_course: method.plain_course(),
-            lead_head_masks: filtered_lead_head_masks,
-
-            start_indices,
-            end_indices,
-        }
-    }
-
-    /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
-    fn is_lead_head(&self, lead_head: &Row) -> bool {
-        self.lead_head_masks.iter().any(|m| m.matches(lead_head))
-    }
-
-    fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
-        match boundary {
-            Boundary::Start => &self.start_indices,
-            Boundary::End => &self.end_indices,
-        }
-    }
-}
-
-/// Returns the place bells which are always preserved by plain leads and all calls of all methods
-/// (e.g. hunt bells in non-variable-hunt compositions).
-fn fixed_bells(query: &Query) -> Vec<(Bell, usize)> {
-    let mut fixed_bells = query.stage.bells().collect_vec();
-    for m in &query.methods {
-        let f = fixed_bells_of_method(m, &query.calls);
-        fixed_bells.retain(|b| f.contains(b));
-    }
-    // Currently, these `fixed_bells` assume that the start_row is rounds
-    fixed_bells
-        .iter()
-        .map(|b| (query.start_row[b.index()], b.index()))
-        .collect_vec()
-}
-
-/// Returns the place bells which are always preserved by plain leads and all calls of a single
-/// method (e.g. hunt bells in non-variable-hunt compositions).
-fn fixed_bells_of_method(method: &query::Method, calls: &CallVec<query::Call>) -> HashSet<Bell> {
-    // Start the set with the bells which are fixed by the plain lead of every method
-    let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-    for call in calls {
-        // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
-        // Grandsire is unaffected by a plain lead, but affected by calls)
-        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
-    }
-    fixed_bells
-}
-
-// For every position that this call could be placed, remove any bells which **aren't** preserved
-// by placing the call at this location.
-fn filter_bells_fixed_by_call(
-    method: &bellframe::Method,
-    call: &query::Call,
-    set: &mut HashSet<Bell>,
-) {
-    // Note that all calls are required to only substitute one piece of place notation.
-    for sub_lead_idx_after_call in method.label_indices(&call.label_from) {
-        // TODO: Handle different from/to locations
-        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
-        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
-
-        // The row before a call in this location in the _first lead_
-        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
-        // The row after a plain call in this location in the _first lead_
-        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
-        // The row after a call in this location in the _first lead_
-        let mut row_after_call = row_before_call.to_owned();
-        call.place_notation.permute(&mut row_after_call).unwrap();
-
-        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
-        // `row_after_no_call`.  These should be removed from the set, because they are no longer
-        // fixed.
-        for (bell_after_no_call, bell_after_call) in
-            row_after_no_call.bell_iter().zip(&row_after_call)
-        {
-            if bell_after_call != bell_after_no_call {
-                set.remove(&bell_after_call);
-            }
-        }
     }
 }

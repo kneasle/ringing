@@ -2,12 +2,12 @@
 
 use std::ops::RangeInclusive;
 
-use bellframe::{music::Pattern, Mask, PlaceNot, RowBuf, Stage, Stroke};
+use bellframe::{music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
 
 use crate::{
     builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
     group::PartHeadGroup,
-    utils::{PerPartLength, Score, TotalLength},
+    utils::{Boundary, PerPartLength, Score, TotalLength},
 };
 
 /// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
@@ -29,6 +29,7 @@ pub(crate) struct Query {
     pub(crate) splice_weight: Score,
     pub(crate) calls: CallVec<Call>,
     pub(crate) call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
+    pub(crate) fixed_bells: Vec<(Bell, usize)>,
 
     // COURSES
     //
@@ -79,23 +80,44 @@ impl Query {
 #[derive(Debug, Clone)]
 pub(crate) struct Method {
     pub(crate) inner: bellframe::Method,
-    pub(crate) shorthand: String,
+    /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
+    /// labels assigned to that row.
+    pub(crate) plain_course: Block<Vec<String>>,
 
+    /// Short [`String`] used to identify this method in spliced
+    pub(crate) shorthand: String,
     /// The number of rows of this method must fit within this range
     pub(crate) count_range: OptionalRangeInclusive,
-    /// The indices in which we can start a composition during this `Method`.  These are
-    /// interpreted modulo the lead length of the method.
-    pub(crate) start_indices: Vec<isize>,
-    /// The indices in which we can end a composition during this `Method`.  `None` means any index
-    /// is allowed (provided the CH masks are satisfied).  These are interpreted modulo the lead
-    /// length of the method.
-    pub(crate) end_indices: Option<Vec<isize>>,
-    pub(crate) courses: Vec<Mask>,
+
+    /// The indices in which we can start a composition during this `Method`.  These are guaranteed
+    /// to fit within `inner.lead_len()`.
+    pub(crate) start_indices: Vec<usize>,
+    /// The indices in which we can end a composition during this `Method`.  These are guaranteed
+    /// to fit within `inner.lead_len()`.
+    pub(crate) end_indices: Vec<usize>,
+
+    /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
+    pub(crate) allowed_course_masks: Vec<Mask>,
+    /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
+    /// [`crate::SearchBuilder::courses`].
+    pub(crate) allowed_lead_masks: Vec<Mask>,
 }
 
 impl Method {
     pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
+
+    /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
+    pub(crate) fn is_lead_head(&self, lead_head: &Row) -> bool {
+        self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
+    }
+
+    pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
+        match boundary {
+            Boundary::Start => &self.start_indices,
+            Boundary::End => &self.end_indices,
+        }
     }
 }
 

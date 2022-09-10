@@ -10,13 +10,13 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{Bell, Mask, Row, RowBuf, Truth};
+use bellframe::{Mask, Row, RowBuf, Truth};
 use itertools::Itertools;
 
-use super::{ChunkEquivalenceMap, ChunkIdInFirstPart, MethodData};
+use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 use crate::{
     graph::{Chunk, ChunkId, PerPartLength, RowIdx},
-    query::{MethodVec, Query},
+    query::Query,
 };
 
 /// Set the falseness links for some [`Chunk`]s, removing any which are false against themselves.
@@ -27,16 +27,13 @@ pub(super) fn set_links(
     chunks: &mut HashMap<ChunkId, Chunk>,
     chunk_equiv_map: &mut ChunkEquivalenceMap,
     query: &Query,
-    method_datas: &MethodVec<MethodData>,
-    fixed_bells: &[(Bell, usize)],
 ) {
     let start = Instant::now();
     let chunk_ids_and_lengths = chunks
         .iter()
         .map(|(id, chunk)| (id.clone(), chunk.per_part_length))
         .collect::<HashSet<_>>();
-    let falseness_table =
-        FalsenessTable::new(&chunk_ids_and_lengths, query, method_datas, fixed_bells);
+    let falseness_table = FalsenessTable::new(&chunk_ids_and_lengths, query);
     log::debug!("  Falseness table built in {:.2?}", start.elapsed());
 
     let start = Instant::now();
@@ -88,18 +85,13 @@ enum FalsenessEntry {
 impl FalsenessTable {
     /// Creates a `FalsenessTable` capable of efficiently generating falseness between a given set
     /// of chunks.
-    fn new(
-        chunks: &HashSet<(ChunkId, PerPartLength)>,
-        query: &Query,
-        method_datas: &MethodVec<MethodData>,
-        fixed_bells: &[(Bell, usize)],
-    ) -> Self {
+    fn new(chunks: &HashSet<(ChunkId, PerPartLength)>, query: &Query) -> Self {
         // Determine which (lead head mask, range) pairs are **actually** used in the graph.  We
         // will produce a 'FCH' tables for every one of these, which will be used as lookups when
         // generating false links.
         let mut masks_used = HashSet::<(ChunkRange, Mask)>::new();
-        for (method_idx, method_data) in method_datas.iter_enumerated() {
-            for lead_head_mask in &method_data.lead_head_masks {
+        for (method_idx, method_data) in query.methods.iter_enumerated() {
+            for lead_head_mask in &method_data.allowed_lead_masks {
                 for (id, len) in chunks {
                     if id.method == method_idx && lead_head_mask.matches(&id.lead_head) {
                         masks_used
@@ -121,16 +113,10 @@ impl FalsenessTable {
 
         // For any ranges which have lots of masks, replace those masks with a single 'empty' one
         // (see doc comment of `reduce_masks` for more info)
-        reduce_masks(
-            &mut masks_used,
-            &mut masks_used_in_all_parts,
-            query,
-            method_datas,
-            fixed_bells,
-        );
+        reduce_masks(&mut masks_used, &mut masks_used_in_all_parts, query);
 
         // Group rows and compute self-falseness
-        let (self_false_ranges, row_groups) = group_rows(masks_used_in_all_parts, method_datas);
+        let (self_false_ranges, row_groups) = group_rows(masks_used_in_all_parts, query);
 
         // Compute FCHs between every `(range, le_mask)` combination
         let false_chunk_transpositions =
@@ -252,11 +238,9 @@ fn reduce_masks(
     masks_used: &mut HashSet<(ChunkRange, Mask)>,
     masks_used_in_all_parts: &mut HashSet<(ChunkRange, Mask)>,
     query: &Query,
-    method_datas: &MethodVec<MethodData>,
-    fixed_bells: &[(Bell, usize)],
 ) {
     let mut fixed_bell_mask = Mask::empty(query.stage);
-    for &(bell, place) in fixed_bells {
+    for &(bell, place) in &query.fixed_bells {
         fixed_bell_mask
             .set_bell(bell, place)
             .expect("Fixed bells shouldn't repeat");
@@ -288,7 +272,7 @@ fn reduce_masks(
     // Log what we've done
     if !reduced_ranges.is_empty() {
         let fmt_range = |range: &ChunkRange| -> String {
-            let method = &method_datas[range.start.method].method;
+            let method = &query.methods[range.start.method];
             let mut s = method.shorthand.clone();
             if range.start.sub_lead_idx == 0 && range.len.as_usize() == method.lead_len() {
                 // Whole lead; don't add any extra annotation
@@ -334,17 +318,17 @@ fn reduce_masks(
 ///
 /// In this loop, we also check for `ChunkRange`s which are 'self-false' (i.e. include some row
 /// multiple times).
-fn group_rows<'query>(
+fn group_rows(
     masks_used_in_all_parts: HashSet<(ChunkRange, Mask)>,
-    method_datas: &'query MethodVec<MethodData<'query>>,
+    query: &Query,
 ) -> (
     HashSet<ChunkRange>,
-    HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&'query Row>>>,
+    HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&Row>>>,
 ) {
     let mut self_false_ranges = HashSet::<ChunkRange>::new();
     let mut row_groups = HashMap::<(ChunkRange, Mask), RowGroups>::new();
     'range_mask_loop: for (range, mask) in &masks_used_in_all_parts {
-        let plain_course = &method_datas[range.start.method].plain_course;
+        let plain_course = &query.methods[range.start.method].plain_course;
 
         // The chunks with the same `range` are either all self-false or all self-true
         if self_false_ranges.contains(range) {
