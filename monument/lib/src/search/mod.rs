@@ -22,6 +22,7 @@ use crate::{
     builder::{MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
+    utils::TotalLength,
     Composition,
 };
 
@@ -126,6 +127,10 @@ impl Search {
             .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
     }
 
+    pub fn is_spliced(&self) -> bool {
+        self.query.is_spliced()
+    }
+
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
         self.query
             .music_types
@@ -139,8 +144,12 @@ impl Search {
             .unwrap_or(usize::MAX)
     }
 
-    pub fn is_spliced(&self) -> bool {
-        self.query.is_spliced()
+    pub fn max_consecutive_duffer(&self) -> Option<usize> {
+        self.query.max_contiguous_duffer.map(TotalLength::as_usize)
+    }
+
+    pub fn max_total_duffer(&self) -> Option<usize> {
+        self.query.max_total_duffer.map(TotalLength::as_usize)
     }
 
     pub fn num_parts(&self) -> usize {

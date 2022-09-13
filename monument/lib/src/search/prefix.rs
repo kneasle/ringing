@@ -296,7 +296,7 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */
 
-        let (path, music_counts) = self.flattened_path(data, paths);
+        let (path, music_counts, contiguous_duffer_lengths) = self.flattened_path(data, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
@@ -345,6 +345,9 @@ impl CompPrefix {
                 .collect(),
             total_score: score,
 
+            contiguous_duffer_lengths,
+            total_duffer: self.total_duffer,
+
             query: data.query.clone(),
         };
         // Sanity check that the composition is true
@@ -362,17 +365,24 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(
+        &self,
+        data: &Search,
+        paths: &Paths,
+    ) -> (Vec<PathElem>, Counts, Vec<TotalLength>) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
-        let mut music_counts = Counts::zeros(data.query.music_types.len());
         let mut path = Vec::<PathElem>::new();
+        let mut music_counts = Counts::zeros(data.query.music_types.len());
+        let mut duffer_lengths = Vec::<TotalLength>::new();
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
         let (start_chunk_idx, _start_link, mut part_head_elem) = data.graph.starts[start_idx];
         let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
+        let mut was_last_chunk_duffer = false; // No last chunk, but the start is non-duffer
+        let mut consecutive_duffer = TotalLength::ZERO;
         for succ_idx in succ_idxs {
             let next_chunk_idx = match next_link_side {
                 LinkSide::Chunk(idx) => idx,
@@ -382,7 +392,19 @@ impl CompPrefix {
             let chunk = &data.graph.chunks[next_chunk_idx];
             let succ_link = &chunk.succs[succ_idx];
             music_counts += &chunk.music_counts;
-
+            // Check for duffer lengths
+            match (was_last_chunk_duffer, chunk.duffer) {
+                (false, true) => consecutive_duffer = chunk.total_length, // Starting duffers
+                (true, true) => consecutive_duffer += chunk.total_length, // Continuing duffers
+                (true, false) => duffer_lengths.push(consecutive_duffer), // Finishing duffers
+                (false, false) => {
+                    // Calls which join two different non-duffer courses is a transition of zero
+                    if succ_link.call.is_some() {
+                        duffer_lengths.push(TotalLength::ZERO);
+                    }
+                }
+            }
+            // Convert this chunk into a `PathElem`
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
             path.push(PathElem {
@@ -396,8 +418,10 @@ impl CompPrefix {
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
+            was_last_chunk_duffer = chunk.duffer;
             part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
-        (path, music_counts)
+        assert!(next_link_side.is_start_or_end());
+        (path, music_counts, duffer_lengths)
     }
 }

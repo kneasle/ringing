@@ -276,6 +276,10 @@ impl Spec {
         Ok((Arc::new(search), music_displays))
     }
 
+    pub fn duffers_specified(&self) -> bool {
+        self.non_duffer_courses.is_some()
+    }
+
     fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
         let mut config = Config {
             thread_limit: opts.num_threads,

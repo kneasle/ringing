@@ -11,6 +11,7 @@ use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
 const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
+const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(
@@ -72,10 +73,15 @@ pub(crate) fn search(
             update_fn(Update::Aborting);
             break;
         }
-
         // Send stats every so often
         if iter_count % ITERS_BETWEEN_PROGRESS_UPDATES == 0 {
             send_progress_update!(truncating_queue = false);
+        }
+        // Garbage-collect the paths every so often, even if we don't run out of memory (because
+        // otherwise the collection structure will keep expanding even if it contains a load of
+        // dead paths)
+        if iter_count % ITERS_BETWEEN_PATH_GCS == 0 {
+            paths.gc(frontier.iter().map(|prefix| prefix.path_head()));
         }
     }
 
