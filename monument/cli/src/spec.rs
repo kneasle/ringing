@@ -511,148 +511,6 @@ impl MethodSpec {
     }
 }
 
-////////////////////
-// ERROR MESSAGES //
-////////////////////
-
-/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
-/// error message with a more verbose coloured one.
-fn improve_error_message(error: monument::Error) -> anyhow::Error {
-    let message = match error {
-        monument::Error::MethodNotFound { title, suggestions } => {
-            method_suggestion_message(&title, suggestions)
-        }
-        monument::Error::MethodPnParse {
-            name,
-            place_notation_string,
-            error,
-        } => pn_parse_err_msg(&name, &place_notation_string, error),
-        /*
-        monument::Error::CustomCourseMaskParse {
-            method_title,
-            mask_str,
-            error,
-        } => mask_parse_error(mask_kind, string, e),
-        */
-        monument::Error::NoMethods => {
-            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
-                .to_owned()
-        }
-        e => e.to_string(),
-    };
-    anyhow::Error::msg(message)
-}
-
-/// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
-/// The message looks something like the following:
-/// ```text
-/// Can't find "{title}" in the Central Council method library.  Did you mean:
-///      "{suggestions[0]}" ({diff for suggestions[0]})
-///   or "{suggestions[1]}" ({diff for suggestions[1]})
-///   or ...
-/// ```
-fn method_suggestion_message(title: &str, mut suggestions: Vec<(String, usize)>) -> String {
-    // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
-    // deterministic (and, by extension, keeps the tests deterministic).
-    suggestions.sort_by_key(|(name, edit_dist)| (*edit_dist, name.clone()));
-
-    let mut message = format!(
-        "Can't find {:?} in the Central Council method library.",
-        title
-    );
-    message.push_str("  Did you mean:");
-    // Only suggest the suggestions which (perhaps jointly) have the best edit
-    // distance
-    let best_edit_dist = suggestions[0].1;
-    let mut is_first_suggestion = true;
-    for (suggested_title, edit_dist) in suggestions {
-        if edit_dist > best_edit_dist {
-            break;
-        }
-        message.push('\n');
-        message.push_str(if is_first_suggestion {
-            "     "
-        } else {
-            "  or "
-        });
-        write!(
-            message,
-            "{:?} ({})",
-            suggested_title,
-            difference::Changeset::new(title, &suggested_title, "")
-        )
-        .unwrap();
-        is_first_suggestion = false;
-    }
-    message
-}
-
-/// Construct a human-friendly error message for a PN parse error, like:
-/// ```text
-/// Can't parse place notation for method "{name}":
-///       {method place notation}
-///             ^^^^ {error message}
-/// ```
-fn pn_parse_err_msg(name: &str, pn_str: &str, error: PnBlockParseError) -> String {
-    let (region, message) = match error {
-        PnBlockParseError::EmptyBlock => {
-            return format!(
-                "Can't have empty place notation block for method {:?}",
-                name
-            );
-        }
-        PnBlockParseError::PlusNotAtBlockStart(plus_idx) => (
-            plus_idx..plus_idx + 1,
-            "`+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
-                .to_owned(),
-        ),
-        PnBlockParseError::PnError(range, err) => (range, err.to_string()),
-    };
-
-    let pn_before_error = &pn_str[..region.start];
-    let pn_error = &pn_str[region.clone()];
-    let pn_after_error = &pn_str[region.end..];
-    // Given that we're labelling `region` with some `message`, construct the full string.
-    let mut msg = format!("Can't parse place notation for method {:?}:\n", name);
-    // Write the place notation string, with the offending 'region' bold.  Also use 5 spaces of
-    // margin, plus one `"`
-    writeln!(
-        msg,
-        "     \"{}{}{}\"",
-        pn_before_error,
-        pn_error.bright_red().bold(),
-        pn_after_error
-    )
-    .unwrap();
-    // Add the error message, with carets under the offending region
-    let chars_before_plus = pn_before_error.chars().count();
-    let caret_string = std::iter::repeat('^')
-        .take(pn_error.chars().count())
-        .join("")
-        .bright_red()
-        .bold();
-    msg.extend(std::iter::repeat(' ').take(6 + chars_before_plus)); // 6 extra for the margin
-    write!(msg, "{} {}", caret_string, message.bright_red().bold()).unwrap();
-    msg
-}
-
-/// Construct a human-friendly error message when a mask fails to parse.
-fn mask_parse_error(
-    mask_kind: &str,
-    string: &str,
-    e: bellframe::mask::ParseError,
-) -> anyhow::Error {
-    anyhow::Error::msg(format!("Can't parse {mask_kind} {string:?}: {e}"))
-}
-
-/////////////
-// HELPERS //
-/////////////
-
-fn default_num_comps() -> usize {
-    100
-}
-
 ////////////
 // LENGTH //
 ////////////
@@ -805,4 +663,146 @@ mod length {
             deserializer.deserialize_any(LengthVisitor)
         }
     }
+}
+
+////////////////////
+// ERROR MESSAGES //
+////////////////////
+
+/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
+/// error message with a more verbose coloured one.
+fn improve_error_message(error: monument::Error) -> anyhow::Error {
+    let message = match error {
+        monument::Error::MethodNotFound { title, suggestions } => {
+            method_suggestion_message(&title, suggestions)
+        }
+        monument::Error::MethodPnParse {
+            name,
+            place_notation_string,
+            error,
+        } => pn_parse_err_msg(&name, &place_notation_string, error),
+        /*
+        monument::Error::CustomCourseMaskParse {
+            method_title,
+            mask_str,
+            error,
+        } => mask_parse_error(mask_kind, string, e),
+        */
+        monument::Error::NoMethods => {
+            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
+                .to_owned()
+        }
+        e => e.to_string(),
+    };
+    anyhow::Error::msg(message)
+}
+
+/// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
+/// The message looks something like the following:
+/// ```text
+/// Can't find "{title}" in the Central Council method library.  Did you mean:
+///      "{suggestions[0]}" ({diff for suggestions[0]})
+///   or "{suggestions[1]}" ({diff for suggestions[1]})
+///   or ...
+/// ```
+fn method_suggestion_message(title: &str, mut suggestions: Vec<(String, usize)>) -> String {
+    // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
+    // deterministic (and, by extension, keeps the tests deterministic).
+    suggestions.sort_by_key(|(name, edit_dist)| (*edit_dist, name.clone()));
+
+    let mut message = format!(
+        "Can't find {:?} in the Central Council method library.",
+        title
+    );
+    message.push_str("  Did you mean:");
+    // Only suggest the suggestions which (perhaps jointly) have the best edit
+    // distance
+    let best_edit_dist = suggestions[0].1;
+    let mut is_first_suggestion = true;
+    for (suggested_title, edit_dist) in suggestions {
+        if edit_dist > best_edit_dist {
+            break;
+        }
+        message.push('\n');
+        message.push_str(if is_first_suggestion {
+            "     "
+        } else {
+            "  or "
+        });
+        write!(
+            message,
+            "{:?} ({})",
+            suggested_title,
+            difference::Changeset::new(title, &suggested_title, "")
+        )
+        .unwrap();
+        is_first_suggestion = false;
+    }
+    message
+}
+
+/// Construct a human-friendly error message for a PN parse error, like:
+/// ```text
+/// Can't parse place notation for method "{name}":
+///       {method place notation}
+///             ^^^^ {error message}
+/// ```
+fn pn_parse_err_msg(name: &str, pn_str: &str, error: PnBlockParseError) -> String {
+    let (region, message) = match error {
+        PnBlockParseError::EmptyBlock => {
+            return format!(
+                "Can't have empty place notation block for method {:?}",
+                name
+            );
+        }
+        PnBlockParseError::PlusNotAtBlockStart(plus_idx) => (
+            plus_idx..plus_idx + 1,
+            "`+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
+                .to_owned(),
+        ),
+        PnBlockParseError::PnError(range, err) => (range, err.to_string()),
+    };
+
+    let pn_before_error = &pn_str[..region.start];
+    let pn_error = &pn_str[region.clone()];
+    let pn_after_error = &pn_str[region.end..];
+    // Given that we're labelling `region` with some `message`, construct the full string.
+    let mut msg = format!("Can't parse place notation for method {:?}:\n", name);
+    // Write the place notation string, with the offending 'region' bold.  Also use 5 spaces of
+    // margin, plus one `"`
+    writeln!(
+        msg,
+        "     \"{}{}{}\"",
+        pn_before_error,
+        pn_error.bright_red().bold(),
+        pn_after_error
+    )
+    .unwrap();
+    // Add the error message, with carets under the offending region
+    let chars_before_plus = pn_before_error.chars().count();
+    let caret_string = std::iter::repeat('^')
+        .take(pn_error.chars().count())
+        .join("")
+        .bright_red()
+        .bold();
+    msg.extend(std::iter::repeat(' ').take(6 + chars_before_plus)); // 6 extra for the margin
+    write!(msg, "{} {}", caret_string, message.bright_red().bold()).unwrap();
+    msg
+}
+
+/// Construct a human-friendly error message when a mask fails to parse.
+fn mask_parse_error(
+    mask_kind: &str,
+    string: &str,
+    e: bellframe::mask::ParseError,
+) -> anyhow::Error {
+    anyhow::Error::msg(format!("Can't parse {mask_kind} {string:?}: {e}"))
+}
+
+/////////////
+// HELPERS //
+/////////////
+
+fn default_num_comps() -> usize {
+    100
 }
