@@ -1,0 +1,11 @@
+length = "practice"
+method = "Double Oxford Bob Major"
+non_duffer_courses = [
+    { courses = [
+        "*5678", "*8765",
+        "*4567", "*7654",
+        "*3456", "*6543",
+        "*2345", "*5432",
+    ], both_strokes = true }
+]
+max_total_duffer = 32

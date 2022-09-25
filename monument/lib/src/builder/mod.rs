@@ -58,7 +58,7 @@ pub struct SearchBuilder {
     pub course_weights: Vec<(Mask, f32)>,
 
     /* NON-DUFFERS */
-    pub non_duffer_courses: Option<Vec<Mask>>,
+    pub non_duffer_courses: Option<Vec<CourseSet>>,
     pub max_contiguous_duffer: Option<usize>,
     pub max_total_duffer: Option<usize>,
 }
@@ -228,7 +228,7 @@ impl SearchBuilder {
             courses,
             course_weights,
 
-            mut non_duffer_courses,
+            non_duffer_courses,
             max_contiguous_duffer,
             max_total_duffer,
         } = self;
@@ -264,7 +264,7 @@ impl SearchBuilder {
                 &default_start_indices,
                 &default_end_indices,
                 &courses,
-                non_duffer_courses.as_deref_mut(),
+                non_duffer_courses.as_deref(),
                 &part_head,
                 stage,
             )?);

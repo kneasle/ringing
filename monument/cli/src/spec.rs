@@ -5,7 +5,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     builder::{
-        CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
+        self, CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
         DEFAULT_SINGLE_WEIGHT,
     },
     Config, Search, SearchBuilder,
@@ -139,7 +139,7 @@ pub struct Spec {
     /* NO-DUFFERS */
     /// Courses which should not be considered a 'duffer'.  If nothing is specified, all courses
     /// are 'non-duffers'.
-    non_duffer_courses: Option<Vec<String>>,
+    non_duffer_courses: Option<Vec<self::CourseSet>>,
     /// The most contiguous [`Row`]s of duffer courses that are allowed between two non-duffer
     /// courses.
     max_contiguous_duffer: Option<usize>,
@@ -237,7 +237,7 @@ impl Spec {
         search_builder.part_head = part_head;
         search_builder.courses = match &self.course_heads {
             // If the user specifies some courses, use them
-            Some(ch_strings) => Some(parse_masks(ch_strings, stage)?),
+            Some(ch_strings) => Some(parse_masks("course mask", ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
             None if self.split_tenors => Some(vec![Mask::empty(stage)]),
             // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
@@ -250,8 +250,12 @@ impl Spec {
         let music_displays = self.music(source, &mut search_builder)?;
         search_builder.start_stroke = self.start_stroke;
         // Non-duffer
-        if let Some(strings) = &self.non_duffer_courses {
-            search_builder.non_duffer_courses = Some(parse_masks(strings, stage)?);
+        if let Some(non_duffer_courses) = &self.non_duffer_courses {
+            let mut course_sets = Vec::new();
+            for non_duffer in non_duffer_courses {
+                course_sets.push(non_duffer.as_monument_course_set("non duffer mask", stage)?);
+            }
+            search_builder.non_duffer_courses = Some(course_sets);
         }
         search_builder.max_contiguous_duffer = self.max_contiguous_duffer;
         search_builder.max_total_duffer = self.max_total_duffer;
@@ -380,9 +384,7 @@ impl Spec {
             };
             // Add the patterns
             for mask_str in ch_masks {
-                let mask = Mask::parse_with_stage(mask_str, stage)
-                    .map_err(|e| mask_parse_error("course head weight", mask_str, e))?;
-                weights.push((mask, *weight));
+                weights.push((parse_mask("course head weight", mask_str, stage)?, *weight));
             }
         }
         Ok(weights)
@@ -394,15 +396,17 @@ fn parse_row(name: &str, s: &str, stage: Stage) -> Result<RowBuf, anyhow::Error>
         .map_err(|e| anyhow::Error::msg(format!("Can't parse {} {:?}: {}", name, s, e)))
 }
 
-fn parse_masks(strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
+fn parse_masks(mask_kind: &str, strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
     let mut masks = Vec::with_capacity(strings.len());
     for s in strings {
-        masks.push(
-            Mask::parse_with_stage(s, stage)
-                .map_err(|e| mask_parse_error("course head mask", s, e))?,
-        );
+        masks
+            .push(Mask::parse_with_stage(s, stage).map_err(|e| mask_parse_error(mask_kind, s, e))?);
     }
     Ok(masks)
+}
+
+fn parse_mask(mask_kind: &str, string: &str, stage: Stage) -> anyhow::Result<Mask> {
+    Mask::parse_with_stage(string, stage).map_err(|e| mask_parse_error(mask_kind, string, e))
 }
 
 ///////////////
@@ -508,6 +512,48 @@ impl MethodSpec {
             }
         }
         Ok(method_builder)
+    }
+}
+
+/////////////////
+// NON DUFFERS //
+/////////////////
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+enum CourseSet {
+    OneMask(String),
+    WithOptions {
+        courses: Vec<String>,
+        #[serde(default)]
+        both_strokes: bool,
+        #[serde(default)]
+        any_bells: bool,
+    },
+}
+
+impl CourseSet {
+    fn as_monument_course_set(
+        &self,
+        mask_kind: &str,
+        stage: Stage,
+    ) -> anyhow::Result<builder::CourseSet> {
+        Ok(match self {
+            CourseSet::OneMask(mask_str) => builder::CourseSet {
+                masks: vec![parse_mask("non-duffer", mask_str, stage)?],
+                both_strokes: false,
+                any_bells: false,
+            },
+            CourseSet::WithOptions {
+                courses: masks,
+                both_strokes,
+                any_bells,
+            } => builder::CourseSet {
+                masks: parse_masks(mask_kind, masks, stage)?,
+                both_strokes: *both_strokes,
+                any_bells: *any_bells,
+            },
+        })
     }
 }
 
