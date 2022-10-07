@@ -188,7 +188,7 @@ impl Stage {
 
     pub fn checked_sub(self, rhs: u8) -> Option<Self> {
         let new_num_bells = self.0.checked_sub(rhs)?;
-        (new_num_bells > 0).then(|| Self(new_num_bells))
+        (new_num_bells > 0).then_some(Self(new_num_bells))
     }
 
     /// Returns a [`SameStageVec`] containing one copy of every [`Row`] possible in this [`Stage`]
