@@ -19,7 +19,7 @@ index_vec = "0.1"
 itertools = "0.10"
 log = "0.4"
 num_cpus = "1.13"
-ordered-float = "3.1"
+ordered-float = "3.2"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
 sysinfo = "0.26"
