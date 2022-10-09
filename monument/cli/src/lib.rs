@@ -69,7 +69,7 @@ pub fn run(
     debug_print!(Query, search);
 
     // Build all the data structures for the search
-    let comp_printer = CompPrinter::new(music_displays, search.clone());
+    let comp_printer = CompPrinter::new(music_displays, search.clone(), spec.duffers_specified());
     let mut update_logger = SingleLineProgressLogger::new(comp_printer.clone());
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
@@ -329,6 +329,8 @@ struct CompPrinter {
     /// )
     /// ```
     method_counts: Vec<(usize, String)>,
+    /// `true` if the user specified anything about duffer courses, otherwise 'false'
+    print_duffers: bool,
     /// If a part head should be displayed, then what's its width
     part_head_width: Option<usize>,
     /// The column widths of every `MusicDisplay` in the output
@@ -336,18 +338,18 @@ struct CompPrinter {
 }
 
 impl CompPrinter {
-    fn new(music_displays: Vec<MusicDisplay>, search: Arc<Search>) -> Self {
+    fn new(music_displays: Vec<MusicDisplay>, search: Arc<Search>, print_duffers: bool) -> Self {
         Self {
             length_width: search.length_range().end().to_string().len(),
             method_counts: search
                 .methods()
                 .map(|(id, _method, shorthand)| {
-                    // TODO: Once integer logarithms become stable, use `.log10() + 1`
                     let max_count_width = search.method_count_range(&id).end().to_string().len();
                     let max_width = max_count_width.max(shorthand.len());
                     (max_width, shorthand.to_owned())
                 })
                 .collect_vec(),
+            print_duffers,
             part_head_width: (search.num_parts() > 2)
                 .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
@@ -385,6 +387,10 @@ impl CompPrinter {
             }
         }
         s.push('|');
+        // Duffers
+        if self.print_duffers {
+            s.push_str(" avg/max/sum dufr |");
+        }
         // Part head
         if let Some(w) = self.part_head_width {
             // Add 2 to the width to get one char of extra padding on either side
@@ -417,6 +423,17 @@ impl CompPrinter {
             }
         }
         s.push('|');
+        // Duffers
+        if self.print_duffers {
+            write!(
+                s,
+                " {:>6.2} {:>4} {:>4} |",
+                comp.total_duffer() as f32 / comp.contiguous_duffer_lengths().count() as f32,
+                comp.contiguous_duffer_lengths().max().unwrap_or(0),
+                comp.total_duffer()
+            )
+            .unwrap();
+        }
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();

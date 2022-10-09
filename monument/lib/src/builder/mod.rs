@@ -56,6 +56,11 @@ pub struct SearchBuilder {
     pub part_head: RowBuf,
     pub courses: Option<Vec<Mask>>,
     pub course_weights: Vec<(Mask, f32)>,
+
+    /* NON-DUFFERS */
+    pub non_duffer_courses: Option<Vec<CourseSet>>,
+    pub max_contiguous_duffer: Option<usize>,
+    pub max_total_duffer: Option<usize>,
 }
 
 impl SearchBuilder {
@@ -125,6 +130,10 @@ impl SearchBuilder {
             part_head: RowBuf::rounds(stage),
             courses: None, // Defer setting the defaults until we know the part head
             course_weights: vec![],
+
+            non_duffer_courses: None, // All courses are non-duffers
+            max_contiguous_duffer: None,
+            max_total_duffer: None,
         })
     }
 
@@ -218,12 +227,16 @@ impl SearchBuilder {
             part_head,
             courses,
             course_weights,
+
+            non_duffer_courses,
+            max_contiguous_duffer,
+            max_total_duffer,
         } = self;
 
         // If no courses are set, fix any bell >=7 which aren't affected by the part head.  Usually
         // this will be either all (e.g. 1-part or a part head of `1342` or `124365`) or all (e.g.
         // cyclic), but any other combinations are possible.  E.g. a composition of Maximus with
-        // part head of `1765432` will still preserve 8 through 12
+        // part head of `1765432` will still preserve 8 through 12.
         let courses = courses.unwrap_or_else(|| {
             let tenors_unaffected_by_part_head =
                 stage.bells().skip(6).filter(|&b| part_head.is_fixed(b));
@@ -239,6 +252,7 @@ impl SearchBuilder {
             calls.extend(base_calls.into_calls(stage));
         }
         calls.extend(custom_calls.into_iter().map(Call::build));
+
         // Methods
         let fixed_bells = self::methods::fixed_bells(&methods, &calls, &start_row, stage);
         let mut built_methods = MethodVec::new();
@@ -250,10 +264,21 @@ impl SearchBuilder {
                 &default_start_indices,
                 &default_end_indices,
                 &courses,
+                non_duffer_courses.as_deref(),
                 &part_head,
                 stage,
             )?);
         }
+
+        // Non-duffer
+        //
+        // Here we also force `max_contiguous_duffer` to be no bigger than `max_total_duffer`
+        // (which clearly can't happen because we'd blow our entire duffer budget in one place).
+        let max_contiguous_duffer = match (max_contiguous_duffer, max_total_duffer) {
+            (Some(contiguous), Some(total)) => Some(usize::min(contiguous, total)),
+            (None, Some(one_val)) | (Some(one_val), None) => Some(one_val),
+            (None, None) => None,
+        };
 
         Ok(Query {
             length_range,
@@ -275,8 +300,11 @@ impl SearchBuilder {
                 .into_iter()
                 .map(|(mask, weight)| (mask, OrderedFloat(weight)))
                 .collect(),
+
             music_types: music_types.into_iter().collect(),
             start_stroke,
+            max_contiguous_duffer: max_contiguous_duffer.map(TotalLength::new),
+            max_total_duffer: max_total_duffer.map(TotalLength::new), // TODO: Cap `total <= contiguous`
         })
     }
 }
@@ -719,10 +747,10 @@ impl OptionalRangeInclusive {
     }
 }
 
-/// Where in a lead can a method finish
+/// Where in a lead can a method finish.
 pub enum EndIndices {
-    /// The composition is allowed to end at any index
+    /// The composition is allowed to end at any index.
     Any,
-    /// The composition can only finish at these indices (modulo the lead lengths)
+    /// The composition can only finish at these indices (modulo the lead lengths).
     Specific(Vec<isize>),
 }

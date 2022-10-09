@@ -26,16 +26,16 @@ use super::{
 /// The prefix of a composition.  These are ordered by average score per row.
 #[derive(Debug, Clone)]
 pub(super) struct CompPrefix {
+    /// Total score generated so far
+    score: Score,
+    /// Length refers to the **end** of the current chunk.  We use `u32` because [`Score`] is also
+    /// 32 bits long, making `CompPrefix` pack into 128 bits
+    length: TotalLength,
     /// Data for this prefix which isn't accessed as much as `avg_score` or `length`.  We store it
     /// in a [`Box`] because the frontier spends a lot of time swapping elements, and copying a
     /// 128-bit struct is much much faster than copying an inlined [`PrefixInner`].  `avg_score`
     /// and `length` are accessed so often that they are left unboxed.
     inner: Box<PrefixInner>,
-    /// Score per row in the composition
-    avg_score: Score,
-    /// Length refers to the **end** of the current chunk.  We use `u32` because [`Score`] is also
-    /// 32 bits long, making `CompPrefix` pack into 128 bits
-    length: TotalLength,
 }
 
 #[derive(Debug, Clone)]
@@ -53,10 +53,14 @@ pub(super) struct PrefixInner {
     /// The [`group::Element`] representing the current part head.  For internal chunks, this value
     /// is completely arbitrary, but once the composition ends this is guaranteed to hold the part
     /// head we reached.
+    // TODO: Compute this after search
     part_head: PartHead,
 
-    /// Score refers to the **end** of the current chunk
-    score: Score,
+    /// Length of contiguous run of duffers up to the end of the prefix
+    contiguous_duffer: TotalLength,
+    /// Total count of duffers used so far in the composition
+    total_duffer: TotalLength,
+
     /// Method counts refers to the **end** of the current chunk
     method_counts: Counts,
 }
@@ -71,43 +75,23 @@ impl CompPrefix {
         graph
             .starts
             .iter_enumerated()
-            .map(|(start_idx, &(chunk_idx, _link_id, rotation))| {
+            .map(|(start_idx, &(chunk_idx, _link_id, part_head))| {
                 let chunk = &graph.chunks[chunk_idx];
-                Self::new(
-                    paths.add_start(start_idx),
-                    LinkSide::Chunk(chunk_idx),
-                    rotation,
-                    all_chunks_ringable.clone(),
-                    Score::from(0.0), // Start links can't have any score
-                    TotalLength::ZERO,
-                    Counts::zeros(chunk.method_counts.len()),
-                )
+                Self {
+                    score: Score::from(0.0), // Start links can't have any score
+                    length: TotalLength::ZERO,
+                    inner: Box::new(PrefixInner {
+                        path: paths.add_start(start_idx),
+                        next_link_side: LinkSide::Chunk(chunk_idx),
+                        unringable_chunks: all_chunks_ringable.clone(),
+                        part_head,
+                        contiguous_duffer: TotalLength::ZERO, // Start is considered a non-duffer
+                        total_duffer: TotalLength::ZERO,
+                        method_counts: Counts::zeros(chunk.method_counts.len()),
+                    }),
+                }
             })
             .collect()
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn new(
-        path: PathId,
-        next_link_side: LinkSide<ChunkIdx>,
-        part_head: PartHead,
-        unringable_chunks: BitVec,
-        score: Score,
-        length: TotalLength,
-        method_counts: Counts,
-    ) -> Self {
-        Self {
-            inner: Box::new(PrefixInner {
-                path,
-                next_link_side,
-                unringable_chunks,
-                part_head,
-                score,
-                method_counts,
-            }),
-            length,
-            avg_score: score / length.as_usize() as f32,
-        }
     }
 
     /// Returns the number of bytes of memory occupied by `self`
@@ -116,6 +100,10 @@ impl CompPrefix {
             + std::mem::size_of::<PrefixInner>()
             + div_rounding_up(self.inner.unringable_chunks.len(), 8)
             + self.inner.method_counts.estimate_heap_size()
+    }
+
+    pub fn avg_score(&self) -> Score {
+        self.score / self.length.as_usize() as f32
     }
 
     pub fn path_head(&self) -> PathId {
@@ -129,7 +117,7 @@ impl CompPrefix {
 
 impl PartialEq for CompPrefix {
     fn eq(&self, other: &Self) -> bool {
-        self.avg_score == other.avg_score
+        self.avg_score() == other.avg_score()
     }
 }
 
@@ -143,7 +131,7 @@ impl PartialOrd for CompPrefix {
 
 impl Ord for CompPrefix {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.avg_score.cmp(&other.avg_score)
+        self.avg_score().cmp(&other.avg_score())
     }
 }
 
@@ -161,6 +149,7 @@ impl Deref for CompPrefix {
 
 impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
+    #[allow(clippy::let_unit_value)]
     pub(super) fn expand(
         self,
         data: &Search,
@@ -178,27 +167,38 @@ impl CompPrefix {
 
         let CompPrefix {
             inner,
-            avg_score: _,
             mut length,
+            mut score,
         } = self;
         let PrefixInner {
             path,
             next_link_side: _,
             mut unringable_chunks,
-            mut score,
             mut method_counts,
-            part_head, // Don't make this `mut` because it gets updated in every loop iteration
+            part_head, // Don't make this `mut` because it would get updated in every loop iteration
+            mut contiguous_duffer,
+            mut total_duffer,
         } = *inner;
 
         // Compute the values for after `chunk`
         length += chunk.total_length;
+        if chunk.duffer {
+            contiguous_duffer += chunk.total_length;
+            total_duffer += chunk.total_length;
+        } else {
+            contiguous_duffer = TotalLength::ZERO;
+        }
         score += chunk.score;
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
 
+        let succ_iter = chunk.succs.iter_enumerated();
+        #[allow(unused_variables)]
+        let chunk = (); // Prevent the loop from accessing `chunk` by accident
+
         let max_length = *data.refined_ranges.length.end();
-        for (succ_idx, link) in chunk.succs.iter_enumerated() {
-            let rotation = part_head * link.ph_rotation;
+        for (succ_idx, link) in succ_iter {
+            let part_head = part_head * link.ph_rotation;
             let score = score + link.score;
 
             // If this `link` would add a new `Chunk`, check if that `Chunk` would make the comps
@@ -207,6 +207,30 @@ impl CompPrefix {
                 let succ_chunk = &data.graph.chunks[succ_idx];
                 let length_after_succ = length + succ_chunk.total_length;
                 let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
+
+                // Contiguous run of duffers would be too long
+                if let Some(duffer_limit) = data.query.max_contiguous_duffer {
+                    if succ_chunk.duffer {
+                        let min_contiguous_duffer = contiguous_duffer
+                            + succ_chunk.total_length
+                            + succ_chunk.min_dist_to_non_duffer;
+                        if min_contiguous_duffer > duffer_limit {
+                            continue; // Chunk would force there to be too much duffer
+                        }
+                    }
+                }
+                // Total duffers would be too much
+                if let Some(max_total_duffer) = data.query.max_total_duffer {
+                    let succ_duffer_len = match succ_chunk.duffer {
+                        false => TotalLength::ZERO,
+                        true => succ_chunk.total_length,
+                    };
+                    let total_duffer_including_succ =
+                        total_duffer + succ_duffer_len + succ_chunk.min_dist_to_non_duffer;
+                    if total_duffer_including_succ > max_total_duffer {
+                        continue; // Chunk would force us to ring too much duffer
+                    }
+                }
 
                 if length_after_succ + succ_chunk.min_len_to_rounds > max_length {
                     continue; // Chunk would make comp too long
@@ -222,15 +246,19 @@ impl CompPrefix {
                 }
             }
 
-            frontier.push(CompPrefix::new(
-                paths.add(path, succ_idx),
-                link.next,
-                rotation,
-                unringable_chunks.clone(), // PERF: Share these to save memory
+            frontier.push(CompPrefix {
+                inner: Box::new(PrefixInner {
+                    path: paths.add(path, succ_idx),
+                    next_link_side: link.next,
+                    unringable_chunks: unringable_chunks.clone(),
+                    part_head,
+                    contiguous_duffer,
+                    total_duffer,
+                    method_counts: method_counts.clone(),
+                }),
                 score,
                 length,
-                method_counts.clone(),
-            ));
+            });
         }
 
         None
@@ -268,7 +296,7 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */
 
-        let (path, music_counts) = self.flattened_path(data, paths);
+        let (path, music_counts, contiguous_duffer_lengths) = self.flattened_path(data, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
@@ -317,6 +345,9 @@ impl CompPrefix {
                 .collect(),
             total_score: score,
 
+            contiguous_duffer_lengths,
+            total_duffer: self.total_duffer,
+
             query: data.query.clone(),
         };
         // Sanity check that the composition is true
@@ -334,17 +365,24 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, data: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(
+        &self,
+        data: &Search,
+        paths: &Paths,
+    ) -> (Vec<PathElem>, Counts, Vec<TotalLength>) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
-        let mut music_counts = Counts::zeros(data.query.music_types.len());
         let mut path = Vec::<PathElem>::new();
+        let mut music_counts = Counts::zeros(data.query.music_types.len());
+        let mut duffer_lengths = Vec::<TotalLength>::new();
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
         let (start_chunk_idx, _start_link, mut part_head_elem) = data.graph.starts[start_idx];
         let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
+        let mut was_last_chunk_duffer = false; // No last chunk, but the start is non-duffer
+        let mut consecutive_duffer = TotalLength::ZERO;
         for succ_idx in succ_idxs {
             let next_chunk_idx = match next_link_side {
                 LinkSide::Chunk(idx) => idx,
@@ -354,7 +392,19 @@ impl CompPrefix {
             let chunk = &data.graph.chunks[next_chunk_idx];
             let succ_link = &chunk.succs[succ_idx];
             music_counts += &chunk.music_counts;
-
+            // Check for duffer lengths
+            match (was_last_chunk_duffer, chunk.duffer) {
+                (false, true) => consecutive_duffer = chunk.total_length, // Starting duffers
+                (true, true) => consecutive_duffer += chunk.total_length, // Continuing duffers
+                (true, false) => duffer_lengths.push(consecutive_duffer), // Finishing duffers
+                (false, false) => {
+                    // Calls which join two different non-duffer courses is a transition of zero
+                    if succ_link.call.is_some() {
+                        duffer_lengths.push(TotalLength::ZERO);
+                    }
+                }
+            }
+            // Convert this chunk into a `PathElem`
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
             path.push(PathElem {
@@ -368,8 +418,10 @@ impl CompPrefix {
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
+            was_last_chunk_duffer = chunk.duffer;
             part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
-        (path, music_counts)
+        assert!(next_link_side.is_start_or_end());
+        (path, music_counts, duffer_lengths)
     }
 }

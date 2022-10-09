@@ -41,6 +41,10 @@ pub(crate) struct Query {
     /// corresponding [`Mask`].
     pub(crate) course_weights: Vec<(Mask, Score)>,
 
+    // NON-DUFFERS
+    pub(crate) max_contiguous_duffer: Option<TotalLength>,
+    pub(crate) max_total_duffer: Option<TotalLength>,
+
     // MUSIC
     pub(crate) music_types: MusicTypeVec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
@@ -101,6 +105,9 @@ pub(crate) struct Method {
     /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
     /// [`crate::SearchBuilder::courses`].
     pub(crate) allowed_lead_masks: Vec<Mask>,
+    /// List of lead heads which are part of
+    /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
+    pub(crate) non_duffer_lead_masks: Vec<Mask>,
 }
 
 impl Method {

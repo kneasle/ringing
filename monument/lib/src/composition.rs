@@ -31,6 +31,8 @@ pub struct Composition {
     pub(crate) method_counts: Counts,
     /// The number of counts generated of each [`MusicType`]
     pub(crate) music_counts: HashMap<MusicTypeId, usize>,
+    pub(crate) contiguous_duffer_lengths: Vec<TotalLength>,
+    pub(crate) total_duffer: TotalLength,
 
     /// The [`Query`] which generated this [`Composition`]
     pub(crate) query: Arc<Query>,
@@ -215,6 +217,18 @@ impl Composition {
     /// The number of *instances* of each [`MusicType`] in the [`Search`].
     pub fn music_counts(&self) -> &HashMap<MusicTypeId, usize> {
         &self.music_counts
+    }
+
+    /// Return an [`Iterator`] over the number of [`Row`]s in each transition between
+    /// [`non_duffer_courses`](SearchBuilder::non_duffer_courses).
+    pub fn contiguous_duffer_lengths(&self) -> impl DoubleEndedIterator<Item = usize> + '_ {
+        self.contiguous_duffer_lengths.iter().map(|l| l.as_usize())
+    }
+
+    /// Returns the total number of [`Row`]s of duffer courses (i.e. those not in
+    /// [`SearchBuilder::non_duffer_courses`]) present in this composition.
+    pub fn total_duffer(&self) -> usize {
+        self.total_duffer.as_usize()
     }
 }
 

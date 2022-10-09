@@ -256,11 +256,12 @@ impl Method {
         default_start_indices: &[isize],
         default_end_indices: &EndIndices,
         allowed_course_masks: &[Mask],
+        non_duffer_courses: Option<&[CourseSet]>,
         part_head: &Row,
         stage: Stage,
     ) -> crate::Result<query::Method> {
         // Parse the allowed courses and expand them into allowed *lead* masks
-        let mut allowed_course_masks = match self.override_courses {
+        let allowed_course_masks = match self.override_courses {
             Some(unparsed_courses) => unparsed_courses
                 .into_iter()
                 .map(|mask_str| {
@@ -275,8 +276,12 @@ impl Method {
                 .collect::<Result<Vec<_>, _>>()?,
             None => allowed_course_masks.to_owned(),
         };
-        let allowed_lead_masks =
-            course_to_lead_masks(&bellframe_method, &mut allowed_course_masks, fixed_bells);
+        let allowed_course_set = CourseSet {
+            masks: allowed_course_masks,
+            both_strokes: false,
+            any_bells: false,
+        };
+
         // Compute the start/end indices
         let not_wrapped_start_indices = self
             .override_start_indices
@@ -314,56 +319,119 @@ impl Method {
 
             start_indices,
             end_indices,
-            allowed_course_masks,
-            allowed_lead_masks,
+            allowed_course_masks: allowed_course_set
+                .as_course_masks(&bellframe_method, fixed_bells),
+            allowed_lead_masks: allowed_course_set.as_lead_masks(&bellframe_method, fixed_bells),
+            non_duffer_lead_masks: match non_duffer_courses {
+                Some(course_sets) => course_sets
+                    .iter()
+                    .flat_map(|c| c.as_lead_masks(&bellframe_method, fixed_bells))
+                    .collect_vec(),
+                None => vec![Mask::empty(stage)], // `None` means all courses are non-duffers
+            },
 
             inner: bellframe_method,
         })
     }
 }
 
-/// Convert 'course' masks to 'lead' masks (by post-multiplying with every lead head).  Also adds
-/// fixed bells to the `allowed_course_masks`.
-fn course_to_lead_masks(
-    method: &bellframe::Method,
-    allowed_course_masks: &mut [Mask],
-    fixed_bells: &[(Bell, usize)],
-) -> Vec<Mask> {
-    let mut lead_head_masks = HashSet::new();
-    // Convert *course* head masks into *lead* head masks (course heads are convenient for the
-    // user, but the whole graph is based on lead heads).
-    'mask_loop: for course_mask in allowed_course_masks {
-        // Add the fixed bells to this CH mask
-        for (bell, pos) in fixed_bells {
-            if course_mask.set_bell(*bell, *pos).is_err() {
-                log::debug!(
-                    "Discarding CH mask {} because it fixes {} in the wrong place",
-                    course_mask,
-                    bell
-                );
-                // Discard any CH masks which require fixed bells in impossible places
-                continue 'mask_loop;
+////////////////////////////////
+// COURSE MASKS -> LEAD MASKS //
+////////////////////////////////
+
+/// Convenient description of a set of courses via [`Mask`]s.
+#[derive(Debug, Clone)]
+pub struct CourseSet {
+    /// List of [`Mask`]s, of which courses should match at least one.
+    pub masks: Vec<Mask>,
+    /// If `true`, the [`Mask`]s will be expanded so that the mask matches on both strokes.  For
+    /// example, `"*5678"` might expand to `["*5678", "*6587"]`.
+    pub both_strokes: bool,
+    /// If `true`, every [`Bell`] in every [`Mask`] will be added/subtracted from to get every
+    /// combination.  For example, `"*3456"` would expand to
+    /// `["*1234", "*2345", "*3456", "*4567", "*5678"]`.
+    pub any_bells: bool,
+}
+
+impl CourseSet {
+    /// Returns a list of [`Mask`]s which match any lead head of the courses represented by `self`.
+    fn as_lead_masks(
+        &self,
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+    ) -> Vec<Mask> {
+        let course_masks = self.as_course_masks(method, fixed_bells);
+        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
+        // user, but Monument is internally based completely on lead heads - courses are only used to
+        // interact with the user).
+        let mut lead_head_masks = HashSet::new();
+        for course_mask in course_masks {
+            for lead_head in method.lead_head().closure() {
+                lead_head_masks.insert(&course_mask * &lead_head);
             }
         }
-        for lead_head in method.lead_head().closure() {
-            lead_head_masks.insert(&*course_mask * &lead_head);
+        // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
+        // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
+        // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
+        // means that perfect duplicates have already been eliminated, so we only need to check for
+        // strict subset-ness.
+        let mut filtered_lead_head_masks = Vec::new();
+        for mask in &lead_head_masks {
+            let is_implied_by_another_mask = lead_head_masks
+                .iter()
+                .any(|mask2| mask.is_strict_subset_of(mask2));
+            if !is_implied_by_another_mask {
+                filtered_lead_head_masks.push(mask.clone());
+            }
         }
+        filtered_lead_head_masks
     }
-    // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
-    // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
-    // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
-    // means that perfect duplicates have already been eliminated, so we only need to check for
-    // strict subset-ness.
-    let mut filtered_lead_head_masks = Vec::new();
-    for mask in &lead_head_masks {
-        let is_implied_by_another_mask = lead_head_masks
-            .iter()
-            .any(|mask2| mask.is_strict_subset_of(mask2));
-        if !is_implied_by_another_mask {
-            filtered_lead_head_masks.push(mask.clone());
+
+    /// Expand `self` into a single set of [`Mask`]s
+    fn as_course_masks(
+        &self,
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+    ) -> Vec<Mask> {
+        let mut course_masks: Vec<Mask> = self.masks.clone();
+        // Expand `any_bells`, by offsetting the bells in the mask in every possible way
+        if self.any_bells {
+            let mut expanded_masks = Vec::new();
+            for mask in &course_masks {
+                let min_bell = mask.bells().flatten().min().unwrap_or(Bell::TREBLE);
+                let max_bell = mask.bells().flatten().max().unwrap_or(Bell::TREBLE);
+                let min_offset = -(min_bell.index_u8() as i16);
+                let max_offset = (method.stage().num_bells_u8() - max_bell.number()) as i16;
+                for offset in min_offset..=max_offset {
+                    expanded_masks.push(Mask::from_bells(
+                        mask.bells()
+                            .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
+                    ));
+                }
+            }
+            course_masks = expanded_masks;
         }
+        // Expand `both_strokes`
+        if self.both_strokes {
+            course_masks = course_masks
+                .into_iter()
+                .flat_map(|mask| [&mask * method.lead_end(), mask])
+                .collect_vec();
+        }
+        // Set fixed bells
+        course_masks
+            .into_iter()
+            .filter_map(|mask| try_fixing_bells(mask, fixed_bells))
+            .collect_vec()
     }
-    filtered_lead_head_masks
+}
+
+/// Attempt to fix the `fixed_bells` in the [`Mask`], returning `None` if it was not possible.
+fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mask> {
+    for &(bell, place) in fixed_bells {
+        mask.set_bell(bell, place).ok()?;
+    }
+    Some(mask)
 }
 
 fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<usize> {

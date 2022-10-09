@@ -281,35 +281,50 @@ impl Display for Bell {
     }
 }
 
-impl std::ops::Add<u8> for Bell {
+impl Bell {
+    #[track_caller]
+    fn from_i16_idx(idx: i16) -> Self {
+        debug_assert!(
+            idx >= u8::MIN as i16,
+            "Integer underflow while adding to `Bell`"
+        );
+        debug_assert!(
+            idx <= u8::MAX as i16,
+            "Integer overflow while adding to `Bell`"
+        );
+        Self { index: idx as u8 }
+    }
+}
+
+impl std::ops::Add<i16> for Bell {
     type Output = Bell;
 
-    fn add(self, rhs: u8) -> Self::Output {
-        Self {
-            index: self.index + rhs,
-        }
+    #[track_caller]
+    fn add(self, rhs: i16) -> Self::Output {
+        Self::from_i16_idx(self.index as i16 + rhs)
     }
 }
 
-impl std::ops::AddAssign<u8> for Bell {
-    fn add_assign(&mut self, rhs: u8) {
-        self.index += rhs;
+impl std::ops::AddAssign<i16> for Bell {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: i16) {
+        *self = *self + rhs;
     }
 }
 
-impl std::ops::Sub<u8> for Bell {
+impl std::ops::Sub<i16> for Bell {
     type Output = Bell;
 
-    fn sub(self, rhs: u8) -> Self::Output {
-        Self {
-            index: self.index - rhs,
-        }
+    #[track_caller]
+    fn sub(self, rhs: i16) -> Self::Output {
+        Self::from_i16_idx(self.index as i16 - rhs)
     }
 }
 
-impl std::ops::SubAssign<u8> for Bell {
-    fn sub_assign(&mut self, rhs: u8) {
-        self.index -= rhs;
+impl std::ops::SubAssign<i16> for Bell {
+    #[track_caller]
+    fn sub_assign(&mut self, rhs: i16) {
+        *self = *self - rhs;
     }
 }
 

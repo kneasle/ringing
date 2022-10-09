@@ -88,10 +88,8 @@ impl Graph {
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
         log::debug!(
-            "Graph build completed in {:.3?} ({} chunks and {} links)",
-            graph_build_start.elapsed(),
-            chunks.len(),
-            links.len(),
+            "Graph build completed in {:.3?}",
+            graph_build_start.elapsed()
         );
 
         // Compute start/end links
@@ -121,9 +119,15 @@ impl Graph {
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
 fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
+    let non_duffer = query.methods[id.method]
+        .non_duffer_lead_masks
+        .iter()
+        .any(|mask| mask.matches(&id.lead_head));
+
     Chunk {
         per_part_length,
         total_length,
+
         // All the length goes to the method rung in this chunk
         method_counts: Counts::single_count(
             total_length.as_usize(),
@@ -141,6 +145,10 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         required: false,
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,
+
+        duffer: !non_duffer,
+        lb_distance_from_non_duffer: TotalLength::ZERO,
+        lb_distance_to_non_duffer: TotalLength::ZERO,
     }
 }
 

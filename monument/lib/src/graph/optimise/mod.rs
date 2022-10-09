@@ -20,11 +20,11 @@ impl Graph {
     pub(crate) fn optimise(&mut self, query: &Query) {
         const ITERATION_LIMIT: usize = 20;
 
-        let passes = passes::default();
+        let passes = self::passes::default();
 
         log::debug!("Optimising graph:");
         let mut last_size = self.size();
-        log::debug!("  Initial size: {:?}", last_size);
+        log::debug!("  Initial size: {}", self.size_summary());
         let mut iter_count = 0;
         let mut passes_since_last_time_graph_got_smaller = 0;
         let start_time = Instant::now();
@@ -53,7 +53,7 @@ impl Graph {
                 }
                 passes_since_last_time_graph_got_smaller += 1;
             }
-            log::debug!("  New     size: {:?}", last_size);
+            log::debug!("  New     size: {}", self.size_summary());
 
             // Stop optimising if the limit has been reached
             if iter_count > ITERATION_LIMIT {
@@ -64,18 +64,24 @@ impl Graph {
             }
             iter_count += 1;
         }
-        log::debug!("  Final   size: {:?}", last_size);
+        log::debug!("  Final   size: {}", self.size_summary());
         log::debug!(
             "Finished optimisation in {:?} after {} iters of every pass",
             start_time.elapsed(),
             iter_count
         );
-        log::debug!(
-            "Optimised graph has {} chunks, {} starts, {} ends",
+    }
+
+    fn size_summary(&self) -> String {
+        format!(
+            "{} chunks ({} non-duffer, {} required); {} links, {} starts, {} ends",
             self.chunks.len(),
+            self.chunks.values().filter(|chunk| !chunk.duffer).count(),
+            self.chunks.values().filter(|chunk| chunk.required).count(),
+            self.links.len(),
             self.starts.len(),
             self.ends.len()
-        );
+        )
     }
 
     /// Return a value representing the 'size' of this graph.  Optimisation passes are
@@ -98,8 +104,9 @@ impl Graph {
 }
 
 type SinglePass = Box<dyn FnMut(&mut Graph, &Query)>;
-/// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  For example,
-/// computing distances to/from rounds (removing unreachable chunks).
+/// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  Very useful
+/// when some graph operation is agnostic to the directionality of the graph, e.g.  computing
+/// distances to/from rounds.
 type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
@@ -163,6 +170,13 @@ impl<'graph> DirectionalView<'graph> {
         Self { graph, direction }
     }
 
+    fn chunks(&'graph self) -> impl Iterator<Item = (&'graph ChunkId, ChunkView<'graph>)> + 'graph {
+        self.graph
+            .chunks
+            .iter()
+            .map(|(id, chunk)| (id, ChunkView::new(chunk, &*self.graph, self.direction)))
+    }
+
     /// Gets the IDs of the 'start' chunks of the [`Graph`] going in this [`Direction`]
     fn starts(&self) -> &[(LinkId, ChunkId)] {
         match self.direction {
@@ -185,15 +199,6 @@ impl<'graph> DirectionalView<'graph> {
             .chunks
             .get(id)
             .map(|chunk| ChunkView::new(chunk, self.graph, self.direction))
-    }
-
-    #[allow(dead_code)] // Don't want `get_chunk` without `get_chunk_mut`
-    fn get_chunk_mut(&'graph mut self, id: &ChunkId) -> Option<ChunkViewMut<'graph>> {
-        let direction = self.direction;
-        self.graph
-            .chunks
-            .get_mut(id)
-            .map(|chunk| ChunkViewMut::new(chunk, direction))
     }
 
     fn retain_chunks(&mut self, mut pred: impl FnMut(&ChunkId, ChunkViewMut) -> bool) {
@@ -259,10 +264,18 @@ impl<'graph> ChunkViewMut<'graph> {
     }
 
     /// Mutable reference to the distance from rounds **to** the start of this chunk
-    fn distance_mut(&mut self) -> &mut TotalLength {
+    fn distance_to_boundary_mut(&mut self) -> &mut TotalLength {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_rounds,
             Backward => &mut self.chunk.lb_distance_to_rounds,
+        }
+    }
+
+    /// Mutable reference to the distance from rounds **to** the start of this chunk
+    fn distance_to_non_duffer_mut(&mut self) -> &mut TotalLength {
+        match self.direction {
+            Forward => &mut self.chunk.lb_distance_from_non_duffer,
+            Backward => &mut self.chunk.lb_distance_to_non_duffer,
         }
     }
 }
@@ -305,7 +318,7 @@ mod passes {
     use itertools::Itertools;
 
     use crate::{
-        graph::{ChunkId, Graph, TotalLength},
+        graph::{ChunkId, Graph, LinkSide},
         query::Query,
     };
 
@@ -315,18 +328,21 @@ mod passes {
     /// enable concurrent access.
     pub(super) fn default() -> Vec<Mutex<Pass>> {
         [
-            // Misc optimisations
-            remove_links_between_false_chunks(),
             // Distance-related optimisation
             compute_distances(),
             strip_long_chunks(),
-            strip_refs(),
+            Pass::Single(Box::new(super::strip_refs::remove_dangling_refs)),
             // Music optimisation
-            required_music(),
-            remove_chunks_exceeding_max_count(),
+            Pass::Single(Box::new(super::music::required_music_min)),
+            Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count)),
             // Required chunk optimisation
             mark_single_start_or_end_as_required(),
             remove_chunks_false_against_required(),
+            // Misc optimisations
+            remove_links_between_false_chunks(),
+            // Non-duffers
+            compute_duffer_distances(),
+            strip_long_duffers(),
         ]
         .into_iter()
         .map(Mutex::new)
@@ -334,24 +350,6 @@ mod passes {
     }
 
     /* Simple passes */
-
-    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
-    /// removing any which can't reach rounds in either direction.
-    fn strip_refs() -> Pass {
-        Pass::Single(Box::new(super::strip_refs::remove_dangling_refs))
-    }
-
-    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
-    /// removing any which can't reach rounds in either direction.
-    fn required_music() -> Pass {
-        Pass::Single(Box::new(super::music::required_music_min))
-    }
-
-    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
-    /// removing any which can't reach rounds in either direction.
-    fn remove_chunks_exceeding_max_count() -> Pass {
-        Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count))
-    }
 
     /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
     fn remove_links_between_false_chunks() -> Pass {
@@ -369,9 +367,7 @@ mod passes {
     fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(|mut view: DirectionalView, query: &Query| {
             let expanded_chunk_distances = super::compute_distances(
-                view.starts()
-                    .iter()
-                    .map(|(_link_id, chunk_id)| (chunk_id, TotalLength::ZERO)),
+                view.starts().iter().map(|(_, chunk_id)| chunk_id),
                 &view,
                 Some(query.max_length()),
             );
@@ -380,7 +376,7 @@ mod passes {
                 |id, mut chunk_view| match expanded_chunk_distances.get(id) {
                     // keep reachable chunks and update their distance lower bounds
                     Some(&new_distance) => {
-                        *chunk_view.distance_mut() = new_distance;
+                        *chunk_view.distance_to_boundary_mut() = new_distance;
                         true
                     }
                     None => false, // Remove unreachable chunks
@@ -438,6 +434,63 @@ mod passes {
                 .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
         }))
     }
+
+    /* Non-duffer optimisations */
+
+    fn compute_duffer_distances() -> Pass {
+        Pass::BothDirections(Box::new(
+            |mut graph_view: DirectionalView, query: &Query| {
+                // Find which chunks follow directly from non-duffer chunks
+                let mut successors_of_non_duffers = HashSet::<ChunkId>::new();
+                for (_id, chunk_view) in graph_view.chunks().filter(|(_, v)| !v.chunk.duffer) {
+                    for succ_link in chunk_view.successors() {
+                        if let LinkSide::Chunk(succ_id) = succ_link.to() {
+                            successors_of_non_duffers.insert(succ_id.clone());
+                        }
+                    }
+                }
+                // Starts are also considered a non-duffer for the purposes of distance calculations
+                successors_of_non_duffers.extend(
+                    graph_view
+                        .starts()
+                        .iter()
+                        .map(|(_link, chunk_id)| chunk_id.clone()),
+                );
+                // Compute distances of every chunk, starting at those which follow directly from a
+                // non-duffer chunk (i.e. are zero distance away from non-duffers)
+                let distances_from_non_duffer = super::compute_distances(
+                    successors_of_non_duffers.iter(),
+                    &graph_view,
+                    query.max_contiguous_duffer,
+                );
+                // Set the distances (stripping any chunks which are too far from a duffer)
+                graph_view.retain_chunks(|id, mut chunk_view| {
+                    match distances_from_non_duffer.get(id) {
+                        // keep reachable chunks and update their distance lower bounds
+                        Some(&new_distance) => {
+                            *chunk_view.distance_to_non_duffer_mut() = new_distance;
+                            true
+                        }
+                        None => false, // Remove unreachable chunks
+                    }
+                });
+            },
+        ))
+    }
+
+    fn strip_long_duffers() -> Pass {
+        Pass::Single(Box::new(|graph: &mut Graph, query: &Query| {
+            if let Some(duffer_limit) = query.max_contiguous_duffer {
+                graph.chunks.retain(|_id, chunk| {
+                    // The length of the shortest chunk of duffer containing this chunk
+                    let min_duffer_length = chunk.lb_distance_from_non_duffer
+                        + chunk.total_length
+                        + chunk.lb_distance_to_non_duffer;
+                    !chunk.duffer || min_duffer_length <= duffer_limit
+                });
+            }
+        }))
+    }
 }
 
 ///////////
@@ -447,7 +500,7 @@ mod passes {
 /// Given a set of starting chunks (and their distances), compute the shortest distance to every
 /// reachable chunk.
 fn compute_distances<'a>(
-    start_chunks: impl IntoIterator<Item = (&'a ChunkId, TotalLength)>,
+    start_chunks: impl IntoIterator<Item = &'a ChunkId>,
     view: &DirectionalView<'a>,
     inclusive_dist_limit: Option<TotalLength>,
 ) -> HashMap<ChunkId, TotalLength> {
@@ -459,7 +512,7 @@ fn compute_distances<'a>(
     // queue.  Initialise this with just the start chunks.
     let mut frontier: BinaryHeap<Reverse<FrontierItem<ChunkId, TotalLength>>> = start_chunks
         .into_iter()
-        .map(|(id, dist)| FrontierItem::new(id.clone(), dist))
+        .map(|id| FrontierItem::new(id.clone(), TotalLength::ZERO))
         .map(Reverse)
         .collect();
 

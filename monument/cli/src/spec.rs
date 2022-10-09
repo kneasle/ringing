@@ -5,7 +5,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     builder::{
-        CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
+        self, CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
         DEFAULT_SINGLE_WEIGHT,
     },
     Config, Search, SearchBuilder,
@@ -135,6 +135,17 @@ pub struct Spec {
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
+
+    /* NO-DUFFERS */
+    /// Courses which should not be considered a 'duffer'.  If nothing is specified, all courses
+    /// are 'non-duffers'.
+    non_duffer_courses: Option<Vec<self::CourseSet>>,
+    /// The most contiguous [`Row`]s of duffer courses that are allowed between two non-duffer
+    /// courses.
+    max_contiguous_duffer: Option<usize>,
+    /// The most total [`Row`]s of duffer courses that can exist in the composition *in its
+    /// entirety*.
+    max_total_duffer: Option<usize>,
 }
 
 impl Spec {
@@ -186,7 +197,6 @@ impl Spec {
         // `layout::new::Method`s
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
-        let music_displays = self.music(source, &mut search_builder)?;
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
@@ -227,7 +237,7 @@ impl Spec {
         search_builder.part_head = part_head;
         search_builder.courses = match &self.course_heads {
             // If the user specifies some courses, use them
-            Some(ch_strings) => Some(parse_masks(ch_strings, stage)?),
+            Some(ch_strings) => Some(parse_masks("course mask", ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
             None if self.split_tenors => Some(vec![Mask::empty(stage)]),
             // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
@@ -237,7 +247,18 @@ impl Spec {
         search_builder.course_weights = self.parse_ch_weights(stage)?;
         search_builder = search_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
+        let music_displays = self.music(source, &mut search_builder)?;
         search_builder.start_stroke = self.start_stroke;
+        // Non-duffer
+        if let Some(non_duffer_courses) = &self.non_duffer_courses {
+            let mut course_sets = Vec::new();
+            for non_duffer in non_duffer_courses {
+                course_sets.push(non_duffer.as_monument_course_set("non duffer mask", stage)?);
+            }
+            search_builder.non_duffer_courses = Some(course_sets);
+        }
+        search_builder.max_contiguous_duffer = self.max_contiguous_duffer;
+        search_builder.max_total_duffer = self.max_total_duffer;
 
         // Build the search
         let search = search_builder.build(self.config(opts, leak_search_memory))?;
@@ -257,6 +278,10 @@ impl Spec {
         }
 
         Ok((Arc::new(search), music_displays))
+    }
+
+    pub fn duffers_specified(&self) -> bool {
+        self.non_duffer_courses.is_some()
     }
 
     fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
@@ -359,9 +384,7 @@ impl Spec {
             };
             // Add the patterns
             for mask_str in ch_masks {
-                let mask = Mask::parse_with_stage(mask_str, stage)
-                    .map_err(|e| mask_parse_error("course head weight", mask_str, e))?;
-                weights.push((mask, *weight));
+                weights.push((parse_mask("course head weight", mask_str, stage)?, *weight));
             }
         }
         Ok(weights)
@@ -373,15 +396,17 @@ fn parse_row(name: &str, s: &str, stage: Stage) -> Result<RowBuf, anyhow::Error>
         .map_err(|e| anyhow::Error::msg(format!("Can't parse {} {:?}: {}", name, s, e)))
 }
 
-fn parse_masks(strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
+fn parse_masks(mask_kind: &str, strings: &[String], stage: Stage) -> anyhow::Result<Vec<Mask>> {
     let mut masks = Vec::with_capacity(strings.len());
     for s in strings {
-        masks.push(
-            Mask::parse_with_stage(s, stage)
-                .map_err(|e| mask_parse_error("course head mask", s, e))?,
-        );
+        masks
+            .push(Mask::parse_with_stage(s, stage).map_err(|e| mask_parse_error(mask_kind, s, e))?);
     }
     Ok(masks)
+}
+
+fn parse_mask(mask_kind: &str, string: &str, stage: Stage) -> anyhow::Result<Mask> {
+    Mask::parse_with_stage(string, stage).map_err(|e| mask_parse_error(mask_kind, string, e))
 }
 
 ///////////////
@@ -490,146 +515,46 @@ impl MethodSpec {
     }
 }
 
-////////////////////
-// ERROR MESSAGES //
-////////////////////
+/////////////////
+// NON DUFFERS //
+/////////////////
 
-/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
-/// error message with a more verbose coloured one.
-fn improve_error_message(error: monument::Error) -> anyhow::Error {
-    let message = match error {
-        monument::Error::MethodNotFound { title, suggestions } => {
-            method_suggestion_message(&title, suggestions)
-        }
-        monument::Error::MethodPnParse {
-            name,
-            place_notation_string,
-            error,
-        } => pn_parse_err_msg(&name, &place_notation_string, error),
-        /*
-        monument::Error::CustomCourseMaskParse {
-            method_title,
-            mask_str,
-            error,
-        } => mask_parse_error(mask_kind, string, e),
-        */
-        monument::Error::NoMethods => {
-            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
-                .to_owned()
-        }
-        e => e.to_string(),
-    };
-    anyhow::Error::msg(message)
+#[derive(Debug, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+enum CourseSet {
+    OneMask(String),
+    WithOptions {
+        courses: Vec<String>,
+        #[serde(default)]
+        both_strokes: bool,
+        #[serde(default)]
+        any_bells: bool,
+    },
 }
 
-/// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
-/// The message looks something like the following:
-/// ```text
-/// Can't find "{title}" in the Central Council method library.  Did you mean:
-///      "{suggestions[0]}" ({diff for suggestions[0]})
-///   or "{suggestions[1]}" ({diff for suggestions[1]})
-///   or ...
-/// ```
-fn method_suggestion_message(title: &str, mut suggestions: Vec<(String, usize)>) -> String {
-    // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
-    // deterministic (and, by extension, keeps the tests deterministic).
-    suggestions.sort_by_key(|(name, edit_dist)| (*edit_dist, name.clone()));
-
-    let mut message = format!(
-        "Can't find {:?} in the Central Council method library.",
-        title
-    );
-    message.push_str("  Did you mean:");
-    // Only suggest the suggestions which (perhaps jointly) have the best edit
-    // distance
-    let best_edit_dist = suggestions[0].1;
-    let mut is_first_suggestion = true;
-    for (suggested_title, edit_dist) in suggestions {
-        if edit_dist > best_edit_dist {
-            break;
-        }
-        message.push('\n');
-        message.push_str(if is_first_suggestion {
-            "     "
-        } else {
-            "  or "
-        });
-        write!(
-            message,
-            "{:?} ({})",
-            suggested_title,
-            difference::Changeset::new(title, &suggested_title, "")
-        )
-        .unwrap();
-        is_first_suggestion = false;
+impl CourseSet {
+    fn as_monument_course_set(
+        &self,
+        mask_kind: &str,
+        stage: Stage,
+    ) -> anyhow::Result<builder::CourseSet> {
+        Ok(match self {
+            CourseSet::OneMask(mask_str) => builder::CourseSet {
+                masks: vec![parse_mask("non-duffer", mask_str, stage)?],
+                both_strokes: false,
+                any_bells: false,
+            },
+            CourseSet::WithOptions {
+                courses: masks,
+                both_strokes,
+                any_bells,
+            } => builder::CourseSet {
+                masks: parse_masks(mask_kind, masks, stage)?,
+                both_strokes: *both_strokes,
+                any_bells: *any_bells,
+            },
+        })
     }
-    message
-}
-
-/// Construct a human-friendly error message for a PN parse error, like:
-/// ```text
-/// Can't parse place notation for method "{name}":
-///       {method place notation}
-///             ^^^^ {error message}
-/// ```
-fn pn_parse_err_msg(name: &str, pn_str: &str, error: PnBlockParseError) -> String {
-    let (region, message) = match error {
-        PnBlockParseError::EmptyBlock => {
-            return format!(
-                "Can't have empty place notation block for method {:?}",
-                name
-            );
-        }
-        PnBlockParseError::PlusNotAtBlockStart(plus_idx) => (
-            plus_idx..plus_idx + 1,
-            "`+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
-                .to_owned(),
-        ),
-        PnBlockParseError::PnError(range, err) => (range, err.to_string()),
-    };
-
-    let pn_before_error = &pn_str[..region.start];
-    let pn_error = &pn_str[region.clone()];
-    let pn_after_error = &pn_str[region.end..];
-    // Given that we're labelling `region` with some `message`, construct the full string.
-    let mut msg = format!("Can't parse place notation for method {:?}:\n", name);
-    // Write the place notation string, with the offending 'region' bold.  Also use 5 spaces of
-    // margin, plus one `"`
-    writeln!(
-        msg,
-        "     \"{}{}{}\"",
-        pn_before_error,
-        pn_error.bright_red().bold(),
-        pn_after_error
-    )
-    .unwrap();
-    // Add the error message, with carets under the offending region
-    let chars_before_plus = pn_before_error.chars().count();
-    let caret_string = std::iter::repeat('^')
-        .take(pn_error.chars().count())
-        .join("")
-        .bright_red()
-        .bold();
-    msg.extend(std::iter::repeat(' ').take(6 + chars_before_plus)); // 6 extra for the margin
-    write!(msg, "{} {}", caret_string, message.bright_red().bold()).unwrap();
-    msg
-}
-
-/// Construct a human-friendly error message when a mask fails to parse.
-fn mask_parse_error(
-    mask_kind: &str,
-    string: &str,
-    e: bellframe::mask::ParseError,
-) -> anyhow::Error {
-    anyhow::Error::msg(format!("Can't parse {mask_kind} {string:?}: {e}"))
-}
-
-/////////////
-// HELPERS //
-/////////////
-
-fn default_num_comps() -> usize {
-    100
 }
 
 ////////////
@@ -784,4 +709,146 @@ mod length {
             deserializer.deserialize_any(LengthVisitor)
         }
     }
+}
+
+////////////////////
+// ERROR MESSAGES //
+////////////////////
+
+/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
+/// error message with a more verbose coloured one.
+fn improve_error_message(error: monument::Error) -> anyhow::Error {
+    let message = match error {
+        monument::Error::MethodNotFound { title, suggestions } => {
+            method_suggestion_message(&title, suggestions)
+        }
+        monument::Error::MethodPnParse {
+            name,
+            place_notation_string,
+            error,
+        } => pn_parse_err_msg(&name, &place_notation_string, error),
+        /*
+        monument::Error::CustomCourseMaskParse {
+            method_title,
+            mask_str,
+            error,
+        } => mask_parse_error(mask_kind, string, e),
+        */
+        monument::Error::NoMethods => {
+            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
+                .to_owned()
+        }
+        e => e.to_string(),
+    };
+    anyhow::Error::msg(message)
+}
+
+/// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
+/// The message looks something like the following:
+/// ```text
+/// Can't find "{title}" in the Central Council method library.  Did you mean:
+///      "{suggestions[0]}" ({diff for suggestions[0]})
+///   or "{suggestions[1]}" ({diff for suggestions[1]})
+///   or ...
+/// ```
+fn method_suggestion_message(title: &str, mut suggestions: Vec<(String, usize)>) -> String {
+    // Sort suggestions by edit distance, **then alphabetically**.  This makes the error messages
+    // deterministic (and, by extension, keeps the tests deterministic).
+    suggestions.sort_by_key(|(name, edit_dist)| (*edit_dist, name.clone()));
+
+    let mut message = format!(
+        "Can't find {:?} in the Central Council method library.",
+        title
+    );
+    message.push_str("  Did you mean:");
+    // Only suggest the suggestions which (perhaps jointly) have the best edit
+    // distance
+    let best_edit_dist = suggestions[0].1;
+    let mut is_first_suggestion = true;
+    for (suggested_title, edit_dist) in suggestions {
+        if edit_dist > best_edit_dist {
+            break;
+        }
+        message.push('\n');
+        message.push_str(if is_first_suggestion {
+            "     "
+        } else {
+            "  or "
+        });
+        write!(
+            message,
+            "{:?} ({})",
+            suggested_title,
+            difference::Changeset::new(title, &suggested_title, "")
+        )
+        .unwrap();
+        is_first_suggestion = false;
+    }
+    message
+}
+
+/// Construct a human-friendly error message for a PN parse error, like:
+/// ```text
+/// Can't parse place notation for method "{name}":
+///       {method place notation}
+///             ^^^^ {error message}
+/// ```
+fn pn_parse_err_msg(name: &str, pn_str: &str, error: PnBlockParseError) -> String {
+    let (region, message) = match error {
+        PnBlockParseError::EmptyBlock => {
+            return format!(
+                "Can't have empty place notation block for method {:?}",
+                name
+            );
+        }
+        PnBlockParseError::PlusNotAtBlockStart(plus_idx) => (
+            plus_idx..plus_idx + 1,
+            "`+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
+                .to_owned(),
+        ),
+        PnBlockParseError::PnError(range, err) => (range, err.to_string()),
+    };
+
+    let pn_before_error = &pn_str[..region.start];
+    let pn_error = &pn_str[region.clone()];
+    let pn_after_error = &pn_str[region.end..];
+    // Given that we're labelling `region` with some `message`, construct the full string.
+    let mut msg = format!("Can't parse place notation for method {:?}:\n", name);
+    // Write the place notation string, with the offending 'region' bold.  Also use 5 spaces of
+    // margin, plus one `"`
+    writeln!(
+        msg,
+        "     \"{}{}{}\"",
+        pn_before_error,
+        pn_error.bright_red().bold(),
+        pn_after_error
+    )
+    .unwrap();
+    // Add the error message, with carets under the offending region
+    let chars_before_plus = pn_before_error.chars().count();
+    let caret_string = std::iter::repeat('^')
+        .take(pn_error.chars().count())
+        .join("")
+        .bright_red()
+        .bold();
+    msg.extend(std::iter::repeat(' ').take(6 + chars_before_plus)); // 6 extra for the margin
+    write!(msg, "{} {}", caret_string, message.bright_red().bold()).unwrap();
+    msg
+}
+
+/// Construct a human-friendly error message when a mask fails to parse.
+fn mask_parse_error(
+    mask_kind: &str,
+    string: &str,
+    e: bellframe::mask::ParseError,
+) -> anyhow::Error {
+    anyhow::Error::msg(format!("Can't parse {mask_kind} {string:?}: {e}"))
+}
+
+/////////////
+// HELPERS //
+/////////////
+
+fn default_num_comps() -> usize {
+    100
 }

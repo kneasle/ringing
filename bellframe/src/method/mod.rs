@@ -92,6 +92,22 @@ impl Method {
         &self.first_lead
     }
 
+    /// The last [`Row`] of the [first lead](Self::first_lead).  Don't confuse this with the
+    /// **[lead head](Self::lead_head)**: 'lead **end**' refers to the treble's _handstroke_ lead,
+    /// whereas 'lead **head**' refers to the treble's _backstroke_ lead.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this method has a 0-length lead.
+    #[inline]
+    #[track_caller]
+    pub fn lead_end(&self) -> &Row {
+        self.first_lead
+            .rows()
+            .last()
+            .expect("`Method::lead_end` called on a method with a 0-length lead")
+    }
+
     /// The overall transposing effect of one lead of this `Method`.
     #[inline]
     pub fn lead_head(&self) -> &Row {

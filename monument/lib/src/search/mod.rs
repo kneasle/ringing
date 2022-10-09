@@ -22,6 +22,7 @@ use crate::{
     builder::{MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
+    utils::TotalLength,
     Composition,
 };
 
@@ -35,7 +36,7 @@ use crate::SearchBuilder;
 /// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
 /// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
 /// you.
-// TODO: Better name?
+// TODO: Rename all instances from `data` to `search`
 #[derive(Debug)]
 pub struct Search {
     /* Data */
@@ -65,6 +66,7 @@ impl Search {
         let refined_ranges = prove_lengths(&source_graph, &query)?;
         // Create a fast-to-traverse copy of the graph
         let graph = self::graph::Graph::new(&source_graph, &query);
+        drop(source_graph);
 
         Ok(Search {
             query: Arc::new(query),
@@ -125,6 +127,10 @@ impl Search {
             .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
     }
 
+    pub fn is_spliced(&self) -> bool {
+        self.query.is_spliced()
+    }
+
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
         self.query
             .music_types
@@ -138,8 +144,12 @@ impl Search {
             .unwrap_or(usize::MAX)
     }
 
-    pub fn is_spliced(&self) -> bool {
-        self.query.is_spliced()
+    pub fn max_consecutive_duffer(&self) -> Option<usize> {
+        self.query.max_contiguous_duffer.map(TotalLength::as_usize)
+    }
+
+    pub fn max_total_duffer(&self) -> Option<usize> {
+        self.query.max_total_duffer.map(TotalLength::as_usize)
     }
 
     pub fn num_parts(&self) -> usize {

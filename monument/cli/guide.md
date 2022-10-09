@@ -189,6 +189,9 @@ take you to more in-depth docs about it.
 - [`ch_weights = []`](#ch_weights)
 - [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
 - ~~[`leadwise`](#leadwise) (default set by Monument)~~ _(removed in v0.10.0)_
+- [`non_duffer_courses`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
+- [`max_total_duffer`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
+- [`max_contiguous_duffer`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
 
 **Starts/Ends:**
 - [`start_row = <rounds>`](#start_row-and-end_row) _(since v0.10.0)_
@@ -538,6 +541,54 @@ default, Monument will set this automatically if the tenor is affected by the pa
 cyclic) but otherwise will stick to course-wise compositions.  The only times you're likely to need
 this is for weird cases like differential methods, which don't have a well-defined concept of a
 'course head'.
+
+#### `non_duffer_courses`, `max_total_duffer`, `max_contiguous_duffer`
+
+Specifies which courses are 'non-duffer'.  Courses which don't satisfy anything in
+`non_duffer_courses` are considered 'duffers' and `max_{total,contiguous}_duffer` can be used to
+restrict how much 'duffer' is allowed in a given composition.
+
+Shorthands for `any_bells` and `both_strokes` can be used to easily specify lots of courses based on
+some pattern.  For example, all the following specify the 4-bell run courses in most Major methods:
+
+1. Specifying all courses explicitly:
+   ```toml
+   non_duffer_courses = [
+       "*5678", "*8765", "*6587", "*7856",
+       "*4567", "*7654", "*5476", "*6745",
+       "*3456", "*6543", "*4365", "*5634",
+       "*2345", "*5432", "*3254", "*4523",
+   ]
+   ```
+2. Using `any_bells` to expand the courses with every similar pattern of bells:
+   ```toml
+   non_duffer_courses = [
+       { courses = ["*5678", "*8765", "*6587", "*7856"], any_bells = true },
+   ]
+   ```
+3. Using `both_strokes` to expand music on backstroke to that on handstroke:
+   ```toml
+   non_duffer_courses = [
+       { courses = ["*5678", "*8765"], any_bells = true, both_strokes = true },
+   ]
+   ```
+
+`max_total_duffer` and `max_contiguous_duffer` specify limits (in number of rows) on how much
+'duffer' can be rung.  For example, the following produces QPs of Bristol with at most two leads of
+_consecutive_ duffer and at most four leads of _total_ duffer:
+
+```toml
+length = "qp"
+method = "Bristol Surprise Major"
+bobs_only = true
+
+non_duffer_courses = [
+    { courses = [ "*5678", "*5x678", "*8765", "*8x765" ], both_strokes = true, any_bells = true },
+    "*6578", "*5x678",
+]
+max_contiguous_duffer = 64 # Limited by contiguous duffers
+max_total_duffer = 128
+```
 
 ### Starts/Ends
 

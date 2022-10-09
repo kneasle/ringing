@@ -107,6 +107,24 @@ impl Mask {
         new_mask
     }
 
+    /// Directly create a [`Mask`] from a sequence of ([`Option`]al) [`Bell`]s
+    #[inline]
+    pub fn from_bells(bells: impl IntoIterator<Item = Option<Bell>>) -> Self {
+        Self::from_vec(bells.into_iter().collect_vec())
+    }
+
+    /// Directly create a [`Mask`] from a [`Vec`] of ([`Option`]al) [`Bell`]s.
+    #[inline]
+    // TODO: Verify the sequence here
+    pub fn from_vec(bells: Vec<Option<Bell>>) -> Self {
+        Self { bells }
+    }
+
+    /// Returns an [`Iterator`] over the [`Bell`]s (or gaps) in `self`.
+    pub fn bells(&self) -> impl DoubleEndedIterator<Item = Option<Bell>> + Clone + '_ {
+        self.bells.iter().copied()
+    }
+
     /// Modifies `self` so that a [`Bell`] is fixed in its home position.  Returns `Err(())` if
     /// that [`Bell`] already appears in this `Mask`.
     #[inline]
