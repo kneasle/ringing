@@ -12,10 +12,17 @@
     available system memory.
 - (#145) Reduce memory limit from 90% to 80% of the available memory.
 - (#146) Merge fields of `graph::build::MethodData` into `query::Method`.
+- (#156) Implement pruning.  In short, you specify courses which are 'non-duffer' (e.g. those with 4-bell
+    runs) and then you can enforce a limit on how much contiguous/total 'duffer' rows can be rung.
+    Think MBD's no-duffer Bristol, but this works for any composition.
 
 ### BellFrame
 - (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.
 - (#140) Don't return borrowed data in the error from `MethodLib::get_by_title_with_suggestions`.
+- (#156) Only implement `Add`/`Sub` for `Bell` with `i16` (i.e. not `u8` or `i8`).  If you want to
+    add/subtract `Bell`s with `i8` or `u8`, cast them to `i16`.
+- (#156) Add `Method::lead_end` (to complement `Method::lead_head`).
+- (#156) Add `Mask::from_{bells,vec}` and `Mask::bells`.
 
 ---
 
