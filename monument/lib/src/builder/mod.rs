@@ -18,7 +18,10 @@ use crate::{
     group::PartHeadGroup,
     query::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
     search::{Config, Search, Update},
-    utils::{lengths::TotalLength, Score},
+    utils::{
+        lengths::{PerPartLength, TotalLength},
+        Score,
+    },
     Composition,
 };
 
@@ -280,6 +283,7 @@ impl SearchBuilder {
             (None, None) => None,
         };
 
+        let part_head_group = PartHeadGroup::new(&part_head);
         Ok(Query {
             length_range,
             stage,
@@ -295,7 +299,6 @@ impl SearchBuilder {
 
             start_row,
             end_row,
-            part_head_group: PartHeadGroup::new(&part_head),
             course_weights: course_weights
                 .into_iter()
                 .map(|(mask, weight)| (mask, OrderedFloat(weight)))
@@ -303,8 +306,9 @@ impl SearchBuilder {
 
             music_types: music_types.into_iter().collect(),
             start_stroke,
-            max_contiguous_duffer: max_contiguous_duffer.map(TotalLength::new),
+            max_contiguous_duffer: max_contiguous_duffer.map(PerPartLength::new),
             max_total_duffer: max_total_duffer.map(TotalLength::new), // TODO: Cap `total <= contiguous`
+            part_head_group,
         })
     }
 }

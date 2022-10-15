@@ -34,7 +34,7 @@ pub(super) struct Chunk {
     /// Minimum number of rows required to go from the end of `self` to rounds
     pub min_len_to_rounds: TotalLength,
     pub duffer: bool,
-    pub min_dist_to_non_duffer: TotalLength,
+    pub min_dist_to_non_duffer: PerPartLength,
 
     // Indices must be aligned with those from the source graph
     pub succs: SuccVec<SuccLink>,

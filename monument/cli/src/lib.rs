@@ -427,7 +427,8 @@ impl CompPrinter {
             write!(
                 s,
                 " {:>6.2} {:>4} {:>4} |",
-                comp.total_duffer() as f32 / comp.contiguous_duffer_lengths().count() as f32,
+                comp.contiguous_duffer_lengths().sum::<usize>() as f32
+                    / comp.contiguous_duffer_lengths().count() as f32,
                 comp.contiguous_duffer_lengths().max().unwrap_or(0),
                 comp.total_duffer()
             )

@@ -45,7 +45,7 @@ pub(crate) struct Query {
     pub(crate) course_weights: Vec<(Mask, Score)>,
 
     // NON-DUFFERS
-    pub(crate) max_contiguous_duffer: Option<TotalLength>,
+    pub(crate) max_contiguous_duffer: Option<PerPartLength>,
     pub(crate) max_total_duffer: Option<TotalLength>,
 
     // MUSIC

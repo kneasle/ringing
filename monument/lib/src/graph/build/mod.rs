@@ -147,8 +147,8 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         lb_distance_to_rounds: TotalLength::ZERO,
 
         duffer: !non_duffer,
-        lb_distance_from_non_duffer: TotalLength::ZERO,
-        lb_distance_to_non_duffer: TotalLength::ZERO,
+        lb_distance_from_non_duffer: PerPartLength::ZERO,
+        lb_distance_to_non_duffer: PerPartLength::ZERO,
     }
 }
 

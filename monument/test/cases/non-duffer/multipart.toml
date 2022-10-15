@@ -1,0 +1,9 @@
+# This is constructed in such a way that chunks are either a duffer in all parts or a non-duffer in
+# all parts.
+
+length = "QP"
+method = "Plain Bob Major"
+part_head = "165432"
+
+non_duffer_courses = [{ courses = ["*2345", "*5432", "*3456", "*6543"], both_strokes = true }]
+max_contiguous_duffer = 64

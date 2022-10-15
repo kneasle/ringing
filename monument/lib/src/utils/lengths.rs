@@ -22,6 +22,12 @@ impl PerPartLength {
     }
 }
 
+impl TotalLength {
+    pub fn as_per_part(self, part_heads: &crate::group::PartHeadGroup) -> PerPartLength {
+        PerPartLength(self.0 / part_heads.size() as u32)
+    }
+}
+
 macro_rules! impl_length {
     ($name: ident) => {
         impl $name {
