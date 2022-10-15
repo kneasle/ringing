@@ -152,16 +152,16 @@ impl CompPrefix {
     #[allow(clippy::let_unit_value)]
     pub(super) fn expand(
         self,
-        data: &Search,
+        search: &Search,
         paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
-            LinkSide::StartOrEnd => return self.check_comp(data, paths),
+            LinkSide::StartOrEnd => return self.check_comp(search, paths),
         };
-        let chunk = &data.graph.chunks[chunk_idx];
+        let chunk = &search.graph.chunks[chunk_idx];
 
         /* From now on, we know we're expanding a chunk, not finishing a comp */
 
@@ -196,7 +196,7 @@ impl CompPrefix {
         #[allow(unused_variables)]
         let chunk = (); // Prevent the loop from accessing `chunk` by accident
 
-        let max_length = *data.refined_ranges.length.end();
+        let max_length = *search.refined_ranges.length.end();
         for (succ_idx, link) in succ_iter {
             let part_head = part_head * link.ph_rotation;
             let score = score + link.score;
@@ -204,12 +204,12 @@ impl CompPrefix {
             // If this `link` would add a new `Chunk`, check if that `Chunk` would make the comps
             // obviously impossible to complete
             if let LinkSide::Chunk(succ_idx) = link.next {
-                let succ_chunk = &data.graph.chunks[succ_idx];
+                let succ_chunk = &search.graph.chunks[succ_idx];
                 let length_after_succ = length + succ_chunk.total_length;
                 let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
 
                 // Contiguous run of duffers would be too long
-                if let Some(duffer_limit) = data.query.max_contiguous_duffer {
+                if let Some(duffer_limit) = search.query.max_contiguous_duffer {
                     if succ_chunk.duffer {
                         let min_contiguous_duffer = contiguous_duffer
                             + succ_chunk.total_length
@@ -220,7 +220,7 @@ impl CompPrefix {
                     }
                 }
                 // Total duffers would be too much
-                if let Some(max_total_duffer) = data.query.max_total_duffer {
+                if let Some(max_total_duffer) = search.query.max_total_duffer {
                     let succ_duffer_len = match succ_chunk.duffer {
                         false => TotalLength::ZERO,
                         true => succ_chunk.total_length,
@@ -240,7 +240,7 @@ impl CompPrefix {
                 }
                 if !method_counts_after_chunk.is_feasible(
                     (max_length - length_after_succ).as_usize(),
-                    data.refined_ranges.method_counts.as_raw_slice(),
+                    search.refined_ranges.method_counts.as_raw_slice(),
                 ) {
                     continue; // Can't recover the method balance before running out of rows
                 }
@@ -272,10 +272,10 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, data: &Search, paths: &Paths) -> Option<Composition> {
+    fn check_comp(&self, search: &Search, paths: &Paths) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
-        if !data.refined_ranges.length.contains(&self.length) {
+        if !search.refined_ranges.length.contains(&self.length) {
             return None; // Comp is either too long or too short
         }
         // We have to re-check feasibility of `method_counts` even though a feasibility
@@ -285,48 +285,48 @@ impl CompPrefix {
         // removing those extra rows could make the method count infeasible.
         if !self
             .method_counts
-            .is_feasible(0, data.refined_ranges.method_counts.as_raw_slice())
+            .is_feasible(0, search.refined_ranges.method_counts.as_raw_slice())
         {
             return None; // Comp doesn't have the required method balance
         }
-        if !data.query.part_head_group.is_generator(self.part_head) {
+        if !search.query.part_head_group.is_generator(self.part_head) {
             return None; // The part head reached wouldn't generate all the parts
         }
 
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */
 
-        let (path, music_counts, contiguous_duffer_lengths) = self.flattened_path(data, paths);
+        let (path, music_counts, contiguous_duffer_lengths) = self.flattened_path(search, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
         // Handle splices over the part head
         let mut score = self.score;
         let is_splice = first_elem.method != last_elem.method
-            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&data.query);
-        let splice_over_part_head = data.query.is_multipart() && is_splice;
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&search.query);
+        let splice_over_part_head = search.query.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
             // common label between the start and end of the composition for a splice to be
             // allowed)
-            let start_labels = data.query.methods[first_elem.method]
+            let start_labels = search.query.methods[first_elem.method]
                 .first_lead()
                 .get_annot(first_elem.start_sub_lead_idx)
                 .unwrap();
-            let end_labels = data.query.methods[last_elem.method]
+            let end_labels = search.query.methods[last_elem.method]
                 .first_lead()
-                .get_annot(last_elem.end_sub_lead_idx(&data.query))
+                .get_annot(last_elem.end_sub_lead_idx(&search.query))
                 .unwrap();
             let is_valid_splice = start_labels.iter().any(|label| end_labels.contains(label));
             if !is_valid_splice {
                 return None;
             }
             // Don't generate comp if it would violate the splice style over the part head
-            if data.query.splice_style == SpliceStyle::Calls && last_elem.ends_with_plain() {
+            if search.query.splice_style == SpliceStyle::Calls && last_elem.ends_with_plain() {
                 return None;
             }
             // Add/subtract weights from the splices over the part head
-            score += data.query.splice_weight * (data.query.num_parts() - 1) as f32;
+            score += search.query.splice_weight * (search.query.num_parts() - 1) as f32;
         }
 
         // Now we know the composition is valid, construct it and return
@@ -336,7 +336,7 @@ impl CompPrefix {
             part_head: self.part_head,
             length: self.length,
             method_counts: self.method_counts.clone(),
-            music_counts: data
+            music_counts: search
                 .query
                 .music_types
                 .iter_enumerated()
@@ -348,10 +348,10 @@ impl CompPrefix {
             contiguous_duffer_lengths,
             total_duffer: self.total_duffer,
 
-            query: data.query.clone(),
+            query: search.query.clone(),
         };
         // Sanity check that the composition is true
-        if data.query.require_truth {
+        if search.query.require_truth {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
             for row in comp.rows().rows() {
                 if !rows_so_far.insert(row) {
@@ -367,19 +367,19 @@ impl CompPrefix {
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
     fn flattened_path(
         &self,
-        data: &Search,
+        search: &Search,
         paths: &Paths,
     ) -> (Vec<PathElem>, Counts, Vec<TotalLength>) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
         let mut path = Vec::<PathElem>::new();
-        let mut music_counts = Counts::zeros(data.query.music_types.len());
+        let mut music_counts = Counts::zeros(search.query.music_types.len());
         let mut duffer_lengths = Vec::<TotalLength>::new();
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
-        let (start_chunk_idx, _start_link, mut part_head_elem) = data.graph.starts[start_idx];
+        let (start_chunk_idx, _start_link, mut part_head_elem) = search.graph.starts[start_idx];
         let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
         let mut was_last_chunk_duffer = false; // No last chunk, but the start is non-duffer
         let mut consecutive_duffer = TotalLength::ZERO;
@@ -389,7 +389,7 @@ impl CompPrefix {
                 LinkSide::StartOrEnd => unreachable!(),
             };
             // Load the chunk at the end of the previous link
-            let chunk = &data.graph.chunks[next_chunk_idx];
+            let chunk = &search.graph.chunks[next_chunk_idx];
             let succ_link = &chunk.succs[succ_idx];
             music_counts += &chunk.music_counts;
             // Check for duffer lengths
@@ -408,9 +408,9 @@ impl CompPrefix {
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
             path.push(PathElem {
-                start_row: data.query.part_head_group.get_row(part_head_elem)
+                start_row: search.query.part_head_group.get_row(part_head_elem)
                     * chunk.id.lead_head.as_ref()
-                    * data.query.methods[method_idx].row_in_plain_lead(sub_lead_idx),
+                    * search.query.methods[method_idx].row_in_plain_lead(sub_lead_idx),
                 method: method_idx,
                 start_sub_lead_idx: sub_lead_idx,
                 length: chunk.per_part_length,
