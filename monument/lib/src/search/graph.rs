@@ -4,7 +4,11 @@ use crate::{
     graph::LinkSide,
     group::{PartHead, PhRotation},
     query::{CallIdx, Query},
-    utils::{Counts, PerPartLength, Score, TotalLength},
+    utils::{
+        counts::Counts,
+        lengths::{PerPartLength, TotalLength},
+        Score,
+    },
 };
 use bit_vec::BitVec;
 use ordered_float::OrderedFloat;

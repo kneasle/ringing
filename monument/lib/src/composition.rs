@@ -8,7 +8,11 @@ use crate::{
     builder::{CallDisplayStyle, MethodId, MusicTypeId},
     group::PartHead,
     query::{CallIdx, MethodIdx, MethodVec, Query},
-    utils::{Counts, PerPartLength, Score, TotalLength},
+    utils::{
+        counts::Counts,
+        lengths::{PerPartLength, TotalLength},
+        Score,
+    },
 };
 
 #[allow(unused_imports)] // Used by doc comments
@@ -295,7 +299,7 @@ fn num_leads_covered(lead_len: usize, start_sub_lead_idx: usize, length: PerPart
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::PerPartLength;
+    use crate::utils::lengths::PerPartLength;
 
     #[test]
     fn num_leads_covered() {

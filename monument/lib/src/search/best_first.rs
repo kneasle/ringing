@@ -5,7 +5,7 @@ use std::{
 
 use datasize::DataSize;
 
-use crate::utils::TotalLength;
+use crate::utils::lengths::TotalLength;
 
 use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
@@ -14,14 +14,10 @@ const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
-pub(crate) fn search(
-    search_data: &Search,
-    mut update_fn: impl FnMut(Update),
-    abort_flag: &AtomicBool,
-) {
+pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
-    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search_data.graph, &mut paths);
+    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search.graph, &mut paths);
 
     // Number of bytes occupied by each `CompPrefix` in the frontier.
     let prefix_size = frontier.peek().unwrap().size();
@@ -44,14 +40,14 @@ pub(crate) fn search(
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
     while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(search_data, &mut paths, &mut frontier);
+        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier);
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
             update_fn(Update::Comp(comp));
             num_comps += 1;
 
-            if num_comps == search_data.query.num_comps {
+            if num_comps == search.query.num_comps {
                 break; // Stop the search once we've got enough comps
             }
         }
@@ -59,7 +55,7 @@ pub(crate) fn search(
         // If we end up using too much memory, half the size of the queue and garbage-collect the
         // paths.
         let mem_usage = frontier.len() * prefix_size + paths.estimate_heap_size();
-        if mem_usage >= search_data.config.mem_limit {
+        if mem_usage >= search.config.mem_limit {
             send_progress_update!(truncating_queue = true);
             truncate_queue(frontier.len() / 2, &mut frontier);
             paths.gc(frontier.iter().map(|prefix| prefix.path_head()));
@@ -91,7 +87,7 @@ pub(crate) fn search(
     // If we're running the CLI, then `mem::forget` the frontier to avoid tons of drop calls.  We
     // don't care about leaking because the Monument process is about to terminate and the OS will
     // clean up the memory anyway.
-    if search_data.config.leak_search_memory {
+    if search.config.leak_search_memory {
         std::mem::forget(frontier);
     }
 }

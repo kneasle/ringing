@@ -17,7 +17,7 @@ use crate::{
     group::{PartHeadGroup, PhRotation},
     query::{Call, Query, StrokeSet},
     search::Config,
-    utils::{Counts, MusicBreakdown},
+    utils::{counts::Counts, MusicBreakdown},
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};

@@ -18,7 +18,7 @@ use crate::{
     group::PartHeadGroup,
     query::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
     search::{Config, Search, Update},
-    utils::{Score, TotalLength},
+    utils::{lengths::TotalLength, Score},
     Composition,
 };
 

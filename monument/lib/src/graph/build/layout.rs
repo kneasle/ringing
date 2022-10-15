@@ -12,7 +12,10 @@ use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
     query::{self, CallIdx, MethodIdx, MethodVec, Query},
-    utils::{Boundary, FrontierItem, PerPartLength, TotalLength},
+    utils::{
+        lengths::{PerPartLength, TotalLength},
+        Boundary, FrontierItem,
+    },
     Config,
 };
 
