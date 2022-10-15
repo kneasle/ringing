@@ -12,7 +12,7 @@ use crate::{
     builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
     query::{MethodIdx, MethodVec, Query},
-    utils::TotalLength,
+    utils::lengths::TotalLength,
 };
 
 const METHOD_COUNT_RELAX_FACTOR: f32 = 0.1;

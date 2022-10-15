@@ -14,7 +14,7 @@ use crate::{
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
-    utils::{div_rounding_up, Counts, Score, TotalLength},
+    utils::{counts::Counts, div_rounding_up, lengths::TotalLength, Score},
 };
 
 use super::{

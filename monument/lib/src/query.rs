@@ -7,7 +7,10 @@ use bellframe::{music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage,
 use crate::{
     builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
     group::PartHeadGroup,
-    utils::{Boundary, PerPartLength, Score, TotalLength},
+    utils::{
+        lengths::{PerPartLength, TotalLength},
+        Boundary, Score,
+    },
 };
 
 /// Fully built specification for which [`Composition`](crate::Composition)s should be generated.

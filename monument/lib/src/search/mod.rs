@@ -22,7 +22,7 @@ use crate::{
     builder::{MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
-    utils::TotalLength,
+    utils::lengths::TotalLength,
     Composition,
 };
 

@@ -5,7 +5,7 @@ use std::{
 
 use datasize::DataSize;
 
-use crate::utils::TotalLength;
+use crate::utils::lengths::TotalLength;
 
 use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 

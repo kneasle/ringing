@@ -8,11 +8,10 @@ use itertools::Itertools;
 
 use crate::query::MusicType;
 
-mod counts;
-mod lengths;
+use self::counts::Counts;
 
-pub(crate) use counts::Counts;
-pub(crate) use lengths::{PerPartLength, TotalLength};
+pub mod counts;
+pub mod lengths;
 
 /// The [`Score`] used to determine which [`Composition`]s are better than others.
 pub(crate) type Score = ordered_float::OrderedFloat<f32>;

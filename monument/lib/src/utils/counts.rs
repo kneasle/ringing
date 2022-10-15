@@ -3,7 +3,7 @@ use std::ops::{Add, AddAssign, Index, IndexMut, Mul, RangeInclusive};
 use datasize::DataSize;
 use itertools::Itertools;
 
-use super::TotalLength;
+use super::lengths::TotalLength;
 
 /// A collection of counts of something, usually instances of music types or rows of a given
 /// method.  Addition/subtraction is performed element-wise.
