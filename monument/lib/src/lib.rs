@@ -38,7 +38,6 @@
 //!    so I can get a proper feel for what the library feels like to use.
 // TODO: Add example
 
-#![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 
 pub mod builder;

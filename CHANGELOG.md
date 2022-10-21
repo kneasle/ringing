@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#165) Only require clippy lints on releases.
 - (#138) Heavily clean up the API of the `monument` library.  This PR focusses on removing as much
     API surface as possible, so that the remaining API can be made as easy as possible to use.  With
     some more attention, it should be possible to embed the `monument` library into programs other
@@ -12,9 +13,9 @@
     available system memory.
 - (#145) Reduce memory limit from 90% to 80% of the available memory.
 - (#146) Merge fields of `graph::build::MethodData` into `query::Method`.
-- (#156) Implement pruning.  In short, you specify courses which are 'non-duffer' (e.g. those with 4-bell
-    runs) and then you can enforce a limit on how much contiguous/total 'duffer' rows can be rung.
-    Think MBD's no-duffer Bristol, but this works for any composition.
+- (#156) Implement non-duffer pruning.  In short, you specify courses which are 'non-duffer' (e.g.
+    those with 4-bell runs) and then you can enforce a limit on how much contiguous/total 'duffer'
+    rows can be rung. Think MBD's no-duffer Bristol, but this works for any composition.
 
 ### BellFrame
 - (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.

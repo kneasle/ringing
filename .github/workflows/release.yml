@@ -105,8 +105,8 @@ jobs:
       # build. This **should** be stopped by PR checks, but better safe than sorry.
     - name: Run tests
       run: cargo test --release
-    - name: Run clippy
-      run: cargo clippy --no-deps
+#   - name: Run clippy
+#     run: cargo clippy -- -D clippy::all # Deny all clippy errors, but only for releases
 
     - name: Strip release binary (linux and macos)
       if: matrix.build == 'linux' || matrix.build == 'macos'
