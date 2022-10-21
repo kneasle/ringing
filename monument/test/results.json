@@ -2255,7 +2255,7 @@
       { "length": 112, "string": "", "avg_score": 0.5 }
     ]
   },
-  "test/cases/non-duffer/both-strokes.toml": {
+  "test/cases/non-duffer/any-stroke.toml": {
     "comps": [
       { "length": 224, "string": "MWHMWH", "avg_score": 0.08123779 },
       { "length": 208, "string": "BsWsMWH", "avg_score": 0.105773926 },
@@ -2416,6 +2416,134 @@
       { "length": 1344, "string": "WHHBHBBMWH", "avg_score": 0.08407593 },
       { "length": 1280, "string": "WWHWHHBWWHHMH", "avg_score": 0.08407593 },
       { "length": 1344, "string": "BHMWBBWHHW", "avg_score": 0.08557129 }
+    ]
+  },
+  "test/cases/non-duffer/multipart-2.toml": {
+    "comps": [
+      {
+        "length": 1344,
+        "string": "#PP[s]P[s]P[-]P[s]PP[s]P[s]PP[-]PP[s]",
+        "avg_score": 0.009979248,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#PP[s]P[s]P[s]P[-]PP[s]P[s]PP[-]PP[s]",
+        "avg_score": 0.011444092,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#P[s]PP[-]P[s]P[s]P[s]PP[s]PP[-]PP[s]",
+        "avg_score": 0.011444092,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#P[s]PP[s]P[-]P[s]P[s]PP[s]PP[-]PP[s]",
+        "avg_score": 0.011444092,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#PP[-]P[-]P[-]P[s]PP[s]P[s]PP[-]PP[s]",
+        "avg_score": 0.015167236,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#PP[-]P[-]P[s]P[-]PP[s]P[s]PP[-]PP[s]",
+        "avg_score": 0.016662598,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#P[s]PP[-]P[s]P[-]P[-]PP[s]PP[-]PP[s]",
+        "avg_score": 0.016662598,
+        "part_head": "15678234"
+      },
+      {
+        "length": 1344,
+        "string": "#P[s]PP[s]P[-]P[-]P[-]PP[s]PP[-]PP[s]",
+        "avg_score": 0.016662598,
+        "part_head": "15678234"
+      }
+    ]
+  },
+  "test/cases/non-duffer/multipart.toml": {
+    "comps": [
+      { "length": 1312, "string": "sMsWsMsHWBBsHsWHBBBBM", "avg_score": 0.059448242, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWMHWBBsHsWHBBBBM", "avg_score": 0.06097412, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWsMsHWBBHWHBBBBM", "avg_score": 0.06097412, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWMHWBBHWHBBBBM", "avg_score": 0.0625, "part_head": "16543278" },
+      { "length": 1344, "string": "BMsHsWMHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1344, "string": "BMsHsWsMsHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMHsWMHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMHsWsMsHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMsHWMHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMsHWsMsHBBBBsHsWsMsWBBM", "avg_score": 0.06756592, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsWBBMsHsWsMsWBsMsWBBM", "avg_score": 0.0687561, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsWsMsHWBBsMsWBsMsWBBM", "avg_score": 0.0687561, "part_head": "16543278" },
+      { "length": 1344, "string": "BMHWMHBBBBsHsWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BMHWsMsHBBBBsHsWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BMsHsWMHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BMsHsWsMsHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMHsWMHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMHsWsMsHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMsHWMHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1344, "string": "BsMsHWsMsHBBBBHWsMsWBBM", "avg_score": 0.06906128, "part_head": "16543278" },
+      { "length": 1280, "string": "BMsHsWMHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "BMsHsWsMsHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMHsWMHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMHsWsMsHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMsHWMHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMsHWsMsHBBMsMsWBBM", "avg_score": 0.070007324, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsWBBMHWsMsWBsMsWBBM", "avg_score": 0.0703125, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsWMHWBBsMsWBsMsWBBM", "avg_score": 0.0703125, "part_head": "16543278" },
+      { "length": 1344, "string": "BMHWMHBBBBHWsMsWBBM", "avg_score": 0.07052612, "part_head": "16543278" },
+      { "length": 1344, "string": "BMHWsMsHBBBBHWsMsWBBM", "avg_score": 0.07052612, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWBBMsHsWsHsWBMBBBM", "avg_score": 0.070892334, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWsMsHWBBsHsWBMBBBM", "avg_score": 0.070892334, "part_head": "16543278" },
+      { "length": 1344, "string": "MsHsWBMHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1344, "string": "MsHsWBsMsHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMHsWBMHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMHsWBsMsHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMsHWBMHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMsHWBsMsHBBBBsMsWsMsHBBM", "avg_score": 0.07128906, "part_head": "16543278" },
+      { "length": 1280, "string": "BMHWMHBBMsMsWBBM", "avg_score": 0.07156372, "part_head": "16543278" },
+      { "length": 1280, "string": "BMHWsMsHBBMsMsWBBM", "avg_score": 0.07156372, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWBBMHWsHsWBMBBBM", "avg_score": 0.07241821, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWBBMsHsWHWBMBBBM", "avg_score": 0.07241821, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWMHWBBsHsWBMBBBM", "avg_score": 0.07241821, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWsMsHWBBHWBMBBBM", "avg_score": 0.07241821, "part_head": "16543278" },
+      { "length": 1344, "string": "MHWBMHBBBBsMsWsMsHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "MHWBsMsHBBBBsMsWsMsHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "MsHsWBMHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "MsHsWBsMsHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMHsWBMHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMHsWBsMsHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMsHWBMHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1344, "string": "sMsHWBsMsHBBBBsMsWMHBBM", "avg_score": 0.072753906, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWBBMHWHWBMBBBM", "avg_score": 0.07394409, "part_head": "16543278" },
+      { "length": 1312, "string": "sMsWMHWBBHWBMBBBM", "avg_score": 0.07394409, "part_head": "16543278" },
+      { "length": 1344, "string": "MHWBMHBBBBsMsWMHBBM", "avg_score": 0.07424927, "part_head": "16543278" },
+      { "length": 1344, "string": "MHWBsMsHBBBBsMsWMHBBM", "avg_score": 0.07424927, "part_head": "16543278" },
+      { "length": 1280, "string": "BMsHsWWBBsHsWsMsWBBM", "avg_score": 0.07467651, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMHsWWBBsHsWsMsWBBM", "avg_score": 0.07467651, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMsHWWBBsHsWsMsWBBM", "avg_score": 0.07467651, "part_head": "16543278" },
+      { "length": 1280, "string": "BMHWWBBsHsWsMsWBBM", "avg_score": 0.07626343, "part_head": "16543278" },
+      { "length": 1280, "string": "BMsHsWWBBHWsMsWBBM", "avg_score": 0.07626343, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMHsWWBBHWsMsWBBM", "avg_score": 0.07626343, "part_head": "16543278" },
+      { "length": 1280, "string": "BsMsHWWBBHWsMsWBBM", "avg_score": 0.07626343, "part_head": "16543278" },
+      { "length": 1280, "string": "BMHWWBBHWsMsWBBM", "avg_score": 0.077819824, "part_head": "16543278" },
+      { "length": 1280, "string": "MsHsWBWBBsMsWsMsHBBM", "avg_score": 0.07858276, "part_head": "16543278" },
+      { "length": 1280, "string": "sMHsWBWBBsMsWsMsHBBM", "avg_score": 0.07858276, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsHWBWBBsMsWsMsHBBM", "avg_score": 0.07858276, "part_head": "16543278" },
+      { "length": 1280, "string": "MHWBWBBsMsWsMsHBBM", "avg_score": 0.08016968, "part_head": "16543278" },
+      { "length": 1280, "string": "MsHsWBWBBsMsWMHBBM", "avg_score": 0.08016968, "part_head": "16543278" },
+      { "length": 1280, "string": "sMHsWBWBBsMsWMHBBM", "avg_score": 0.08016968, "part_head": "16543278" },
+      { "length": 1280, "string": "sMsHWBWBBsMsWMHBBM", "avg_score": 0.08016968, "part_head": "16543278" },
+      { "length": 1280, "string": "MHWBWBBsMsWMHBBM", "avg_score": 0.081726074, "part_head": "16543278" }
     ]
   },
   "test/cases/non-duffer/shorthand.toml": {

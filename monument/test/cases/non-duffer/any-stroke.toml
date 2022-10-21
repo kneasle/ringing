@@ -6,6 +6,6 @@ non_duffer_courses = [
         "*4567", "*7654",
         "*3456", "*6543",
         "*2345", "*5432",
-    ], both_strokes = true }
+    ], any_stroke = true }
 ]
 max_total_duffer = 32

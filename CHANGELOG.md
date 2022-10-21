@@ -1,6 +1,8 @@
 ## (Unreleased)
 
 ### Monument
+- (#166) Output correct contiguous duffer lengths in multi-parts.
+- (#166) Make `Chunk`s non-duffer only if they are a non-duffer in **every** part.
 - (#165) Only require clippy lints on releases.
 - (#138) Heavily clean up the API of the `monument` library.  This PR focusses on removing as much
     API surface as possible, so that the remaining API can be made as easy as possible to use.  With

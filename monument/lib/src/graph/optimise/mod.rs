@@ -8,9 +8,15 @@ use std::{
     time::Instant,
 };
 
-use crate::{query::Query, utils::FrontierItem};
+use crate::{
+    query::Query,
+    utils::{
+        lengths::{PerPartLength, TotalLength},
+        FrontierItem,
+    },
+};
 
-use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide, TotalLength};
+use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide};
 
 use Direction::{Backward, Forward};
 
@@ -272,7 +278,7 @@ impl<'graph> ChunkViewMut<'graph> {
     }
 
     /// Mutable reference to the distance from rounds **to** the start of this chunk
-    fn distance_to_non_duffer_mut(&mut self) -> &mut TotalLength {
+    fn distance_to_non_duffer_mut(&mut self) -> &mut PerPartLength {
         match self.direction {
             Forward => &mut self.chunk.lb_distance_from_non_duffer,
             Backward => &mut self.chunk.lb_distance_to_non_duffer,
@@ -461,14 +467,17 @@ mod passes {
                 let distances_from_non_duffer = super::compute_distances(
                     successors_of_non_duffers.iter(),
                     &graph_view,
-                    query.max_contiguous_duffer,
+                    query
+                        .max_contiguous_duffer
+                        .map(|l| l.as_total(&query.part_head_group)),
                 );
                 // Set the distances (stripping any chunks which are too far from a duffer)
                 graph_view.retain_chunks(|id, mut chunk_view| {
                     match distances_from_non_duffer.get(id) {
                         // keep reachable chunks and update their distance lower bounds
                         Some(&new_distance) => {
-                            *chunk_view.distance_to_non_duffer_mut() = new_distance;
+                            *chunk_view.distance_to_non_duffer_mut() =
+                                new_distance.as_per_part(&query.part_head_group);
                             true
                         }
                         None => false, // Remove unreachable chunks
@@ -484,7 +493,7 @@ mod passes {
                 graph.chunks.retain(|_id, chunk| {
                     // The length of the shortest chunk of duffer containing this chunk
                     let min_duffer_length = chunk.lb_distance_from_non_duffer
-                        + chunk.total_length
+                        + chunk.per_part_length
                         + chunk.lb_distance_to_non_duffer;
                     !chunk.duffer || min_duffer_length <= duffer_limit
                 });

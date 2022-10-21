@@ -89,10 +89,10 @@ pub(crate) struct Chunk {
     pub(crate) duffer: bool,
     /// A lower bound on the number of [`Row`]s required to go from any non-duffer course to the
     /// first row of `self`.
-    pub(crate) lb_distance_from_non_duffer: TotalLength,
+    pub(crate) lb_distance_from_non_duffer: PerPartLength,
     /// A lower bound on the number of rows required to go from the first row **after** `self` to
     /// the closest non-duffer course.
-    pub(crate) lb_distance_to_non_duffer: TotalLength,
+    pub(crate) lb_distance_to_non_duffer: PerPartLength,
 }
 
 /// A link between two [`Chunk`]s in a [`Graph`]

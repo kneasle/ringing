@@ -119,10 +119,11 @@ impl Graph {
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
 fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
-    let non_duffer = query.methods[id.method]
-        .non_duffer_lead_masks
-        .iter()
-        .any(|mask| mask.matches(&id.lead_head));
+    // A `Chunk` is a duffer iff it's a duffer in any part
+    let duffer = query.part_head_group.rows().any(|part_head| {
+        let lead_head_in_part = part_head * &*id.lead_head;
+        query.methods[id.method].is_lead_head_duffer(&lead_head_in_part)
+    });
 
     Chunk {
         per_part_length,
@@ -146,9 +147,9 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,
 
-        duffer: !non_duffer,
-        lb_distance_from_non_duffer: TotalLength::ZERO,
-        lb_distance_to_non_duffer: TotalLength::ZERO,
+        duffer,
+        lb_distance_from_non_duffer: PerPartLength::ZERO,
+        lb_distance_to_non_duffer: PerPartLength::ZERO,
     }
 }
 

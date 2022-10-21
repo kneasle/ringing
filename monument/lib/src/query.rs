@@ -45,7 +45,7 @@ pub(crate) struct Query {
     pub(crate) course_weights: Vec<(Mask, Score)>,
 
     // NON-DUFFERS
-    pub(crate) max_contiguous_duffer: Option<TotalLength>,
+    pub(crate) max_contiguous_duffer: Option<PerPartLength>,
     pub(crate) max_total_duffer: Option<TotalLength>,
 
     // MUSIC
@@ -114,13 +114,20 @@ pub(crate) struct Method {
 }
 
 impl Method {
-    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
+    /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
+    pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
+        self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
     }
 
-    /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
-    pub(crate) fn is_lead_head(&self, lead_head: &Row) -> bool {
-        self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
+    pub(crate) fn is_lead_head_duffer(&self, lead_head: &Row) -> bool {
+        !self
+            .non_duffer_lead_masks
+            .iter()
+            .any(|mask| mask.matches(lead_head))
+    }
+
+    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+        (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
 
     pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {

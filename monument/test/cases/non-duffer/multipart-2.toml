@@ -1,0 +1,8 @@
+# Nearly all chunks have some part in which they aren't a duffer
+
+length = "QP"
+method = "Plain Bob Major"
+part_head = "18234567"
+
+non_duffer_courses = [{ courses = ["*2345", "*5432"], any_bells = true, any_stroke = true }]
+max_contiguous_duffer = 64
