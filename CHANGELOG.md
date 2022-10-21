@@ -1,25 +1,31 @@
-## (Unreleased)
+## 21st October 2022
 
-### Monument
-- (#166) Output correct contiguous duffer lengths in multi-parts.
-- (#166) Make `Chunk`s non-duffer only if they are a non-duffer in **every** part.
+### Monument v0.12.0
+
+#### Headline Features
+- (#156) Implement non-duffer pruning.  In short, you specify courses which are 'non-duffer' (e.g.
+    those with 4-bell runs) and then you can enforce a limit on how much contiguous/total 'duffer'
+    rows can be rung. Think MBD's no-duffer Bristol, but this works for any composition.
+- (#143) Use explicit memory limit.  Set by `--mem-limit` or `-M`, defaults to ~~90%~~ 80% of
+    available system memory.
+
+#### Internal Improvements
 - (#165) Only require clippy lints on releases.
+- (#146) Merge fields of `graph::build::MethodData` into `query::Method`.
+- (#142) Implement builder API to make `monument` easier to use as a library
+- (#142) Make `Query` private and build `Search`es directly.
+- (#140) Rename some fields of `Query` (which, after #138, are no longer exposed externally)
 - (#138) Heavily clean up the API of the `monument` library.  This PR focusses on removing as much
     API surface as possible, so that the remaining API can be made as easy as possible to use.  With
     some more attention, it should be possible to embed the `monument` library into programs other
     than its CLI interface.
-- (#140) Rename some fields of `Query` (which, after #138, are no longer exposed externally)
-- (#142) Implement builder API to make `monument` easier to use as a library
-- (#142) Make `Query` private and build `Search`es directly.
-- (#143) Use explicit memory limit.  Set by `--mem-limit` or `-M`, defaults to ~~90%~~ 80% of
-    available system memory.
-- (#145) Reduce memory limit from 90% to 80% of the available memory.
-- (#146) Merge fields of `graph::build::MethodData` into `query::Method`.
-- (#156) Implement non-duffer pruning.  In short, you specify courses which are 'non-duffer' (e.g.
-    those with 4-bell runs) and then you can enforce a limit on how much contiguous/total 'duffer'
-    rows can be rung. Think MBD's no-duffer Bristol, but this works for any composition.
 
-### BellFrame
+#### Pre-Release Bug Fixes
+- (#166) Output correct contiguous duffer lengths in multi-parts.
+- (#166) Make `Chunk`s non-duffer only if they are a non-duffer in **every** part.
+- (#145) Reduce memory limit from 90% to 80% of the available memory.
+
+### BellFrame v0.11.0
 - (#140) Rename `Mask::fix_bells` to `Mask::with_fixed_bells`.
 - (#140) Don't return borrowed data in the error from `MethodLib::get_by_title_with_suggestions`.
 - (#156) Only implement `Add`/`Sub` for `Bell` with `i16` (i.e. not `u8` or `i8`).  If you want to
