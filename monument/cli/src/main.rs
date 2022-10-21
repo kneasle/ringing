@@ -1,4 +1,3 @@
-#![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
 use colored::Colorize;
