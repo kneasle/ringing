@@ -31,8 +31,8 @@ a pre-built copy of the latest version from
 More examples can be found in [the `examples/` directory](examples/).  This exact example can also
 be found there (as [`examples/guide.toml`](example/guide.toml) and
 [`examples/guide-music-8.toml`](examples/guide-music-8.toml)).  Monument's CLI reads files are in
-the TOML data format, so if you're wondering then check out TOML's [helpful
-website](https://toml.io/en/) for more info.
+the TOML data format, so if you're wondering then check out TOML's
+[helpful website](https://toml.io/en/) for more info.
 
 The following example is for quarter peal compositions of Yorkshire, Lessness and Bastow with
 changes of method only at calls, and a 2-part with `124365` as the part-head.  It's designed to
@@ -189,9 +189,9 @@ take you to more in-depth docs about it.
 - [`ch_weights = []`](#ch_weights)
 - [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
 - ~~[`leadwise`](#leadwise) (default set by Monument)~~ _(removed in v0.10.0)_
-- [`non_duffer_courses`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
-- [`max_total_duffer`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
-- [`max_contiguous_duffer`](#non_duffer_courses-max_total_duffer-max_contiguous_duffer) _(added in v0.12.0)_
+- [`non_duffer_courses`](#non_duffer_courses) _(added in v0.12.0)_
+- [`max_total_duffer`](#max_total_duffer-and-max_contiguous_duffer) _(added in v0.12.0)_
+- [`max_contiguous_duffer`](#max_total_duffer-and-max_contiguous_duffer) _(added in v0.12.0)_
 
 **Starts/Ends:**
 - [`start_row = <rounds>`](#start_row-and-end_row) _(since v0.10.0)_
@@ -542,7 +542,7 @@ cyclic) but otherwise will stick to course-wise compositions.  The only times yo
 this is for weird cases like differential methods, which don't have a well-defined concept of a
 'course head'.
 
-#### `non_duffer_courses`, `max_total_duffer`, `max_contiguous_duffer`
+#### `non_duffer_courses`
 
 Specifies which courses are 'non-duffer'.  Courses which don't satisfy anything in
 `non_duffer_courses` are considered 'duffers' and `max_{total,contiguous}_duffer` can be used to
@@ -572,6 +572,31 @@ some pattern.  For example, all the following specify the 4-bell run courses in 
        { courses = ["*5678", "*8765"], any_bells = true, both_strokes = true },
    ]
    ```
+
+#### Quick note on `non_duffer_courses` and multi-parts
+
+Currently, Monument does not consider the non-duffer status of each part separately.  Thus, a
+'chunk' of ringing is a non-duffer if and only if it's a non-duffer in **every** part.  This is a
+potential gotcha when combined with e.g. cyclic multi-parts.  For example, if you want
+'non-duffers' to be courses which generate 4-bell runs in _some_ part, the first instinct is often
+to specify 4-bell run courses like so:
+
+```toml
+non_duffer_courses = [{ courses = ["*5678", "*8765"], any_bells = true, both_strokes = true }]
+```
+
+This, however, makes only the plain course a non-duffer.  Any other course will generate `*6782` in
+some part and therefore all other 4-bell run courses are a duffer in some part.  To get the
+expected behaviour, you need to explicitly add `*6782`, `*7823` and `*8234` as non-duffers, like so:
+
+```toml
+non_duffer_courses = [
+  { courses = ["*5678", "*8765"], any_bells = true, both_strokes = true },
+  { courses = ["*6782", "*7823", "*8234"], both_strokes = true }
+]
+```
+
+#### `max_total_duffer` and `max_contiguous_duffer`
 
 `max_total_duffer` and `max_contiguous_duffer` specify limits (in number of rows) on how much
 'duffer' can be rung.  For example, the following produces QPs of Bristol with at most two leads of
@@ -614,4 +639,4 @@ value. These indices are taken modulo the lead length and can be negative, so fo
 
 ---
 
-### That's it folks.  Happy composing!
+### That's all, folks.  Happy composing!

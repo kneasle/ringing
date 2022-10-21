@@ -548,7 +548,7 @@ fn find_locations_of_row(row: &Row, boundary: Boundary, query: &Query) -> Vec<Ch
             let lead_head =
                 Row::solve_xa_equals_b(method.row_in_plain_lead(sub_lead_idx), row).unwrap();
             // This start is valid if it matches at least one of this method's lead head masks
-            if method.is_lead_head(&lead_head) {
+            if method.is_lead_head_allowed(&lead_head) {
                 locations.push(ChunkIdInFirstPart {
                     lead_head,
                     row_idx: RowIdx::new(method_idx, sub_lead_idx),
