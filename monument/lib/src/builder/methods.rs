@@ -278,7 +278,7 @@ impl Method {
         };
         let allowed_course_set = CourseSet {
             masks: allowed_course_masks,
-            both_strokes: false,
+            any_stroke: false,
             any_bells: false,
         };
 
@@ -346,7 +346,7 @@ pub struct CourseSet {
     pub masks: Vec<Mask>,
     /// If `true`, the [`Mask`]s will be expanded so that the mask matches on both strokes.  For
     /// example, `"*5678"` might expand to `["*5678", "*6587"]`.
-    pub both_strokes: bool,
+    pub any_stroke: bool,
     /// If `true`, every [`Bell`] in every [`Mask`] will be added/subtracted from to get every
     /// combination.  For example, `"*3456"` would expand to
     /// `["*1234", "*2345", "*3456", "*4567", "*5678"]`.
@@ -411,8 +411,8 @@ impl CourseSet {
             }
             course_masks = expanded_masks;
         }
-        // Expand `both_strokes`
-        if self.both_strokes {
+        // Expand `any_stroke`
+        if self.any_stroke {
             course_masks = course_masks
                 .into_iter()
                 .flat_map(|mask| [&mask * method.lead_end(), mask])

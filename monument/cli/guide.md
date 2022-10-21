@@ -548,7 +548,7 @@ Specifies which courses are 'non-duffer'.  Courses which don't satisfy anything 
 `non_duffer_courses` are considered 'duffers' and `max_{total,contiguous}_duffer` can be used to
 restrict how much 'duffer' is allowed in a given composition.
 
-Shorthands for `any_bells` and `both_strokes` can be used to easily specify lots of courses based on
+Shorthands for `any_bells` and `any_stroke` can be used to easily specify lots of courses based on
 some pattern.  For example, all the following specify the 4-bell run courses in most Major methods:
 
 1. Specifying all courses explicitly:
@@ -566,10 +566,10 @@ some pattern.  For example, all the following specify the 4-bell run courses in 
        { courses = ["*5678", "*8765", "*6587", "*7856"], any_bells = true },
    ]
    ```
-3. Using `both_strokes` to expand music on backstroke to that on handstroke:
+3. Using `any_stroke` to expand music on backstroke to that on handstroke:
    ```toml
    non_duffer_courses = [
-       { courses = ["*5678", "*8765"], any_bells = true, both_strokes = true },
+       { courses = ["*5678", "*8765"], any_bells = true, any_stroke = true },
    ]
    ```
 
@@ -582,7 +582,7 @@ potential gotcha when combined with e.g. cyclic multi-parts.  For example, if yo
 to specify 4-bell run courses like so:
 
 ```toml
-non_duffer_courses = [{ courses = ["*5678", "*8765"], any_bells = true, both_strokes = true }]
+non_duffer_courses = [{ courses = ["*5678", "*8765"], any_bells = true, any_stroke = true }]
 ```
 
 This, however, makes only the plain course a non-duffer.  Any other course will generate `*6782` in
@@ -591,8 +591,8 @@ expected behaviour, you need to explicitly add `*6782`, `*7823` and `*8234` as n
 
 ```toml
 non_duffer_courses = [
-  { courses = ["*5678", "*8765"], any_bells = true, both_strokes = true },
-  { courses = ["*6782", "*7823", "*8234"], both_strokes = true }
+  { courses = ["*5678", "*8765"], any_bells = true, any_stroke = true },
+  { courses = ["*6782", "*7823", "*8234"], any_stroke = true } # Not using `any_bells` here
 ]
 ```
 
@@ -608,7 +608,7 @@ method = "Bristol Surprise Major"
 bobs_only = true
 
 non_duffer_courses = [
-    { courses = [ "*5678", "*5x678", "*8765", "*8x765" ], both_strokes = true, any_bells = true },
+    { courses = [ "*5678", "*5x678", "*8765", "*8x765" ], any_stroke = true, any_bells = true },
     "*6578", "*5x678",
 ]
 max_contiguous_duffer = 64 # Limited by contiguous duffers

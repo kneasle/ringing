@@ -526,7 +526,7 @@ enum CourseSet {
     WithOptions {
         courses: Vec<String>,
         #[serde(default)]
-        both_strokes: bool,
+        any_stroke: bool,
         #[serde(default)]
         any_bells: bool,
     },
@@ -541,16 +541,16 @@ impl CourseSet {
         Ok(match self {
             CourseSet::OneMask(mask_str) => builder::CourseSet {
                 masks: vec![parse_mask("non-duffer", mask_str, stage)?],
-                both_strokes: false,
+                any_stroke: false,
                 any_bells: false,
             },
             CourseSet::WithOptions {
                 courses: masks,
-                both_strokes,
+                any_stroke,
                 any_bells,
             } => builder::CourseSet {
                 masks: parse_masks(mask_kind, masks, stage)?,
-                both_strokes: *both_strokes,
+                any_stroke: *any_stroke,
                 any_bells: *any_bells,
             },
         })

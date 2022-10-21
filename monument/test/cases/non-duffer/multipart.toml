@@ -5,5 +5,5 @@ length = "QP"
 method = "Plain Bob Major"
 part_head = "165432"
 
-non_duffer_courses = [{ courses = ["*2345", "*5432", "*3456", "*6543"], both_strokes = true }]
+non_duffer_courses = [{ courses = ["*2345", "*5432", "*3456", "*6543"], any_stroke = true }]
 max_contiguous_duffer = 64

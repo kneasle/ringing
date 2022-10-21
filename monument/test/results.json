@@ -2255,7 +2255,7 @@
       { "length": 112, "string": "", "avg_score": 0.5 }
     ]
   },
-  "test/cases/non-duffer/both-strokes.toml": {
+  "test/cases/non-duffer/any-stroke.toml": {
     "comps": [
       { "length": 224, "string": "MWHMWH", "avg_score": 0.08123779 },
       { "length": 208, "string": "BsWsMWH", "avg_score": 0.105773926 },
