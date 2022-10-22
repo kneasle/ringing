@@ -9,7 +9,6 @@ use bellframe::{
     method::LABEL_LEAD_END, method_lib::QueryError, Bell, Mask, MethodLib, Row, Stage,
 };
 use itertools::Itertools;
-use serde::Deserialize;
 
 use crate::query::{self, CallVec, MethodIdx, MethodVec};
 
@@ -134,14 +133,12 @@ impl Method {
 }
 
 /// The different styles of spliced that can be generated.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum SpliceStyle {
     /// Splices could happen at any lead label (usually just
     /// [lead ends](bellframe::method::LABEL_LEAD_END)).
-    #[serde(rename = "leads")]
     LeadLabels,
     /// Splices only happen at calls.
-    #[serde(rename = "calls")]
     Calls,
 }
 

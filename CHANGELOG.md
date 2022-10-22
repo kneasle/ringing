@@ -1,3 +1,15 @@
+## (Unreleased)
+
+### Monument
+- (#167) Remove dependence on `serde` from Monument's library.  Now, all the handling of TOML files
+    is in `monument_cli`.
+
+### Bellframe
+
+---
+
+
+
 ## 21st October 2022
 
 ### Monument v0.12.0
