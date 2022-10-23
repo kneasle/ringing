@@ -5,8 +5,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use monument::{
     builder::{
-        self, CallDisplayStyle, EndIndices, Method, SpliceStyle, DEFAULT_BOB_WEIGHT,
-        DEFAULT_SINGLE_WEIGHT,
+        self, CallDisplayStyle, EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
     Config, Search, SearchBuilder,
 };
@@ -220,7 +219,7 @@ impl Spec {
             Some(idxs) => EndIndices::Specific(idxs.to_vec()),
             None => EndIndices::Any,
         };
-        search_builder.splice_style = self.splice_style;
+        search_builder.splice_style = self.splice_style.into();
         search_builder.splice_weight = self.splice_weight;
         // Calls
         search_builder.base_calls = self.base_calls()?;
@@ -456,6 +455,33 @@ pub struct MethodCommon {
     course_heads: Option<Vec<String>>,
     start_indices: Option<Vec<isize>>,
     end_indices: Option<Vec<isize>>,
+}
+
+/// The different styles of spliced that can be generated.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
+pub enum SpliceStyle {
+    /// Splices could happen at any lead label (usually just
+    /// [lead ends](bellframe::method::LABEL_LEAD_END)).
+    #[serde(rename = "leads")]
+    LeadLabels,
+    /// Splices only happen at calls.
+    #[serde(rename = "calls")]
+    Calls,
+}
+
+impl From<self::SpliceStyle> for monument::builder::SpliceStyle {
+    fn from(style: self::SpliceStyle) -> Self {
+        match style {
+            self::SpliceStyle::LeadLabels => monument::builder::SpliceStyle::LeadLabels,
+            self::SpliceStyle::Calls => monument::builder::SpliceStyle::Calls,
+        }
+    }
+}
+
+impl Default for SpliceStyle {
+    fn default() -> Self {
+        Self::LeadLabels
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -682,7 +682,6 @@ dependencies = [
  "log",
  "num_cpus",
  "ordered-float",
- "serde",
  "sysinfo",
 ]
 
