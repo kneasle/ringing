@@ -5,6 +5,7 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fmt::{Debug, Display, Formatter},
     path::{Path, PathBuf},
+    time::{Duration, Instant},
 };
 
 use anyhow::Context;
@@ -41,6 +42,8 @@ const PATH_TO_MONUMENT_DIR: &str = "../";
 pub fn run() -> anyhow::Result<Outcome> {
     monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
 
+    let start = Instant::now();
+
     // Collect the test cases
     let cases = sources_to_cases(collect_sources()?)?;
     // Run the tests.
@@ -48,9 +51,10 @@ pub fn run() -> anyhow::Result<Outcome> {
     let completed_tests: Vec<RunTestCase> = cases.into_par_iter().map(run_test).collect();
     // Collate failures and unspecified tests from all `Suite`s
     report_failures(&completed_tests);
-    let outcome = print_summary_string(&completed_tests);
+    let outcome = print_summary_string(&completed_tests, start.elapsed());
     // Save current results file, used when blessing results
     write_actual_results(completed_tests)?;
+
     Ok(outcome)
 }
 
@@ -493,7 +497,7 @@ fn report_failures(run_cases: &[RunTestCase]) {
 }
 
 /// Generate and print a summary string for the tests.  Returns the outcome of the test suite
-fn print_summary_string(completed_tests: &[RunTestCase]) -> Outcome {
+fn print_summary_string(completed_tests: &[RunTestCase], duration: Duration) -> Outcome {
     // Count the test categories
     let mut num_ok = 0;
     let mut num_ignored = 0;
@@ -523,12 +527,13 @@ fn print_summary_string(completed_tests: &[RunTestCase]) -> Outcome {
     // Print summary string
     println!();
     println!(
-        "test result: {}. {} passed; {} unspecified; {} failed; {} ignored",
+        "test result: {}. {} passed; {} unspecified; {} failed; {} ignored in {:.2?}",
         outcome.colored_string(),
         num_ok,
         num_unspecified,
         num_failures,
         num_ignored,
+        duration
     );
     // Print a helpful message about `cargo bless`
     if num_unspecified > 0 {
