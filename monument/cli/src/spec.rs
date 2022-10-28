@@ -1,4 +1,9 @@
-use std::{collections::HashMap, fmt::Write, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke};
 use colored::Colorize;
@@ -15,7 +20,6 @@ use crate::{
     calls::{BaseCalls, CustomCall},
     music::{BaseMusic, MusicDisplay, MusicSpec},
     utils::OptRangeInclusive,
-    Source,
 };
 
 use self::length::Length;
@@ -149,22 +153,15 @@ pub struct Spec {
 
 impl Spec {
     /// Read a `Spec` from a TOML file
-    pub fn from_source(source: &Source) -> anyhow::Result<Self> {
-        let toml_buf;
-        let toml_string: &str = match source {
-            Source::Path(p) => {
-                toml_buf = crate::utils::read_file_to_string(p)?;
-                &toml_buf
-            }
-            Source::Str { spec, .. } => spec,
-        };
-        crate::utils::parse_toml(toml_string)
+    pub fn new(toml_path: &Path) -> anyhow::Result<Self> {
+        let toml_buf = crate::utils::read_file_to_string(toml_path)?;
+        crate::utils::parse_toml(&toml_buf)
     }
 
     /// 'Lower' this `Spec`ification into a [`Search`].
     pub fn lower(
         &self,
-        source: &Source,
+        toml_path: &Path,
         opts: &crate::args::Options,
         leak_search_memory: bool,
     ) -> anyhow::Result<(Arc<Search>, Vec<MusicDisplay>)> {
@@ -246,7 +243,7 @@ impl Spec {
         search_builder.course_weights = self.parse_ch_weights(stage)?;
         search_builder = search_builder.handbell_coursing_weight(self.handbell_coursing_weight);
         // Music
-        let music_displays = self.music(source, &mut search_builder)?;
+        let music_displays = self.music(toml_path, &mut search_builder)?;
         search_builder.start_stroke = self.start_stroke;
         // Non-duffer
         if let Some(non_duffer_courses) = &self.non_duffer_courses {
@@ -340,35 +337,28 @@ impl Spec {
 
     fn music(
         &self,
-        source: &Source,
+        toml_path: &Path,
         search: &mut SearchBuilder,
     ) -> anyhow::Result<Vec<MusicDisplay>> {
         // Load TOML for the music file
-        let music_file_buffer;
-        let music_file_str = match (&self.music_file, source) {
-            (Some(relative_music_path), Source::Path(spec_path)) => {
-                // If `self` was loaded from a file (as would be the case when using the CLI in
-                // the wild), then we also load the music file from a file
-                let mut music_path = spec_path
+        let music_file_str = match &self.music_file {
+            Some(relative_music_path) => {
+                let mut music_path = toml_path
                     .parent()
                     .expect("files should always have a parent")
                     .to_owned();
                 music_path.push(relative_music_path);
-                music_file_buffer = crate::utils::read_file_to_string(&music_path)?;
-                Some(music_file_buffer.as_str())
+                Some(crate::utils::read_file_to_string(&music_path)?)
             }
-            (Some(_), Source::Str { music_file, .. }) => {
-                let music_file_str = music_file.ok_or_else(|| {
-                    anyhow::Error::msg(
-                        "Spec string requires `music_file`, but no music file string was given",
-                    )
-                })?;
-                Some(music_file_str)
-            }
-            (None, _) => None,
+            None => None,
         };
         // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
-        crate::music::generate_music(&self.music, self.base_music, music_file_str, search)
+        crate::music::generate_music(
+            &self.music,
+            self.base_music,
+            music_file_str.as_deref(),
+            search,
+        )
     }
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {

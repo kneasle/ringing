@@ -14,7 +14,7 @@ pub mod utils;
 use std::{
     fmt::Write,
     io::Write as IoWrite,
-    path::PathBuf,
+    path::Path,
     str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
@@ -39,7 +39,7 @@ pub fn init_logging(filter: LevelFilter) {
 }
 
 pub fn run(
-    source: Source,
+    toml_path: &Path,
     options: &args::Options,
     env: Environment,
 ) -> anyhow::Result<Option<QueryResult>> {
@@ -57,14 +57,14 @@ pub fn run(
     let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
-    let spec = Spec::from_source(&source)?;
+    let spec = Spec::new(toml_path)?;
     debug_print!(Spec, spec);
     // If running in CLI mode, don't `drop` any of the search data structures, since Monument will
     // exit shortly after the search terminates.  With the `Arc`-based data structures, this is
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     let leak_search_memory = env == Environment::Cli;
     // Convert the `Spec` into a `Layout` and other data required for running a search
-    let (search, music_displays) = spec.lower(&source, options, leak_search_memory)?;
+    let (search, music_displays) = spec.lower(toml_path, options, leak_search_memory)?;
     debug_print!(Query, search);
 
     // Build all the data structures for the search
@@ -109,21 +109,6 @@ pub enum Environment {
     TestHarness,
     /// Being run by the CLI
     Cli,
-}
-
-/// The `Source` of the TOML that Monument should read.  In nearly all cases, this will be loaded
-/// from the file a given [`Path`](std::path::Path).  For the test runner it's useful to be able to
-/// run Monument on strings that aren't loaded from a specific file, so for this we have the
-/// [`Str`](Self::Str) variant.
-#[derive(Debug, Clone)]
-pub enum Source<'a> {
-    /// The TOML 'spec' file should be loaded from this path
-    Path(PathBuf),
-    /// The TOML should be read directly from a string
-    Str {
-        spec: &'a str,
-        music_file: Option<&'a str>,
-    },
 }
 
 #[derive(Debug, Clone)]
