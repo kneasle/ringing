@@ -388,7 +388,7 @@
       { "length": 1344, "string": "#DLSYSL", "avg_score": 0.14434814, "part_head": "18234567" }
     ]
   },
-  "test/cases/default-music.md: major": {
+  "test/cases/default-music/major.toml": {
     "comps": [
       { "length": 288, "string": "MBW", "avg_score": 0.1166687 },
       { "length": 224, "string": "", "avg_score": 0.25894165 },
@@ -401,7 +401,7 @@
       { "length": 64, "string": "sHsH", "avg_score": 0.5375061 }
     ]
   },
-  "test/cases/default-music.md: maximus": {
+  "test/cases/default-music/maximus.toml": {
     "comps": [
       { "length": 1584, "string": "sMWHHMsWH", "avg_score": 0.11578369 },
       { "length": 1584, "string": "MsWsMWHsMsWH", "avg_score": 0.11590576 },
@@ -478,7 +478,7 @@
       { "length": 1584, "string": "MMM", "avg_score": 0.24407959 }
     ]
   },
-  "test/cases/default-music.md: minor": {
+  "test/cases/default-music/minor.toml": {
     "comps": [
       { "length": 288, "string": "BFBFW", "avg_score": 0.050689697 },
       { "length": 216, "string": "HIBWWH", "avg_score": 0.055541992 },
@@ -509,7 +509,7 @@
       { "length": 72, "string": "HHH", "avg_score": 0.18609619 }
     ]
   },
-  "test/cases/default-music.md: royal": {
+  "test/cases/default-music/royal.toml": {
     "comps": [
       { "length": 762, "string": "MWxBMWHMsW>", "avg_score": 0.024810791 },
       { "length": 762, "string": "sMxBsWHMsW>", "avg_score": 0.025604248 },
@@ -597,7 +597,7 @@
       { "length": 720, "string": "sHsH", "avg_score": 0.18527222 }
     ]
   },
-  "test/cases/default-music.md: triples": {
+  "test/cases/default-music/triples.toml": {
     "comps": [
       { "length": 140, "string": "WsBsFH", "avg_score": 0.10284424 },
       { "length": 112, "string": "WsBsTsBsMH", "avg_score": 0.11071777 },
@@ -725,56 +725,56 @@
       { "length": 84, "string": "", "avg_score": 0.51190186 }
     ]
   },
-  "test/cases/end-row.toml": { "comps": [{ "length": 130, "string": ">", "avg_score": 0.0 }] },
-  "test/cases/error-messages.md: bobs-and-singles-only": {
-    "error_message": "Composition can't be both `bobs_only` and `singles_only`"
-  },
-  "test/cases/error-messages.md: call-pn-parse": {
-    "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
-  },
-  "test/cases/error-messages.md: calling-positions-too-long": {
-    "error_message": "Call \"x\" only specifies 9 calling positions, but the stage has 8 bells"
-  },
-  "test/cases/error-messages.md: calling-positions-too-short": {
-    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage has 8 bells"
-  },
-  "test/cases/error-messages.md: ch-mask::bell-out-of-stage": {
-    "error_message": "Can't parse course mask \"1234*9\": bell 9 is out of stage Major"
-  },
-  "test/cases/error-messages.md: ch-mask::too-long": {
-    "error_message": "Can't parse course mask \"1234x5678\": mask is too long, needing at least 9 bells (too many for Major)"
-  },
-  "test/cases/error-messages.md: ch-mask::too-many-*s": {
-    "error_message": "Can't parse course mask \"1*2*3\": too many `*`s.  Masks can only have one region with `x` or `*`."
-  },
-  "test/cases/error-messages.md: ch-mask::too-short": {
-    "error_message": "Can't parse course mask \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
-  },
-  "test/cases/error-messages.md: ch-pattern::bell-out-of-stage": {
-    "error_message": "Can't parse course head weight \"x9*\": bell 9 is out of stage Major"
-  },
-  "test/cases/error-messages.md: ch-pattern::too-long": {
-    "error_message": "Can't parse course head weight \"1234*5678x\": mask is too long, needing at least 9 bells (too many for Major)"
-  },
-  "test/cases/error-messages.md: ch-pattern::too-many-*s": {
-    "error_message": "Can't parse course head weight \"*7*8\": too many `*`s.  Masks can only have one region with `x` or `*`."
-  },
-  "test/cases/error-messages.md: ch-pattern::too-short": {
-    "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
-  },
-  "test/cases/error-messages.md: chs-not-in-other-parts": {
-    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
-  },
-  "test/cases/error-messages.md: deprecation::lead_location-in-calls": {
+  "test/cases/deprecation/lead_locations-in-call.toml": {
     "error_message": "`calls.lead_location` has been renamed to `label`"
   },
-  "test/cases/error-messages.md: deprecation::lead_locations-in-method": {
+  "test/cases/deprecation/lead_locations-in-method.toml": {
     "error_message": "`methods.lead_locations` has been renamed to `labels`"
   },
-  "test/cases/error-messages.md: duplicate-calls::debug-symbol": {
+  "test/cases/end-row.toml": { "comps": [{ "length": 130, "string": ">", "avg_score": 0.0 }] },
+  "test/cases/error-messages/bobs-and-singles-only.toml": {
+    "error_message": "Composition can't be both `bobs_only` and `singles_only`"
+  },
+  "test/cases/error-messages/call-pn-parse.toml": {
+    "error_message": "Can't parse place notation \"10\" for call \"x\": Place '0' is out of stage Major"
+  },
+  "test/cases/error-messages/calling-positions-too-long.toml": {
+    "error_message": "Call \"x\" only specifies 9 calling positions, but the stage has 8 bells"
+  },
+  "test/cases/error-messages/calling-positions-too-short.toml": {
+    "error_message": "Call \"x\" only specifies 7 calling positions, but the stage has 8 bells"
+  },
+  "test/cases/error-messages/ch-mask/bell-out-of-stage.toml": {
+    "error_message": "Can't parse course mask \"1234*9\": bell 9 is out of stage Major"
+  },
+  "test/cases/error-messages/ch-mask/too-long.toml": {
+    "error_message": "Can't parse course mask \"1234x5678\": mask is too long, needing at least 9 bells (too many for Major)"
+  },
+  "test/cases/error-messages/ch-mask/too-many-*s.toml": {
+    "error_message": "Can't parse course mask \"1*2*3\": too many `*`s.  Masks can only have one region with `x` or `*`."
+  },
+  "test/cases/error-messages/ch-mask/too-short.toml": {
+    "error_message": "Can't parse course mask \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
+  },
+  "test/cases/error-messages/ch-pattern/bell-out-of-stage.toml": {
+    "error_message": "Can't parse course head weight \"x9*\": bell 9 is out of stage Major"
+  },
+  "test/cases/error-messages/ch-pattern/too-long.toml": {
+    "error_message": "Can't parse course head weight \"1234*5678x\": mask is too long, needing at least 9 bells (too many for Major)"
+  },
+  "test/cases/error-messages/ch-pattern/too-many-*s.toml": {
+    "error_message": "Can't parse course head weight \"*7*8\": too many `*`s.  Masks can only have one region with `x` or `*`."
+  },
+  "test/cases/error-messages/ch-pattern/too-short.toml": {
+    "error_message": "Can't parse course head weight \"12345\": mask is too short; did you mean `12345*` or `12345678`?"
+  },
+  "test/cases/error-messages/chs-not-in-other-parts.toml": {
+    "error_message": "course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.\n   help: consider adding `1xxx7865` to `course_heads`"
+  },
+  "test/cases/error-messages/duplicate-calls/debug-symbol.toml": {
     "error_message": "Call debug symbol \"-\" (at \"LE\") is used for both 14 and 16"
   },
-  "test/cases/error-messages.md: duplicate-calls::different-lead-locations": {
+  "test/cases/error-messages/duplicate-calls/different-lead-locations.toml": {
     "comps": [
       { "length": 64, "string": "sHsH", "avg_score": -0.0718689 },
       { "length": 128, "string": "HsHHsH", "avg_score": -0.0640564 },
@@ -791,94 +791,94 @@
       { "length": 224, "string": "", "avg_score": 0.0 }
     ]
   },
-  "test/cases/error-messages.md: duplicate-calls::display-symbol": {
+  "test/cases/error-messages/duplicate-calls/display-symbol.toml": {
     "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1678"
   },
-  "test/cases/error-messages.md: duplicate-calls::same-pn": {
+  "test/cases/error-messages/duplicate-calls/same-pn.toml": {
     "error_message": "Call display symbol \"s\" (at \"LE\") is used for both 1234 and 1234"
   },
-  "test/cases/error-messages.md: duplicate-shorthand": {
+  "test/cases/error-messages/duplicate-shorthand.toml": {
     "error_message": "Methods \"London Surprise Major\" and \"Lessness Surprise Major\" share a shorthand (L)"
   },
-  "test/cases/error-messages.md: length-proving::does-not-come-round": {
+  "test/cases/error-messages/length-proving/does-not-come-round.toml": {
     "error_message": "No compositions can fit the required length range (0 <= length <= 300).  No compositions are possible."
   },
-  "test/cases/error-messages.md: length-proving::invalid-method-counts-1": {
+  "test/cases/error-messages/length-proving/invalid-method-counts-1.toml": {
     "error_message": "Not enough method counts; the composition needs at least 1344 rows but the methods can make at most 672."
   },
-  "test/cases/error-messages.md: length-proving::invalid-method-counts-2": {
+  "test/cases/error-messages/length-proving/invalid-method-counts-2.toml": {
     "error_message": "Too much method counts; the method counts need at least 2016 rows, but at most 1344 rows are available."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-length-1": {
+  "test/cases/error-messages/length-proving/unachievable-length-1.toml": {
     "error_message": "No compositions can fit the required length range (5000 <= length <= 5200).  The nearest lengths are 4752 and 5280."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-length-2": {
+  "test/cases/error-messages/length-proving/unachievable-length-2.toml": {
     "error_message": "No compositions can fit the required length range (length == 350).  No compositions are possible."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-length-3": {
+  "test/cases/error-messages/length-proving/unachievable-length-3.toml": {
     "error_message": "No compositions can fit the required length range (length == 370).  The nearest length is 360."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-method-count-1": {
+  "test/cases/error-messages/length-proving/unachievable-method-count-1.toml": {
     "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (count == 250).  The nearest counts are 226 and 256."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-method-count-2": {
+  "test/cases/error-messages/length-proving/unachievable-method-count-2.toml": {
     "error_message": "No method counts for \"Bristol Surprise Major\" satisfy the requested range (250 <= count <= 400).  The nearest counts are 224 and 448."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-method-count-3": {
+  "test/cases/error-messages/length-proving/unachievable-method-count-3.toml": {
     "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (count <= 300).  The nearest count is 360."
   },
-  "test/cases/error-messages.md: length-proving::unachievable-method-count-4": {
+  "test/cases/error-messages/length-proving/unachievable-method-count-4.toml": {
     "error_message": "No method counts for \"Clyde Surprise Royal\" satisfy the requested range (380 <= count).  The nearest count is 360."
   },
-  "test/cases/error-messages.md: method-not-found::case-1": {
+  "test/cases/error-messages/method-not-found/case-1.toml": {
     "error_message": "Can't find \"Brisol Suprise Major\" in the Central Council method library.  Did you mean:\n     \"Bristol Surprise Major\" (Bristol Surprise Major)"
   },
-  "test/cases/error-messages.md: method-not-found::case-2": {
+  "test/cases/error-messages/method-not-found/case-2.toml": {
     "error_message": "Can't find \"Camibridge Surprise Manor\" in the Central Council method library.  Did you mean:\n     \"Cambridge Surprise Major\" (Camibridge Surprise Manjor)\n  or \"Cambridge Surprise Minor\" (Camibridge Surprise Mainor)"
   },
-  "test/cases/error-messages.md: method-not-found::case-3": {
+  "test/cases/error-messages/method-not-found/case-3.toml": {
     "error_message": "Can't find \"Corwnall Surprise major\" in the Central Council method library.  Did you mean:\n     \"Cornwall Surprise Major\" (Cornwnall Surprise mMajor)"
   },
-  "test/cases/error-messages.md: method-pn-parsing::ambiguous-gap": {
+  "test/cases/error-messages/method-pn-parsing/ambiguous-gap.toml": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n        ^^ Ambiguous gap of 3 bells between places '1' and '5'."
   },
-  "test/cases/error-messages.md: method-pn-parsing::bell-out-of-stage": {
+  "test/cases/error-messages/method-pn-parsing/bell-out-of-stage.toml": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.5x4x1,+9\"\n                              ^ Place '9' is out of stage Major"
   },
-  "test/cases/error-messages.md: method-pn-parsing::misplaced-plus": {
+  "test/cases/error-messages/method-pn-parsing/misplaced-plus.toml": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5+4.5x5.36.4x4.5x4x1,+8\"\n         ^ `+` must only go at the start of a block (i.e. at the start or directly after a `,`)"
   },
-  "test/cases/error-messages.md: method-pn-parsing::odd-stage-cross": {
+  "test/cases/error-messages/method-pn-parsing/odd-stage-cross.toml": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x15x4.5x5.36.4x4.5x4x1,+8\"\n       ^ Cross notation isn't valid for odd stages (in this case Triples)"
   },
-  "test/cases/error-messages.md: method-pn-parsing::repeated-place": {
+  "test/cases/error-messages/method-pn-parsing/repeated-place.toml": {
     "error_message": "Can't parse place notation for method \"Bristol\":\n     \"&x5x4.5x5.36.4x4.585x4x1,+9\"\n                       ^^^ Place '5' is duplicated"
   },
-  "test/cases/error-messages.md: multiple-strokes-for-chunk": {
+  "test/cases/error-messages/multiple-strokes-for-chunk.toml": {
     "error_message": "The same chunk of ringing can be at multiple strokes, probably because you're using a method with odd-length leads"
   },
-  "test/cases/error-messages.md: music-presets::5678-wrong-stage-1": {
+  "test/cases/error-messages/music-presets/5678-wrong-stage-1.toml": {
     "error_message": "5678 combinations only make sense for Triples and Major"
   },
-  "test/cases/error-messages.md: music-presets::5678-wrong-stage-2": {
+  "test/cases/error-messages/music-presets/5678-wrong-stage-2.toml": {
     "error_message": "5678 combinations only make sense for Triples and Major"
   },
-  "test/cases/error-messages.md: music-presets::crus-on-small-stage": {
+  "test/cases/error-messages/music-presets/crus-on-small-stage.toml": {
     "error_message": "Can't have CRUs on less than 7 bells"
   },
-  "test/cases/error-messages.md: no-methods": {
+  "test/cases/error-messages/no-methods.toml": {
     "error_message": "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
   },
-  "test/cases/error-messages.md: part-head-parse::1": {
+  "test/cases/error-messages/part-head-parse/1.toml": {
     "error_message": "Can't parse part head \"13\": bell '2' is missing"
   },
-  "test/cases/error-messages.md: part-head-parse::2": {
+  "test/cases/error-messages/part-head-parse/2.toml": {
     "error_message": "Can't parse part head \"1321\": bell '1' appears twice."
   },
-  "test/cases/error-messages.md: part-head-parse::3": {
+  "test/cases/error-messages/part-head-parse/3.toml": {
     "error_message": "Can't parse part head \"123456789\": bell '9' is not within stage Major"
   },
-  "test/cases/error-messages.md: undefined-lead-location": {
+  "test/cases/error-messages/undefined-lead-location.toml": {
     "error_message": "Call \"x\" refers to a label \"poo\", which doesn't exist"
   },
   "test/cases/exact-count.toml": { "comps": [{ "length": 224, "string": "", "avg_score": 0.25894165 }] },

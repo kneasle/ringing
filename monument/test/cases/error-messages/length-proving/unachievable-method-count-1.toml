@@ -1,0 +1,7 @@
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count = 250 # 224 or 448 are both possible

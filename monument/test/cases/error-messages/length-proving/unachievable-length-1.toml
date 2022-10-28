@@ -1,0 +1,3 @@
+length = "peal" # 5000..=5200 can't be reached without big bobs (5280 can be)
+method = "Cambridge Surprise Maximus"
+bobs_only = true

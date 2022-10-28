@@ -1,0 +1,8 @@
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count.min = 500 # 500 of each method makes 1500 rows, which is longer than a QP
+part_head = "18234567"

@@ -1,0 +1,6 @@
+length = "QP"
+method = "Bristol Surprise Major"
+[[calls]]
+symbol = "x"
+place_notation = "16"
+calling_positions = "LIOFVMWHN" # 9 calling positions

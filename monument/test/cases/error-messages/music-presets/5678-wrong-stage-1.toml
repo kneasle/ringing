@@ -1,0 +1,3 @@
+length = "practice"
+method = "Bristol Surprise Royal"
+music = [{ preset = "5678 combinations" }] # Don't make sense for Royal

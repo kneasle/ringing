@@ -1,0 +1,3 @@
+length = "practice"
+method = "Cambridge Surprise Minor"
+music = [{ preset = "5678 combinations" }] # Don't make sense for Minor

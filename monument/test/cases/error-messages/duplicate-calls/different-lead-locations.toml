@@ -1,0 +1,9 @@
+length = "practice"
+method = { title = "Bristol Surprise Major", labels = { LE = 0, HL = 16 } }
+base_music = "none"
+
+[[calls]]
+symbol = "s" # Not a clash, because this is a HL call
+place_notation = "5678"
+label = "HL"
+calling_positions = "hwmvfbil"

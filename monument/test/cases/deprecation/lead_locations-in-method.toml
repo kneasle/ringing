@@ -1,0 +1,3 @@
+length = "QP"
+method.title = "Bristol Surprise Major"
+method.lead_locations = { LE = 0 } # Deprecation error in >= v0.11.0

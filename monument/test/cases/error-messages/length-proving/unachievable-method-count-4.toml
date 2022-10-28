@@ -1,0 +1,4 @@
+length = { min = 0, max = 500 }
+method = "Clyde Surprise Royal"
+method_count.min = 380 # 360 is the only possible count
+base_calls = "none"
