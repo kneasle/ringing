@@ -1,0 +1,8 @@
+length = "QP"
+methods = [
+    "Bristol Surprise Major",
+    "Deva Surprise Major",
+    "Cornwall Surprise Major",
+]
+method_count.max = 300 # At least 448 of each method are required
+part_head = "18234567"

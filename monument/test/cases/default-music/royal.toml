@@ -1,0 +1,7 @@
+length = { min = 600, max = 800 } # 84 compositions within this length range
+method = "Yorkshire Surprise Royal"
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+weight = -5

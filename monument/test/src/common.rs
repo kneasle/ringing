@@ -13,7 +13,6 @@ use difference::Changeset;
 use itertools::Itertools;
 use monument_cli::{DebugOption, Environment};
 use ordered_float::OrderedFloat;
-use path_slash::PathExt;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -94,20 +93,20 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     let mut expected_results = load_results(EXPECTED_RESULTS_PATH)?;
     let mut actual_results = load_results(ACTUAL_RESULTS_PATH)?;
     // Determine which tests cases we have (any) results for
-    let mut test_case_names = HashSet::<String>::new();
-    test_case_names.extend(expected_results.keys().map(String::clone));
-    test_case_names.extend(actual_results.keys().map(String::clone));
+    let mut test_case_names = HashSet::<PathBuf>::new();
+    test_case_names.extend(expected_results.keys().cloned());
+    test_case_names.extend(actual_results.keys().cloned());
 
     // Merge the results, using the `BlessLevel` to decide, for each test, which result to keep
-    let mut changed_case_names = Vec::<(ChangeType, String)>::new();
+    let mut changed_case_names = Vec::<(ChangeType, PathBuf)>::new();
     let merged_results = test_case_names
         .into_iter()
-        .filter_map(|name: String| {
-            let entry = match (expected_results.remove(&name), actual_results.remove(&name)) {
+        .filter_map(|path: PathBuf| {
+            let entry = match (expected_results.remove(&path), actual_results.remove(&path)) {
                 (Some(exp_result), Some(act_result)) => {
                     if level == BlessLevel::Fails && exp_result != act_result {
                         // We're blessing this file iff the results are different
-                        changed_case_names.push((ChangeType::Fail, name.clone()));
+                        changed_case_names.push((ChangeType::Fail, path.clone()));
                         act_result
                     } else {
                         exp_result
@@ -115,17 +114,17 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
                 }
                 (None, Some(act_result)) => {
                     // Always bless new tests
-                    changed_case_names.push((ChangeType::New, name.clone()));
+                    changed_case_names.push((ChangeType::New, path.clone()));
                     act_result
                 }
                 (Some(_exp_result), None) => {
                     // Remove results for deleted cases
-                    changed_case_names.push((ChangeType::Removed, name.clone()));
+                    changed_case_names.push((ChangeType::Removed, path.clone()));
                     return None;
                 }
                 (None, None) => unreachable!(),
             };
-            Some((name, entry))
+            Some((path, entry))
         })
         .collect::<ResultsFile>();
     assert!(expected_results.is_empty());
@@ -140,11 +139,12 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
             BlessLevel::OnlyUnspecified => println!("Blessing only unspecified/new test cases:"),
             BlessLevel::Fails => println!("Blessing all cases, even fails:"),
         }
-        for (level, name) in &changed_case_names {
+        for (level, path) in &changed_case_names {
+            let name = path_to_string(path);
             match level {
-                ChangeType::New => println!("     (new) {}", unspecified_str(name)),
-                ChangeType::Fail => println!("    (fail) {}", fail_str(name)),
-                ChangeType::Removed => println!(" (removed) {}", name.yellow().bold()),
+                ChangeType::New => println!("     (new) {:?}", unspecified_str(&name)),
+                ChangeType::Fail => println!("    (fail) {:?}", fail_str(&name)),
+                ChangeType::Removed => println!(" (removed) {:?}", name.yellow().bold()),
             }
         }
         println!("{} test cases blessed", changed_case_names.len());
@@ -165,9 +165,9 @@ enum SuiteState {
 }
 
 /// Determine where all the tests should come from, and how they should be run
-fn collect_sources() -> anyhow::Result<Vec<(CaseSource, SuiteState)>> {
+fn collect_sources() -> anyhow::Result<Vec<(PathBuf, SuiteState)>> {
     // Collect the individual test sources from every suite
-    let mut test_sources: Vec<(CaseSource, SuiteState)> = Vec::new();
+    let mut test_sources: Vec<(PathBuf, SuiteState)> = Vec::new();
     for (path, state) in TEST_DIRS {
         // TODO: Make newtypes for the different relative paths?
         let path_relative_to_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
@@ -181,61 +181,36 @@ fn collect_sources() -> anyhow::Result<Vec<(CaseSource, SuiteState)>> {
                 entry.path().components().skip(1).collect::<PathBuf>();
 
             match extension {
-                Some("toml") => {
-                    test_sources.push((
-                        CaseSource::TomlFile(file_path_relative_to_monument_dir),
-                        state,
-                    ));
-                }
-                Some("md") => {
-                    // Parse the file as markdown
-                    let markdown = std::fs::read_to_string(entry.path()).with_context(|| {
-                        format!(
-                            "Error reading test suite file {:?}",
-                            &path_relative_to_cargo_toml
-                        )
-                    })?;
-                    for (heading_path, spec) in markdown::extract_cases(&markdown) {
-                        test_sources.push((
-                            CaseSource::SectionOfFile {
-                                file_path: file_path_relative_to_monument_dir.clone(),
-                                section_name: heading_path,
-                                spec,
-                                music_file: None,
-                            },
-                            state,
-                        ));
-                    }
-                }
+                Some("toml") => test_sources.push((file_path_relative_to_monument_dir, state)),
+                // Directories should always be ignored
+                None => {}
                 // Ignore any files that aren't `.toml` or `.md`
-                _ => print!("Ignoring {:?}", file_path_relative_to_monument_dir),
+                _ => println!("Ignoring {:?}", file_path_relative_to_monument_dir),
             }
         }
     }
     Ok(test_sources)
 }
 
-/// Convert ([`CaseSource`], [`SuiteState`]) pairs into [`UnrunTestCase`]s.  TODO: Implement this
-/// as an iterator chain
-fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Vec<UnrunTestCase>> {
+/// Convert ([`PathBuf`], [`SuiteState`]) pairs into [`UnrunTestCase`]s.
+fn sources_to_cases(sources: Vec<(PathBuf, SuiteState)>) -> anyhow::Result<Vec<UnrunTestCase>> {
     // Combine them with the auxiliary files (results, ignore, timings, etc.) to get the
     // `UnrunTestCase`s
     let mut results = load_results(EXPECTED_RESULTS_PATH)?;
     let mut ignore = load_ignore()?;
 
     let mut unrun_test_cases = Vec::new();
-    for (source, state) in sources {
-        let name = &source.name();
+    for (path, state) in sources {
         // Load the values from the ignore/result files
-        let ignore_value = ignore.remove(name);
-        let results_value = results.remove(name);
+        let ignore_value = ignore.remove(&path);
+        let results_value = results.remove(&path);
         // Combine everything into an `UnrunTestCase`
         let ignored = match ignore_value {
             Some(IgnoreReason::MusicFile) => {
                 assert!(
                     results_value.is_none(),
                     "Music file {:?} shouldn't have results",
-                    name
+                    path
                 );
                 continue; // Fully ignore music files
             }
@@ -253,7 +228,7 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
             None => ExpectedResult::NoCompsGiven,
         };
         unrun_test_cases.push(UnrunTestCase {
-            source,
+            path,
             ignored,
             expected_results,
         });
@@ -268,7 +243,7 @@ fn sources_to_cases(sources: Vec<(CaseSource, SuiteState)>) -> anyhow::Result<Ve
 /// The contents of the `results.toml` file, found at [`RESULTS_PATH`].  We use a [`BTreeMap`] so
 /// that the test cases are always written in a consistent order (i.e. alphabetical order by file
 /// path), thus making the diffs easier to digest.
-type ResultsFile = BTreeMap<String, ResultsFileEntry>;
+type ResultsFile = BTreeMap<PathBuf, ResultsFileEntry>;
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -280,8 +255,8 @@ enum ResultsFileEntry {
 /// The contents of the `ignore.toml` file, found at [`IGNORE_PATH`].
 #[derive(Debug, Deserialize)]
 struct IgnoreFile {
-    ignore: HashSet<String>,
-    music_files: HashSet<String>,
+    ignore: HashSet<PathBuf>,
+    music_files: HashSet<PathBuf>,
 }
 
 /// Reasons why a given test file could be ignored
@@ -293,7 +268,7 @@ enum IgnoreReason {
     MusicFile,
 }
 
-fn load_ignore() -> anyhow::Result<HashMap<String, IgnoreReason>> {
+fn load_ignore() -> anyhow::Result<HashMap<PathBuf, IgnoreReason>> {
     // Load the `IgnoreFile`
     let full_ignore_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(IGNORE_PATH);
     let ignore_toml = std::fs::read_to_string(&full_ignore_path)
@@ -301,7 +276,7 @@ fn load_ignore() -> anyhow::Result<HashMap<String, IgnoreReason>> {
     let ignore_file: IgnoreFile = toml::from_str(&ignore_toml)
         .with_context(|| format!("Error parsing ignore file ({:?})", full_ignore_path))?;
     // Flatten the `IgnoreFile` into a single `HashMap`
-    let mut ignore_map: HashMap<String, IgnoreReason> = ignore_file
+    let mut ignore_map: HashMap<PathBuf, IgnoreReason> = ignore_file
         .ignore
         .into_iter()
         .map(|path| (path, IgnoreReason::ExplicitIgnore))
@@ -331,13 +306,16 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
     let actual_results: ResultsFile = cases
         .into_iter()
         .filter_map(|case| {
-            let name = case.name();
-            let entry = match case.actual_result {
+            let RunTestCase {
+                base,
+                actual_result,
+            } = case;
+            let entry = match actual_result {
                 ActualResult::Ignored | ActualResult::Parsed => return None, // If no result, skip
                 ActualResult::Error(error_message) => ResultsFileEntry::Error { error_message },
                 ActualResult::Comps(comps) => ResultsFileEntry::Comps { comps },
             };
-            Some((name, entry))
+            Some((base.path, entry))
         })
         .collect();
     write_results(&actual_results, ACTUAL_RESULTS_PATH)
@@ -370,17 +348,7 @@ fn run_test(case: UnrunTestCase) -> RunTestCase {
     }
 
     // Determine the source of this test
-    let source = match &case.source {
-        CaseSource::TomlFile(path) => {
-            monument_cli::Source::Path(PathBuf::from(PATH_TO_MONUMENT_DIR).join(path))
-        }
-        CaseSource::SectionOfFile {
-            spec, music_file, ..
-        } => monument_cli::Source::Str {
-            spec,
-            music_file: music_file.as_deref(),
-        },
-    };
+    let toml_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(&case.path);
 
     let no_search = case.expected_results == ExpectedResult::Parsed;
 
@@ -389,7 +357,7 @@ fn run_test(case: UnrunTestCase) -> RunTestCase {
         debug_option: no_search.then(|| DebugOption::StopBeforeSearch),
         ..Default::default()
     };
-    let monument_result = monument_cli::run(source, &options, Environment::TestHarness);
+    let monument_result = monument_cli::run(&toml_path, &options, Environment::TestHarness);
     // Convert Monument's `Result` into a `Results`
     let actual_result = match monument_result {
         // Successful search run
@@ -587,17 +555,11 @@ fn print_summary_string(completed_tests: &[RunTestCase]) -> Outcome {
 
 #[derive(Debug)]
 struct UnrunTestCase {
-    source: CaseSource,
+    path: PathBuf,
     ignored: bool,
     expected_results: ExpectedResult,
     // pinned_duration: Duration,
     // last_duration: Duration,
-}
-
-impl UnrunTestCase {
-    fn name(&self) -> String {
-        self.source.name()
-    }
 }
 
 #[derive(Debug)]
@@ -605,6 +567,12 @@ struct RunTestCase {
     base: UnrunTestCase,
     // duration: Duration,
     actual_result: ActualResult,
+}
+
+impl UnrunTestCase {
+    fn name(&self) -> String {
+        path_to_string(&self.path)
+    }
 }
 
 impl RunTestCase {
@@ -635,38 +603,6 @@ impl std::ops::Deref for RunTestCase {
 
     fn deref(&self) -> &Self::Target {
         &self.base
-    }
-}
-
-#[derive(Debug)]
-enum CaseSource {
-    /// This case was loaded from a TOML file.
-    ///
-    /// NOTE: The path is relative to the `monument/` directory
-    TomlFile(PathBuf),
-    /// This case was loaded from a section of another file
-    SectionOfFile {
-        file_path: PathBuf,
-        /// A unique name for this test within the file
-        section_name: String,
-        spec: String,
-        music_file: Option<String>,
-    },
-}
-
-impl CaseSource {
-    /// Generate the unique name for this test.  This is the file's path (always delimited with '/'
-    /// so the names are consistent across all platforms), optionally extended with a section name
-    /// (if the same file contains many test cases).
-    fn name(&self) -> String {
-        match &self {
-            Self::TomlFile(path) => path.to_slash_lossy().into_owned(),
-            Self::SectionOfFile {
-                file_path,
-                section_name,
-                ..
-            } => format!("{}: {}", file_path.to_slash_lossy(), section_name),
-        }
     }
 }
 
@@ -797,129 +733,17 @@ impl Display for Comp {
     }
 }
 
+///////////
+// UTILS //
+///////////
+
 fn de_avg_score<'de, D: Deserializer<'de>>(de: D) -> Result<OrderedFloat<f32>, D::Error> {
     f32::deserialize(de).map(Comp::round_score)
 }
 
-//////////////
-// MARKDOWN //
-//////////////
-
-/// Utilities for extracting test cases from markdown files
-mod markdown {
-    use std::ops::Deref;
-
-    use itertools::Itertools;
-    use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Parser, Tag};
-
-    /// Extract `(case_name, case_toml)` pairs from a markdown string.  Each test comes from a
-    /// fenced `toml` code region, and is labelled by which headers it's in (ignoring the `h1`
-    /// header, which is assumed to be at the top of the file).
-    pub fn extract_cases(markdown: &str) -> Vec<(String, String)> {
-        let mut cases = Vec::new();
-        // This represents the nested sections in which the parser head is situated.  The
-        // `HeadingLevel`s are expected to be strictly increasing.  For example, in the following
-        // TOML file:
-        //
-        // ```toml
-        // # Title
-        //
-        // ## Chapter 1
-        //
-        // ### Paragraph 1.1
-        //
-        // ## Chapter 2
-        //
-        // #### Paragraph 2.1
-        //
-        // <--- Parser head is here
-        //
-        // #### Paragraph 2.2
-        // ```
-        //
-        // the header path would be `[(H1, "Title"), (H2, "Chapter 2"), (H4, "Paragraph 2.1")]`
-        let mut header_path = Vec::<(HeadingLevel, String)>::new();
-
-        let mut parser = Parser::new(markdown);
-        while let Some(event) = parser.next() {
-            match &event {
-                // Starting a heading of some level.  In this case, read the level (h1, h2, etc.)
-                // and the contained text and updating `header_path` appropriately.  Thus, any
-                // contained test cases will be named correctly
-                Event::Start(tag @ Tag::Heading(new_level, _, _)) => {
-                    let title = read_text_contained_in_tag(&mut parser, tag);
-                    // End any header sections which are at least as deep as this header.  For
-                    // example, in this case:
-                    // ```toml
-                    // # Title
-                    //
-                    // ## Chapter 1
-                    //
-                    // ### Paragraph 1.1
-                    //
-                    // ## Chapter 2  <-- parsing this tag
-                    // ```
-                    // we should remove `Chapter 1` and `Paragraph 1.1` (because they have level
-                    // >=H2), leaving the path as `Title`.  Once the new header is pushed, the new
-                    // path becomes `Title/Chapter 1`.
-                    loop {
-                        match header_path.last() {
-                            None => break, // Removed all headers, new header is always valid
-                            Some((level, _title)) if level < new_level => break, // Header is too big
-                            Some(_) => {
-                                header_path.pop();
-                            }
-                        }
-                    }
-                    header_path.push((*new_level, title));
-                }
-
-                // Starting a TOML code block.  In this case, we read the contained text and add it
-                // as a new test case
-                Event::Start(tag @ Tag::CodeBlock(CodeBlockKind::Fenced(lang)))
-                    if lang.deref() == "toml" =>
-                {
-                    let name = header_path
-                        .iter()
-                        .filter(|(level, _)| *level != HeadingLevel::H1)
-                        .map(|(_level, name)| name)
-                        .join("::");
-                    let toml = read_text_contained_in_tag(&mut parser, tag);
-                    cases.push((name, toml));
-                }
-
-                // Any other events aren't interesting
-                _ => {}
-            }
-        }
-        cases
-    }
-
-    /// Read text/code elements from a [`Parser`] until a given [`Tag`] ends.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the file ends before the [`Tag`] is closed.
-    fn read_text_contained_in_tag(parser: &mut Parser, closing_tag: &Tag) -> String {
-        let mut text_in_tag = String::new();
-        loop {
-            let event = parser.next().expect("Found EOF before closing tag");
-            match &event {
-                // TODO: Handle a case where multiple instances of the `closing_tag` are nested (in
-                // this case we should keep a counter so we can only return on the correct instance
-                // of `closing_tag`).  However, the tags we need (headers and code blocks) can't be
-                // nested so this is fine.
-                Event::End(tag) if tag == closing_tag => return text_in_tag,
-                Event::Code(text) | Event::Text(text) => text_in_tag.push_str(text),
-                _ => {}
-            }
-        }
-    }
+fn path_to_string(path: &Path) -> String {
+    path.as_os_str().to_string_lossy().into_owned()
 }
-
-///////////
-// UTILS //
-///////////
 
 fn unspecified_str(s: &str) -> ColoredString {
     s.color(UNSPECIFIED_COLOR).bold()

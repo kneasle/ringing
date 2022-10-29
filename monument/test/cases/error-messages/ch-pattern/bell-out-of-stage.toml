@@ -1,0 +1,5 @@
+length = "QP"
+method = "Bristol Surprise Major"
+[[ch_weights]]
+pattern = "x9*"
+weight = 0.1

@@ -1,0 +1,6 @@
+length = "QP"
+method = "Bristol Surprise Major"
+
+[[calls]]
+symbol = "-" # Name clashes with the builtin 14 bob
+place_notation = "16"

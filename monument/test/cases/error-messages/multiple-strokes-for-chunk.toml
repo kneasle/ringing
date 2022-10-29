@@ -1,0 +1,5 @@
+length = "practice"
+method = "Woolly Jumper Alliance Major"
+
+base_music = "none"
+music = [{ pattern = "*87", stroke = "back" }]

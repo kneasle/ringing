@@ -3,6 +3,9 @@
 ### Monument
 - (#167) Remove dependence on `serde` from Monument's library.  Now, all the handling of TOML files
     is in `monument_cli`.
+- (#171) Don't store test cases in Markdown files, instead storing them all as individual TOML
+    files.  Apart from massively simplifying the code, this also means that all test cases can be
+    easily run directly from the command line (a very useful feature for debugging).
 
 ### Bellframe
 

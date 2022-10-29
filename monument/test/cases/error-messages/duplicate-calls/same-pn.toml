@@ -1,0 +1,7 @@
+length = "practice"
+method = "Bristol Surprise Major"
+base_music = "none"
+
+[[calls]]
+symbol = "s" # Not technically a clash, but is likely to be a mistake
+place_notation = "1234"

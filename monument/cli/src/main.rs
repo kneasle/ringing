@@ -1,17 +1,13 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 use colored::Colorize;
-use monument_cli::{args::CliArgs, Environment, Source};
+use monument_cli::{args::CliArgs, Environment};
 use structopt::StructOpt;
 
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let result = monument_cli::run(
-        Source::Path(args.input_file.clone()),
-        &args.config,
-        Environment::Cli,
-    );
+    let result = monument_cli::run(&args.input_file, &args.config, Environment::Cli);
     match result {
         Ok(Some(query_result)) => query_result.print(),
         Ok(None) => assert!(args.config.debug_option.is_some()),

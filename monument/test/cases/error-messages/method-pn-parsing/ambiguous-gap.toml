@@ -1,0 +1,5 @@
+length = "QP"
+[method]
+name = "Bristol"
+place_notation = "&x15x4.5x5.36.4x4.5x4x1,+8" # `15` has an ambiguous gap
+stage = 8
