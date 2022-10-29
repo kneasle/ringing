@@ -25,6 +25,7 @@ use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
 use monument::{Composition, Progress, Search, Update};
 use music::MusicDisplay;
+use ordered_float::OrderedFloat;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -90,8 +91,18 @@ pub fn run(
         }
     });
     // Once the search has completed, sort the compositions and return
-    use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.average_score())));
+    fn rounded_float(f: f32) -> OrderedFloat<f32> {
+        const FACTOR: f32 = 1e-6;
+        let rounded = (f / FACTOR).round() * FACTOR;
+        OrderedFloat(rounded)
+    }
+    comps.sort_by_key(|comp| {
+        (
+            rounded_float(comp.music_score()),
+            rounded_float(comp.average_score()),
+            comp.call_string(),
+        )
+    });
     Ok(Some(QueryResult {
         comps,
         comp_printer,
