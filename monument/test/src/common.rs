@@ -3,20 +3,19 @@
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    fmt::{Debug, Display, Formatter},
+    fmt::Debug,
+    io::Read,
     path::{Path, PathBuf},
+    process::Stdio,
     time::{Duration, Instant},
 };
 
 use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use difference::Changeset;
-use itertools::Itertools;
-use monument_cli::{DebugOption, Environment};
-use ordered_float::OrderedFloat;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::Deserialize;
 
 // NOTE: All paths are relative to the `monument` directory.  Cargo runs custom test code in the
 // same directory as the `Cargo.toml` for that crate (in our case `monument/cli/Cargo.toml`), so
@@ -28,9 +27,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 const IGNORE_PATH: &str = "test/ignore.toml";
 const EXPECTED_RESULTS_PATH: &str = "test/results.json";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
-const TEST_DIRS: [(&str, SuiteState); 2] = [
-    ("test/cases/", SuiteState::Run), // Test cases which we expect to succeed
-    ("examples/", SuiteState::Parse), // Examples to show how Monument's TOML format works
+const TEST_DIRS: [(&str, CaseState); 2] = [
+    ("test/cases/", CaseState::Run), // Test cases which we expect to succeed
+    ("examples/", CaseState::Parse), // Examples to show how Monument's TOML format works
 ];
 const PATH_TO_MONUMENT_DIR: &str = "../";
 
@@ -146,9 +145,9 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
         for (level, path) in &changed_case_names {
             let name = path_to_string(path);
             match level {
-                ChangeType::New => println!("     (new) {:?}", unspecified_str(&name)),
-                ChangeType::Fail => println!("    (fail) {:?}", fail_str(&name)),
-                ChangeType::Removed => println!(" (removed) {:?}", name.yellow().bold()),
+                ChangeType::New => println!("     (new) {}", unspecified_str(&name)),
+                ChangeType::Fail => println!("    (fail) {}", fail_str(&name)),
+                ChangeType::Removed => println!(" (removed) {}", name.yellow().bold()),
             }
         }
         println!("{} test cases blessed", changed_case_names.len());
@@ -163,15 +162,16 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
 ////////////////////////
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SuiteState {
+enum CaseState {
     Run,
     Parse,
+    Ignored,
 }
 
 /// Determine where all the tests should come from, and how they should be run
-fn collect_sources() -> anyhow::Result<Vec<(PathBuf, SuiteState)>> {
+fn collect_sources() -> anyhow::Result<Vec<(PathBuf, CaseState)>> {
     // Collect the individual test sources from every suite
-    let mut test_sources: Vec<(PathBuf, SuiteState)> = Vec::new();
+    let mut test_sources: Vec<(PathBuf, CaseState)> = Vec::new();
     for (path, state) in TEST_DIRS {
         // TODO: Make newtypes for the different relative paths?
         let path_relative_to_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
@@ -197,7 +197,7 @@ fn collect_sources() -> anyhow::Result<Vec<(PathBuf, SuiteState)>> {
 }
 
 /// Convert ([`PathBuf`], [`SuiteState`]) pairs into [`UnrunTestCase`]s.
-fn sources_to_cases(sources: Vec<(PathBuf, SuiteState)>) -> anyhow::Result<Vec<UnrunTestCase>> {
+fn sources_to_cases(sources: Vec<(PathBuf, CaseState)>) -> anyhow::Result<Vec<UnrunTestCase>> {
     // Combine them with the auxiliary files (results, ignore, timings, etc.) to get the
     // `UnrunTestCase`s
     let mut results = load_results(EXPECTED_RESULTS_PATH)?;
@@ -206,35 +206,26 @@ fn sources_to_cases(sources: Vec<(PathBuf, SuiteState)>) -> anyhow::Result<Vec<U
     let mut unrun_test_cases = Vec::new();
     for (path, state) in sources {
         // Load the values from the ignore/result files
-        let ignore_value = ignore.remove(&path);
-        let results_value = results.remove(&path);
-        // Combine everything into an `UnrunTestCase`
-        let ignored = match ignore_value {
+        let ignore_reason = ignore.remove(&path);
+        let expected_output = results.remove(&path);
+        // Decide whether to ignore this case
+        let state = match ignore_reason {
             Some(IgnoreReason::MusicFile) => {
                 assert!(
-                    results_value.is_none(),
+                    expected_output.is_none(),
                     "Music file {:?} shouldn't have results",
                     path
                 );
                 continue; // Fully ignore music files
             }
-            Some(IgnoreReason::ExplicitIgnore) => true,
-            None => false,
+            Some(IgnoreReason::ExplicitIgnore) => CaseState::Ignored,
+            None => state,
         };
-        let expected_results = match results_value {
-            // Errors are always emitted, even for 'parsed' tests.  So errors take precedence over
-            // everything.
-            Some(ResultsFileEntry::Error { error_message }) => ExpectedResult::Error(error_message),
-            // If no errors, then 'parsed' takes precedence over everything else
-            _ if state == SuiteState::Parse => ExpectedResult::Parsed,
-            // If the state is `SuiteState::Run`, then we want the expected comps
-            Some(ResultsFileEntry::Comps { comps }) => ExpectedResult::Comps(comps),
-            None => ExpectedResult::NoCompsGiven,
-        };
+        // Combine everything into an `UnrunTestCase`
         unrun_test_cases.push(UnrunTestCase {
             path,
-            ignored,
-            expected_results,
+            state,
+            expected_output,
         });
     }
     Ok(unrun_test_cases)
@@ -247,14 +238,7 @@ fn sources_to_cases(sources: Vec<(PathBuf, SuiteState)>) -> anyhow::Result<Vec<U
 /// The contents of the `results.toml` file, found at [`RESULTS_PATH`].  We use a [`BTreeMap`] so
 /// that the test cases are always written in a consistent order (i.e. alphabetical order by file
 /// path), thus making the diffs easier to digest.
-type ResultsFile = BTreeMap<PathBuf, ResultsFileEntry>;
-
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(untagged)]
-enum ResultsFileEntry {
-    Error { error_message: String },
-    Comps { comps: Vec<Comp> },
-}
+type ResultsFile = BTreeMap<PathBuf, String>;
 
 /// The contents of the `ignore.toml` file, found at [`IGNORE_PATH`].
 #[derive(Debug, Deserialize)]
@@ -299,9 +283,9 @@ fn load_ignore() -> anyhow::Result<HashMap<PathBuf, IgnoreReason>> {
 
 fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
     let full_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    let toml = std::fs::read_to_string(&full_path)
+    let json = std::fs::read_to_string(&full_path)
         .with_context(|| format!("Error loading results file ({:?})", full_path))?;
-    let results_file: ResultsFile = serde_json::from_str(&toml)
+    let results_file: ResultsFile = serde_json::from_str(&json)
         .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
     Ok(results_file)
 }
@@ -309,18 +293,7 @@ fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
 fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
     let actual_results: ResultsFile = cases
         .into_iter()
-        .filter_map(|case| {
-            let RunTestCase {
-                base,
-                actual_result,
-            } = case;
-            let entry = match actual_result {
-                ActualResult::Ignored | ActualResult::Parsed => return None, // If no result, skip
-                ActualResult::Error(error_message) => ResultsFileEntry::Error { error_message },
-                ActualResult::Comps(comps) => ResultsFileEntry::Comps { comps },
-            };
-            Some((base.path, entry))
-        })
+        .filter_map(|case| case.actual_output.map(|o| (case.base.path, o)))
         .collect();
     write_results(&actual_results, ACTUAL_RESULTS_PATH)
 }
@@ -344,63 +317,51 @@ fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
 /// once finished.
 fn run_test(case: UnrunTestCase) -> RunTestCase {
     // Skip any ignored tests
-    if case.ignored {
-        return RunTestCase {
-            base: case,
-            actual_result: ActualResult::Ignored,
-        };
-    }
+    let no_search = match case.state {
+        CaseState::Run => false,
+        CaseState::Parse => true,
+        CaseState::Ignored => {
+            return RunTestCase {
+                base: case,
+                actual_output: None,
+            };
+        }
+    };
 
-    // Determine the source of this test
+    // Spawn a command to run Monument, and fetch its stdout output as the test result
     let toml_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(&case.path);
+    // TODO: Don't hardcode the Monument path
+    let cmd = std::process::Command::new("/home/kneasle/.build/rust/debug/monument_cli")
+        .arg(&path_to_string(&toml_path))
+        .args(match no_search {
+            false => &[] as &[&str],
+            true => &["-D", "no-search"],
+        })
+        .args(["-q"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut output = Vec::new();
+    cmd.stdout.unwrap().read_to_end(&mut output).unwrap();
+    // Strip color codes from the output
+    //
+    // ANSI colors are 'esc key' (1b in hex) followed by `[` then some codes, finishing
+    // with `m`.  We use `.*?` to consume anything, but stopping at the first `m` (`.*?` is
+    // the non-greedy version of `.*`)
+    let output = String::from_utf8_lossy(&output).into_owned();
+    let ansi_escape_regex = Regex::new("\x1b\\[.*?m").unwrap();
+    let color_free_output = ansi_escape_regex.replace_all(&output, "").into_owned();
 
-    let no_search = case.expected_results == ExpectedResult::Parsed;
-
-    // Run Monument
-    let options = monument_cli::args::Options {
-        debug_option: no_search.then(|| DebugOption::StopBeforeSearch),
-        ..Default::default()
-    };
-    let monument_result = monument_cli::run(&toml_path, &options, Environment::TestHarness);
-    // Convert Monument's `Result` into a `Results`
-    let actual_result = match monument_result {
-        // Successful search run
-        Ok(Some(result)) => {
-            assert!(!no_search);
-            // Convert compositions and sort them by score, resolving tiebreaks using the comp string.
-            // This guarantees a consistent ordering even if Monument's output order is non-deterministic
-            let mut comps = result.comps.iter().map(Comp::new).collect_vec();
-            comps.sort_by_key(|comp| (comp.avg_score, comp.string.clone()));
-            ActualResult::Comps(comps)
-        }
-        // Successful `no_search` run, since no comp array was generated (the file was just
-        // parsed and verified)
-        Ok(None) => {
-            assert!(no_search);
-            ActualResult::Parsed
-        }
-        // Search failed in some way
-        Err(e) => {
-            // ANSI colours are 'esc key' (1b in hex) followed by `[` then some codes, finishing
-            // with `m`.  We use `.*?` to consume anything, but stopping at the first `m` (`.*?` is
-            // the non-greedy version of `.*`)
-            let ansi_escape_regex = Regex::new("\x1b\\[.*?m").unwrap();
-            let error_string = format!("{:?}", e);
-            let color_free_error_string = ansi_escape_regex
-                .replace_all(&error_string, "")
-                .into_owned();
-            ActualResult::Error(color_free_error_string)
-        }
-    };
-
+    // Create the `run_case`
     let run_case = RunTestCase {
         base: case,
-        actual_result,
+        actual_output: Some(color_free_output),
     };
     println!(
         "{} ... {}",
         run_case.name(),
-        run_case.outcome().colored_string()
+        run_case.colored_outcome_string()
     );
     run_case
 }
@@ -414,84 +375,22 @@ fn report_failures(run_cases: &[RunTestCase]) {
     // Report all unspecified tests first
     for case in run_cases {
         let path_string = unspecified_str(&case.name());
-        match case.outcome() {
-            CaseOutcome::Unspecified(Ok(comps)) => {
-                println!();
-                println!(
-                    "Unspecified results for {}.  These {} comps were generated:",
-                    path_string,
-                    comps.len()
-                );
-                println!("{}", Comp::multiline_string(comps));
-            }
-            CaseOutcome::Unspecified(Err(err_msg)) => {
-                println!();
-                println!(
-                    "Unspecified results for {}.  This error was generated:",
-                    path_string
-                );
-                println!("{}", err_msg);
-            }
-            _ => {}
+        if case.outcome() == CaseOutcome::Unspecified {
+            println!();
+            println!("Unspecified results for {path_string}.  This is the output:",);
+            println!("{}", case.actual_output.as_ref().unwrap());
         }
     }
     // Report all the failures second
     for case in run_cases {
         let path_string = fail_str(&case.name());
-        match case.outcome() {
-            CaseOutcome::ParseError(err_msg) => {
+        match (&case.expected_output, &case.actual_output) {
+            (Some(expected), Some(actual)) if expected != actual => {
                 println!();
-                println!("{} returned an unexpected parse error:", path_string);
-                println!("{}", err_msg);
+                println!("{} produced the wrong output:", path_string);
+                println!("{}", Changeset::new(expected, actual, "\n"));
             }
-            CaseOutcome::Specified { expected, actual } if expected != actual => {
-                match (expected, actual) {
-                    // If the comps are different, print a fancy diff between the two sets.
-                    (Ok(exp_comps), Ok(act_comps)) => {
-                        println!();
-                        println!("{} produced the wrong comps:", path_string);
-                        println!(
-                            "{}",
-                            Changeset::new(
-                                &Comp::multiline_string(exp_comps),
-                                &Comp::multiline_string(act_comps),
-                                "\n"
-                            )
-                        );
-                    }
-                    // If the errors are different, print a fancy diff between the two messages
-                    (Err(exp_msg), Err(act_msg)) => {
-                        println!();
-                        println!("{} produced the wrong error message:", path_string);
-                        println!("{}", Changeset::new(exp_msg, act_msg, "\n"));
-                    }
-                    // If we got an error but expected comps
-                    (Ok(exp_comps), Err(act_msg)) => {
-                        println!();
-                        println!(
-                            "{} returned an unexpected error (expected {} comps):",
-                            path_string,
-                            exp_comps.len()
-                        );
-                        println!("{}", act_msg);
-                    }
-                    // If we got comps but expected an error message
-                    (Err(exp_msg), Ok(act_comps)) => {
-                        println!();
-                        println!(
-                            "{} returned {} comps, but we expected this error message:",
-                            path_string,
-                            act_comps.len()
-                        );
-                        println!("{}", exp_msg);
-                    }
-                }
-            }
-            // Everything else isn't a failure
-            CaseOutcome::Parsed
-            | CaseOutcome::Ignored
-            | CaseOutcome::Unspecified(_)
-            | CaseOutcome::Specified { .. } => {}
+            _ => {} // Everything else isn't a failure
         }
     }
 }
@@ -505,13 +404,10 @@ fn print_summary_string(completed_tests: &[RunTestCase], duration: Duration) -> 
     let mut num_unspecified = 0;
     for case in completed_tests {
         match case.outcome() {
-            CaseOutcome::Parsed => num_ok += 1,
-            CaseOutcome::Specified { actual, expected } if actual == expected => num_ok += 1,
-
+            CaseOutcome::Ok | CaseOutcome::Parsed => num_ok += 1,
             CaseOutcome::Ignored => num_ignored += 1,
-            CaseOutcome::Unspecified(_) => num_unspecified += 1,
-
-            CaseOutcome::ParseError(_) | CaseOutcome::Specified { .. } => num_failures += 1,
+            CaseOutcome::Unspecified => num_unspecified += 1,
+            CaseOutcome::Fail => num_failures += 1,
         }
     }
     assert_eq!(
@@ -561,17 +457,14 @@ fn print_summary_string(completed_tests: &[RunTestCase], duration: Duration) -> 
 #[derive(Debug)]
 struct UnrunTestCase {
     path: PathBuf,
-    ignored: bool,
-    expected_results: ExpectedResult,
-    // pinned_duration: Duration,
-    // last_duration: Duration,
+    state: CaseState,
+    expected_output: Option<String>,
 }
 
 #[derive(Debug)]
 struct RunTestCase {
     base: UnrunTestCase,
-    // duration: Duration,
-    actual_result: ActualResult,
+    actual_output: Option<String>,
 }
 
 impl UnrunTestCase {
@@ -581,23 +474,29 @@ impl UnrunTestCase {
 }
 
 impl RunTestCase {
-    fn outcome(&self) -> CaseOutcome {
-        use ActualResult as ActR;
-        use ExpectedResult as ExpR;
+    fn colored_outcome_string(&self) -> ColoredString {
+        self.outcome().colored_string()
+    }
 
-        match (&self.expected_results, &self.actual_result) {
-            (_, ActR::Ignored) => {
-                assert!(self.ignored);
-                CaseOutcome::Ignored
-            }
-            (ExpR::NoCompsGiven, ActR::Parsed) => unreachable!(),
-            (ExpR::NoCompsGiven, act_r) => CaseOutcome::Unspecified(act_r.comps_or_err()),
-            (ExpR::Parsed, ActR::Parsed) => CaseOutcome::Parsed,
-            (ExpR::Parsed, ActR::Comps(_)) => unreachable!(),
-            (ExpR::Parsed, ActR::Error(e)) => CaseOutcome::ParseError(e),
-            (expected, actual) => CaseOutcome::Specified {
-                expected: expected.comps_or_err(),
-                actual: actual.comps_or_err(),
+    fn outcome(&self) -> CaseOutcome {
+        // TODO: Clean this up?
+        match self.state {
+            CaseState::Ignored => CaseOutcome::Ignored,
+            CaseState::Parse | CaseState::Run => match (&self.expected_output, &self.actual_output)
+            {
+                (_, None) => unreachable!(),
+                (None, Some(_)) => CaseOutcome::Unspecified,
+                (Some(x), Some(y)) => {
+                    if x == y {
+                        if self.state == CaseState::Parse {
+                            CaseOutcome::Parsed
+                        } else {
+                            CaseOutcome::Ok
+                        }
+                    } else {
+                        CaseOutcome::Fail
+                    }
+                }
             },
         }
     }
@@ -611,140 +510,31 @@ impl std::ops::Deref for RunTestCase {
     }
 }
 
-/// The possible results we'd expect from a test case
-#[derive(Debug, PartialEq, Eq)]
-enum ExpectedResult {
-    /// No comps were specified (only makes sense for `expected_results`)
-    NoCompsGiven,
-    /// A test case that is only parsed, but no search run
-    Parsed,
-    /// The test ends with an error, which renders to this string
-    Error(String),
-    /// The test produces compositions
-    Comps(Vec<Comp>),
-}
-
-/// The possible results from running a test case
-#[derive(Debug, PartialEq, Eq)]
-enum ActualResult {
-    /// The result of a test run that was ignored (only makes sense for `actual_results`)
-    Ignored,
-    /// A test case that is only parsed, but no search run
-    Parsed,
-    /// The test ends with an error, which renders to this string
-    Error(String),
-    /// The test produces compositions
-    Comps(Vec<Comp>),
-}
-
-impl ExpectedResult {
-    fn comps_or_err(&self) -> CompOrErr {
-        match self {
-            Self::Error(e) => Err(e),
-            Self::Comps(comps) => Ok(comps),
-            _ => panic!(),
-        }
-    }
-}
-
-impl ActualResult {
-    fn comps_or_err(&self) -> CompOrErr {
-        match self {
-            Self::Error(e) => Err(e),
-            Self::Comps(comps) => Ok(comps),
-            _ => panic!(),
-        }
-    }
-}
-
 /// The outcomes of a test, corresponding to what's printed to the console.
-#[derive(Debug, Clone, Copy)]
-enum CaseOutcome<'case> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CaseOutcome {
+    Ok,
     Parsed,
-    ParseError(&'case str),
     Ignored,
-    Unspecified(CompOrErr<'case>),
-    Specified {
-        expected: CompOrErr<'case>,
-        actual: CompOrErr<'case>,
-    },
+    Unspecified,
+    Fail,
 }
 
-type CompOrErr<'case> = Result<&'case [Comp], &'case str>;
-
-impl CaseOutcome<'_> {
+impl CaseOutcome {
     fn colored_string(self) -> ColoredString {
         match self {
+            Self::Ok => ok_string(),
             Self::Parsed => "parsed".color(Color::Green),
             Self::Ignored => "ignored".color(Color::Yellow),
-            Self::Unspecified(_) => "unspecified".color(UNSPECIFIED_COLOR),
-            Self::Specified { expected, actual } if expected == actual => ok_string(),
-            Self::Specified { .. } | Self::ParseError(_) => fail_string(),
+            Self::Unspecified => "unspecified".color(UNSPECIFIED_COLOR),
+            Self::Fail => fail_string(),
         }
-    }
-}
-
-/// A simplified version of [`monument::Comp`] that can be easily (de)serialised.
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize, Serialize)]
-struct Comp {
-    length: usize,
-    string: String,
-    #[serde(deserialize_with = "de_avg_score")]
-    avg_score: OrderedFloat<f32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    part_head: Option<String>, // Part head for multi-part compositions
-}
-
-impl Comp {
-    fn multiline_string(comps: &[Self]) -> String {
-        if comps.is_empty() {
-            "<no comps>".to_owned()
-        } else {
-            comps.iter().map(Self::to_string).join("\n")
-        }
-    }
-
-    /// Round an `f32` to 15 significant binary decimal places.  This is almost always enough to
-    /// remove any floating-point rounding errors, but not enough that obviously different scores
-    /// become the same.
-    fn round_score(score: f32) -> OrderedFloat<f32> {
-        // The least significant 4 bits of the mantissa will be set to 0s
-        let rounding_factor = f32::powi(2.0, 15);
-        let rounded_score = (score * rounding_factor).round() / rounding_factor;
-        OrderedFloat(rounded_score)
-    }
-}
-
-impl Comp {
-    fn new(source: &monument::Composition) -> Self {
-        let is_multipart = !source.part_head().is_rounds();
-        Self {
-            length: source.length(),
-            string: source.call_string(),
-            avg_score: Self::round_score(source.average_score()),
-            // Only store part heads for multi-part strings
-            part_head: is_multipart.then(|| source.part_head().to_string()),
-        }
-    }
-}
-
-impl Display for Comp {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>4}/{:>8.5}", self.length, self.avg_score)?;
-        if let Some(p) = &self.part_head {
-            write!(f, "/{}", p)?;
-        }
-        write!(f, ": {}", self.string)
     }
 }
 
 ///////////
 // UTILS //
 ///////////
-
-fn de_avg_score<'de, D: Deserializer<'de>>(de: D) -> Result<OrderedFloat<f32>, D::Error> {
-    f32::deserialize(de).map(Comp::round_score)
-}
 
 fn path_to_string(path: &Path) -> String {
     path.as_os_str().to_string_lossy().into_owned()
