@@ -20,13 +20,9 @@ use serde::Deserialize;
 // NOTE: All paths are relative to the `monument` directory.  Cargo runs custom test code in the
 // same directory as the `Cargo.toml` for that crate (in our case `monument/cli/Cargo.toml`), so
 // these will all be prefixed with `PATH_TO_MONUMENT_DIR`.
-//
-// Also NOTE: We use JSON for the results file, because serialization to JSON always succeeds
-// whilst serialization to TOML fails when mixing empty and non-empty lists (which we do all the
-// time because some tests produce no results).
 const IGNORE_PATH: &str = "test/ignore.toml";
-const EXPECTED_RESULTS_PATH: &str = "test/results.json";
-const ACTUAL_RESULTS_PATH: &str = "test/.last-results.json";
+const EXPECTED_RESULTS_PATH: &str = "test/results.toml";
+const ACTUAL_RESULTS_PATH: &str = "test/.last-results.toml";
 const TEST_DIRS: [(&str, CaseState); 2] = [
     ("test/cases/", CaseState::Run), // Test cases which we expect to succeed
     ("examples/", CaseState::Parse), // Examples to show how Monument's TOML format works
@@ -283,9 +279,9 @@ fn load_ignore() -> anyhow::Result<HashMap<PathBuf, IgnoreReason>> {
 
 fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
     let full_path = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    let json = std::fs::read_to_string(&full_path)
+    let toml = std::fs::read_to_string(&full_path)
         .with_context(|| format!("Error loading results file ({:?})", full_path))?;
-    let results_file: ResultsFile = serde_json::from_str(&json)
+    let results_file: ResultsFile = toml::from_str(&toml)
         .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
     Ok(results_file)
 }
@@ -299,13 +295,11 @@ fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
 }
 
 fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
-    let unformatted_json = serde_json::to_string(results)
+    let toml = toml::to_string_pretty(results)
         .with_context(|| format!("Error serialising results file {:?}", path))?;
-    let formatted_json = goldilocks_json_fmt::format_within_width(&unformatted_json, 120)
-        .expect("`serde_json` should emit valid JSON");
 
     let path_from_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-    std::fs::write(path_from_cargo_toml, formatted_json.as_bytes())
+    std::fs::write(path_from_cargo_toml, toml.as_bytes())
         .with_context(|| format!("Error writing results to {:?}", path))
 }
 
