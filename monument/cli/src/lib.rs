@@ -25,6 +25,7 @@ use itertools::Itertools;
 use log::{log_enabled, LevelFilter};
 use monument::{Composition, Progress, Search, Update};
 use music::MusicDisplay;
+use ordered_float::OrderedFloat;
 use ringing_utils::{BigNumInt, PrettyDuration};
 use simple_logger::SimpleLogger;
 use spec::Spec;
@@ -90,8 +91,18 @@ pub fn run(
         }
     });
     // Once the search has completed, sort the compositions and return
-    use ordered_float::OrderedFloat as OF;
-    comps.sort_by_key(|comp| (OF(comp.music_score()), OF(comp.average_score())));
+    fn rounded_float(f: f32) -> OrderedFloat<f32> {
+        const FACTOR: f32 = 1e-6;
+        let rounded = (f / FACTOR).round() * FACTOR;
+        OrderedFloat(rounded)
+    }
+    comps.sort_by_key(|comp| {
+        (
+            rounded_float(comp.music_score()),
+            rounded_float(comp.average_score()),
+            comp.call_string(),
+        )
+    });
     Ok(Some(QueryResult {
         comps,
         comp_printer,
@@ -123,13 +134,13 @@ pub struct QueryResult {
 
 impl QueryResult {
     pub fn print(&self) {
-        println!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
+        eprintln!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
         for c in &self.comps {
             println!("{}", self.comp_printer.comp_string(c));
         }
         println!("{}", self.comp_printer.ruleoff());
         println!("{}", self.comp_printer.header());
-        println!(
+        eprintln!(
             "{} compositions generated{} {}",
             self.comps.len(),
             match self.aborted {
@@ -227,14 +238,14 @@ impl SingleLineProgressLogger {
         self.append_progress_string(&mut update_string);
         let update_string = self.extend_string(&update_string);
 
-        let std_out = std::io::stdout();
-        let mut std_out = std_out.lock();
+        let std_err = std::io::stderr();
+        let mut std_err = std_err.lock();
         // We precede with a carriage return to make sure that we overwrite anything the user
         // types (e.g. `^C`).  We don't do anything in the case that the user's input is longer
         // than what we're writing - we'll just assume that no-one would be able to type that much
         // in between updates (which happen many many times per second).
-        write!(std_out, "\r{}\r", update_string).unwrap();
-        std_out.flush().unwrap(); // `std_out` won't flush by default without a newline
+        write!(std_err, "\r{}\r", update_string).unwrap();
+        std_err.flush().unwrap(); // `std_out` won't flush by default without a newline
 
         comp
     }

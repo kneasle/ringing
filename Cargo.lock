@@ -384,12 +384,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "goldilocks-json-fmt"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3789ceaa220a1f6e232676d9dbb9fc65e1c0e1c2573f7015bf34a9904f1bd666"
-
-[[package]]
 name = "h2"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -679,7 +673,6 @@ dependencies = [
  "colored",
  "ctrlc",
  "difference",
- "goldilocks-json-fmt",
  "hmap",
  "itertools",
  "kneasle_ringing_utils",
@@ -689,7 +682,6 @@ dependencies = [
  "rayon",
  "regex",
  "serde",
- "serde_json",
  "simple_logger",
  "structopt",
  "sysinfo",
@@ -824,7 +816,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d84eb1409416d254e4a9c8fa56cc24701755025b458f0fcd8e59e1f5f40c23bf"
 dependencies = [
  "num-traits",
- "serde",
 ]
 
 [[package]]
