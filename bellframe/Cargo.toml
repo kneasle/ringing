@@ -25,7 +25,7 @@ serde = ["serde_crate"]
 [dependencies]
 dirs = { version = "4.0", optional = true }
 edit-distance = "2.1"
-factorial = "0.2"
+factorial = "0.3"
 itertools = "0.10.5"
 reqwest = { version = "0.11", optional = true, features = ["blocking"] }
 serde_json = { version = "1.0", optional = true }
