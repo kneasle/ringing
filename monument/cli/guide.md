@@ -13,7 +13,7 @@ intended for my own use and I won't recommend it for users once the GUI exists.
 - [Installation](#installation)
 - [Example](#example)
 - [Quick List of Parameters](#quick-list-of-parameters)
-- [More Detail on Parameters](#more-details-on-parameters)
+- [More Detail on Parameters](#more-detail-on-parameters)
 
 ---
 
@@ -69,9 +69,9 @@ music = [
 # Courses
 part_head = "124365"
 split_tenors = true
-# course_heads = ["*78", "*7856"] # uncomment to override `split_tenors`
+# courses = ["*78", "*7856"] # uncomment to override `split_tenors`
 leadwise = false # optional: Monument would have determined this
-ch_weights = [{ pattern = "*78", weight = 0.05 }] # slight boost for tenors-together courses
+course_weights = [{ pattern = "*78", weight = 0.05 }] # slight boost for tenors-together courses
 
 # Starts/Ends (commented because they currently play badly with multi-part spliced)
 # snap_start = true
@@ -184,9 +184,9 @@ take you to more in-depth docs about it.
 
 **Courses:**
 - [`part_head = ""`](#part_head) (i.e. default to 1-part)
-- [`course_heads`](#course_heads) (default set by `split_tenors`)
 - [`split_tenors = false`](#split_tenors)
-- [`ch_weights = []`](#ch_weights)
+- [`courses`](#courses) (default determined by `split_tenors`, _renamed from `course_heads` in v0.13.0)_
+- [`course_weights = []`](#course_weights) _(renamed from `ch_weights` in v0.13.0)_
 - [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
 - ~~[`leadwise`](#leadwise) (default set by Monument)~~ _(removed in v0.10.0)_
 - [`non_duffer_courses`](#non_duffer_courses) _(added in v0.12.0)_
@@ -262,7 +262,7 @@ labels = { LE = 0, HL = 16 } # (optional; defaults to `{ LE = 0 }`)
 lead_locations = { LE = 0, HL = 16 } # (pre-v0.11.0 name for `labels`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
-course_heads = ["*78"]
+courses = ["*78"]
 start_indices = [2]
 end_indices = [2]
 
@@ -277,7 +277,7 @@ labels = { LE = 0, HL = 8 } # (optional; defaults to `{ LE = 0 }`)
 lead_locations = { LE = 0, HL = 16 } # (pre-v0.11.0 name for `labels`)
 # Overrides for global values (all optional):
 count = { min = 224, max = 600 }
-course_heads = ["*78"]
+courses = ["*78"]
 start_indices = [2]
 end_indices = [2]
 ```
@@ -483,27 +483,27 @@ compositions with a different part head, provided the same set of parts are gene
 `part_head = "23456781"` and `part_head = "81234567"` are equivalent but `part_head = "56781234"` is
 not).  Defaults to rounds (i.e. one part, or `part_head = ""`).
 
-#### `course_heads`
+#### `courses`
 
 List of masks which define the courses that Monument can use.  Defaults to tenors together, or any
 course (if `split_tenors` is set).  For example:
 ```toml
-course_heads = ["*78", "xxxx7856", "12345xxx"]
+courses = ["*78", "xxxx7856", "12345xxx"]
 ```
 
 #### `split_tenors`
 
-If `course_heads` isn't specified, this lets Monument use any courses, as opposed to just those with
+If `courses` isn't specified, this lets Monument use any courses, as opposed to just those with
 the tenors together.  On higher stages, this will almost certainly cause Monument's graph size limit
 to be reached.  Defaults to `false`.
 
-#### `ch_weights`
+#### `course_weights`
 
 Applies some score to every row in a course which contains a lead head which matches a given mask.
 For example, the following will weight Monument to create compositions where handbell pairs are
 coursing often:
 ```toml
-[[ch_weights]]
+[[course_weights]]
 patterns = [
     "*78",
     "*56", "*65",
@@ -514,11 +514,11 @@ weight = 0.05 # this is small because the weight is applied per row
 
 #### `handbell_coursing_weight`
 
-Generates `ch_weights` which apply the given weight to every row where a handbell pair coursing
+Generates `course_weights` which apply the given weight to every row where a handbell pair coursing
 (this score gets multiplied for courses with multiple handbell pairs coursing).  Equivalent to
 something like this (truncated according to stage):
 ```toml
-[[ch_weights]]
+[[course_weights]]
 patterns = [
     "*12", "*21",
     "*34", "*43",
@@ -535,7 +535,7 @@ Defaults to 0.
 **_(removed in v0.10.0)_**
 
 If set, this will stop Monument using calling positions, and instead label all the calls
-positionally.  `course_heads`, `split_tenors` and `ch_weights` will obviously have no effect, and
+positionally.  `courses`, `split_tenors` and `course_weights` will obviously have no effect, and
 this will always generate split-tenors compositions.  You should rarely have to set this yourself; by
 default, Monument will set this automatically if the tenor is affected by the part head (e.g. in
 cyclic) but otherwise will stick to course-wise compositions.  The only times you're likely to need
