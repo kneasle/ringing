@@ -2,7 +2,7 @@ length = { min = 0, max = 700 }
 method = "Cornwall Surprise Major"
 
 part_head = "123465"
-course_heads = ["*5678", "*6578"]
+courses = ["*5678", "*6578"]
 
 [[calls]]
 symbol = "b"

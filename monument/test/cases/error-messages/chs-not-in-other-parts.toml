@@ -1,4 +1,4 @@
 length = "peal"
 method = "Bristol Surprise Major"
 part_head = "134265"
-course_heads = ["*78", "*7856"] # `*7856` becomes `*7865` in other parts
+courses = ["*78", "*7856"] # `*7856` becomes `*7865` in other parts

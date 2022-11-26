@@ -1,5 +1,0 @@
-length = "QP"
-method = "Bristol Surprise Major"
-[[ch_weights]]
-pattern = "1234*5678x"
-weight = 0.1

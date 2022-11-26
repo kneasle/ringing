@@ -1,0 +1,3 @@
+length = "qp"
+method = "Yorkshire Surprise Major"
+ch_weights = [] # `ch_weights` has been renamed to `course_weights`

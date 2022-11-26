@@ -2,7 +2,7 @@
 length = "practice"
 methods = [
     "Yorkshire Surprise Major",
-    { title = "Bristol Surprise Major", course_heads = ["12345678"] }
+    { title = "Bristol Surprise Major", courses = ["12345678"] }
 ]
 method_count = { min = 0, max = 400 }
 base_music = "none"

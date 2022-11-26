@@ -2,4 +2,4 @@ length = "practice"
 method = "Bristol Surprise Major"
 # `*5678` and `*4678` are implied by `*78`, so this test should behave identically to just `*78`.
 # It's a bit of an unusual thing to test, so it's here to make sure that things don't break.
-course_heads = ["*5678", "*4678", "*78"]
+courses = ["*5678", "*4678", "*78"]

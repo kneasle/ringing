@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#185) Rename `ch_weights` to `course_weights`, and `course_heads` to `courses`
 - (#167) Remove dependence on `serde` from Monument's library.  Now, all the handling of TOML files
     is in `monument_cli`.
 - (#171) Don't store test cases in Markdown files, instead storing them all as individual TOML

@@ -742,11 +742,20 @@ len |  music         4-bell runs      lb5s   56s   65s | avg score | calling
 ----|-------------------------------|-----------|-----------
 len |  music      4-bell runs   46s | avg score | calling
 '''
+"test/cases/deprecation/ch_weight.toml" = '''
+Error: `ch_weights` has been renamed to `course_weights`
+'''
+"test/cases/deprecation/course_heads.toml" = '''
+Error: `course_heads` has been renamed to `courses`
+'''
 "test/cases/deprecation/lead_locations-in-call.toml" = '''
 Error: `calls.lead_location` has been renamed to `label`
 '''
 "test/cases/deprecation/lead_locations-in-method.toml" = '''
 Error: `methods.lead_locations` has been renamed to `labels`
+'''
+"test/cases/deprecation/method-course_heads.toml" = '''
+Error: `methods.course_heads` has been renamed to `courses`
 '''
 "test/cases/end-row.toml" = '''
 130 |    0.00 |  0.000000 | >
@@ -765,33 +774,33 @@ Error: Call "x" only specifies 9 calling positions, but the stage has 8 bells
 "test/cases/error-messages/calling-positions-too-short.toml" = '''
 Error: Call "x" only specifies 7 calling positions, but the stage has 8 bells
 '''
-"test/cases/error-messages/ch-mask/bell-out-of-stage.toml" = '''
-Error: Can't parse course mask "1234*9": bell 9 is out of stage Major
-'''
-"test/cases/error-messages/ch-mask/too-long.toml" = '''
-Error: Can't parse course mask "1234x5678": mask is too long, needing at least 9 bells (too many for Major)
-'''
-"test/cases/error-messages/ch-mask/too-many-*s.toml" = '''
-Error: Can't parse course mask "1*2*3": too many `*`s.  Masks can only have one region with `x` or `*`.
-'''
-"test/cases/error-messages/ch-mask/too-short.toml" = '''
-Error: Can't parse course mask "12345": mask is too short; did you mean `12345*` or `12345678`?
-'''
-"test/cases/error-messages/ch-pattern/bell-out-of-stage.toml" = '''
-Error: Can't parse course head weight "x9*": bell 9 is out of stage Major
-'''
-"test/cases/error-messages/ch-pattern/too-long.toml" = '''
-Error: Can't parse course head weight "1234*5678x": mask is too long, needing at least 9 bells (too many for Major)
-'''
-"test/cases/error-messages/ch-pattern/too-many-*s.toml" = '''
-Error: Can't parse course head weight "*7*8": too many `*`s.  Masks can only have one region with `x` or `*`.
-'''
-"test/cases/error-messages/ch-pattern/too-short.toml" = '''
-Error: Can't parse course head weight "12345": mask is too short; did you mean `12345*` or `12345678`?
-'''
 "test/cases/error-messages/chs-not-in-other-parts.toml" = '''
 Error: course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.
    help: consider adding `1xxx7865` to `course_heads`
+'''
+"test/cases/error-messages/course-weights/bell-out-of-stage.toml" = '''
+Error: Can't parse course head weight "x9*": bell 9 is out of stage Major
+'''
+"test/cases/error-messages/course-weights/too-long.toml" = '''
+Error: Can't parse course head weight "1234*5678x": mask is too long, needing at least 9 bells (too many for Major)
+'''
+"test/cases/error-messages/course-weights/too-many-*s.toml" = '''
+Error: Can't parse course head weight "*7*8": too many `*`s.  Masks can only have one region with `x` or `*`.
+'''
+"test/cases/error-messages/course-weights/too-short.toml" = '''
+Error: Can't parse course head weight "12345": mask is too short; did you mean `12345*` or `12345678`?
+'''
+"test/cases/error-messages/courses/bell-out-of-stage.toml" = '''
+Error: Can't parse course mask "1234*9": bell 9 is out of stage Major
+'''
+"test/cases/error-messages/courses/too-long.toml" = '''
+Error: Can't parse course mask "1234x5678": mask is too long, needing at least 9 bells (too many for Major)
+'''
+"test/cases/error-messages/courses/too-many-*s.toml" = '''
+Error: Can't parse course mask "1*2*3": too many `*`s.  Masks can only have one region with `x` or `*`.
+'''
+"test/cases/error-messages/courses/too-short.toml" = '''
+Error: Can't parse course mask "12345": mask is too short; did you mean `12345*` or `12345678`?
 '''
 "test/cases/error-messages/duplicate-calls/debug-symbol.toml" = '''
 Error: Call debug symbol "-" (at "LE") is used for both 14 and 16

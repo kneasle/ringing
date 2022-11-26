@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::anyhow;
 use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke};
 use colored::Colorize;
 use itertools::Itertools;
@@ -131,10 +132,12 @@ pub struct Spec {
     #[serde(default)]
     split_tenors: bool,
     /// Which course heads masks are allowed (overrides `split_tenors`)
-    course_heads: Option<Vec<String>>,
+    courses: Option<Vec<String>>,
+    course_heads: Option<Vec<String>>, // Deprecated spelling of `courses`
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
-    ch_weights: Vec<ChWeightPattern>,
+    course_weights: Vec<CourseWeightPattern>,
+    ch_weights: Option<Vec<CourseWeightPattern>>, // Deprecated spelling of `course_weights`
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
@@ -231,7 +234,10 @@ impl Spec {
         search_builder.start_row = parse_row("start row", &self.start_row, stage)?;
         search_builder.end_row = parse_row("end row", &self.end_row, stage)?;
         search_builder.part_head = part_head;
-        search_builder.courses = match &self.course_heads {
+        if self.course_heads.is_some() {
+            return Err(anyhow!("`course_heads` has been renamed to `courses`"));
+        }
+        search_builder.courses = match &self.courses {
             // If the user specifies some courses, use them
             Some(ch_strings) => Some(parse_masks("course mask", ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
@@ -363,10 +369,13 @@ impl Spec {
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
         let mut weights = Vec::new();
+        if self.ch_weights.is_some() {
+            return Err(anyhow!("`ch_weights` has been renamed to `course_weights`",));
+        }
         // Add explicit patterns from the `ch_weights` parameter
-        for pattern in &self.ch_weights {
+        for pattern in &self.course_weights {
             // Extract a (slice of patterns, weight)
-            use ChWeightPattern::*;
+            use CourseWeightPattern::*;
             let (ch_masks, weight) = match pattern {
                 Pattern { pattern, weight } => (std::slice::from_ref(pattern), weight),
                 Patterns { patterns, weight } => (patterns.as_slice(), weight),
@@ -404,7 +413,7 @@ fn parse_mask(mask_kind: &str, string: &str, stage: Stage) -> anyhow::Result<Mas
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
-pub enum ChWeightPattern {
+pub enum CourseWeightPattern {
     Pattern { pattern: String, weight: f32 },
     Patterns { patterns: Vec<String>, weight: f32 },
 }
@@ -442,7 +451,8 @@ pub struct MethodCommon {
     /// Deprecated name for `labels` (deprecated since `v0.11.0`)
     lead_locations: Option<HashMap<String, LeadLabels>>,
     /// Custom set of course head masks for this method
-    course_heads: Option<Vec<String>>,
+    courses: Option<Vec<String>>,
+    course_heads: Option<Vec<String>>, // Deprecated spelling of `courses`
     start_indices: Option<Vec<isize>>,
     end_indices: Option<Vec<isize>>,
 }
@@ -507,14 +517,19 @@ impl MethodSpec {
         };
         if let Some(common) = common {
             if common.lead_locations.is_some() {
-                return Err(anyhow::Error::msg(
+                return Err(anyhow!(
                     "`methods.lead_locations` has been renamed to `labels`",
+                ));
+            }
+            if common.course_heads.is_some() {
+                return Err(anyhow!(
+                    "`methods.course_heads` has been renamed to `courses`",
                 ));
             }
 
             method_builder = method_builder
                 .count_range(common.count_range.into())
-                .courses(common.course_heads)
+                .courses(common.courses)
                 .shorthand(common.shorthand)
                 .start_indices(common.start_indices)
                 .end_indices(common.end_indices);

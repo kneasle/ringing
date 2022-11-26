@@ -10,6 +10,4 @@ bobs_only = true
 
 split_tenors = true
 handbell_coursing_weight = 0.1
-[[ch_weights]]
-patterns = ["*5678", "*6578"]
-weight = 0.1
+course_weights = [{ patterns = ["*5678", "*6578"], weight = 0.1 }]

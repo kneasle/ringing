@@ -1,5 +1,5 @@
 length = "QP"
-course_heads = ["1xxx87xx", "1xxx5678"]
+courses = ["1xxx87xx", "1xxx5678"]
 base_calls = "none" # We need custom calls (12 bobs, 1234 singles)
 snap_start = true
 music_file = "music-8.toml"

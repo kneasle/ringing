@@ -2,7 +2,7 @@
 # head).  In this case, neither `D[xB]Y` or `Y[xB]DDDDD` should be emitted.
 length = { min = 0, max = 800 }
 part_head = "1342"
-course_heads = ["*5678"]
+courses = ["*5678"]
 
 methods = ["Deva Surprise Major", "Ytterbium Surprise Major"]
 method_count = { min = 0, max = 800 }

@@ -4,4 +4,4 @@
 
 length = { min = 0, max = 500 }
 method = "Normandy Surprise Major"
-course_heads = ["*678"] # Only allow W/H, thus forcing 4-lead sections from W to H
+courses = ["*678"] # Only allow W/H, thus forcing 4-lead sections from W to H
