@@ -10,11 +10,11 @@ bobs_only = true
 
 split_tenors = true
 
-[[ch_weights]]
+[[course_weights]]
 patterns = [
-    "*78",
-    "*56", "*65",
     "*34", "*43",
+    "*56", "*65",
     "*5678", "*6578",
+    "*78",
 ]
 weight = 0.1

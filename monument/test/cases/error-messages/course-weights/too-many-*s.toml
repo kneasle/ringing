@@ -1,0 +1,3 @@
+length = "QP"
+method = "Bristol Surprise Major"
+course_weights = [{ pattern = "*7*8", weight = 0.1 }]

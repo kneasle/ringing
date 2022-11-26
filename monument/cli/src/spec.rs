@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::anyhow;
 use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke};
 use colored::Colorize;
 use itertools::Itertools;
@@ -134,7 +135,8 @@ pub struct Spec {
     course_heads: Option<Vec<String>>,
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
-    ch_weights: Vec<ChWeightPattern>,
+    course_weights: Vec<CourseWeightPattern>,
+    ch_weights: Option<Vec<CourseWeightPattern>>, // Deprecated spelling of 'course_weights'
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
@@ -363,10 +365,13 @@ impl Spec {
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
         let mut weights = Vec::new();
+        if self.ch_weights.is_some() {
+            return Err(anyhow!("`ch_weights` has been renamed to `course_weights`",));
+        }
         // Add explicit patterns from the `ch_weights` parameter
-        for pattern in &self.ch_weights {
+        for pattern in &self.course_weights {
             // Extract a (slice of patterns, weight)
-            use ChWeightPattern::*;
+            use CourseWeightPattern::*;
             let (ch_masks, weight) = match pattern {
                 Pattern { pattern, weight } => (std::slice::from_ref(pattern), weight),
                 Patterns { patterns, weight } => (patterns.as_slice(), weight),
@@ -404,7 +409,7 @@ fn parse_mask(mask_kind: &str, string: &str, stage: Stage) -> anyhow::Result<Mas
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
-pub enum ChWeightPattern {
+pub enum CourseWeightPattern {
     Pattern { pattern: String, weight: f32 },
     Patterns { patterns: Vec<String>, weight: f32 },
 }

@@ -28,7 +28,7 @@ music = [
 part_head = "124365"
 split_tenors = true
 # course_heads = ["*78", "*7856"] # uncomment to override `split_tenors`
-ch_weights = [{ pattern = "*78", weight = 0.05 }] # slight boost for tenors-together courses
+course_weights = [{ pattern = "*78", weight = 0.05 }] # slight boost for tenors-together courses
 
 # Starts/Ends (commented because they currently play badly with multi-part spliced)
 # snap_start = true
