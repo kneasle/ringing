@@ -2,7 +2,7 @@
 # of 5 (splices), not 3 (as you'd get if you discounted splices over the part heads).
 length = { min = 0, max = 800 }
 part_head = "1342"
-course_heads = ["*5678"]
+courses = ["*5678"]
 
 methods = ["Yorkshire Surprise Major", "Cornwall Surprise Major"]
 method_count = { min = 0, max = 800 }

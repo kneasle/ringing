@@ -1,7 +1,7 @@
 length = { min = 0, max = 500 }
 method = "Birthday Delight Major"
 start_indices = [-4]
-course_heads = ["24315678", "1*78"]
+courses = ["24315678", "1*78"]
 
 base_music = "none"
 music_file = "../music/8.toml"

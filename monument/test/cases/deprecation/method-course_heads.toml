@@ -1,0 +1,5 @@
+length = "QP"
+
+[method]
+title = "Yorkshire Surprise Major"
+course_heads = ["*78"] # `course_heads` has been renamed to `courses`

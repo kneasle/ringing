@@ -2,7 +2,7 @@
 
 length = "practice"
 method = "Plain Bob Major"
-course_heads = ["12345xxx"]
+courses = ["12345xxx"]
 base_calls = "far"
 base_music = "none" # Only count 87s as score
 

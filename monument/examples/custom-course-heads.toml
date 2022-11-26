@@ -1,5 +1,5 @@
 length = "peal"
 method = "Cambridge Surprise Royal"
 # Allow Monument to affect the tenors if the resulting course has 6-bell runs of 2-7
-course_heads = ["*7890", "1234567xxx", "1674523xxx"]
+courses = ["*7890", "1234567xxx", "1674523xxx"]
 music_file = "music-10.toml"

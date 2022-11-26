@@ -7,7 +7,7 @@ methods = [
 method_count = { min = 200, max = 1000 }
 
 part_head = "18234567"
-course_heads = [
+courses = [
     "1xxx5678", "12345xxx",
     "1xxx6782", "13456xxx",
     "1xxx7823", "14567xxx",

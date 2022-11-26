@@ -2,7 +2,7 @@
 # head).  In this case, `D[xB]N` shouldn't be emitted.
 length = { min = 0, max = 800 }
 part_head = "1342"
-course_heads = ["*5678"]
+courses = ["*5678"]
 base_music = "none"
 
 methods = [
