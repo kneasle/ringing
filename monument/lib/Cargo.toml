@@ -21,4 +21,4 @@ log = "0.4"
 num_cpus = "1.14"
 ordered-float = "3.4"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
-sysinfo = "0.26"
+sysinfo = "0.27"
