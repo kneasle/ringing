@@ -156,7 +156,8 @@ take you to more in-depth docs about it.
 **General:**
 - [`length`](#length-required)
 - [`num_comps = 100`](#num_comps)
-- [`allow_false = false`](#allow_false)
+- ~~[`allow_false = false`](#allow_false)~~ _(removed in v0.13.0)_
+- [`require_truth = true`](#require_truth)
 - ~~[`queue_limit`](#queue_limit)~~ _(removed in v0.12.0)_
 - [`graph_size_limit`](#graph_size_limit)
 
@@ -227,6 +228,8 @@ length = "peal"      # equivalent to `{ min = 5000, max = 5200 }`
 The number of compositions you want.  Defaults to `100`
 
 #### `allow_false`
+
+**_(replaced by `require_truth` in v0.13.0)_**
 
 If `true`, Monument will ignore falseness and generate potentially false compositions.  Defaults to
 `false`.

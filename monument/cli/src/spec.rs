@@ -41,10 +41,13 @@ pub struct Spec {
     /// Monument won't stop until it generates the `num_comps` best compositions
     #[serde(default = "default_num_comps")]
     num_comps: usize,
+    /// Set to `false` to allow Monument to ignore falseness and generate false compositions.
+    /// Compositions still won't have internal rounds.
+    #[serde(default = "crate::utils::get_true")]
+    require_truth: bool,
     /// Allow Monument to ignore falseness and generate false compositions.  Compositions still
     /// won't have internal rounds.
-    #[serde(default)]
-    allow_false: bool,
+    allow_false: Option<bool>, // Anti-alias of `require_truth`, deprecated in v0.13.0
 
     /* CONFIG OPTIONS */
     /// If set, overrides `--graph-size-limit` CLI argument
@@ -133,11 +136,11 @@ pub struct Spec {
     split_tenors: bool,
     /// Which course heads masks are allowed (overrides `split_tenors`)
     courses: Option<Vec<String>>,
-    course_heads: Option<Vec<String>>, // Deprecated spelling of `courses`
+    course_heads: Option<Vec<String>>, // Alias of `courses`, deprecated in v0.13.0
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
     course_weights: Vec<CourseWeightPattern>,
-    ch_weights: Option<Vec<CourseWeightPattern>>, // Deprecated spelling of `course_weights`
+    ch_weights: Option<Vec<CourseWeightPattern>>, // Alias of `course_weights`, deprecated in v0.13.0
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
@@ -204,9 +207,15 @@ impl Spec {
             CallDisplayStyle::Positional
         };
 
+        if self.allow_false.is_some() {
+            return Err(anyhow!(
+                "`allow_false` has been replaced with `require_truth`"
+            ));
+        }
+
         // General params
         search_builder.num_comps = self.num_comps;
-        search_builder.require_truth = !self.allow_false;
+        search_builder.require_truth = self.require_truth;
         // Methods
         search_builder.default_method_count = self.method_count.into();
         search_builder.default_start_indices = match &self.start_indices {

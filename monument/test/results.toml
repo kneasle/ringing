@@ -742,6 +742,9 @@ len |  music         4-bell runs      lb5s   56s   65s | avg score | calling
 ----|-------------------------------|-----------|-----------
 len |  music      4-bell runs   46s | avg score | calling
 '''
+"test/cases/deprecation/allow_false.toml" = '''
+Error: `allow_false` has been replaced with `require_truth`
+'''
 "test/cases/deprecation/ch_weight.toml" = '''
 Error: `ch_weights` has been renamed to `course_weights`
 '''
