@@ -132,7 +132,6 @@ fn search_chunk_combinations<'gr>(
     search_chunks(
         non_required_chunks.iter(),
         counts_needed_from_non_required_chunks,
-        non_required_chunks,
         &mut chunks_used,
         &mut chunk_patterns,
         &mut iter_count_down,
@@ -146,7 +145,6 @@ fn search_chunks<'iter, 'graph: 'iter>(
     mut chunks: impl Iterator<Item = &'iter (&'graph ChunkId, &'graph Chunk)> + Clone,
 
     counts_needed: &MusicBreakdown,
-    non_required_chunks: &[(&'graph ChunkId, &'graph Chunk)],
 
     chunks_used: &mut HashSet<&'graph ChunkId>,
     chunk_patterns: &mut Vec<HashSet<&'graph ChunkId>>,
@@ -174,7 +172,6 @@ fn search_chunks<'iter, 'graph: 'iter>(
     search_chunks(
         chunks.clone(),
         counts_needed,
-        non_required_chunks,
         chunks_used,
         chunk_patterns,
         iters_left,
@@ -193,7 +190,6 @@ fn search_chunks<'iter, 'graph: 'iter>(
     search_chunks(
         chunks.clone(),
         &counts_needed_with_this_chunk,
-        non_required_chunks,
         chunks_used,
         chunk_patterns,
         iters_left,
