@@ -227,7 +227,7 @@ impl PlaceNot {
     pub fn has_internal_places(&self) -> bool {
         let has_lead = self.places.first() == Some(&0);
         let has_lie = self.places.last() == Some(&(self.stage.num_bells_u8() - 1));
-        let num_external_places = if has_lead { 1 } else { 0 } + if has_lie { 1 } else { 0 };
+        let num_external_places = usize::from(has_lead) + usize::from(has_lie);
         self.places.len() > num_external_places
     }
 

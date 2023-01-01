@@ -3,7 +3,7 @@ methods = ["Bristol Surprise Major", "Yorkshire Surprise Major"]
 method_count = { min = 32, max = 160 }
 
 base_calls = "none"
-require_truth = false
+allow_false = true
 
 base_music = "none"
 music_file = "../music/8.toml"

@@ -64,7 +64,6 @@ pub enum Error {
     },
     /// Two [`Call`]s have the same lead location and name
     DuplicateCall {
-        symbol_type: &'static str,
         symbol: String,
         label: String,
         pn1: PlaceNot,
@@ -174,15 +173,14 @@ impl Display for Error {
                 )
             }
             Error::DuplicateCall {
-                symbol_type,
                 symbol,
                 label,
                 pn1,
                 pn2,
             } => write!(
                 f,
-                "Call {} symbol {:?} (at {:?}) is used for both {} and {}",
-                symbol_type, symbol, label, pn1, pn2
+                "Call symbol {:?} (at {:?}) is used for both {} and {}",
+                symbol, label, pn1, pn2
             ),
 
             /* GRAPH BUILD ERRORS */

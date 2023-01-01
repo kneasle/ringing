@@ -481,7 +481,7 @@ impl<'de> Visitor<'de> for StageVisitor {
     where
         E: Error,
     {
-        try_parse_stage(v as i64)
+        try_parse_stage(v)
     }
 
     fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>

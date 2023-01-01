@@ -257,8 +257,8 @@ impl Row {
     /* PERMUTATION ARITHMETIC */
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), checking that the [`Stage`]s are
-    /// compatible.  This is like using [the * operator](<Row as Mul>::mul), except that this returns a
-    /// [`Result`] instead of [`panic!`]ing.
+    /// compatible.  This is like using the * operator, except that this returns a [`Result`]
+    /// instead of [`panic!`]ing when the [`Stage`]s don't match.
     ///
     /// # Example
     /// ```
@@ -374,8 +374,7 @@ impl Row {
 
     /// Find the inverse of a `Row`.  If `X` is the input `Row`, and `Y = X.inv()`, then `XY = YX =
     /// I` where `I` is the identity on the same stage as `X` (i.e. rounds).  This operation cannot
-    /// fail, since all valid `Row`s have an inverse.  This is equivalent to using the [`!`
-    /// operator](<Self as Not>::not).
+    /// fail, since all valid `Row`s have an inverse.  This is equivalent to using the `!` operator.
     ///
     /// # Example
     /// ```
@@ -425,6 +424,7 @@ impl Row {
     /// #
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
+    // TODO: Rename this `inv_into_row`
     pub fn inv_into(&self, out: &mut Row) -> Result<(), IncompatibleStages> {
         IncompatibleStages::test_err(self.stage(), out.stage())?;
         // Now perform the inversion
@@ -458,6 +458,7 @@ impl Row {
     /// #
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
+    // TODO: Rename this `inv_into`
     pub fn inv_into_buf(&self, out: &mut RowBuf) {
         // Make sure that `out` has the right stage
         match out.stage().cmp(&self.stage()) {

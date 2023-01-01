@@ -96,11 +96,11 @@ impl Composition {
                             .map_or(part_head, |path_elem| &path_elem.start_row);
                         let place_of_calling_bell = row_after_call.place_of(calling_bell).unwrap();
                         let calling_position = &call.calling_positions[place_of_calling_bell];
-                        s.push_str(&call.display_symbol);
+                        s.push_str(call.short_symbol());
                         s.push_str(calling_position);
                     }
                     // TODO: Compute actual counts for positional calls
-                    CallDisplayStyle::Positional => s.push_str(&call.debug_symbol),
+                    CallDisplayStyle::Positional => s.push_str(&call.symbol),
                 }
                 s.push_str(if needs_brackets { "]" } else { "" });
             }

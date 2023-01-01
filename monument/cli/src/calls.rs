@@ -34,7 +34,7 @@ impl Default for BaseCalls {
 pub struct CustomCall {
     place_notation: String,
     symbol: String,
-    debug_symbol: Option<String>,
+    debug_symbol: Option<String>, // Deprecated in v0.13.0
     #[serde(default = "lead_end")]
     label: CallLabel,
     /// Deprecated alias for `label`
@@ -59,14 +59,17 @@ impl CustomCall {
         let place_notation = PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
             anyhow::Error::msg(format!(
                 "Can't parse place notation {:?} for call {:?}: {}",
-                self.place_notation,
-                self.debug_symbol.as_ref().unwrap_or(&self.symbol),
-                e
+                self.place_notation, &self.symbol, e
             ))
         })?;
         if self.lead_location.is_some() {
             return Err(anyhow::Error::msg(
                 "`calls.lead_location` has been renamed to `label`",
+            ));
+        }
+        if self.debug_symbol.is_some() {
+            return Err(anyhow::Error::msg(
+                "`debug_symbol` is now calculated automatically.  Use `symbol = \"-\" for bobs.`",
             ));
         }
         let (label_from, label_to) = match self.label {
@@ -75,7 +78,6 @@ impl CustomCall {
         };
 
         let builder = Call::new(self.symbol, place_notation)
-            .maybe_debug_symbol(self.debug_symbol)
             .maybe_calling_positions(
                 self.calling_positions
                     .as_ref()

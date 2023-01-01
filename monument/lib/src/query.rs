@@ -153,8 +153,7 @@ impl std::ops::Deref for Method {
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
 pub(crate) struct Call {
-    pub(crate) display_symbol: String,
-    pub(crate) debug_symbol: String,
+    pub(crate) symbol: String,
     pub(crate) calling_positions: Vec<String>,
 
     pub(crate) label_from: String,
@@ -163,6 +162,18 @@ pub(crate) struct Call {
     pub(crate) place_notation: PlaceNot,
 
     pub(crate) weight: Score,
+}
+
+impl Call {
+    /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
+    /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
+    /// `-WsW-WsW-H`.
+    pub(crate) fn short_symbol(&self) -> &str {
+        match self.symbol.as_str() {
+            "-" | "–" => "", // Convert `-` to ``
+            s => s,            // All other calls use their explicit symbol
+        }
+    }
 }
 
 ///////////

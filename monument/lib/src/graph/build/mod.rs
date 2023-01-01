@@ -293,7 +293,7 @@ fn check_query(query: &Query) -> crate::Result<()> {
     for call in &query.calls {
         if call.calling_positions.len() != query.stage.num_bells() {
             return Err(crate::Error::WrongCallingPositionsLength {
-                call_name: call.debug_symbol.clone(),
+                call_name: call.symbol.clone(),
                 calling_position_len: call.calling_positions.len(),
                 stage: query.stage,
             });
@@ -311,7 +311,7 @@ fn check_query(query: &Query) -> crate::Result<()> {
         for lead_label in [&call.label_from, &call.label_to] {
             if !defined_labels.contains(lead_label) {
                 return Err(crate::Error::UndefinedLabel {
-                    call_name: call.debug_symbol.clone(),
+                    call_name: call.symbol.clone(),
                     label: lead_label.clone(),
                 });
             }
@@ -319,8 +319,7 @@ fn check_query(query: &Query) -> crate::Result<()> {
     }
 
     // Two calls with the same name at the same lead location
-    check_for_duplicate_call_names(query, CallSymbolType::Display)?;
-    check_for_duplicate_call_names(query, CallSymbolType::Debug)?;
+    check_for_duplicate_call_names(query)?;
 
     // Course head masks which don't exist in other parts
     //
@@ -352,25 +351,17 @@ fn check_query(query: &Query) -> crate::Result<()> {
 }
 
 /// Check for two [`Call`]s which assign the same `symbol` at the same `label`.
-fn check_for_duplicate_call_names(query: &Query, symbol_type: CallSymbolType) -> crate::Result<()> {
+fn check_for_duplicate_call_names(query: &Query) -> crate::Result<()> {
     let sorted_calls = query
         .calls
         .iter()
         .map(|call: &Call| -> (&str, &str, &PlaceNot) {
-            let symbol = match symbol_type {
-                CallSymbolType::Debug => &call.debug_symbol,
-                CallSymbolType::Display => &call.display_symbol,
-            };
-            (symbol, &call.label_from, &call.place_notation)
+            (&call.symbol, &call.label_from, &call.place_notation)
         })
         .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
     for ((sym1, label1, pn1), (sym2, label2, pn2)) in sorted_calls.tuple_windows() {
         if sym1 == sym2 && label1 == label2 {
             return Err(crate::Error::DuplicateCall {
-                symbol_type: match symbol_type {
-                    CallSymbolType::Debug => "debug",
-                    CallSymbolType::Display => "display",
-                },
                 symbol: sym1.to_owned(),
                 label: label1.to_owned(),
                 pn1: pn1.clone(),
@@ -379,14 +370,6 @@ fn check_for_duplicate_call_names(query: &Query, symbol_type: CallSymbolType) ->
         }
     }
     Ok(())
-}
-
-/// `enum` of the different types of symbol given to a [`super::Call`] (i.e. `display_symbol` or
-/// `debug_symbol`).
-#[derive(Debug, Clone, Copy)]
-enum CallSymbolType {
-    Debug,
-    Display,
 }
 
 ///////////////
