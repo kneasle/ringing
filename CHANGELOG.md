@@ -1,6 +1,6 @@
 ## 1st January 2023
 
-### Monument v0.13.0
+### Monument v0.13.1
 
 #### Headline Features
 - (#201) Print an extra header line every 50 compositions.
@@ -15,6 +15,7 @@
     files.  Apart from massively simplifying the code, this also means that all test cases can be
     easily run directly from the command line (a very useful feature for debugging).
 - (#172) Test Monument's `stdout` output, rather than driving the library directly.
+- (no PR) Fix test case path that was invalid on Windows.
 
 ---
 
