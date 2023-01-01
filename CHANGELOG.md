@@ -1,18 +1,20 @@
-## (Unreleased)
+## 1st January 2023
 
-### Monument
+### Monument v0.13.0
+
+#### Headline Features
 - (#201) Print an extra header line every 50 compositions.
 - (#200) Remove `debug_symbol` and calculate it automatically for bobs.
 - (#200) Replace `allow_false` with `require_truth`
 - (#185) Rename `ch_weights` to `course_weights`, and `course_heads` to `courses`
+
+#### Internal Improvements
 - (#167) Remove dependence on `serde` from Monument's library.  Now, all the handling of TOML files
     is in `monument_cli`.
 - (#171) Don't store test cases in Markdown files, instead storing them all as individual TOML
     files.  Apart from massively simplifying the code, this also means that all test cases can be
     easily run directly from the command line (a very useful feature for debugging).
 - (#172) Test Monument's `stdout` output, rather than driving the library directly.
-
-### Bellframe
 
 ---
 
