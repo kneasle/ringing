@@ -24,11 +24,12 @@ on:
     # - release-workflow
     tags:
     - 'v*'
+
 jobs:
   create-release:
     name: create-release
     runs-on: ubuntu-latest
-    # Set to force version number, e.g., when no tag exists.
+    # Uncomment to force version number, e.g., when no tag exists.
     # env:
     #   MONUMENT_VERSION: TEST-0.0.1
     outputs:
@@ -80,15 +81,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-#     - name: Install packages (Ubuntu)
-#       if: matrix.os == 'ubuntu-18.04'
-#       run: sudo apt install libssl-dev
-
-#    - name: Install packages (macOS)
-#      if: matrix.os == 'macos-latest'
-#      run: |
-#        ci/macos-install-packages
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
