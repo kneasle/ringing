@@ -1,6 +1,7 @@
 ## (Unreleased)
 
 ### Monument
+- (#201) Print an extra header line every 50 compositions.
 - (#200) Remove `debug_symbol` and calculate it automatically for bobs.
 - (#200) Replace `allow_false` with `require_truth`
 - (#185) Rename `ch_weights` to `course_weights`, and `course_heads` to `courses`
