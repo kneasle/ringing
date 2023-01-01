@@ -9,7 +9,7 @@ fn main() {
     monument_cli::init_logging(args.log_level());
     let result = monument_cli::run(&args.input_file, &args.config, Environment::Cli);
     match result {
-        Ok(Some(query_result)) => query_result.print(),
+        Ok(Some(mut query_result)) => query_result.print(),
         Ok(None) => assert!(args.config.debug_option.is_some()),
         Err(e) => {
             // In the case of an error, print the error message nicely then terminate the program
