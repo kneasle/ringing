@@ -1,0 +1,18 @@
+name: release v2
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+
+#############################################################
+# JOB #1: Set up release, removing old release if necessary #
+#############################################################
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, 'Release ')
+    run: |
+      echo "HI"
