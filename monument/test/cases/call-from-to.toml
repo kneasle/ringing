@@ -14,8 +14,7 @@ part_head = "13456782"
 
 base_calls = "none" # Only use our own custom calls
 [[calls]]
-symbol = ""
-debug_symbol = "-"
+symbol = "-"
 place_notation = "14"
 label = { from = "2nds", to = "LE" }
 

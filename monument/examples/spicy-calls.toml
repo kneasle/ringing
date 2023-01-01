@@ -12,8 +12,7 @@ stage = 8
 
 
 [[calls]]
-debug_symbol = "-"
-symbol = ""
+symbol = "-"
 place_notation = "12"
 
 [[calls]]

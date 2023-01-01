@@ -329,7 +329,6 @@ pub const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
 /// Builder API for a call.
 pub struct Call {
     symbol: String,
-    debug_symbol: Option<String>,
     calling_positions: Option<Vec<String>>,
 
     label_from: String,
@@ -345,30 +344,12 @@ impl Call {
     pub fn new(symbol: impl Into<String>, place_notation: PlaceNot) -> Self {
         Self {
             symbol: symbol.into(),
-            debug_symbol: None,      // Use `symbol`
             calling_positions: None, // Compute default calling positions
             label_from: LABEL_LEAD_END.to_owned(),
             label_to: LABEL_LEAD_END.to_owned(),
             place_notation,
             weight: DEFAULT_MISC_CALL_WEIGHT,
         }
-    }
-
-    /// If set, this call will use a different symbol for debugging as displaying.  This is
-    /// currently only used for bobs (which display as '' but debug as '-').
-    ///
-    /// If `debug_symbol` isn't called, this will be the same as the 'display' symbol.
-    pub fn debug_symbol(mut self, symbol: impl Into<String>) -> Self {
-        self.debug_symbol = Some(symbol.into());
-        self
-    }
-
-    /// If passed `Some(_)`, the behaviour is the same as [`Call::debug_symbol`]; if `None`
-    /// is passed, the behaviour is reverted to the default (using the same symbol for debug and
-    /// display).
-    pub fn maybe_debug_symbol<T: Into<String>>(mut self, symbol: Option<T>) -> Self {
-        self.debug_symbol = symbol.map(T::into);
-        self
     }
 
     /// Forces the use of a given set of calling positions.  The supplied [`Vec`] contains one
@@ -411,8 +392,7 @@ impl Call {
     /// Builds a [`Call`] into a [`crate::query::Call`].
     fn build(self) -> query::Call {
         query::Call {
-            debug_symbol: self.debug_symbol.unwrap_or_else(|| self.symbol.clone()),
-            display_symbol: self.symbol,
+            symbol: self.symbol,
             calling_positions: self
                 .calling_positions
                 .unwrap_or_else(|| default_calling_positions(&self.place_notation)),
@@ -470,7 +450,7 @@ impl BaseCalls {
                 BaseCallType::Near => PlaceNot::parse("14", stage).unwrap(),
                 BaseCallType::Far => PlaceNot::from_slice(&mut [0, n - 3], stage).unwrap(),
             };
-            calls.push(lead_end_call(bob_pn, "", "-", bob_weight)); // Hide in display; '-' in debug
+            calls.push(lead_end_call(bob_pn, "-", bob_weight)); // Hide in display; '-' in debug
         }
         // Add single
         if let Some(single_weight) = self.single_weight {
@@ -480,7 +460,7 @@ impl BaseCalls {
                     PlaceNot::from_slice(&mut [0, n - 3, n - 2, n - 1], stage).unwrap()
                 }
             };
-            calls.push(lead_end_call(single_pn, "s", "s", single_weight));
+            calls.push(lead_end_call(single_pn, "s", single_weight));
         }
 
         calls
@@ -499,15 +479,9 @@ impl Default for BaseCalls {
 }
 
 /// Create a [`query::Call`] which replaces the lead end with a given [`PlaceNot`]
-fn lead_end_call(
-    place_not: PlaceNot,
-    display_symbol: &str,
-    debug_symbol: &str,
-    weight: f32,
-) -> query::Call {
+fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> query::Call {
     query::Call {
-        display_symbol: display_symbol.to_owned(),
-        debug_symbol: debug_symbol.to_owned(),
+        symbol: symbol.to_owned(),
         calling_positions: default_calling_positions(&place_not),
         label_from: LABEL_LEAD_END.to_owned(),
         label_to: LABEL_LEAD_END.to_owned(),

@@ -4,8 +4,7 @@ base_music = "none"
 
 [[calls]]
 place_notation = "58"
-symbol = ""
-debug_symbol = "-"
+symbol = "-"
 label = "HL"
 calling_positions = "hwmvfbi_"
 weight = -1

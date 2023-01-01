@@ -751,6 +751,9 @@ Error: `ch_weights` has been renamed to `course_weights`
 "test/cases/deprecation/course_heads.toml" = '''
 Error: `course_heads` has been renamed to `courses`
 '''
+"test/cases/deprecation/debug_symbol.toml" = '''
+Error: `debug_symbol` is now calculated automatically.  Use `symbol = "-" for bobs.`
+'''
 "test/cases/deprecation/lead_locations-in-call.toml" = '''
 Error: `calls.lead_location` has been renamed to `label`
 '''
@@ -805,8 +808,11 @@ Error: Can't parse course mask "1*2*3": too many `*`s.  Masks can only have one 
 "test/cases/error-messages/courses/too-short.toml" = '''
 Error: Can't parse course mask "12345": mask is too short; did you mean `12345*` or `12345678`?
 '''
-"test/cases/error-messages/duplicate-calls/debug-symbol.toml" = '''
-Error: Call debug symbol "-" (at "LE") is used for both 14 and 16
+"test/cases/error-messages/duplicate-calls/bob.toml" = '''
+Error: Call symbol "-" (at "LE") is used for both 14 and 16
+'''
+"test/cases/error-messages/duplicate-calls/custom.toml" = '''
+Error: Call symbol "x" (at "LE") is used for both 16 and 18
 '''
 "test/cases/error-messages/duplicate-calls/different-lead-locations.toml" = '''
  64 |    0.00 | -0.071875 | sHsH
@@ -825,11 +831,11 @@ Error: Call debug symbol "-" (at "LE") is used for both 14 and 16
 ----|---------|-----------|-----------
 len |  music  | avg score | calling
 '''
-"test/cases/error-messages/duplicate-calls/display-symbol.toml" = '''
-Error: Call display symbol "s" (at "LE") is used for both 1234 and 1678
-'''
 "test/cases/error-messages/duplicate-calls/same-pn.toml" = '''
-Error: Call display symbol "s" (at "LE") is used for both 1234 and 1234
+Error: Call symbol "s" (at "LE") is used for both 1234 and 1234
+'''
+"test/cases/error-messages/duplicate-calls/single.toml" = '''
+Error: Call symbol "s" (at "LE") is used for both 1234 and 1678
 '''
 "test/cases/error-messages/duplicate-shorthand.toml" = '''
 Error: Methods "London Surprise Major" and "Lessness Surprise Major" share a shorthand (L)

@@ -1,0 +1,9 @@
+length = "QP"
+method = "Yorkshire Surprise Major"
+
+base_calls = "none"
+
+[[calls]]
+symbol = ""
+debug_symbol = "-"
+place_notation = "14"

@@ -2,6 +2,5 @@ length = "QP"
 method = "Bristol Surprise Major"
 
 [[calls]]
-debug_symbol = "z"
 symbol = "s" # Name clashes with the builtin 1234 singles
 place_notation = "1678"
