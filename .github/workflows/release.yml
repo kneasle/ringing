@@ -19,9 +19,8 @@
 name: release
 on:
   push:
-    # Enable when testing release infrastructure on a branch.
-    # branches:
-    # - release-workflow
+    branches:
+    - release-workflow
     tags:
     - 'v*'
 
@@ -30,8 +29,8 @@ jobs:
     name: create-release
     runs-on: ubuntu-latest
     # Uncomment to force version number, e.g., when no tag exists.
-    # env:
-    #   MONUMENT_VERSION: TEST-0.0.1
+    env:
+      MONUMENT_VERSION: TEST-0.0.1
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
       monument_version: ${{ env.MONUMENT_VERSION }}
@@ -45,6 +44,7 @@ jobs:
           # See: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
           echo "MONUMENT_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "version is: ${{ env.MONUMENT_VERSION }}"
+
       - name: Create GitHub release
         id: release
         uses: actions/create-release@v1
@@ -54,82 +54,82 @@ jobs:
           tag_name: ${{ env.MONUMENT_VERSION }}
           release_name: ${{ env.MONUMENT_VERSION }}
 
-  build-release:
-    name: build-release
-    needs: ['create-release']
-    runs-on: ${{ matrix.os }}
-    env:
-      # Emit backtraces on panics.
-      RUST_BACKTRACE: 1
-    strategy:
-      matrix:
-        build: [linux, macos, windows-64, windows-32]
-        include:
-        - build: linux
-          os: ubuntu-18.04
-          target: x86_64-unknown-linux-musl
-        - build: macos
-          os: macos-latest
-          target: x86_64-apple-darwin
-        - build: windows-64
-          os: windows-2019
-          target: x86_64-pc-windows-msvc
-        - build: windows-32
-          os: windows-2019
-          target: i686-pc-windows-msvc
+#   build-release:
+#     name: build-release
+#     needs: ['create-release']
+#     runs-on: ${{ matrix.os }}
+#     env:
+#       # Emit backtraces on panics.
+#       RUST_BACKTRACE: 1
+#     strategy:
+#       matrix:
+#         build: [linux, macos, windows-64, windows-32]
+#         include:
+#         - build: linux
+#           os: ubuntu-18.04
+#           target: x86_64-unknown-linux-musl
+#         - build: macos
+#           os: macos-latest
+#           target: x86_64-apple-darwin
+#         - build: windows-64
+#           os: windows-2019
+#           target: x86_64-pc-windows-msvc
+#         - build: windows-32
+#           os: windows-2019
+#           target: i686-pc-windows-msvc
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+#     steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v2
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-        target: ${{ matrix.target }}
+#     - name: Install Rust
+#       uses: actions-rs/toolchain@v1
+#       with:
+#         toolchain: stable
+#         profile: minimal
+#         override: true
+#         target: ${{ matrix.target }}
 
-    - name: Build release binary
-      run: cargo build --verbose --release
+#     - name: Build release binary
+#       run: cargo build --verbose --release
 
-      # Run tests & clippy, just to make sure that we can't accidentally publish an obviously borked
-      # build. This **should** be stopped by PR checks, but better safe than sorry.
-    - name: Run tests
-      run: cargo test --release
-#   - name: Run clippy
-#     run: cargo clippy -- -D clippy::all # Deny all clippy errors, but only for releases
+#       # Run tests & clippy, just to make sure that we can't accidentally publish an obviously borked
+#       # build. This **should** be stopped by PR checks, but better safe than sorry.
+#     - name: Run tests
+#       run: cargo test --release
+# #   - name: Run clippy
+# #     run: cargo clippy -- -D clippy::all # Deny all clippy errors, but only for releases
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.build == 'linux' || matrix.build == 'macos'
-      run: |
-        strip "target/release/monument_cli"
+#     - name: Strip release binary (linux and macos)
+#       if: matrix.build == 'linux' || matrix.build == 'macos'
+#       run: |
+#         strip "target/release/monument_cli"
 
-    - name: Build archive
-      shell: bash
-      run: |
-        staging="monument-${{ needs.create-release.outputs.monument_version }}-${{ matrix.build }}"
-        mkdir -p "$staging"
+#     - name: Build archive
+#       shell: bash
+#       run: |
+#         staging="monument-${{ needs.create-release.outputs.monument_version }}-${{ matrix.build }}"
+#         mkdir -p "$staging"
 
-        cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$staging/"
-        cp -r monument/examples "$staging/"
+#         cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$staging/"
+#         cp -r monument/examples "$staging/"
 
-        if [ "${{ matrix.os }}" = "windows-2019" ]; then
-          cp "target/release/monument_cli.exe" "$staging/monument.exe"
-          7z a "$staging.zip" "$staging"
-          echo "ASSET=$staging.zip" >> $GITHUB_ENV
-        else
-          cp "target/release/monument_cli" "$staging/monument"
-          tar czf "$staging.tar.gz" "$staging"
-          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
-        fi
+#         if [ "${{ matrix.os }}" = "windows-2019" ]; then
+#           cp "target/release/monument_cli.exe" "$staging/monument.exe"
+#           7z a "$staging.zip" "$staging"
+#           echo "ASSET=$staging.zip" >> $GITHUB_ENV
+#         else
+#           cp "target/release/monument_cli" "$staging/monument"
+#           tar czf "$staging.tar.gz" "$staging"
+#           echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+#         fi
 
-    - name: Upload release archive
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ env.ASSET }}
-        asset_name: ${{ env.ASSET }}
-        asset_content_type: application/octet-stream
+#     - name: Upload release archive
+#       uses: actions/upload-release-asset@v1.0.1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         upload_url: ${{ needs.create-release.outputs.upload_url }}
+#         asset_path: ${{ env.ASSET }}
+#         asset_name: ${{ env.ASSET }}
+#         asset_content_type: application/octet-stream
