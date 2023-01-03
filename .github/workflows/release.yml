@@ -38,9 +38,11 @@ jobs:
       # MONUMENT_VERSION: TEST-0.0.1
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
-      upload_url: ${{ steps.release.outputs.upload_url }}
       monument_version: ${{ env.MONUMENT_VERSION }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Get the release version from the tag
         if: env.MONUMENT_VERSION == ''
         shell: bash
@@ -51,13 +53,16 @@ jobs:
           echo "version is: ${{ env.MONUMENT_VERSION }}"
 
       - name: Create GitHub release
-        id: release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.MONUMENT_VERSION }}
-          release_name: ${{ env.MONUMENT_VERSION }}
+        shell: bash
+        run: |
+          # Delete duplicate release if it exists
+          if gh release view $MONUMENT_VERSION; then
+            gh release delete $MONUMENT_VERSION
+          fi
+
+          gh release create $MONUMENT_VERSION --notes "Hello, $(git rev-parse HEAD --short)!"
+          gh release edit $MONUMENT_VERSION --title "Monument $MONUMENT_VERSION"
+          gh release edit $MONUMENT_VERSION --draft=true
 
 #####################
 # BUILD EXECUTABLES #
@@ -71,6 +76,7 @@ jobs:
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
       MONUMENT_VERSION: ${{ needs.create-release.outputs.monument_version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         build: [linux, macos, windows-64, windows-32]
@@ -132,11 +138,23 @@ jobs:
         fi
 
     - name: Upload release archive
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ${{ env.ASSET }}
-        asset_name: ${{ env.ASSET }}
-        asset_content_type: application/octet-stream
+      shell: bash
+      run: gh release upload $MONUMENT_VERSION ${{ env.ASSET }}
+
+########################
+# UN-DRAFT THE RELEASE #
+########################
+
+  publish-release:
+    needs: ['create-release', 'publish-crates']
+    runs-on: ubuntu-latest
+    env:
+      MONUMENT_VERSION: ${{ needs.create-release.outputs.monument_version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Remove pre-release tag
+      shell: bash
+      run: gh release edit $MONUMENT_VERSION --draft=false
