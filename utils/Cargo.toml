@@ -1,6 +1,6 @@
 [package]
 name = "kneasle_ringing_utils"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
