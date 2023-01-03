@@ -142,6 +142,25 @@ jobs:
       run: gh release upload $MONUMENT_VERSION ${{ env.ASSET }}
 
 ########################
+# PUBLISH TO CRATES.IO #
+########################
+
+  publish-crates:
+    needs: ['create-release', 'build-release']
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Cargo Workspaces
+      run: cargo install cargo-workspaces
+
+    - name: Publish to crates.io
+      run: cargo ws publish --from-git
+
+########################
 # UN-DRAFT THE RELEASE #
 ########################
 
