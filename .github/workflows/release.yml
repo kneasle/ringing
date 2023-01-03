@@ -16,7 +16,7 @@
 # Reference:
 # https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
 
-name: release
+name: Release
 on:
   push:
     # Enable when testing release infrastructure on a branch.
@@ -24,26 +24,32 @@ on:
     # - release-workflow
     tags:
     - 'v*'
+
+######################
+# CREATE NEW RELEASE #
+######################
+
 jobs:
   create-release:
-    name: create-release
+    name: Create Release
     runs-on: ubuntu-latest
-    # Set to force version number, e.g., when no tag exists.
-    # env:
-    #   MONUMENT_VERSION: TEST-0.0.1
+    env:
+      # Uncomment to force version number, e.g., when no tag exists.
+      # MONUMENT_VERSION: TEST-0.0.1
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
       monument_version: ${{ env.MONUMENT_VERSION }}
     steps:
       - name: Get the release version from the tag
-        shell: bash
         if: env.MONUMENT_VERSION == ''
+        shell: bash
         run: |
           # Apparently, this is the right way to get a tag name. Really?
-          #
           # See: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
           echo "MONUMENT_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "version is: ${{ env.MONUMENT_VERSION }}"
+
       - name: Create GitHub release
         id: release
         uses: actions/create-release@v1
@@ -53,13 +59,18 @@ jobs:
           tag_name: ${{ env.MONUMENT_VERSION }}
           release_name: ${{ env.MONUMENT_VERSION }}
 
+#####################
+# BUILD EXECUTABLES #
+#####################
+
   build-release:
-    name: build-release
+    name: Build Release
     needs: ['create-release']
     runs-on: ${{ matrix.os }}
     env:
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
+      MONUMENT_VERSION: ${{ needs.create-release.outputs.monument_version }}
     strategy:
       matrix:
         build: [linux, macos, windows-64, windows-32]
@@ -81,15 +92,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-#     - name: Install packages (Ubuntu)
-#       if: matrix.os == 'ubuntu-18.04'
-#       run: sudo apt install libssl-dev
-
-#    - name: Install packages (macOS)
-#      if: matrix.os == 'macos-latest'
-#      run: |
-#        ci/macos-install-packages
-
     - name: Install Rust
       uses: actions-rs/toolchain@v1
       with:
@@ -101,35 +103,32 @@ jobs:
     - name: Build release binary
       run: cargo build --verbose --release
 
-      # Run tests & clippy, just to make sure that we can't accidentally publish an obviously borked
-      # build. This **should** be stopped by PR checks, but better safe than sorry.
+      # Run tests, just to make sure that we can't accidentally publish an obviously borked build.
+      # This **should** be caught by the PR checks, but better safe than sorry.
     - name: Run tests
       run: cargo test --release
-#   - name: Run clippy
-#     run: cargo clippy -- -D clippy::all # Deny all clippy errors, but only for releases
 
     - name: Strip release binary (linux and macos)
       if: matrix.build == 'linux' || matrix.build == 'macos'
-      run: |
-        strip "target/release/monument_cli"
+      run: strip "target/release/monument_cli"
 
     - name: Build archive
       shell: bash
       run: |
-        staging="monument-${{ needs.create-release.outputs.monument_version }}-${{ matrix.build }}"
-        mkdir -p "$staging"
+        STAGING="monument-$MONUMENT_VERSION-${{ matrix.build }}"
+        mkdir -p "$STAGING"
 
-        cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$staging/"
-        cp -r monument/examples "$staging/"
+        cp {LICENSE,monument/README.md,monument/cli/guide.md,monument/to-complib.py} "$STAGING/"
+        cp -r monument/examples "$STAGING/"
 
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
-          cp "target/release/monument_cli.exe" "$staging/monument.exe"
-          7z a "$staging.zip" "$staging"
-          echo "ASSET=$staging.zip" >> $GITHUB_ENV
+          cp "target/release/monument_cli.exe" "$STAGING/monument.exe"
+          7z a "$STAGING.zip" "$STAGING"
+          echo "ASSET=$STAGING.zip" >> $GITHUB_ENV
         else
-          cp "target/release/monument_cli" "$staging/monument"
-          tar czf "$staging.tar.gz" "$staging"
-          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+          cp "target/release/monument_cli" "$STAGING/monument"
+          tar czf "$STAGING.tar.gz" "$STAGING"
+          echo "ASSET=$STAGING.tar.gz" >> $GITHUB_ENV
         fi
 
     - name: Upload release archive
