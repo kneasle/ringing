@@ -1,7 +1,7 @@
 //! Code shared between both the test and benchmark runners
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     io::Read,
     path::{Path, PathBuf},
     process::Stdio,
@@ -205,6 +205,40 @@ enum IgnoreReason {
     ExplicitIgnore,
     /// The file was a music file, and never should have been tested in the first place
     MusicFile,
+}
+
+//////////////////
+// RESULT FILES //
+//////////////////
+
+/// The contents of a results file.  We use a [`BTreeMap`] so that the test cases are always
+/// written in a consistent order (i.e. alphabetical order by file path), thus making the diffs
+/// easier to digest.
+pub type ResultsFile<T> = BTreeMap<PathFromMonument, T>;
+
+pub fn load_results<'s, T: Deserialize<'s>>(
+    path: impl AsRef<Path>,
+    toml_buf: &'s mut String,
+) -> anyhow::Result<ResultsFile<T>> {
+    let full_path = PathFromMonument::new(path.as_ref()).relative_to_cargo_toml();
+    if !full_path.exists() {
+        return Ok(ResultsFile::new()); // Return empty results if file doesn't exist
+    }
+
+    *toml_buf = std::fs::read_to_string(&full_path)
+        .with_context(|| format!("Error loading results file ({:?})", full_path))?;
+    let results_file: ResultsFile<T> = toml::from_str(toml_buf)
+        .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
+    Ok(results_file)
+}
+
+pub fn write_results<T: Serialize>(results: &ResultsFile<T>, path: &str) -> anyhow::Result<()> {
+    let toml = toml::to_string_pretty(results)
+        .with_context(|| format!("Error serialising results file {:?}", path))?;
+
+    let path_from_cargo_toml = PathFromMonument::new(path).relative_to_cargo_toml();
+    std::fs::write(path_from_cargo_toml, toml.as_bytes())
+        .with_context(|| format!("Error writing results to {:?}", path))
 }
 
 ///////////

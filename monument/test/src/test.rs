@@ -3,13 +3,11 @@
 mod common;
 
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::HashSet,
     fmt::Debug,
-    path::Path,
     time::{Duration, Instant},
 };
 
-use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
 use common::{PathFromMonument, UnrunTestCase};
 use difference::Changeset;
@@ -97,7 +95,7 @@ pub fn run() -> anyhow::Result<Outcome> {
 }
 
 fn get_cases() -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
-    let mut results = load_results(EXPECTED_RESULTS_PATH)?;
+    let mut results = common::load_results(EXPECTED_RESULTS_PATH, &mut String::new())?;
 
     common::load_cases(
         TEST_DIRS,
@@ -159,6 +157,14 @@ impl Outcome {
     }
 }
 
+fn write_actual_results(cases: Vec<RunTestCase<CaseData>>) -> anyhow::Result<()> {
+    let actual_results: common::ResultsFile<String> = cases
+        .into_iter()
+        .filter_map(|case| case.output.map(|o| (case.base.path, o)))
+        .collect();
+    common::write_results(&actual_results, ACTUAL_RESULTS_PATH)
+}
+
 //////////////////////////
 // TOP-LEVEL BLESS CODE //
 //////////////////////////
@@ -184,8 +190,8 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
         Removed,
     }
     // Load all results files
-    let mut expected_results = load_results(EXPECTED_RESULTS_PATH)?;
-    let mut actual_results = load_results(ACTUAL_RESULTS_PATH)?;
+    let mut expected_results = common::load_results(EXPECTED_RESULTS_PATH, &mut String::new())?;
+    let mut actual_results = common::load_results(ACTUAL_RESULTS_PATH, &mut String::new())?;
     // Determine which tests cases we have (any) results for
     let mut test_case_names = HashSet::<PathFromMonument>::new();
     test_case_names.extend(expected_results.keys().cloned());
@@ -220,7 +226,7 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
             };
             Some((path, entry))
         })
-        .collect::<ResultsFile>();
+        .collect::<common::ResultsFile<String>>();
     assert!(expected_results.is_empty());
     assert!(actual_results.is_empty());
 
@@ -245,42 +251,7 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     }
     // Always write the results, even if there's nothing to bless.  This way, we can handle things
     // like reformatting the JSON files
-    write_results(&merged_results, EXPECTED_RESULTS_PATH)
-}
-
-//////////////////
-// RESULT FILES //
-//////////////////
-
-/// The contents of the `results.toml` file, found at [`RESULTS_PATH`].  We use a [`BTreeMap`] so
-/// that the test cases are always written in a consistent order (i.e. alphabetical order by file
-/// path), thus making the diffs easier to digest.
-type ResultsFile = BTreeMap<PathFromMonument, String>;
-
-fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
-    let full_path = PathFromMonument::new(path.as_ref()).relative_to_cargo_toml();
-    let toml = std::fs::read_to_string(&full_path)
-        .with_context(|| format!("Error loading results file ({:?})", full_path))?;
-    let results_file: ResultsFile = toml::from_str(&toml)
-        .with_context(|| format!("Error parsing results file ({:?})", full_path))?;
-    Ok(results_file)
-}
-
-fn write_actual_results(cases: Vec<RunTestCase<CaseData>>) -> anyhow::Result<()> {
-    let actual_results: ResultsFile = cases
-        .into_iter()
-        .filter_map(|case| case.output.map(|o| (case.base.path, o)))
-        .collect();
-    write_results(&actual_results, ACTUAL_RESULTS_PATH)
-}
-
-fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
-    let toml = toml::to_string_pretty(results)
-        .with_context(|| format!("Error serialising results file {:?}", path))?;
-
-    let path_from_cargo_toml = PathFromMonument::new(path).relative_to_cargo_toml();
-    std::fs::write(path_from_cargo_toml, toml.as_bytes())
-        .with_context(|| format!("Error writing results to {:?}", path))
+    common::write_results(&merged_results, EXPECTED_RESULTS_PATH)
 }
 
 ////////////////////////////
