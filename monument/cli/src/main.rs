@@ -7,10 +7,14 @@ use structopt::StructOpt;
 fn main() {
     let args = CliArgs::from_args();
     monument_cli::init_logging(args.log_level());
-    let result = monument_cli::run(&args.input_file, &args.config, Environment::Cli);
+    let result = monument_cli::run(&args.input_file, &args.options, Environment::Cli);
     match result {
-        Ok(Some(mut query_result)) => query_result.print(),
-        Ok(None) => assert!(args.config.debug_option.is_some()),
+        Ok(Some(mut query_result)) => {
+            if !args.options.only_display_update_line {
+                query_result.print();
+            }
+        }
+        Ok(None) => assert!(args.options.debug_option.is_some()),
         Err(e) => {
             // In the case of an error, print the error message nicely then terminate the program
             // with code -1 without causing a panic message.

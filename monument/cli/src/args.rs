@@ -15,7 +15,7 @@ pub struct CliArgs {
     pub input_file: PathBuf,
 
     #[structopt(flatten)]
-    pub config: Options,
+    pub options: Options,
 
     /// Makes Monument print more output (`-vv` will produce all output).
     #[structopt(short, long = "verbose", parse(from_occurrences))]
@@ -47,6 +47,10 @@ pub struct Options {
     /// structures.  `no-search` will run as normal but stop just before starting the full search.
     #[structopt(short = "D", long)]
     pub debug_option: Option<DebugOption>,
+    /// If `true` Monument will only display the update line, outputting no compositions until
+    /// the search is complete.
+    #[structopt(long = "only-update-line")]
+    pub only_display_update_line: bool,
 }
 
 impl CliArgs {
