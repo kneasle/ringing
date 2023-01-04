@@ -5,4 +5,4 @@
 bless = "-q test --test integration -- bless"
 # `cargo cut-release` sets up the versions for a new Monument release and pushes a tag to trigger
 # the release CI.
-cut-release = "ws version --force \"*\" --no-individual-tags"
+cut-release = "ws version --force * --no-individual-tags"
