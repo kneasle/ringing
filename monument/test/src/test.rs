@@ -5,18 +5,17 @@ mod common;
 use std::{
     collections::{BTreeMap, HashSet},
     fmt::Debug,
-    io::Read,
-    path::{Path, PathBuf},
-    process::Stdio,
+    path::Path,
     time::{Duration, Instant},
 };
 
 use anyhow::Context;
 use colored::{Color, ColoredString, Colorize};
-use common::PathFromMonument;
+use common::{PathFromMonument, UnrunTestCase};
 use difference::Changeset;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use regex::Regex;
+
+use crate::common::RunTestCase;
 
 const EXPECTED_RESULTS_PATH: &str = "test/results.toml";
 const ACTUAL_RESULTS_PATH: &str = "test/.last-results.toml";
@@ -84,10 +83,10 @@ pub fn run() -> anyhow::Result<Outcome> {
     let start = Instant::now();
 
     // Collect the test cases
-    let cases = sources_to_cases(common::load_cases(TEST_DIRS, IGNORE_PATH)?)?;
+    let cases = get_cases()?;
     // Run the tests.
     println!("running {} tests", cases.len());
-    let completed_tests: Vec<RunTestCase> = cases.into_par_iter().map(run_test).collect();
+    let completed_tests: Vec<RunTestCase<CaseData>> = cases.into_par_iter().map(run_test).collect();
     // Collate failures and unspecified tests from all `Suite`s
     report_failures(&completed_tests);
     let outcome = print_summary_string(&completed_tests, start.elapsed());
@@ -95,6 +94,51 @@ pub fn run() -> anyhow::Result<Outcome> {
     write_actual_results(completed_tests)?;
 
     Ok(outcome)
+}
+
+fn get_cases() -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
+    let mut results = load_results(EXPECTED_RESULTS_PATH)?;
+
+    common::load_cases(
+        TEST_DIRS,
+        IGNORE_PATH,
+        |path: &PathFromMonument, is_ignored: bool| {
+            let is_example = path.to_string().contains("example");
+            CaseData {
+                behaviour: if is_ignored {
+                    CaseBehaviour::Ignored
+                } else if is_example {
+                    CaseBehaviour::Example
+                } else {
+                    CaseBehaviour::Test
+                },
+                expected_output: results.remove(path),
+            }
+        },
+    )
+}
+
+/// Run a test case (skipping ignored cases), determining its [`TestResult`].  Prints a status line
+/// once finished.
+fn run_test(case: UnrunTestCase<CaseData>) -> RunTestCase<CaseData> {
+    let no_search = match case.behaviour {
+        CaseBehaviour::Test => false,
+        CaseBehaviour::Example => true,
+        CaseBehaviour::Ignored => false, // Exact value doesn't matter
+    };
+
+    let mut args = vec!["-q"];
+    if no_search {
+        args.extend(["-D", "no-search"]);
+    }
+    let run_case = case.run(&args, /* display_stderr = */ false);
+
+    println!(
+        "{} ... {}",
+        run_case.name(),
+        run_case.colored_outcome_string()
+    );
+    run_case
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -204,34 +248,6 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     write_results(&merged_results, EXPECTED_RESULTS_PATH)
 }
 
-////////////////////////
-// LOADING TEST CASES //
-////////////////////////
-
-/// Convert case paths into [`UnrunTestCase`]s.
-fn sources_to_cases(sources: Vec<(PathFromMonument, bool)>) -> anyhow::Result<Vec<UnrunTestCase>> {
-    // Combine them with the auxiliary files (results, ignore, timings, etc.) to get the
-    // `UnrunTestCase`s
-    let mut results = load_results(EXPECTED_RESULTS_PATH)?;
-
-    let mut unrun_test_cases = Vec::new();
-    for (path, is_ignored) in sources {
-        let is_example = path.to_string().contains("example");
-        unrun_test_cases.push(UnrunTestCase {
-            expected_output: results.remove(&path),
-            state: if is_ignored {
-                CaseBehaviour::Ignored
-            } else if is_example {
-                CaseBehaviour::Example
-            } else {
-                CaseBehaviour::Test
-            },
-            path,
-        });
-    }
-    Ok(unrun_test_cases)
-}
-
 //////////////////
 // RESULT FILES //
 //////////////////
@@ -250,10 +266,10 @@ fn load_results(path: impl AsRef<Path>) -> anyhow::Result<ResultsFile> {
     Ok(results_file)
 }
 
-fn write_actual_results(cases: Vec<RunTestCase>) -> anyhow::Result<()> {
+fn write_actual_results(cases: Vec<RunTestCase<CaseData>>) -> anyhow::Result<()> {
     let actual_results: ResultsFile = cases
         .into_iter()
-        .filter_map(|case| case.actual_output.map(|o| (case.base.path, o)))
+        .filter_map(|case| case.output.map(|o| (case.base.path, o)))
         .collect();
     write_results(&actual_results, ACTUAL_RESULTS_PATH)
 }
@@ -267,104 +283,25 @@ fn write_results(results: &ResultsFile, path: &str) -> anyhow::Result<()> {
         .with_context(|| format!("Error writing results to {:?}", path))
 }
 
-////////////////////////
-// RUNNING TEST CASES //
-////////////////////////
-
-/// Run a test case (skipping ignored cases), determining its [`TestResult`].  Prints a status line
-/// once finished.
-fn run_test(case: UnrunTestCase) -> RunTestCase {
-    // Skip any ignored tests
-    let no_search = match case.state {
-        CaseBehaviour::Test => false,
-        CaseBehaviour::Example => true,
-        CaseBehaviour::Ignored => {
-            return RunTestCase {
-                base: case,
-                actual_output: None,
-            };
-        }
-    };
-
-    // Determine where the 'monument_cli' executible is.  This is harder than it seems because
-    // Cargo allows users (like myself) to override the location of the build directory from the
-    // default of `target/`.  The most reliable way to find the executible path is to ask
-    // `cargo build` for JSON output of where its executables are placed.  However, I don't want
-    // to re-run the compiler during unit tests (`cargo` holds a file lock on the build directory,
-    // so multiple instances of `cargo` compiling the same crate can't run in parallel).
-    //
-    // We have a better trick up our sleeves, though: we are running the tests from an executible
-    // **built by cargo**.  Therefore, _the current executible lives in Cargo's build directory_.
-    // So, instead of hardcoding an path relative to the user's current directory, we instead
-    // hardcode the path relative to the path of the test executible.  This is very portable, but
-    // I'm fairly sure that the exact layout of Cargo's build directory is an implementation detail
-    // and may change during any release.  But, if this does happen, the only bad effect is that
-    // unit tests break, which is annoying but can't affect users.
-    let current_exe_path = std::env::args()
-        .next()
-        .expect("Argv should always include current path");
-    let mut monument_cli_path = PathBuf::from(current_exe_path);
-    monument_cli_path.pop(); // Pop current exe's filename
-    monument_cli_path.pop(); // Pop out of the 'deps/' directory
-    monument_cli_path.push("monument_cli");
-
-    // Spawn a command to run Monument, and fetch its stdout output as the test result
-    let toml_path = case.path.relative_to_cargo_toml();
-    // TODO: Don't hardcode the Monument path
-    let cmd = std::process::Command::new(monument_cli_path)
-        .arg(&*toml_path.as_os_str().to_string_lossy())
-        .args(match no_search {
-            false => &[] as &[&str],
-            true => &["-D", "no-search"],
-        })
-        .args(["-q"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
-    let mut output = Vec::new();
-    cmd.stdout.unwrap().read_to_end(&mut output).unwrap();
-    // Strip color codes from the output
-    //
-    // ANSI colors are 'esc key' (1b in hex) followed by `[` then some codes, finishing
-    // with `m`.  We use `.*?` to consume anything, but stopping at the first `m` (`.*?` is
-    // the non-greedy version of `.*`)
-    let output = String::from_utf8_lossy(&output).into_owned();
-    let ansi_escape_regex = Regex::new("\x1b\\[.*?m").unwrap();
-    let color_free_output = ansi_escape_regex.replace_all(&output, "").into_owned();
-
-    // Create the `run_case`
-    let run_case = RunTestCase {
-        base: case,
-        actual_output: Some(color_free_output),
-    };
-    println!(
-        "{} ... {}",
-        run_case.name(),
-        run_case.colored_outcome_string()
-    );
-    run_case
-}
-
 ////////////////////////////
 // PRINT ERRORS & SUMMARY //
 ////////////////////////////
 
 /// Given the completed tests, print reports for the unspecified and failed tests
-fn report_failures(run_cases: &[RunTestCase]) {
+fn report_failures(run_cases: &[RunTestCase<CaseData>]) {
     // Report all unspecified tests first
     for case in run_cases {
         let path_string = unspecified_str(&case.name());
         if case.outcome() == CaseOutcome::Unspecified {
             println!();
             println!("Unspecified results for {path_string}.  This is the output:",);
-            println!("{}", case.actual_output.as_ref().unwrap());
+            println!("{}", case.output.as_ref().unwrap());
         }
     }
     // Report all the failures second
     for case in run_cases {
         let path_string = fail_str(&case.name());
-        match (&case.expected_output, &case.actual_output) {
+        match (&case.expected_output, &case.output) {
             (Some(expected), Some(actual)) if expected != actual => {
                 println!();
                 println!("{} produced the wrong output:", path_string);
@@ -376,7 +313,7 @@ fn report_failures(run_cases: &[RunTestCase]) {
 }
 
 /// Generate and print a summary string for the tests.  Returns the outcome of the test suite
-fn print_summary_string(completed_tests: &[RunTestCase], duration: Duration) -> Outcome {
+fn print_summary_string(completed_tests: &[RunTestCase<CaseData>], duration: Duration) -> Outcome {
     // Count the test categories
     let mut num_ok = 0;
     let mut num_ignored = 0;
@@ -434,41 +371,27 @@ fn print_summary_string(completed_tests: &[RunTestCase], duration: Duration) -> 
 // TEST CASE TYPES //
 /////////////////////
 
-#[derive(Debug)]
-struct UnrunTestCase {
-    path: PathFromMonument,
-    state: CaseBehaviour,
+struct CaseData {
+    behaviour: CaseBehaviour,
     expected_output: Option<String>,
 }
 
-#[derive(Debug)]
-struct RunTestCase {
-    base: UnrunTestCase,
-    actual_output: Option<String>,
-}
-
-impl UnrunTestCase {
-    fn name(&self) -> String {
-        self.path.to_string()
-    }
-}
-
-impl RunTestCase {
+impl RunTestCase<CaseData> {
     fn colored_outcome_string(&self) -> ColoredString {
         self.outcome().colored_string()
     }
 
     fn outcome(&self) -> CaseOutcome {
         // TODO: Clean this up?
-        match self.state {
+        match self.behaviour {
             CaseBehaviour::Ignored => CaseOutcome::Ignored,
             CaseBehaviour::Example | CaseBehaviour::Test => {
-                match (&self.expected_output, &self.actual_output) {
+                match (&self.expected_output, &self.output) {
                     (_, None) => unreachable!(),
                     (None, Some(_)) => CaseOutcome::Unspecified,
                     (Some(x), Some(y)) => {
                         if x == y {
-                            if self.state == CaseBehaviour::Example {
+                            if self.behaviour == CaseBehaviour::Example {
                                 CaseOutcome::Parsed
                             } else {
                                 CaseOutcome::Ok
@@ -480,14 +403,6 @@ impl RunTestCase {
                 }
             }
         }
-    }
-}
-
-impl std::ops::Deref for RunTestCase {
-    type Target = UnrunTestCase;
-
-    fn deref(&self) -> &Self::Target {
-        &self.base
     }
 }
 
