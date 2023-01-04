@@ -34,5 +34,5 @@ walkdir = "2.3"
 
 [[test]]
 name = "integration"
-path = "../test/runner.rs"
+path = "../test/src/test.rs"
 harness = false
