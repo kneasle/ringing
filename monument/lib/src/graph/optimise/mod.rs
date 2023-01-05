@@ -348,6 +348,8 @@ mod passes {
             remove_chunks_false_against_required(),
             // Misc optimisations
             remove_links_between_false_chunks(),
+            remove_chunks_with_long_method_counts(),
+            remove_links_with_long_method_counts(),
             // Non-duffers
             compute_duffer_distances(),
             strip_long_duffers(),
@@ -365,6 +367,31 @@ mod passes {
             |graph: &mut Graph, _query: &Query, _ranges: &RefinedRanges| {
                 graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
                     !chunk_from.false_chunks.contains(id_to)
+                })
+            },
+        ))
+    }
+
+    fn remove_chunks_with_long_method_counts() -> Pass {
+        Pass::Single(Box::new(
+            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
+                graph.chunks.retain(|id, chunk| {
+                    chunk.total_length <= *ranges.method_counts[id.method].end()
+                })
+            },
+        ))
+    }
+
+    fn remove_links_with_long_method_counts() -> Pass {
+        Pass::Single(Box::new(
+            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
+                graph.retain_internal_links(|_link, id_from, chunk_from, id_to, chunk_to| {
+                    if id_from.method == id_to.method {
+                        let max_method_count = *ranges.method_counts[id_from.method].end();
+                        chunk_from.total_length + chunk_to.total_length <= max_method_count
+                    } else {
+                        true
+                    }
                 })
             },
         ))
