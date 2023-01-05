@@ -13,7 +13,8 @@ use crate::music::MusicDisplay;
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
 /// search progresses.
 pub struct SingleLineProgressLogger {
-    comp_printer: CompositionPrinter,
+    // Set to `None` if the `--only-update-line` option is set
+    comp_printer: Option<CompositionPrinter>,
 
     last_progress: Progress,
     is_aborting: bool,
@@ -23,7 +24,7 @@ pub struct SingleLineProgressLogger {
 }
 
 impl SingleLineProgressLogger {
-    pub fn new(comp_printer: CompositionPrinter) -> Self {
+    pub fn new(comp_printer: Option<CompositionPrinter>) -> Self {
         Self {
             comp_printer,
 
@@ -47,8 +48,8 @@ impl SingleLineProgressLogger {
         // Decide what string we're going to print.  This may have multiple lines (if a comp was
         // generated).
         let mut update_string = String::new();
-        if let Some(c) = &comp {
-            update_string.push_str(&self.comp_printer.comp_string_with_headers(c));
+        if let (Some(printer), Some(c)) = (&mut self.comp_printer, &comp) {
+            update_string.push_str(&printer.comp_string_with_headers(c));
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);

@@ -26,6 +26,8 @@ use ringing_utils::PrettyDuration;
 use simple_logger::SimpleLogger;
 use spec::Spec;
 
+use crate::logging::{CompositionPrinter, SingleLineProgressLogger};
+
 pub fn init_logging(filter: LevelFilter) {
     SimpleLogger::new()
         .without_timestamps()
@@ -65,12 +67,12 @@ pub fn run(
     debug_print!(Query, search);
 
     // Build all the data structures for the search
-    let comp_printer = self::logging::CompositionPrinter::new(
-        music_displays,
-        search.clone(),
-        spec.duffers_specified(),
-    );
-    let mut update_logger = self::logging::SingleLineProgressLogger::new(comp_printer.clone());
+    let comp_printer =
+        CompositionPrinter::new(music_displays, search.clone(), spec.duffers_specified());
+    let mut update_logger = SingleLineProgressLogger::new(match options.only_display_update_line {
+        true => None,
+        false => Some(comp_printer.clone()),
+    });
 
     if options.debug_option == Some(DebugOption::StopBeforeSearch) {
         return Ok(None);

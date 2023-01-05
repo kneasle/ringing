@@ -3,6 +3,7 @@
 # makes Cargo 'quiet' - i.e. it won't print any 'Compiling ...' stuff.  This is probably fine,
 # because you've almost certainly run the tests before blessing.
 bless = "-q test --test integration -- bless"
+pin-bench = "-q bench --bench integration -- pin"
 # `cargo cut-release` sets up the versions for a new Monument release and pushes a tag to trigger
 # the release CI.
 cut-release = "ws version --force * --no-individual-tags"

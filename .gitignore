@@ -3,10 +3,11 @@
 
 # Cached files from the test/benchmark runner
 monument/test/.last-results.toml
+monument/test/.pinned-benches.toml
+monument/test/.last-benches.toml
 
 # Where I store comps I'm working on that I don't want to show to everyone
 */comps/
-monument/bench/
 
 # All callgrind files
 **/callgrind*
