@@ -69,7 +69,7 @@ pub(super) fn chunk_lengths<'q>(
             return Err(crate::Error::SizeLimit(config.graph_size_limit));
         }
 
-        // Build the chunk
+        // Compute long this chunk is, and what its successors are
         let (per_part_length, successors) = chunk_factory.build_chunk(chunk_id.clone(), query);
         let min_distance_after_chunk =
             min_distance_from_start + per_part_length.as_total(&query.part_head_group);

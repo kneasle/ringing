@@ -60,10 +60,11 @@ impl Search {
     pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
         let mut source_graph = crate::graph::Graph::unoptimised(&query, &config)?;
-        source_graph.optimise(&query);
         // Prove which lengths are impossible, and use that to refine the length and method count
         // ranges
         let refined_ranges = prove_lengths(&source_graph, &query)?;
+        // Reduce the size of the graph to improve the search speed
+        source_graph.optimise(&query, &refined_ranges);
         // Create a fast-to-traverse copy of the graph
         let graph = self::graph::Graph::new(&source_graph, &query);
         drop(source_graph);
