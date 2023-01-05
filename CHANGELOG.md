@@ -2,6 +2,11 @@
 
 ### Monument v0.14.0
 
+#### Headline Features
+- (#205) Remove chunks and links which contribute too much method counts.  This should have a small
+    speed improvement for compositions which include one lead of each method in each part
+    (e.g. 23-spliced Surprise Major).
+
 #### Internal Improvements
 - (#203) Automate the release workflow.  Now, `cargo cut-release` is enough to trigger the
     whole release pipeline.

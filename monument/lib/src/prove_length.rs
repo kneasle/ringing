@@ -160,8 +160,10 @@ fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
                 }
             }
             LinkSide::Chunk(next_chunk) => {
-                for (chunk_length, succ) in &simple_graph.successors[next_chunk] {
-                    frontier.push(Reverse((length + *chunk_length, succ.as_ref())));
+                if let Some(succs) = simple_graph.successors.get(next_chunk) {
+                    for (chunk_length, succ) in succs {
+                        frontier.push(Reverse((length + *chunk_length, succ.as_ref())));
+                    }
                 }
             }
         }

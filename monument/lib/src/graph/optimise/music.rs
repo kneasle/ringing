@@ -5,6 +5,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
+    prove_length::RefinedRanges,
     query::Query,
     utils::MusicBreakdown,
 };
@@ -12,7 +13,7 @@ use crate::{
 /// How many chunks will be searched to determine which chunk patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
 
-pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
+pub(super) fn required_music_min(graph: &mut Graph, query: &Query, _ranges: &RefinedRanges) {
     // log::debug!("\n\n\n");
 
     // For each `MusicType`, maps its index to minimum count
@@ -92,7 +93,11 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query) {
 
 /// Remove any chunk which exceeds the max count for any music type.  Usually this max count will be
 /// 0 (i.e. any chunks with that music should be removed).
-pub(crate) fn remove_chunks_exceeding_max_count(graph: &mut Graph, query: &Query) {
+pub(crate) fn remove_chunks_exceeding_max_count(
+    graph: &mut Graph,
+    query: &Query,
+    _ranges: &RefinedRanges,
+) {
     let mut counts_from_required_chunks = MusicBreakdown::zero(query.music_types.len());
     for chunk in graph.chunks.values() {
         if chunk.required {

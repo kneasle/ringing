@@ -19,6 +19,10 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
     let mut paths = Paths::new();
     let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search.graph, &mut paths);
 
+    if frontier.is_empty() {
+        return; // Don't run a search if no compositions are possible
+    }
+
     // Number of bytes occupied by each `CompPrefix` in the frontier.
     let prefix_size = frontier.peek().unwrap().size();
 
