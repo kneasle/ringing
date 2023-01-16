@@ -59,7 +59,8 @@ Want a peal of Bristol Royal?  Two lines:
 Pretty sweet.
 
 Also, see what I mean about speed?  That search took **0.818 seconds**!  I don't know
-about you, but I struggle to compose anything very exciting in under one second.
+about you, but I struggle to compose anything very exciting in under one second - let alone make
+one hundred nice compositions.
 
 And these compositions are actually good!  For example, you can check out the second to top
 composition [on Composition Library](https://complib.org/composition/104684?accessKey=20e68fb231540ee4c1ecb18678bb1e8b773537c8).
