@@ -2,7 +2,7 @@
 
 Downloads and release notes for recent Monument versions can be found here:
 
-- [Latest release](https://github.com/kneasle/ringing/releases/tag/latest)
+- [Latest release](https://github.com/kneasle/ringing/releases/latest)
 - [v0.12.0](https://github.com/kneasle/ringing/releases/tag/v0.12.0)
 - [v0.11.0](https://github.com/kneasle/ringing/releases/tag/v0.11.0)
 - [v0.10.0](https://github.com/kneasle/ringing/releases/tag/v0.10.0)
