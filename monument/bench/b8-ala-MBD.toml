@@ -1,0 +1,16 @@
+length = "peal"
+method = "Bristol Surprise Major"
+
+bob_weight = -15
+bobs_only = true
+
+music = [
+    # { patterns = ["*6578"], weight = 1, show = false },
+    { patterns = ["*5678", "*8765"], weight = 1, show = false },
+    { patterns = ["5678*", "8765*"], weight = 4, show = false },
+    { preset = "5678 combinations", weight = 0.1 }
+]
+
+[[ch_weights]]
+patterns = ["*78"]
+weight = 0.02

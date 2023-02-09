@@ -195,8 +195,8 @@ take you to more in-depth docs about it.
 - [`max_contiguous_duffer`](#max_total_duffer-and-max_contiguous_duffer) _(added in v0.12.0)_
 
 **Starts/Ends:**
-- [`start_row = <rounds>`](#start_row-and-end_row) _(since v0.10.0)_
-- [`end_row = <rounds>`](#start_row-and-end_row) _(since v0.10.0)_
+- [`start_row = ""`](#start_row-and-end_row) _(since v0.10.0.  "" is equivalent to rounds)_
+- [`end_row = ""`](#start_row-and-end_row) _(since v0.10.0.  "" is equivalent to rounds)_
 - [`snap_start = false`](#snap_start)
 - [`start_indices`](#start_indices-and-end_indices) (default set by `snap_start`)
 - [`end_indices`](#start_indices-and-end_indices) (default to allow any finish)

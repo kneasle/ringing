@@ -3,14 +3,23 @@
 ### Monument v0.14.0
 
 #### Headline Features
+
+#### Smaller Changes
 - (#205) Remove chunks and links which contribute too much method counts.  This should have a small
     speed improvement for compositions which include one lead of each method in each part
     (e.g. 23-spliced Surprise Major).
+- (#221) In the guide, use valid values for `{start,end}_rows`.
 
 #### Internal Improvements
 - (#203) Automate the release workflow.  Now, `cargo cut-release` is enough to trigger the
     whole release pipeline.
 - (#204) Implement benchmark runner.
+
+### Bellframe v0.12.0
+- (#221) Add `Bell::MAX`, which returns the largest `Bell` possible (i.e. the 254th)
+- (#221) Stop bell-path methods (e.g. `Block::path_of`) from returning `Option`.  Instead, passing
+    a `Bell` out of the `Block`'s `Stage` will cause a panic.
+- (#221) Add `Mask::contains`, returning `true` if the `Mask` constrains that `Bell`.
 
 ---
 

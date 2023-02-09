@@ -147,6 +147,9 @@ impl Bell {
     /// ```
     pub const TREBLE: Bell = Bell { index: 0 };
 
+    /// The largest [`Bell`] that can be stored.
+    pub const MAX: Bell = Bell { index: 254 };
+
     /// Converts this `Bell` into the [`char`] that it should be displayed as.  If the `Bell` is
     /// too big to have a corresponding name, then [`None`] is returned.
     ///

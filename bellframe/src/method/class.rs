@@ -522,7 +522,7 @@ impl Cycle {
                 // Mark that we've covered this bell
                 bells_left[place_bell.index()] = false;
                 // Track this bell's path through the next lead
-                let (path, next_place_bell) = first_lead.path_of(place_bell).unwrap();
+                let (path, next_place_bell) = first_lead.path_of(place_bell);
                 // Add path & place_bell to this cycle
                 place_bells_in_cycle.push(place_bell);
                 full_path.extend(path);

@@ -120,6 +120,10 @@ impl Mask {
         Self { bells }
     }
 
+    pub fn contains(&self, bell: Bell) -> bool {
+        self.bells.contains(&Some(bell))
+    }
+
     /// Returns an [`Iterator`] over the [`Bell`]s (or gaps) in `self`.
     pub fn bells(&self) -> impl DoubleEndedIterator<Item = Option<Bell>> + Clone + '_ {
         self.bells.iter().copied()

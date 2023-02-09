@@ -1,0 +1,17 @@
+length = "peal"
+methods = [
+    "Lancashire Surprise Major",
+    "Ytterbium Surprise Major",
+    "Mareham Delight Major",
+    { title = "Deva Surprise Major", shorthand = "V" },
+    { title = "Double Coslany Court Bob Major", shorthand = "C", count = { min = 500, max = 700 } },
+    { title = "Double Norwich Court Bob Major", shorthand = "N", count = { min = 500, max = 700 } },
+]
+method_count = 960
+
+part_head = "134265"
+course_heads = ["*78", "*7856", "*7865"]
+
+[[music]]
+preset = "5678 combinations"
+weight = 0.2
