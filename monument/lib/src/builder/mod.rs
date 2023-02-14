@@ -1,8 +1,6 @@
 //! Builder API for constructing [`Search`]es.
 
-mod methods;
-
-pub use self::methods::*;
+pub mod methods;
 
 use std::ops::{Range, RangeInclusive};
 
@@ -25,8 +23,12 @@ use crate::{
     Composition,
 };
 
+pub use methods::{CourseSet, Method, SpliceStyle};
+
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
+
+use self::methods::MethodSet;
 
 /// Builder API for constructing searches.
 pub struct SearchBuilder {
@@ -37,7 +39,7 @@ pub struct SearchBuilder {
     stage: Stage,
 
     /* METHODS */
-    methods: MethodVec<(bellframe::Method, self::Method)>,
+    methods: MethodVec<(bellframe::Method, Method)>,
     pub default_method_count: OptionalRangeInclusive,
     pub default_start_indices: Vec<isize>,
     pub default_end_indices: EndIndices,

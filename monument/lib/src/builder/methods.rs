@@ -442,7 +442,7 @@ fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<u
 }
 
 /// Get a default shorthand given a method's title.
-fn default_shorthand(title: &str) -> String {
+pub fn default_shorthand(title: &str) -> String {
     title
         .chars()
         .next()

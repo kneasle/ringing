@@ -6,7 +6,7 @@ use bellframe::{Block, Row, RowBuf};
 
 use crate::{
     atw::{AtwBitmap, AtwTable, PlaceBellRange},
-    builder::{CallDisplayStyle, MethodId, MusicTypeId},
+    builder::{methods::MethodId, CallDisplayStyle, MusicTypeId},
     group::PartHead,
     query::{CallIdx, MethodIdx, MethodVec, Query},
     utils::{

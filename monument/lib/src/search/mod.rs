@@ -19,7 +19,7 @@ use sysinfo::SystemExt;
 
 use crate::{
     atw::AtwTable,
-    builder::{MethodId, MusicTypeId},
+    builder::{methods::MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
     utils::lengths::{PerPartLength, TotalLength},
