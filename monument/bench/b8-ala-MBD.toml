@@ -11,6 +11,4 @@ music = [
     { preset = "5678 combinations", weight = 0.1 }
 ]
 
-[[ch_weights]]
-patterns = ["*78"]
-weight = 0.02
+course_weights = [{ patterns = ["*78"], weight = 0.02 }]
