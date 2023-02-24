@@ -1,0 +1,42 @@
+length = "peal"
+methods = [
+      { labels = { LE = 0, 8ths = 0 }, title = "Aquarius Surprise Major", shorthand = "Aq" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Belfast Surprise Major", shorthand = "F" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Buckfastleigh Surprise Major" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Chertsey Surprise Major", shorthand = "Ch" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Deva Surprise Major" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Dunwich Surprise Major", shorthand = "Du" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Glasgow Surprise Major" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Mytholmroyd Surprise Major" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Saddleworth Surprise Major", shorthand = "Sa" },
+      { labels = { LE = 0, 8ths = 0 }, title = "Thurston Surprise Major" },
+
+      { labels = { LE = 0, 2nds = 0 }, title = "Delrow Surprise Major", shorthand = "Dr" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Devon Surprise Major", shorthand = "Dv" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Eire Surprise Major" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Flint Surprise Major", shorthand = "Ft" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Gemini Surprise Major", shorthand = "Ge" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Hardham Surprise Major" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Londonthorpe Surprise Major" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Lyme Surprise Major", shorthand = "Y" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Orwell Surprise Major", shorthand = "Or" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Otley Surprise Major", shorthand = "Ot" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Quantock Surprise Major" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Scorpio Surprise Major", shorthand = "Sc" },
+      { labels = { LE = 0, 2nds = 0 }, title = "Whalley Surprise Major" },
+]
+part_head = "18234567"
+
+base_calls = "none"
+# 4ths place calls only in 2nds place methods
+[[calls]]
+symbol = "-"
+place_notation = "14"
+label = { from = "2nds", to = "LE" }
+weight = 0
+# 6ths place calls only in 8nds place methods
+[[calls]]
+symbol = "x"
+place_notation = "16"
+label = { from = "8ths", to = "LE" }
+weight = 0

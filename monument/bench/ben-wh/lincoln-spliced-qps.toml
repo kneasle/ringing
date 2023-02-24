@@ -1,0 +1,26 @@
+length = "qp"
+methods = [
+    # == Core 7 ==
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Bristol Surprise Major",
+    "London Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+
+    # == Oxford ==
+    { title = "Deva Surprise Major", shorthand = "V" },
+    { title = "Ytterbium Surprise Major", shorthand = "T" },
+    { title = "Lancashire Surprise Major", shorthand = "A" },
+    { title = "Double Norwich Court Bob Major", shorthand = "N", count.max = 96 },
+    { title = "Double Coslany Court Bob Major", shorthand = "D", count.max = 96 },
+]
+
+courses = ["*78", "*7856", "*8765"]
+part_head = "1342"
+
+bob_weight = -2
+single_weight = -3
+
+splice_weight = 1

@@ -1,0 +1,13 @@
+length = 5088
+method = "Double Norwich Court Bob Major"
+split_tenors = true
+
+base_calls = "far"
+bob_weight = -5
+single_weight = -8
+
+part_head = "134265"
+
+[[course_weights]]
+pattern = "*78"
+weight = 0.02

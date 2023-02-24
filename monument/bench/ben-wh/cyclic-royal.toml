@@ -1,0 +1,32 @@
+length = "peal"
+methods = [
+    "Yorkshire Surprise Royal",
+    "Bristol Surprise Royal",
+    "Sgurr A'Chaorachain Surprise Royal",
+    "Kenninghall Surprise Royal",
+]
+
+# method_count = { min = 1440   , max = 2160 }
+
+bob_weight = -3
+single_weight = -3
+calls = [{ symbol = "x", place_notation = "16", weight = -3 }]
+
+courses = [
+    "1xxxx67890", "123456xxxx",
+    "1xxxx78902", "134567xxxx",
+    "1xxxx89023", "145678xxxx",
+    "1xxxx90234", "156789xxxx",
+    "1xxxx02345", "167890xxxx",
+    "1xxxx23456", "178902xxxx",
+    "1xxxx34567", "189023xxxx",
+    "1xxxx45678", "190234xxxx",
+    "1xxxx56789", "102345xxxx",
+]
+part_head = "1023456789"
+
+base_music = "none"
+music = [
+    { run_lengths = [4,  6,  8,    ] },
+    { run_lengths = [  5,  7,  9,10], show = false },
+]

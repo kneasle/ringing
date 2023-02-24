@@ -1,0 +1,16 @@
+length = "peal"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Bristol Surprise Major",
+    "London Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+]
+method_count = { min = 500, max = 900 }
+
+part_head = "134265"
+courses = ["*78", "*8765", "*8756"]
+
+music = [{ preset = "5678 combinations", weight = 0.1 }]

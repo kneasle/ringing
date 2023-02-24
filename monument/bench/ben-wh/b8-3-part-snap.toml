@@ -1,0 +1,13 @@
+length = "peal"
+method = "Bristol Surprise Major"
+part_head = "1342"
+start_indices = [2] # Only snap starts/finishes
+
+bob_weight = -5
+single_weight = -7
+
+music = [
+    # Boost music off the front, to prevent Monument from jamming loads of calls together
+    { patterns = ["5678*", "8765*"], weight = 1 },
+    { pattern = "*6578", weight = 1 },
+]

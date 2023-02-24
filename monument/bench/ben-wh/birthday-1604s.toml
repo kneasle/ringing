@@ -1,0 +1,8 @@
+length = 1604
+method = "Birthday Delight Major"
+start_indices = [-4]
+courses = ["24315678", "1*78"]
+
+[[calls]]
+symbol = "t"
+place_notation = "38"
