@@ -498,7 +498,7 @@ fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> query::Call 
 }
 
 #[allow(clippy::branches_sharing_code)]
-fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
