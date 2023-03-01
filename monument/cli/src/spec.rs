@@ -79,6 +79,11 @@ pub struct Spec {
     /// then all locations are allowed.  All indices are taken modulo each method's lead length (so
     /// 2, -30 and 34 are all equivalent for Treble Dodging Major).
     end_indices: Option<Vec<isize>>,
+    /// Score applied when a composition is 'all the work' - i.e. every (working) bell rings every
+    /// row of every (working) place bell of every method.  This is smoothly interpolated; a 'half
+    /// the work' composition would be given a score of `atw_weight / 2`.
+    #[serde(default)]
+    atw_weight: f32,
 
     /* CALLS */
     /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
@@ -230,6 +235,7 @@ impl Spec {
         };
         search_builder.splice_style = self.splice_style.into();
         search_builder.splice_weight = self.splice_weight;
+        search_builder.atw_weight = self.atw_weight;
         // Calls
         search_builder.base_calls = self.base_calls()?;
         search_builder.custom_calls = self
@@ -289,6 +295,10 @@ impl Spec {
         }
 
         Ok((Arc::new(search), music_displays))
+    }
+
+    pub fn atw_specified(&self) -> bool {
+        self.atw_weight.abs() != 0.0
     }
 
     pub fn duffers_specified(&self) -> bool {

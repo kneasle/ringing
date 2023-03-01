@@ -10,6 +10,7 @@ use datasize::DataSize;
 use itertools::Itertools;
 
 use crate::{
+    atw::AtwBitmap,
     builder::{MusicTypeId, SpliceStyle},
     composition::{Composition, PathElem},
     graph::LinkSide,
@@ -23,7 +24,7 @@ use crate::{
 };
 
 use super::{
-    graph::{ChunkIdx, Graph},
+    graph::ChunkIdx,
     path::{PathId, Paths},
     Search,
 };
@@ -68,20 +69,23 @@ pub(super) struct PrefixInner {
 
     /// Method counts refers to the **end** of the current chunk
     method_counts: Counts,
+    /// Bitmap storing the parts of methods rung by each bell so far in the composition
+    atw_bitmap: AtwBitmap,
 }
 
 impl CompPrefix {
     /// Given a index-based [`Graph`], return [`CompPrefix`]es representing each of the possible
     /// start links.
-    pub fn starts(graph: &Graph, paths: &mut Paths) -> BinaryHeap<Self> {
+    pub fn starts(search: &Search, paths: &mut Paths) -> BinaryHeap<Self> {
         // `BitVec` that marks every `Chunk` as ringable
-        let all_chunks_ringable = BitVec::from_elem(graph.chunks.len(), false);
+        let all_chunks_ringable = BitVec::from_elem(search.graph.chunks.len(), false);
 
-        graph
+        search
+            .graph
             .starts
             .iter_enumerated()
             .map(|(start_idx, &(chunk_idx, _link_id, part_head))| {
-                let chunk = &graph.chunks[chunk_idx];
+                let chunk = &search.graph.chunks[chunk_idx];
                 Self {
                     score: Score::from(0.0), // Start links can't have any score
                     length: TotalLength::ZERO,
@@ -93,6 +97,7 @@ impl CompPrefix {
                         contiguous_duffer: PerPartLength::ZERO, // Start is considered a non-duffer
                         total_duffer: TotalLength::ZERO,
                         method_counts: Counts::zeros(chunk.method_counts.len()),
+                        atw_bitmap: search.atw_table.empty_bitmap(),
                     }),
                 }
             })
@@ -105,6 +110,7 @@ impl CompPrefix {
             + std::mem::size_of::<PrefixInner>()
             + div_rounding_up(self.inner.unringable_chunks.len(), 8)
             + self.inner.method_counts.estimate_heap_size()
+            + self.inner.atw_bitmap.estimate_heap_size()
     }
 
     pub fn avg_score(&self) -> Score {
@@ -183,6 +189,7 @@ impl CompPrefix {
             part_head, // Don't make this `mut` because it would get updated in every loop iteration
             mut contiguous_duffer,
             mut total_duffer,
+            mut atw_bitmap,
         } = *inner;
 
         // Compute the values for after `chunk`
@@ -196,6 +203,11 @@ impl CompPrefix {
         score += chunk.score;
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
+        // Factor in the change in atw score by subtracting and adding the scores on either side
+        // of the change
+        score -= search.atw_table.atw_score(&atw_bitmap);
+        atw_bitmap.union_with(&chunk.atw_bitmap);
+        score += search.atw_table.atw_score(&atw_bitmap);
 
         let succ_iter = chunk.succs.iter_enumerated();
         #[allow(unused_variables)]
@@ -263,6 +275,7 @@ impl CompPrefix {
                     contiguous_duffer,
                     total_duffer,
                     method_counts: method_counts.clone(),
+                    atw_bitmap: atw_bitmap.clone(),
                 }),
                 score,
                 length,
@@ -344,6 +357,7 @@ impl CompPrefix {
             part_head: self.part_head,
             length: self.length,
             method_counts: self.method_counts.clone(),
+            atw_bitmap: self.atw_bitmap.clone(),
             music_counts: search
                 .query
                 .music_types
@@ -357,6 +371,7 @@ impl CompPrefix {
             total_duffer: self.total_duffer,
 
             query: search.query.clone(),
+            atw_table: search.atw_table.clone(),
         };
         // Sanity check that the composition is true
         if search.query.require_truth {

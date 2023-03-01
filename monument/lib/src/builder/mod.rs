@@ -43,6 +43,7 @@ pub struct SearchBuilder {
     pub default_end_indices: EndIndices,
     pub splice_style: SpliceStyle,
     pub splice_weight: f32,
+    pub atw_weight: f32,
 
     /* CALLS */
     pub base_calls: Option<BaseCalls>,
@@ -120,6 +121,7 @@ impl SearchBuilder {
             default_end_indices: EndIndices::Any,
             splice_style: SpliceStyle::LeadLabels,
             splice_weight: 0.0,
+            atw_weight: 0.0,
 
             base_calls: Some(BaseCalls::default()),
             custom_calls: vec![],
@@ -217,6 +219,7 @@ impl SearchBuilder {
             default_end_indices,
             splice_style,
             splice_weight,
+            atw_weight,
 
             base_calls,
             custom_calls,
@@ -284,6 +287,7 @@ impl SearchBuilder {
         };
 
         let part_head_group = PartHeadGroup::new(&part_head);
+
         Ok(Query {
             length_range,
             stage,
@@ -296,6 +300,7 @@ impl SearchBuilder {
             calls,
             call_display_style,
             fixed_bells,
+            atw_weight: OrderedFloat(atw_weight),
 
             start_row,
             end_row,

@@ -23,7 +23,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
 
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
-    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search.graph, &mut paths);
+    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search, &mut paths);
 
     if frontier.is_empty() {
         return; // Don't run a search if no compositions are possible

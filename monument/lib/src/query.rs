@@ -1,11 +1,12 @@
 //! Instructions for Monument about what compositions should be generated.
 
-use std::ops::RangeInclusive;
+use std::ops::{Deref, Range, RangeInclusive};
 
 use bellframe::{music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
 
 use crate::{
     builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
+    graph::ChunkId,
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -21,61 +22,123 @@ use crate::{
 #[derive(Debug, Clone)]
 pub(crate) struct Query {
     // GENERAL
-    pub(crate) length_range: RangeInclusive<TotalLength>,
-    pub(crate) stage: Stage,
-    pub(crate) num_comps: usize,
-    pub(crate) require_truth: bool,
+    pub length_range: RangeInclusive<TotalLength>,
+    pub stage: Stage,
+    pub num_comps: usize,
+    pub require_truth: bool,
 
     // METHODS & CALLING
-    pub(crate) methods: MethodVec<Method>,
-    pub(crate) splice_style: SpliceStyle,
-    pub(crate) splice_weight: Score,
-    pub(crate) calls: CallVec<Call>,
-    pub(crate) call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
-    pub(crate) fixed_bells: Vec<(Bell, usize)>,
+    pub methods: MethodVec<Method>,
+    pub splice_style: SpliceStyle,
+    pub splice_weight: Score,
+    pub calls: CallVec<Call>,
+    pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
+    pub fixed_bells: Vec<(Bell, usize)>,
+    pub atw_weight: Score,
 
     // COURSES
     //
     // NOTE: Course masks are defined on each `Method`
-    pub(crate) start_row: RowBuf,
-    pub(crate) end_row: RowBuf,
-    pub(crate) part_head_group: PartHeadGroup,
+    pub start_row: RowBuf,
+    pub end_row: RowBuf,
+    pub part_head_group: PartHeadGroup,
     /// [`Score`]s applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
-    pub(crate) course_weights: Vec<(Mask, Score)>,
+    pub course_weights: Vec<(Mask, Score)>,
 
     // NON-DUFFERS
-    pub(crate) max_contiguous_duffer: Option<PerPartLength>,
-    pub(crate) max_total_duffer: Option<TotalLength>,
+    pub max_contiguous_duffer: Option<PerPartLength>,
+    pub max_total_duffer: Option<TotalLength>,
 
     // MUSIC
-    pub(crate) music_types: MusicTypeVec<MusicType>,
+    pub music_types: MusicTypeVec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
-    pub(crate) start_stroke: Stroke,
+    pub start_stroke: Stroke,
 }
 
 impl Query {
-    pub(crate) fn max_length(&self) -> TotalLength {
+    pub fn max_length(&self) -> TotalLength {
         *self.length_range.end()
     }
 
-    pub(crate) fn length_range_usize(&self) -> RangeInclusive<usize> {
+    pub fn length_range_usize(&self) -> RangeInclusive<usize> {
         let start = self.length_range.start().as_usize();
         let end = self.length_range.end().as_usize();
         start..=end
     }
 
-    pub(crate) fn is_spliced(&self) -> bool {
+    pub fn is_spliced(&self) -> bool {
         self.methods.len() > 1
     }
 
-    pub(crate) fn num_parts(&self) -> usize {
+    pub fn num_parts(&self) -> usize {
         self.part_head_group.size()
     }
 
-    pub(crate) fn is_multipart(&self) -> bool {
+    pub fn is_multipart(&self) -> bool {
         self.num_parts() > 1
+    }
+
+    /// For a given chunk, split that chunk's range into segments where each one falls within a
+    /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`
+    /// and length 18 would return the following regions:
+    /// ```text
+    ///                           12345678
+    ///                            1
+    ///                  +     +    1
+    ///                  |     |     1
+    ///                  |     |     1
+    ///                  |     |    1
+    ///                  |     |   1
+    ///                  |     +  1
+    ///                  |     +  16482735
+    ///                  |     |   1
+    ///                  |     |    1
+    ///   Original range |     |     1
+    ///                  |     |     1
+    ///                  |     |    1
+    ///                  |     |   1
+    ///                  |     +  1
+    ///                  |     +  17856342
+    ///                  |     |   1
+    ///                  |     |    1
+    ///                  +     +     1
+    ///                      /       1
+    ///                     /       1
+    ///    Output ranges --/       1
+    ///                           1
+    /// ```
+    pub fn chunk_lead_regions(
+        &self,
+        id: &ChunkId,
+        length: PerPartLength,
+    ) -> Vec<(RowBuf, Range<usize>)> {
+        let method = &self.methods[id.method];
+
+        let mut lead_head: RowBuf = id.lead_head.deref().to_owned();
+        let mut length_left = length.as_usize();
+        let mut sub_lead_idx = id.sub_lead_idx;
+
+        let mut lead_regions = Vec::new();
+        while length_left > 0 {
+            // Add a region for as much of this lead as we can
+            let length_left_in_lead = method.lead_len() - sub_lead_idx;
+            let chunk_len = usize::min(length_left_in_lead, length_left);
+            let chunk_end = sub_lead_idx + chunk_len;
+            lead_regions.push((lead_head.clone(), sub_lead_idx..chunk_end));
+            // Move to after this region, moving forward a lead if necessary
+            assert!(chunk_len <= method.lead_len());
+            length_left -= chunk_len;
+            sub_lead_idx += chunk_len;
+            assert!(sub_lead_idx <= method.lead_len());
+            if sub_lead_idx == method.lead_len() {
+                // Next chunk starts in a new lead, so update the lead head accordingly
+                sub_lead_idx = 0;
+                lead_head = lead_head * method.lead_head();
+            }
+        }
+        lead_regions
     }
 }
 

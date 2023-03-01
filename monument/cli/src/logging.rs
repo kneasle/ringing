@@ -144,6 +144,8 @@ pub struct CompositionPrinter {
     /// )
     /// ```
     method_counts: Vec<(usize, String)>,
+    /// `true` if the user gave some weight to atw
+    print_atw: bool,
     /// `true` if the user specified anything about duffer courses, otherwise 'false'
     print_duffers: bool,
     /// If a part head should be displayed, then what's its width
@@ -156,6 +158,7 @@ impl CompositionPrinter {
     pub fn new(
         music_displays: Vec<MusicDisplay>,
         search: Arc<Search>,
+        print_atw: bool,
         print_duffers: bool,
     ) -> Self {
         Self {
@@ -170,6 +173,7 @@ impl CompositionPrinter {
                 .collect_vec(),
             comps_printed: 0,
 
+            print_atw,
             print_duffers,
             part_head_width: (search.num_parts() > 2)
                 .then(|| search.effective_part_head_stage().num_bells()),
@@ -245,6 +249,10 @@ impl CompositionPrinter {
             }
         }
         s.push('|');
+        // Atw
+        if self.print_atw {
+            s.push_str(" atw |");
+        }
         // Duffers
         if self.print_duffers {
             s.push_str(" avg/max/sum dufr |");
@@ -281,6 +289,15 @@ impl CompositionPrinter {
             }
         }
         s.push('|');
+        // Atw
+        if self.print_atw {
+            let factor = comp.atw_factor();
+            if factor > 0.999999 {
+                s.push_str(" atw |");
+            } else {
+                write!(s, " {:>2}% |", (factor * 100.0).floor() as usize).unwrap();
+            }
+        }
         // Duffers
         if self.print_duffers {
             write!(

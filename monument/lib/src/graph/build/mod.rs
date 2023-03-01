@@ -14,6 +14,7 @@ use bellframe::{PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
+    atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
     query::{Call, Query, StrokeSet},
     search::Config,
@@ -24,7 +25,7 @@ use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, Tot
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub(crate) fn unoptimised(query: &Query, config: &Config) -> crate::Result<Self> {
+    pub(crate) fn unoptimised(query: &Query, config: &Config) -> crate::Result<(Self, AtwTable)> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 
@@ -36,13 +37,15 @@ impl Graph {
             self::layout::chunk_lengths(query, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
+        let atw_table = AtwTable::new(query, &chunk_lengths);
+
         // TODO: Combine overlapping chunks
 
         // Build actual chunks
         let mut chunks = chunk_lengths
             .into_iter()
             .map(|(id, per_part_length): (ChunkId, PerPartLength)| {
-                let chunk = expand_chunk(&id, per_part_length, query);
+                let chunk = expand_chunk(&id, per_part_length, query, &atw_table);
                 (id, chunk)
             })
             .collect::<HashMap<_, _>>();
@@ -106,18 +109,24 @@ impl Graph {
         }
 
         // Finally construct the graph
-        Ok(Graph {
+        let graph = Graph {
             chunks,
             links,
 
             starts,
             ends,
-        })
+        };
+        Ok((graph, atw_table))
     }
 }
 
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
-fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> Chunk {
+fn expand_chunk(
+    id: &ChunkId,
+    per_part_length: PerPartLength,
+    query: &Query,
+    atw_table: &AtwTable,
+) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
     // A `Chunk` is a duffer iff it's a duffer in any part
     let duffer = query.part_head_group.rows().any(|part_head| {
@@ -135,6 +144,7 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, query: &Query) -> 
             id.method.index(),
             query.methods.len(),
         ),
+        atw_bitmap: atw_table.bitmap_for_chunk(query, id, per_part_length),
 
         // Filled in separate graph build passes
         predecessors: Vec::new(),
