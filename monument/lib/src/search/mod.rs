@@ -15,7 +15,6 @@ use std::{
 };
 
 use bellframe::Stage;
-use ringing_utils::BigNumInt;
 use sysinfo::SystemExt;
 
 use crate::{
@@ -261,8 +260,6 @@ impl Default for Config {
             .min(pointer_size_limit)
             .try_into()
             .expect("Memory limit should fit into `usize`");
-
-        log::info!("Limiting memory usage to {}B", BigNumInt(mem_limit));
 
         Self {
             thread_limit: None,
