@@ -28,7 +28,7 @@ sysinfo = "0.28"
 toml = "0.5"
 
 [dev-dependencies]
-rayon = "1.6"
+rayon = "1.7"
 regex = "1.7"
 walkdir = "2.3"
 
