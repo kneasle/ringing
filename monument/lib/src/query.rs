@@ -171,7 +171,7 @@ impl Call {
     pub(crate) fn short_symbol(&self) -> &str {
         match self.symbol.as_str() {
             "-" | "–" => "", // Convert `-` to ``
-            s => s,            // All other calls use their explicit symbol
+            s => s,          // All other calls use their explicit symbol
         }
     }
 }
