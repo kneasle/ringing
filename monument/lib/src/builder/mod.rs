@@ -43,7 +43,7 @@ pub struct SearchBuilder {
     pub default_end_indices: EndIndices,
     pub splice_style: SpliceStyle,
     pub splice_weight: f32,
-    pub atw_weight: f32,
+    pub atw_weight: Option<f32>,
 
     /* CALLS */
     pub base_calls: Option<BaseCalls>,
@@ -121,7 +121,7 @@ impl SearchBuilder {
             default_end_indices: EndIndices::Any,
             splice_style: SpliceStyle::LeadLabels,
             splice_weight: 0.0,
-            atw_weight: 0.0,
+            atw_weight: None,
 
             base_calls: Some(BaseCalls::default()),
             custom_calls: vec![],
@@ -300,7 +300,7 @@ impl SearchBuilder {
             calls,
             call_display_style,
             fixed_bells,
-            atw_weight: OrderedFloat(atw_weight),
+            atw_weight: atw_weight.map(OrderedFloat),
 
             start_row,
             end_row,

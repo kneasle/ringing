@@ -82,8 +82,10 @@ pub struct Spec {
     /// Score applied when a composition is 'all the work' - i.e. every (working) bell rings every
     /// row of every (working) place bell of every method.  This is smoothly interpolated; a 'half
     /// the work' composition would be given a score of `atw_weight / 2`.
-    #[serde(default)]
-    atw_weight: f32,
+    ///
+    /// Setting this to any value will display atw values.  If you just want to display atw, set
+    /// `atw_weight = 0.0`.
+    atw_weight: Option<f32>,
 
     /* CALLS */
     /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
@@ -298,7 +300,7 @@ impl Spec {
     }
 
     pub fn atw_specified(&self) -> bool {
-        self.atw_weight.abs() != 0.0
+        self.atw_weight.is_some()
     }
 
     pub fn duffers_specified(&self) -> bool {

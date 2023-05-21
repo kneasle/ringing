@@ -34,7 +34,7 @@ pub(crate) struct Query {
     pub calls: CallVec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub fixed_bells: Vec<(Bell, usize)>,
-    pub atw_weight: Score,
+    pub atw_weight: Option<Score>,
 
     // COURSES
     //

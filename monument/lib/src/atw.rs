@@ -83,7 +83,7 @@ impl AtwTable {
         let (bitmap_chunk_multipliers, flag_per_bit) = split_flags_into_bitmap_chunks(flags);
 
         Self {
-            atw_weight: query.atw_weight,
+            atw_weight: query.atw_weight.unwrap_or(Score::from(0.0)),
             bell_place_to_bitmap_index: make_bell_place_to_bitmap_index(&flag_per_bit),
             total_unique_row_positions,
             flag_per_bit,
