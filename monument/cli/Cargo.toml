@@ -22,7 +22,7 @@ monument = { version = "0.13.0", path = "../lib/" }
 ordered-float = "3.7"
 ringing_utils = { version = "0.1.0", package = "kneasle_ringing_utils", path = "../../utils/" }
 serde = { version = "1.0", features = ["derive"] }
-simple_logger = "4.1"
+simple_logger = "4.2"
 structopt = "0.3"
 sysinfo = "0.29"
 toml = "0.5"
