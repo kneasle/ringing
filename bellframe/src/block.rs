@@ -15,36 +15,6 @@ use crate::{
     utils, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage,
 };
 
-#[derive(Debug, Eq, PartialEq, Hash)]
-pub struct AnnotRow<'b, A> {
-    row: &'b Row,
-    annot: &'b A,
-}
-
-impl<'b, A> AnnotRow<'b, A> {
-    pub fn new(row: &'b Row, annot: &'b A) -> Self {
-        Self { row, annot }
-    }
-
-    pub fn row(self) -> &'b Row {
-        self.row
-    }
-
-    pub fn annot(self) -> &'b A {
-        self.annot
-    }
-}
-
-// AnnotRow is always `Clone`, regardless of whether or not `A` is.
-impl<'b, A> Clone for AnnotRow<'b, A> {
-    fn clone(&self) -> Self {
-        Self { ..*self }
-    }
-}
-
-// AnnotRow is always `Copy`, regardless of whether or not `A` is.
-impl<'b, A> Copy for AnnotRow<'b, A> {}
-
 /// A block of [`Row`], each of which can be given an annotation of any type.  Blocks can start
 /// from any [`Row`], and can be empty.
 ///
@@ -189,10 +159,8 @@ impl<A> Block<A> {
 
     /// Gets the [`Row`] at a given index, along with its annotation.
     #[inline]
-    pub fn get_annot_row(&self, index: usize) -> Option<AnnotRow<A>> {
-        let row = self.get_row(index)?;
-        let annot = self.get_annot(index)?;
-        Some(AnnotRow::new(row, annot))
+    pub fn get_annot_row(&self, index: usize) -> Option<(&A, &Row)> {
+        Some((self.get_annot(index)?, self.get_row(index)?))
     }
 
     /// Gets the first [`Row`] of this `Block`, which may be leftover.
@@ -205,7 +173,7 @@ impl<A> Block<A> {
 
     /// Gets the first [`Row`] of this `Block`, along with its annotation.
     #[inline]
-    pub fn first_annot_row(&self) -> Option<AnnotRow<A>> {
+    pub fn first_annot_row(&self) -> Option<(&A, &Row)> {
         self.get_annot_row(0)
     }
 
@@ -256,10 +224,8 @@ impl<A> Block<A> {
     /// `Block`.  This does not include the 'left-over' row; if you want to include the
     /// left-over [`Row`], use [`Block::all_rows`] instead.
     #[inline]
-    pub fn annot_rows(&self) -> impl Iterator<Item = AnnotRow<A>> + Clone {
-        self.rows()
-            .zip_eq(self.annots())
-            .map(|(r, a)| AnnotRow::new(r, a))
+    pub fn annot_rows(&self) -> impl Iterator<Item = (&A, &Row)> + Clone {
+        self.rows().zip_eq(self.annots()).map(|(r, a)| (a, r))
     }
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `Block`.  Also returns
@@ -276,7 +242,7 @@ impl<A> Block<A> {
         self.rows.path_of(bell) // Delegate to `SameStageVec`
     }
 
-    /// An [`Iterator`] which yields the [`AnnotRow`]s of `self` repeated forever.  This
+    /// An [`Iterator`] which yields the annotated [`Row`]s of `self` repeated forever.  This
     /// [`Iterator`] never terminates.
     ///
     /// [`RepeatIter`] is an [`Iterator`] which yields [`RowBuf`]s, causing an allocation for each
@@ -473,9 +439,9 @@ where
         }
 
         let mut builder = f.debug_tuple(stringify!(Block));
-        for annot_row in self.annot_rows() {
+        for (annot, row) in self.annot_rows() {
             // Format all annotated rows as `row: annot`
-            builder.field(&Pair(DbgRow(annot_row.row()), annot_row.annot()));
+            builder.field(&Pair(DbgRow(row), annot));
         }
         // Format the leftover row as `row` (since it has no annotation)
         builder.field(&DbgRow(self.leftover_row()));

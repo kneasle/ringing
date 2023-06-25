@@ -306,12 +306,12 @@ impl LinkLookupTable {
         // ```
         let mut link_ends_by_label = HashMap::<&str, Vec<(RowIdx, RowBuf)>>::new();
         for (method_idx, method_data) in query.methods.iter_enumerated() {
-            for (sub_lead_idx, annot_row) in method_data.first_lead().annot_rows().enumerate() {
-                for label in annot_row.annot() {
+            for (sub_lead_idx, (annot, row)) in method_data.first_lead().annot_rows().enumerate() {
+                for label in annot {
                     link_ends_by_label
                         .entry(label)
                         .or_default()
-                        .push((RowIdx::new(method_idx, sub_lead_idx), annot_row.row().inv()));
+                        .push((RowIdx::new(method_idx, sub_lead_idx), row.inv()));
                 }
             }
         }
@@ -326,7 +326,8 @@ impl LinkLookupTable {
             let mut link_positions = HashMap::<Mask, HashMap<usize, Vec<LinkLookupEntry>>>::new();
 
             // for every labelled row in the plain course ...
-            for (mut dist_from_lead_head, annot_row) in method.plain_course.annot_rows().enumerate()
+            for (mut dist_from_lead_head, (annot, _)) in
+                method.plain_course.annot_rows().enumerate()
             {
                 // There's no sense in having a link at the 0th row (which would potentially
                 // produce a 0-length chunk), so we move those rows to the end of the course
@@ -334,7 +335,7 @@ impl LinkLookupTable {
                     dist_from_lead_head = method.plain_course.len();
                 }
 
-                for label in annot_row.annot() {
+                for label in annot {
                     // Add links for calls
                     //
                     // ... for every call that can be placed there ...
