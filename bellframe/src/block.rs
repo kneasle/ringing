@@ -353,7 +353,7 @@ impl<A> Block<A> {
 
     /// Consumes this `Block`, and returns a [`SameStageVec`] containing the same [`Row`]s,
     /// **including** the left-over row.
-    pub fn into_row_vec(self) -> SameStageVec {
+    pub fn into_rows(self) -> SameStageVec {
         self.rows
     }
 
