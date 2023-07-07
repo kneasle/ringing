@@ -9,7 +9,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{Bell, IncompatibleStages, Parity, RowBuf, Stage};
+use crate::{Bell, IncompatibleStages, Parity, RowBuf, SameStageVec, Stage};
 
 use super::{MulIntoError, RowAccumulator};
 
@@ -650,26 +650,26 @@ impl Row {
     /// `x_1 * x_2 * ... * x_n` where `x_i` comes from `X_i` for all `i`.
     pub fn multi_cartesian_product(
         row_sets: impl IntoIterator<Item = impl IntoIterator<Item = impl AsRef<Self>>>,
-    ) -> Result<Vec<RowBuf>, IncompatibleStages> {
+        stage: Stage,
+    ) -> Result<SameStageVec, IncompatibleStages> {
         let mut set_iter = row_sets.into_iter();
-        let mut stage: Option<Stage> = None;
         // We will always be transposing the contents of `transpose_from` with the new values,
         // putting the results into `transpose_to`.  At the end of every loop iteration these are
         // swapped round
         // PERF: Use same stage buffers here for linear layout and massive reduction in allocations
-        let mut transpose_from: Vec<RowBuf> = Vec::new();
-        let mut transpose_to: Vec<RowBuf> = Vec::new();
+        let mut transpose_from = SameStageVec::new(stage);
+        let mut transpose_to = SameStageVec::new(stage);
         // Consume the first set as a special case:
         match set_iter.next() {
             // If it doesn't exist, no things are being CPed together so we return the empty Vec
-            None => return Ok(Vec::new()),
+            None => return Ok(SameStageVec::new(stage)),
             // If it does exist, then populate the `transpose_from` buffer with it and initialise
             // the stage
             Some(set) => {
                 for r in set.into_iter() {
                     let r = r.as_ref();
-                    IncompatibleStages::test_err_opt(&mut stage, r.stage())?;
-                    transpose_from.push(r.to_owned());
+                    IncompatibleStages::test_err(stage, r.stage())?;
+                    transpose_from.push(r).unwrap();
                 }
             }
         }
@@ -677,20 +677,19 @@ impl Row {
         for set in set_iter {
             // First up, check if `transpose_from` is empty, in which case the output will be empty
             if transpose_from.is_empty() {
-                return Ok(Vec::new());
+                return Ok(SameStageVec::new(stage));
             }
             // Unwrap the stage once, since it has either been set by now or `transpose_from` is
             // empty
-            let s = stage.unwrap();
             // Now, transpose every item in `transpose_from` with every item from the new set and
             // push into `transpose_to`
             transpose_to.clear();
             for r2 in set {
                 let r2 = r2.as_ref();
-                IncompatibleStages::test_err(s, r2.stage())?;
+                IncompatibleStages::test_err(stage, r2.stage())?;
                 for r1 in &transpose_from {
                     // SAFETY: We checked that `r2` and all of `transpose_from` have stage `s`
-                    transpose_to.push(unsafe { r1.mul_unchecked(r2) });
+                    transpose_to.push(&unsafe { r1.mul_unchecked(r2) }).unwrap();
                 }
             }
             // Finally, swap the buffers so that we read from the newly transposed rows
