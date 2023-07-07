@@ -222,10 +222,21 @@ impl<A> Block<A> {
 
     /// Returns an [`Iterator`] which yields the [`Row`]s which are directly part of this
     /// `Block`.  This does not include the 'left-over' row; if you want to include the
-    /// left-over [`Row`], use [`Block::all_rows`] instead.
+    /// left-over [`Row`], use [`Block::all_annot_rows`] instead.
     #[inline]
     pub fn annot_rows(&self) -> impl Iterator<Item = (&A, &Row)> + Clone {
-        self.rows().zip_eq(self.annots()).map(|(r, a)| (a, r))
+        self.annots().zip_eq(self.rows())
+    }
+
+    /// Returns an [`Iterator`] which yields the [`Row`]s which are directly part of this
+    /// `Block`.  This **does** include the 'left-over' row, which will have an annotation of
+    /// [`None`].
+    #[inline]
+    pub fn all_annot_rows(&self) -> impl Iterator<Item = (Option<&A>, &Row)> + Clone {
+        self.annots()
+            .map(Some)
+            .chain(std::iter::once(None))
+            .zip_eq(self.all_rows())
     }
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `Block`.  Also returns
