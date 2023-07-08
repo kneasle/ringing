@@ -3,6 +3,7 @@
 ### Monument v0.14.0
 
 #### Headline Features
+- (#284) Allow scoring of all-the-work compositions, using the `atw_weight` parameter.
 
 #### Smaller Changes
 - (#205) Remove chunks and links which contribute too much method counts.  This should have a small

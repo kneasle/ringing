@@ -15,10 +15,10 @@ use std::{
 };
 
 use bellframe::Stage;
-use ringing_utils::BigNumInt;
 use sysinfo::SystemExt;
 
 use crate::{
+    atw::AtwTable,
     builder::{MethodId, MusicTypeId},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
@@ -41,6 +41,7 @@ use crate::SearchBuilder;
 pub struct Search {
     /* Data */
     query: Arc<Query>,
+    atw_table: Arc<AtwTable>,
     config: Config,
     // TODO: Reintroduce this to make the search graph smaller
     // source_graph: crate::graph::Graph,
@@ -59,7 +60,7 @@ impl Search {
     /// [`search.run(...)`](Self::run)**.
     pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
-        let mut source_graph = crate::graph::Graph::unoptimised(&query, &config)?;
+        let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&query, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count
         // ranges
         let refined_ranges = prove_lengths(&source_graph, &query)?;
@@ -71,6 +72,7 @@ impl Search {
 
         Ok(Search {
             query: Arc::new(query),
+            atw_table: Arc::new(atw_table),
             config,
             refined_ranges,
             graph,
@@ -261,8 +263,6 @@ impl Default for Config {
             .min(pointer_size_limit)
             .try_into()
             .expect("Memory limit should fit into `usize`");
-
-        log::info!("Limiting memory usage to {}B", BigNumInt(mem_limit));
 
         Self {
             thread_limit: None,

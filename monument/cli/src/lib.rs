@@ -67,8 +67,12 @@ pub fn run(
     debug_print!(Query, search);
 
     // Build all the data structures for the search
-    let comp_printer =
-        CompositionPrinter::new(music_displays, search.clone(), spec.duffers_specified());
+    let comp_printer = CompositionPrinter::new(
+        music_displays,
+        search.clone(),
+        spec.atw_specified(),
+        spec.duffers_specified(),
+    );
     let mut update_logger = SingleLineProgressLogger::new(match options.only_display_update_line {
         true => None,
         false => Some(comp_printer.clone()),

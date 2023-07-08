@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    atw::AtwBitmap,
     graph::LinkSide,
     group::{PartHead, PhRotation},
     query::{CallIdx, Query},
@@ -42,6 +43,7 @@ pub(super) struct Chunk {
     // as unreachable.  This includes `Self`, because every chunk is guaranteed to be false against
     // itself.
     pub falseness: BitVec,
+    pub atw_bitmap: AtwBitmap,
 }
 
 /// A link between a chunk and its successor
@@ -119,6 +121,7 @@ impl Graph {
 
                     succs,
                     falseness,
+                    atw_bitmap: source_chunk.atw_bitmap.clone(),
                 }
             })
             .collect();

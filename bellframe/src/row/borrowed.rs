@@ -2,7 +2,7 @@ use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
     fmt::{Debug, Display, Formatter},
-    ops::{Index, Mul, Not},
+    ops::{Index, Mul, MulAssign, Not},
     rc::Rc,
     sync::Arc,
 };
@@ -959,6 +959,24 @@ mul_impl!(&Row, RowBuf);
 mul_impl!(&Row, &RowBuf);
 // NOTE: Intentionally commented, because `&Row, &Row` is the one explicit implementation
 // mul_impl!(&Row, &Row);
+
+impl MulAssign<&Row> for RowBuf {
+    fn mul_assign(&mut self, rhs: &Row) {
+        *self = &*self * rhs;
+    }
+}
+
+impl MulAssign<&RowBuf> for RowBuf {
+    fn mul_assign(&mut self, rhs: &RowBuf) {
+        *self *= rhs.as_row();
+    }
+}
+
+impl MulAssign<RowBuf> for RowBuf {
+    fn mul_assign(&mut self, rhs: RowBuf) {
+        *self *= rhs.as_row();
+    }
+}
 
 impl<'row> IntoIterator for &'row Row {
     type Item = Bell;

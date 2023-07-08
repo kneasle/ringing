@@ -4,6 +4,7 @@ use std::{
 };
 
 use datasize::DataSize;
+use ringing_utils::BigNumInt;
 
 use crate::utils::lengths::TotalLength;
 
@@ -15,9 +16,14 @@ const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions
 pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
+    log::info!(
+        "Limiting memory usage to {}B",
+        BigNumInt(search.config.mem_limit)
+    );
+
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
-    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(&search.graph, &mut paths);
+    let mut frontier: BinaryHeap<CompPrefix> = CompPrefix::starts(search, &mut paths);
 
     if frontier.is_empty() {
         return; // Don't run a search if no compositions are possible

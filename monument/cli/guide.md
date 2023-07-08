@@ -167,6 +167,7 @@ take you to more in-depth docs about it.
 - [`method_count`](#method_count) (default to ±10% balance)
 - [`splice_style = "leads"`](#splice_style)
 - [`splice_weight = 0.0`](#splice_weight) _(since v0.7.0)_
+- [`atw_weight`](#atw_weight) _(since v0.14.0)_
 
 **Calls:**
 - [`base_calls = "near"`](#base_calls)
@@ -335,6 +336,20 @@ method_count = { min = 100, max = 300 } # Force a given method count range
 
 Weight applied to each change of method.  Positive values will encourage more c.o.m.; negative
 values will encourage few c.o.m.  Defaults to 0 (i.e. don't care about c.o.m.).
+
+#### `atw_weight`
+
+**_(since v0.14.0)_**
+
+Weight applied to a composition that is 'all the work' (i.e. one where every bell rings every part
+of every place bell of every method).  The score generated is continuous - a 'half-the-work'
+composition will be given an additional score of `atw_weight * 0.5`.
+
+Setting this to any value (even `0.0`) will cause the atw-ness of compositions to be displayed.
+
+**NOTE:** Monument's current search algorithm finds it quite challenging to actually find fully atw
+compositions.  The algorithm is designed to generate 'all-rounder' compositions, and therefore
+struggles with 'all-or-nothing' metrics like atw.
 
 ### Calls
 

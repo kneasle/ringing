@@ -219,18 +219,13 @@ impl Default for MusicCommon {
 }
 
 /// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum StrokeSet {
     Hand,
     Back,
+    #[default]
     Both,
-}
-
-impl Default for StrokeSet {
-    fn default() -> Self {
-        StrokeSet::Both
-    }
 }
 
 ////////////////////////////////

@@ -1,6 +1,6 @@
 use std::ops::{Deref, Mul, Not};
 
-use bellframe::{Row, RowBuf, Stage};
+use bellframe::{Bell, Row, RowBuf, Stage};
 use datasize::DataSize;
 use gcd::Gcd;
 
@@ -8,7 +8,7 @@ use gcd::Gcd;
 /// mathematical sense of 'cyclic').
 #[derive(Debug, Clone)]
 pub struct PartHeadGroup {
-    /// The [`Row`]s which make up the `PartHeadGroup`.
+    /// The [`Row`]s which make up the `PartHeadGroup`.  `part_heads[0]` is always rounds.
     ///
     /// Invariant: there is some row `r` such that `part_heads[i] = r^i` for all `i`.
     // PERF: Make this a `SameStageVec`
@@ -75,6 +75,35 @@ impl PartHeadGroup {
     }
 
     /* PROCESSING ELEMENTS */
+
+    /// Return a set of groups of [`Bell`]s which share paths through the compositions.
+    ///
+    /// For example, a composition with `parthead = "134265"` will return
+    /// `[[1], [2, 3, 4], [5, 6], [7], [8]]`.  The ordering of the [`Bell`]s and groups is
+    /// non-deterministic.
+    pub fn bell_cycles(&self) -> Vec<Vec<Bell>> {
+        let base_part_head = self.part_heads.last().unwrap();
+
+        let mut bells_used = vec![false; base_part_head.stage().num_bells()];
+        let mut groups = Vec::new();
+        // Repeatedly pick a bell that we haven't put into a group
+        while let Some(group_start) = bells_used.iter().position(|u| !*u) {
+            let group_start = Bell::from_index(group_start as u8);
+            let mut group = Vec::new();
+            // This bell is grouped with every place bell it visits in the part head
+            let mut next_bell = group_start;
+            loop {
+                group.push(next_bell);
+                bells_used[next_bell.index()] = true;
+                next_bell = base_part_head[next_bell.index()];
+                if next_bell == group_start {
+                    break; // We've fully run through this loop
+                }
+            }
+            groups.push(group);
+        }
+        groups
+    }
 
     /// Given an abstract [`PartHead`], return the corresponding [`Row`]
     pub fn get_row(&self, element: PartHead) -> &Row {

@@ -1,0 +1,17 @@
+length = "QP"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Bristol Surprise Major",
+    # "London Surprise Major",
+    { title = "Cornwall Surprise Major", shorthand = "W" },
+    { title = "Lessness Surprise Major", shorthand = "E" },
+]
+method_count = { min = 0, max = 448 }
+part_head = "18234567"
+courses = [
+    "*2345", "*3456", "*4567", "*5678", "*6782", "*7823", "*8234",
+    "12345*", "13456*", "14567*", "15678*", "16782*", "17823*", "18234*",
+]
+atw_weight = 100
