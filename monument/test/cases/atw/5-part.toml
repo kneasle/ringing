@@ -1,0 +1,13 @@
+length = "peal"
+methods = [
+    "Cambridge Surprise Major",
+    "Yorkshire Surprise Major",
+    "Superlative Surprise Major",
+    "Pudsey Surprise Major",
+]
+method_count = { min = 0, max = 4000 }
+atw_weight = 100
+splice_style = "calls"
+
+part_head = "156342"
+bobs_only = true
