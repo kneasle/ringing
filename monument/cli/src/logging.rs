@@ -3,6 +3,7 @@
 use std::{fmt::Write, io::Write as IoWrite, sync::Arc};
 
 use bellframe::row::ShortRow;
+use colored::Colorize;
 use itertools::Itertools;
 use log::log_enabled;
 use monument::{Composition, Progress, Search, Update};
@@ -293,7 +294,7 @@ impl CompositionPrinter {
         if self.print_atw {
             let factor = comp.atw_factor();
             if factor > 0.999999 {
-                s.push_str(" atw |");
+                s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {
                 write!(s, " {:>2}% |", (factor * 100.0).floor() as usize).unwrap();
             }
