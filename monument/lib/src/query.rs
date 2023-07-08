@@ -135,7 +135,7 @@ impl Query {
             if sub_lead_idx == method.lead_len() {
                 // Next chunk starts in a new lead, so update the lead head accordingly
                 sub_lead_idx = 0;
-                lead_head = lead_head * method.lead_head();
+                lead_head *= method.lead_head();
             }
         }
         lead_regions

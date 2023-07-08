@@ -129,7 +129,7 @@ impl AtwTable {
                     let start_idx = index_within_bit_starts(sub_lead_range.start);
                     let end_idx = index_within_bit_starts(sub_lead_range.end);
                     let bit_idxs = &bit_starts[start_idx..end_idx];
-                    assert!(bit_idxs.len() >= 1);
+                    assert!(!bit_idxs.is_empty());
                     assert_eq!(bit_idxs[0].0, sub_lead_range.start);
 
                     // Add each of the bits we've found to the bitmask for this chunk
@@ -348,7 +348,7 @@ fn range_boundaries_to_flags(
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
     for (method_idx, method) in methods.iter_enumerated() {
-        let bell_place_sets = bell_place_sets(working_bells, &part_head_cycles, method);
+        let bell_place_sets = bell_place_sets(working_bells, part_head_cycles, method);
         // Add one flag for every chunk and every (bell, place bell) pair
         for bell_place_set in &bell_place_sets {
             // It is possible for different (bell, place bell) pairs to have different lead

@@ -968,7 +968,13 @@ impl MulAssign<&Row> for RowBuf {
 
 impl MulAssign<&RowBuf> for RowBuf {
     fn mul_assign(&mut self, rhs: &RowBuf) {
-        *self = &*self * rhs;
+        *self *= rhs.as_row();
+    }
+}
+
+impl MulAssign<RowBuf> for RowBuf {
+    fn mul_assign(&mut self, rhs: RowBuf) {
+        *self *= rhs.as_row();
     }
 }
 
