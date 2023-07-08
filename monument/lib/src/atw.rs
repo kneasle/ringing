@@ -50,6 +50,10 @@ impl AtwFlag {
 
 impl AtwTable {
     pub fn new(query: &Query, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
+        let Some(atw_weight) = query.atw_weight else {
+            return Self::empty();
+        };
+
         let working_bells = query
             .stage
             .bells()
@@ -83,11 +87,21 @@ impl AtwTable {
         let (bitmap_chunk_multipliers, flag_per_bit) = split_flags_into_bitmap_chunks(flags);
 
         Self {
-            atw_weight: query.atw_weight.unwrap_or(Score::from(0.0)),
+            atw_weight,
             bell_place_to_bitmap_index: make_bell_place_to_bitmap_index(&flag_per_bit),
             total_unique_row_positions,
             flag_per_bit,
             bitmap_chunk_multipliers,
+        }
+    }
+
+    fn empty() -> Self {
+        Self {
+            atw_weight: Score::from(0.0),
+            total_unique_row_positions: 1, // Should really be `0`, set to `1` to avoid div by 0
+            bitmap_chunk_multipliers: Vec::new(),
+            flag_per_bit: Vec::new(),
+            bell_place_to_bitmap_index: HashMap::new(),
         }
     }
 
@@ -285,13 +299,13 @@ fn total_unique_row_positions(
     let total_unique_row_positions = working_bells.len() // Working bells
         * working_bells.len() // Working place bells
         * methods.iter().map(|m| m.lead_len()).sum::<usize>();
-    assert_eq!(
-        flags
-            .iter()
-            .map(AtwFlag::unique_row_positions)
-            .sum::<usize>(),
-        total_unique_row_positions
-    );
+    let unique_row_positions_in_flags = flags
+        .iter()
+        .map(AtwFlag::unique_row_positions)
+        .sum::<usize>();
+    if unique_row_positions_in_flags != total_unique_row_positions {
+        log::warn!("Not enough place bells can be rung for a fully atw composition.");
+    }
     total_unique_row_positions
 }
 
