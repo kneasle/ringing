@@ -63,9 +63,16 @@ impl SameStageVec {
     //////////////////
 
     /// Creates a new `SameStageVec` containing no [`Row`]s, expecting to be given [`Row`]s of a
-    /// given [`Stage`].
+    /// given [`Stage`].  Identical to [`SameStageVec::empty`].
     #[inline]
     pub fn new(stage: Stage) -> Self {
+        Self::empty(stage)
+    }
+
+    /// Creates a new `SameStageVec` containing no [`Row`]s, expecting to be given [`Row`]s of a
+    /// given [`Stage`].  Identical to [`SameStageVec::new`].
+    #[inline]
+    pub fn empty(stage: Stage) -> Self {
         Self {
             bells: Vec::new(),
             stage,
@@ -225,6 +232,12 @@ impl SameStageVec {
     ////////////////
     // OPERATIONS //
     ////////////////
+
+    /// Mutates `self` to become empty
+    #[inline]
+    pub fn clear(&mut self) {
+        self.bells.clear();
+    }
 
     /// Adds a new [`Row`] to the end of the buffer, checking that its [`Stage`] is as expected.
     #[inline]

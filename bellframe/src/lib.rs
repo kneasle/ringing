@@ -20,7 +20,7 @@ mod utils;
 
 // Re-export useful data types into the top level of the crate
 pub use bell::Bell;
-pub use block::{AnnotRow, Block};
+pub use block::Block;
 pub use call::Call;
 pub use mask::Mask;
 pub use method::Method;
