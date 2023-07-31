@@ -43,7 +43,8 @@ pub fn read_file_to_string(path: &Path) -> anyhow::Result<String> {
 
 /// Attempt to read a file as a [`String`], returning a helpful error message on failure
 pub fn parse_toml<'de, T: Deserialize<'de>>(s: &'de str) -> anyhow::Result<T> {
-    toml::from_str(s).map_err(|e| anyhow::Error::msg(format!("Error parsing spec file: {}", e)))
+    toml::from_str(s)
+        .map_err(|e| anyhow::Error::msg(format!("Error parsing composition file: {}", e)))
 }
 
 pub fn get_one() -> f32 {

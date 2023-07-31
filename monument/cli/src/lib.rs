@@ -9,7 +9,7 @@ pub mod args;
 pub mod calls;
 pub mod logging;
 pub mod music;
-pub mod spec;
+pub mod toml_file;
 pub mod utils;
 
 use std::{
@@ -24,7 +24,7 @@ use monument::{Composition, Search};
 use ordered_float::OrderedFloat;
 use ringing_utils::PrettyDuration;
 use simple_logger::SimpleLogger;
-use spec::Spec;
+use toml_file::TomlFile;
 
 use crate::logging::{CompositionPrinter, SingleLineProgressLogger};
 
@@ -56,22 +56,22 @@ pub fn run(
     let start_time = Instant::now();
 
     // Generate & debug print the TOML file specifying the search
-    let spec = Spec::new(toml_path)?;
-    debug_print!(Spec, spec);
+    let toml_file = TomlFile::new(toml_path)?;
+    debug_print!(Toml, toml_file);
     // If running in CLI mode, don't `drop` any of the search data structures, since Monument will
     // exit shortly after the search terminates.  With the `Arc`-based data structures, this is
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     let leak_search_memory = env == Environment::Cli;
-    // Convert the `Spec` into a `Layout` and other data required for running a search
-    let (search, music_displays) = spec.lower(toml_path, options, leak_search_memory)?;
+    // Convert the `TomlFile` into a `Layout` and other data required for running a search
+    let (search, music_displays) = toml_file.to_search(toml_path, options, leak_search_memory)?;
     debug_print!(Query, search);
 
     // Build all the data structures for the search
     let comp_printer = CompositionPrinter::new(
         music_displays,
         search.clone(),
-        spec.atw_specified(),
-        spec.duffers_specified(),
+        toml_file.atw_specified(),
+        toml_file.duffers_specified(),
     );
     let mut update_logger = SingleLineProgressLogger::new(match options.only_display_update_line {
         true => None,
@@ -162,7 +162,7 @@ impl QueryResult {
 /// What item should be debug printed
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DebugOption {
-    Spec,
+    Toml,
     Query,
     Graph,
     /// Stop just before the search starts, to let the user see what's been printed out without
@@ -175,13 +175,13 @@ impl FromStr for DebugOption {
 
     fn from_str(v: &str) -> Result<Self, String> {
         Ok(match v.to_lowercase().as_str() {
-            "spec" => Self::Spec,
+            "toml" => Self::Toml,
             "query" => Self::Query,
             "graph" => Self::Graph,
             "no-search" => Self::StopBeforeSearch,
             #[rustfmt::skip] // See https://github.com/rust-lang/rustfmt/issues/5204
             _ => return Err(format!(
-                "Unknown value {:?}. Expected `spec`, `query`, `layout`, `graph` or `no-search`.",
+                "Unknown value {:?}. Expected `toml`, `query`, `layout`, `graph` or `no-search`.",
                 v
             )),
         })

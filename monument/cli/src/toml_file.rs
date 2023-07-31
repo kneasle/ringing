@@ -19,7 +19,7 @@ use serde::Deserialize;
 
 use crate::{
     calls::{BaseCalls, CustomCall},
-    music::{BaseMusic, MusicDisplay, MusicSpec},
+    music::{BaseMusic, MusicDisplay, TomlMusic},
     utils::OptRangeInclusive,
 };
 
@@ -28,13 +28,13 @@ use self::length::Length;
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
 
-/// The specification for a set of compositions which Monument should search.  The [`Spec`] type is
+/// The specification for a set of compositions which Monument should search.  The [`TomlFile`] type is
 /// parsed directly from the `TOML`, and can be thought of as an AST representation of the TOML
 /// file.  Like ASTs, this specifies a superset of valid programs - so building a composition
 /// search can also fail (as can lowering an AST).
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Spec {
+pub struct TomlFile {
     /* GENERAL */
     /// The range of lengths of composition which are allowed
     length: Length,
@@ -55,10 +55,10 @@ pub struct Spec {
 
     /* METHODS */
     /// The method who's compositions we are after
-    method: Option<MethodSpec>,
+    method: Option<TomlMethod>,
     #[serde(default)]
     /// A list of methods to be spliced together
-    methods: Vec<MethodSpec>,
+    methods: Vec<TomlMethod>,
     /// At which locations method splices are allowed
     #[serde(default)]
     splice_style: SpliceStyle,
@@ -119,7 +119,7 @@ pub struct Spec {
     music_file: Option<PathBuf>,
     /// Specification of which classes of music Monument should consider
     #[serde(default)]
-    music: Vec<MusicSpec>,
+    music: Vec<TomlMusic>,
     /// The [`Stroke`] of the first row of the composition
     #[serde(default = "crate::utils::handstroke")]
     start_stroke: Stroke,
@@ -164,15 +164,15 @@ pub struct Spec {
     max_total_duffer: Option<usize>,
 }
 
-impl Spec {
-    /// Read a `Spec` from a TOML file
+impl TomlFile {
+    /// Load and parse a `TomlFile` structure from a TOML file
     pub fn new(toml_path: &Path) -> anyhow::Result<Self> {
         let toml_buf = crate::utils::read_file_to_string(toml_path)?;
         crate::utils::parse_toml(&toml_buf)
     }
 
-    /// 'Lower' this `Spec`ification into a [`Search`].
-    pub fn lower(
+    /// Build a [`Search`] which corresponds to this `TomlFile`
+    pub fn to_search(
         &self,
         toml_path: &Path,
         opts: &crate::args::Options,
@@ -187,14 +187,14 @@ impl Spec {
             .iter()
             .chain(self.method.as_ref())
             .cloned()
-            .map(MethodSpec::into_builder)
+            .map(TomlMethod::into_builder)
             .collect::<anyhow::Result<Vec<_>>>()?;
         let length = monument::builder::Length::Range(self.length.range.clone());
         let mut search_builder =
             SearchBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
         let stage = search_builder.get_stage();
 
-        // Lower `MethodSpec`s into `bellframe::Method`s.
+        // Lower `TomlMethod`s into `bellframe::Method`s.
         let calling_bell = match self.calling_bell {
             Some(v) => Bell::from_number(v).ok_or_else(|| {
                 anyhow::Error::msg("Invalid calling bell: bell number 0 doesn't exist.")
@@ -442,7 +442,7 @@ pub enum CourseWeightPattern {
 /// The contents of the `[method]` header in the input TOML file
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
-pub enum MethodSpec {
+pub enum TomlMethod {
     JustTitle(String),
     FromCcLib {
         title: String,
@@ -521,12 +521,12 @@ impl LeadLabels {
     }
 }
 
-impl MethodSpec {
+impl TomlMethod {
     fn into_builder(self) -> anyhow::Result<Method> {
         let (mut method_builder, common) = match self {
-            MethodSpec::JustTitle(title) => (Method::with_title(title), None),
-            MethodSpec::FromCcLib { title, common } => (Method::with_title(title), Some(common)),
-            MethodSpec::Custom {
+            TomlMethod::JustTitle(title) => (Method::with_title(title), None),
+            TomlMethod::FromCcLib { title, common } => (Method::with_title(title), Some(common)),
+            TomlMethod::Custom {
                 name,
                 place_notation,
                 stage,

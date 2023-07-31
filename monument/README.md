@@ -1,7 +1,12 @@
 # Monument
 
-A fast, flexible and human-friendly composing engine.  Monument is currently in an **alpha** state of
-readiness (see the [known issues](#known-issues)).
+A fast, flexible and human-friendly composition generator.
+
+Monument can be thought of as a computer composer: you provide it with a description of what
+compositions you want and it generates the best compositions it can, according to your definition
+of 'good'.
+
+Monument is currently in an **alpha** state of readiness (see the [known issues](#known-issues)).
 
 _A guide to Monument can be found [here](cli/guide.md)._
 
@@ -13,19 +18,20 @@ all software.
 
 Note that this doesn't necessarily mean generating the perfect composition, or generating _every
 possible_ composition.  Monument guarantees neither of these but in return, Monument is **orders of
-magnitude faster** than any other engine I'm aware of (if anyone knows of any faster
-generally-available engine, then please let me know!).
+magnitude faster** than any other composing program I'm aware of (if anyone knows of any faster
+generally-available program, then please let me know!).
 
 ### Who _isn't_ Monument for?
 
 If you do want to run exhaustive searches or want guaranteed optimal results, then Monument isn't
 for you - [SMC](https://github.com/GACJ/smc) is extremely good at exhaustive searching to get
 optimal results.  If you want to exhaustively search spliced, I think you need to write your own
-engine.  I wish you the best of luck getting results before the eventual heat death of the universe.
+generator.  I wish you the best of luck getting results before the inevitable heat death of the
+universe.
 
-If you want a GUI, Monument isn't for you (yet).
+If you want a graphical user interface, Monument isn't for you (yet).
 
-If you want an engine that doesn't change often, Monument isn't for you (yet).
+If you want a generator who's user interface doesn't change often, Monument isn't for you (yet).
 
 ## Features
 
@@ -73,5 +79,14 @@ If you want an engine that doesn't change often, Monument isn't for you (yet).
 
 Finally, it's worth pointing out that generating compositions is, in general, **really hard** ([NP
 hard](https://en.wikipedia.org/wiki/NP-hardness), in fact).  There will always be queries which are
-simply too hard for Monument (or any other engine) to complete, so any promise of speed is a
+simply too hard for Monument (or any other generator) to complete, so any promise of speed is a
 best-effort not a guarantee.
+
+## Under the Hood
+
+If you want to understand how Monument works at a high level, check out the
+['Under the Hood'](under-the-hood.md) post.
+
+If you want to understand the code in its gory details (e.g. to contribute), the
+[`ARCHITECTURE.md` file](https://github.com/kneasle/ringing/blob/master/monument/README.md)
+provides a high-level overview of Monument's code and internal workings.

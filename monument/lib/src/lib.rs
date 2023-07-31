@@ -1,14 +1,14 @@
-//! Monument is a fast and embeddable composing engine for
+//! Monument is a fast and embeddable composition generator for
 //! [change ringing](https://en.wikipedia.org/wiki/Change_ringing).
 //!
-//! This crate aims to provide a convenient API for embedding Monument's core engine into larger
+//! This crate aims to provide a convenient API for embedding Monument's core 'engine' into larger
 //! pieces of software.  Monument also has a command-line interface, provided by a separate crate
 //! `monument_cli` which reads queries from TOML files, passes them to this library and prints the
 //! resulting compositions to the console.
 //!
 //! # Description
 //!
-//! Monument is a **composing engine**.  This means it is designed to run [`Search`]es to find
+//! Monument is a **composition generator**.  This means it is designed to run [`Search`]es to find
 //! [`Composition`]s which satisfy some set of constraints (length, methods/calls used, etc.).  One
 //! can also describe what features make a [`Composition`] 'good' and Monument will attempt to
 //! maximise them.
@@ -22,9 +22,9 @@
 //! (but maybe not optimal) compositions seems like a very good deal.
 //!
 //! Composing in general is so hard ([NP-hard](https://en.wikipedia.org/wiki/NP-hardness), in fact)
-//! that it's impossible to have an engine that is both consistently fast and guarantees
+//! that it's impossible to have a generator that is both consistently fast and guarantees
 //! optimality.  Thus, any promise of speed is a best-effort not a guarantee, and there will always
-//! be searches which are too complex for Monument to handle.  Such must be true of any engine.
+//! be searches which are too complex for Monument to handle.  Such must be true of any generator.
 //!
 //! # Status
 //!
