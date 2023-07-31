@@ -82,8 +82,11 @@ hard](https://en.wikipedia.org/wiki/NP-hardness), in fact).  There will always b
 simply too hard for Monument (or any other generator) to complete, so any promise of speed is a
 best-effort not a guarantee.
 
-## Internal details
+## Under the Hood
 
-If you're interested in the details of how Monument works, the
+If you want to understand how Monument works at a high level, check out the
+['Under the Hood'](under-the-hood.md) post.
+
+If you want to understand the code in its gory details (e.g. to contribute), the
 [`ARCHITECTURE.md` file](https://github.com/kneasle/ringing/blob/master/monument/README.md)
 provides a high-level overview of Monument's code and internal workings.
