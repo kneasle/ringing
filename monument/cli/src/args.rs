@@ -8,7 +8,7 @@ use crate::DebugOption;
 /// A struct storing the CLI args taken by Monument.  `StructOpt` will generate the argument
 /// parsing/help code for us.
 #[derive(Debug, Clone, StructOpt)]
-#[structopt(name = "Monument", about = "Fast and flexible composing engine")]
+#[structopt(name = "Monument", about = "Fast and flexible composition generator")]
 pub struct CliArgs {
     /// The name of the specification file for Monument (`*.toml`)
     #[structopt(parse(from_os_str))]

@@ -4,7 +4,7 @@ version = "0.13.4"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
-description = "A fast and flexible composing engine."
+description = "A fast and flexible composition generator."
 readme = "../README.md"
 license = "MIT"
 repository = "https://github.com/kneasle/ringing-monorepo"
