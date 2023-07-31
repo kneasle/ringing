@@ -43,7 +43,7 @@ pub struct Options {
     #[structopt(short = "M", long, parse(try_from_str = parse_big_int))]
     pub mem_limit: Option<usize>,
 
-    /// Debug options.  `spec`, `query`, `layout` and `graph` print the corresponding data
+    /// Debug options.  `toml`, `query`, `layout` and `graph` print the corresponding data
     /// structures.  `no-search` will run as normal but stop just before starting the full search.
     #[structopt(short = "D", long)]
     pub debug_option: Option<DebugOption>,

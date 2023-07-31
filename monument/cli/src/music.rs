@@ -26,13 +26,13 @@ pub enum BaseMusic {
 /// The specification for a music file
 #[derive(Debug, Clone, Deserialize)]
 struct MusicFile {
-    music: Vec<MusicSpec>,
+    music: Vec<TomlMusic>,
 }
 
 /// The specification for one type of music
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
-pub enum MusicSpec {
+pub enum TomlMusic {
     RunLength {
         #[serde(rename = "run_length")]
         length: u8,
@@ -72,7 +72,7 @@ pub enum MusicSpec {
     },
 }
 
-/// Values common to all enum variants of [`MusicSpec`]
+/// Values common to all enum variants of [`TomlMusic`]
 #[derive(Debug, Clone, Deserialize)]
 pub struct MusicCommon {
     #[serde(default = "crate::utils::get_one")]
@@ -104,11 +104,11 @@ pub enum MusicPreset {
 }
 
 ////////////////////////////////////////////////
-// DETERMINING WHICH `MusicSpec`S TO GENERATE //
+// DETERMINING WHICH `TomlMusic`S TO GENERATE //
 ////////////////////////////////////////////////
 
 pub fn generate_music(
-    music_specs: &[MusicSpec],
+    toml_musics: &[TomlMusic],
     base_music: BaseMusic,
     music_file_str: Option<&str>,
     search_builder: &mut SearchBuilder,
@@ -126,7 +126,7 @@ pub fn generate_music(
         music_builder.add_music_toml(music_file_toml)?;
     }
     // Explicit music types
-    music_builder.add_specs(music_specs)?;
+    music_builder.add_toml_musics(toml_musics)?;
 
     // Generate `MusicDisplay`s necessary to display all the `MusicTypes` we've generated
     Ok(music_builder.finish())
@@ -147,14 +147,14 @@ impl<'a> MusicTypeFactory<'a> {
 
     fn add_music_toml(&mut self, toml_str: &str) -> anyhow::Result<()> {
         let music_file: MusicFile = crate::utils::parse_toml(toml_str)?;
-        self.add_specs(&music_file.music)
+        self.add_toml_musics(&music_file.music)
     }
 
-    fn add_specs<'m>(
+    fn add_toml_musics<'m>(
         &mut self,
-        specs: impl IntoIterator<Item = &'m MusicSpec>,
+        toml_musics: impl IntoIterator<Item = &'m TomlMusic>,
     ) -> anyhow::Result<()> {
-        for s in specs {
+        for s in toml_musics {
             self.annot_music_types
                 .extend(s.to_music_types(self.search_builder)?);
         }
@@ -229,10 +229,10 @@ enum StrokeSet {
 }
 
 ////////////////////////////////
-// `MusicSpec` -> `MusicType` //
+// `TomlMusic` -> `MusicType` //
 ////////////////////////////////
 
-impl MusicSpec {
+impl TomlMusic {
     /// Generates a [`MusicType`] representing `self`.
     fn to_music_types(
         &self,
