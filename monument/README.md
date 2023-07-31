@@ -81,3 +81,9 @@ Finally, it's worth pointing out that generating compositions is, in general, **
 hard](https://en.wikipedia.org/wiki/NP-hardness), in fact).  There will always be queries which are
 simply too hard for Monument (or any other generator) to complete, so any promise of speed is a
 best-effort not a guarantee.
+
+## Internal details
+
+If you're interested in the details of how Monument works, the
+[`ARCHITECTURE.md` file](https://github.com/kneasle/ringing/blob/master/monument/README.md)
+provides a high-level overview of Monument's code and internal workings.
