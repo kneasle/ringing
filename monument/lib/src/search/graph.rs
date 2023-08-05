@@ -4,7 +4,7 @@ use crate::{
     atw::AtwBitmap,
     graph::LinkSide,
     group::{PartHead, PhRotation},
-    query::{CallIdx, Query},
+    parameters::{CallIdx, Parameters},
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
@@ -60,7 +60,7 @@ pub(super) struct SuccLink {
 ///////////////////////////////////////////
 
 impl Graph {
-    pub fn new(source_graph: &crate::graph::Graph, query: &Query) -> Self {
+    pub fn new(source_graph: &crate::graph::Graph, query: &Parameters) -> Self {
         let num_chunks = source_graph.chunks.len();
 
         // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
@@ -151,7 +151,7 @@ impl Graph {
 fn link_score(
     source_chunk: &crate::graph::Chunk,
     link: &crate::graph::Link,
-    query: &Query,
+    query: &Parameters,
 ) -> Score {
     const ZERO: Score = OrderedFloat(0.0);
 

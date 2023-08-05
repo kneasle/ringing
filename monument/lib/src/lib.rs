@@ -47,10 +47,10 @@ mod composition;
 mod error;
 mod graph;
 mod group;
+pub mod parameters;
 mod prove_length;
-mod query;
 mod search;
-mod utils;
+pub mod utils;
 
 pub use builder::SearchBuilder;
 pub use composition::Composition;

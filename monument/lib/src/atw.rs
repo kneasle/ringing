@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    query::{MethodIdx, MethodVec, Query},
+    parameters::{MethodIdx, MethodVec, Parameters},
     utils::{div_rounding_up, lengths::PerPartLength, Score},
 };
 
@@ -49,7 +49,7 @@ impl AtwFlag {
 }
 
 impl AtwTable {
-    pub fn new(query: &Query, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
+    pub fn new(query: &Parameters, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
         let Some(atw_weight) = query.atw_weight else {
             return Self::empty();
         };
@@ -109,7 +109,7 @@ impl AtwTable {
     /// stores all of that chunk's ATW information.
     pub fn bitmap_for_chunk(
         &self,
-        query: &Query,
+        query: &Parameters,
         id: &ChunkId,
         chunk_len: PerPartLength,
     ) -> AtwBitmap {
@@ -293,7 +293,7 @@ fn make_bell_place_to_bitmap_index(
 // accounted for
 fn total_unique_row_positions(
     working_bells: &[Bell],
-    methods: &MethodVec<crate::query::Method>,
+    methods: &MethodVec<crate::parameters::Method>,
     flags: &[AtwFlag],
 ) -> usize {
     let total_unique_row_positions = working_bells.len() // Working bells
@@ -312,7 +312,7 @@ fn total_unique_row_positions(
 /// Determine how the (bell, place bell, method, sub-lead idx) tuples can be combined into
 /// individual bitflags.
 fn place_bell_range_boundaries(
-    query: &Query,
+    query: &Parameters,
     chunk_lengths: &HashMap<ChunkId, PerPartLength>,
 ) -> HashMap<(Bell, u8, MethodIdx), Vec<usize>> {
     // For each (bell, place bell, method) triple, determine at which sub-lead indices the chunks
@@ -343,7 +343,7 @@ fn place_bell_range_boundaries(
 fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    methods: &MethodVec<crate::query::Method>,
+    methods: &MethodVec<crate::parameters::Method>,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
@@ -391,7 +391,7 @@ fn range_boundaries_to_flags(
 fn bell_place_sets(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    method: &crate::query::Method,
+    method: &crate::parameters::Method,
 ) -> Vec<Vec<(Bell, u8)>> {
     let mut bells_left_to_track = working_bells.iter().copied().collect::<HashSet<_>>();
     let mut bell_place_sets = Vec::<Vec<(Bell, u8)>>::new();

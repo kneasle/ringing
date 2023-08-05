@@ -16,7 +16,7 @@ use itertools::Itertools;
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    query::{Call, Query, StrokeSet},
+    parameters::{Call, Parameters, StrokeSet},
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
 };
@@ -25,7 +25,10 @@ use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, Tot
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub(crate) fn unoptimised(query: &Query, config: &Config) -> crate::Result<(Self, AtwTable)> {
+    pub(crate) fn unoptimised(
+        query: &Parameters,
+        config: &Config,
+    ) -> crate::Result<(Self, AtwTable)> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 
@@ -124,7 +127,7 @@ impl Graph {
 fn expand_chunk(
     id: &ChunkId,
     per_part_length: PerPartLength,
-    query: &Query,
+    query: &Parameters,
     atw_table: &AtwTable,
 ) -> Chunk {
     let total_length = per_part_length.as_total(&query.part_head_group);
@@ -171,7 +174,7 @@ fn expand_chunk(
 fn get_start_strokes(
     chunks: &HashMap<ChunkId, Chunk>,
     links: &LinkSet,
-    query: &Query,
+    query: &Parameters,
 ) -> Option<HashMap<ChunkId, Stroke>> {
     let mut start_strokes = HashMap::<ChunkId, Stroke>::with_capacity(chunks.len());
     let mut frontier = Vec::<(ChunkId, Stroke)>::new();
@@ -221,7 +224,7 @@ fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
-    query: &Query,
+    query: &Parameters,
 ) {
     // Always set music to `0`s, even if the chunk is unreachable.  If we don't, then an
     // optimisation pass could see this chunk and run `zip_eq` on the `MusicType`s, thus causing a
@@ -280,7 +283,7 @@ fn count_scores(
 ////////////////////
 
 /// Check a [`Query`] for obvious errors before starting to build the [`Graph`]
-fn check_query(query: &Query) -> crate::Result<()> {
+fn check_query(query: &Parameters) -> crate::Result<()> {
     // Different start/end rows aren't well defined for multi-parts
     if query.is_multipart() && query.start_row != query.end_row {
         return Err(crate::Error::DifferentStartEndRowInMultipart);
@@ -361,7 +364,7 @@ fn check_query(query: &Query) -> crate::Result<()> {
 }
 
 /// Check for two [`Call`]s which assign the same `symbol` at the same `label`.
-fn check_for_duplicate_call_names(query: &Query) -> crate::Result<()> {
+fn check_for_duplicate_call_names(query: &Parameters) -> crate::Result<()> {
     let sorted_calls = query
         .calls
         .iter()

@@ -14,7 +14,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     group::PartHeadGroup,
-    query::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Query, StrokeSet},
+    parameters::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Parameters, StrokeSet},
     search::{Config, Search, Update},
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -54,7 +54,7 @@ pub struct SearchBuilder {
     pub call_display_style: CallDisplayStyle,
 
     /* MUSIC */
-    music_types: MusicTypeVec<query::MusicType>,
+    music_types: MusicTypeVec<parameters::MusicType>,
     pub start_stroke: Stroke,
 
     /* COURSES */
@@ -209,7 +209,7 @@ impl SearchBuilder {
     }
 
     /// Finish building and construct the resulting [`Query`]
-    fn into_query(self) -> crate::Result<Query> {
+    fn into_query(self) -> crate::Result<Parameters> {
         let Self {
             stage,
             length_range,
@@ -291,7 +291,7 @@ impl SearchBuilder {
 
         let part_head_group = PartHeadGroup::new(&part_head);
 
-        Ok(Query {
+        Ok(Parameters {
             length_range,
             stage,
             num_comps,
@@ -399,8 +399,8 @@ impl Call {
     }
 
     /// Builds a [`Call`] into a [`crate::query::Call`].
-    fn build(self) -> query::Call {
-        query::Call {
+    fn build(self) -> parameters::Call {
+        parameters::Call {
             symbol: self.symbol,
             calling_positions: self
                 .calling_positions
@@ -449,7 +449,7 @@ pub enum BaseCallType {
 }
 
 impl BaseCalls {
-    fn into_calls(self, stage: Stage) -> Vec<query::Call> {
+    fn into_calls(self, stage: Stage) -> Vec<parameters::Call> {
         let n = stage.num_bells_u8();
 
         let mut calls = Vec::new();
@@ -488,8 +488,8 @@ impl Default for BaseCalls {
 }
 
 /// Create a [`query::Call`] which replaces the lead end with a given [`PlaceNot`]
-fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> query::Call {
-    query::Call {
+fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> parameters::Call {
+    parameters::Call {
         symbol: symbol.to_owned(),
         calling_positions: default_calling_positions(&place_not),
         label_from: LABEL_LEAD_END.to_owned(),
@@ -620,13 +620,13 @@ mod tests {
 
 /// A type of music that Monument should care about.
 pub struct MusicType {
-    music_type: query::MusicType,
+    music_type: parameters::MusicType,
 }
 
 impl MusicType {
     pub fn new(patterns: impl IntoIterator<Item = Pattern>) -> Self {
         Self {
-            music_type: query::MusicType {
+            music_type: parameters::MusicType {
                 patterns: patterns.into_iter().collect_vec(),
                 strokes: StrokeSet::Both,
                 weight: Score::from(1.0),

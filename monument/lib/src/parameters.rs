@@ -20,7 +20,7 @@ use crate::{
 /// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the
 /// results are generated).
 #[derive(Debug, Clone)]
-pub(crate) struct Query {
+pub struct Parameters {
     // GENERAL
     pub length_range: RangeInclusive<TotalLength>,
     pub stage: Stage,
@@ -58,7 +58,7 @@ pub(crate) struct Query {
     pub start_stroke: Stroke,
 }
 
-impl Query {
+impl Parameters {
     pub fn max_length(&self) -> TotalLength {
         *self.length_range.end()
     }
@@ -110,7 +110,7 @@ impl Query {
     ///    Output ranges --/       1
     ///                           1
     /// ```
-    pub fn chunk_lead_regions(
+    pub(crate) fn chunk_lead_regions(
         &self,
         id: &ChunkId,
         length: PerPartLength,
@@ -149,7 +149,7 @@ impl Query {
 
 /// A `Method` used in a [`Query`].
 #[derive(Debug, Clone)]
-pub(crate) struct Method {
+pub struct Method {
     pub(crate) inner: bellframe::Method,
     /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
     /// labels assigned to that row.
@@ -216,16 +216,16 @@ impl std::ops::Deref for Method {
 
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
-pub(crate) struct Call {
-    pub(crate) symbol: String,
-    pub(crate) calling_positions: Vec<String>,
+pub struct Call {
+    pub symbol: String,
+    pub calling_positions: Vec<String>,
 
-    pub(crate) label_from: String,
-    pub(crate) label_to: String,
+    pub label_from: String,
+    pub label_to: String,
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
-    pub(crate) place_notation: PlaceNot,
+    pub place_notation: PlaceNot,
 
-    pub(crate) weight: Score,
+    pub weight: Score,
 }
 
 impl Call {
@@ -246,11 +246,11 @@ impl Call {
 
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
-pub(crate) struct MusicType {
-    pub(crate) patterns: Vec<Pattern>,
-    pub(crate) strokes: StrokeSet,
-    pub(crate) weight: Score,
-    pub(crate) count_range: OptionalRangeInclusive,
+pub struct MusicType {
+    pub patterns: Vec<Pattern>,
+    pub strokes: StrokeSet,
+    pub weight: Score,
+    pub count_range: OptionalRangeInclusive,
 }
 
 impl MusicType {
@@ -267,14 +267,14 @@ impl MusicType {
 
 /// A set of at least one [`Stroke`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum StrokeSet {
+pub enum StrokeSet {
     Hand,
     Back,
     Both,
 }
 
 impl StrokeSet {
-    pub(crate) fn contains(self, stroke: Stroke) -> bool {
+    pub fn contains(self, stroke: Stroke) -> bool {
         match self {
             Self::Both => true,
             Self::Hand => stroke == Stroke::Hand,
@@ -287,9 +287,9 @@ impl StrokeSet {
 // MISC TYPES //
 ////////////////
 
-index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct MusicTypeIdx = usize; }
-pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub(crate) type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
+index_vec::define_index_type! { pub struct MethodIdx = usize; }
+index_vec::define_index_type! { pub struct CallIdx = usize; }
+index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
+pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
+pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

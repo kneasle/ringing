@@ -20,8 +20,8 @@ use sysinfo::SystemExt;
 use crate::{
     atw::AtwTable,
     builder::{methods::MethodId, MusicTypeId},
+    parameters::Parameters,
     prove_length::{prove_lengths, RefinedRanges},
-    query::Query,
     utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
@@ -40,7 +40,7 @@ use crate::SearchBuilder;
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    query: Arc<Query>,
+    query: Arc<Parameters>,
     atw_table: Arc<AtwTable>,
     config: Config,
     // TODO: Reintroduce this to make the search graph smaller
@@ -58,7 +58,7 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
+    pub(crate) fn new(query: Parameters, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
         let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&query, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count

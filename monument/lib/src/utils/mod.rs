@@ -6,15 +6,17 @@ use std::{
 use bellframe::{Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 
-use crate::query::MusicType;
+use crate::parameters::MusicType;
 
 use self::counts::Counts;
 
-pub mod counts;
-pub mod lengths;
+pub(crate) mod counts;
+pub(crate) mod lengths;
+
+pub use lengths::{PerPartLength, TotalLength};
 
 /// The [`Score`] used to determine which [`Composition`]s are better than others.
-pub(crate) type Score = ordered_float::OrderedFloat<f32>;
+pub type Score = ordered_float::OrderedFloat<f32>;
 
 /// A container type which sorts its contents according to some given distance metric
 #[derive(Debug, Clone)]

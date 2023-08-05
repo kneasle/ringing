@@ -11,7 +11,7 @@ use crate::{
     builder::SpliceStyle,
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    query::{self, CallIdx, MethodIdx, MethodVec, Query},
+    parameters::{self, CallIdx, MethodIdx, MethodVec, Parameters},
     utils::{
         lengths::{PerPartLength, TotalLength},
         Boundary, FrontierItem,
@@ -26,7 +26,7 @@ use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 /// This is the only item exported by this module; all the other code should be considered
 /// implementation detail of this function
 pub(super) fn chunk_lengths<'q>(
-    query: &'q Query,
+    query: &'q Parameters,
     config: &Config,
 ) -> crate::Result<(
     ChunkEquivalenceMap<'q>,
@@ -122,7 +122,7 @@ struct ChunkFactory {
 }
 
 impl ChunkFactory {
-    fn new(query: &Query) -> Self {
+    fn new(query: &Parameters) -> Self {
         Self {
             end_lookup_table: EndLookupTable::new(query),
             link_lookup_table: LinkLookupTable::new(query),
@@ -135,7 +135,7 @@ impl ChunkFactory {
     fn build_chunk(
         &self,
         chunk_id: ChunkId,
-        query: &Query,
+        query: &Parameters,
     ) -> (
         PerPartLength,
         Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
@@ -199,7 +199,7 @@ struct EndLookupTable {
 }
 
 impl EndLookupTable {
-    fn new(query: &Query) -> Self {
+    fn new(query: &Parameters) -> Self {
         // Create lookup table for ends
         let mut end_lookup = HashMap::new();
         for part_head in query.part_head_group.rows() {
@@ -241,7 +241,7 @@ impl EndLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Query,
+        query: &Parameters,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
@@ -289,7 +289,7 @@ struct LinkLookupEntry {
 }
 
 impl LinkLookupTable {
-    fn new(query: &Query) -> Self {
+    fn new(query: &Parameters) -> Self {
         // Treat non-spliced comps as having `SpliceStyle::Calls`
         let splice_style = if query.is_spliced() {
             query.splice_style
@@ -445,7 +445,7 @@ impl LinkLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Query,
+        query: &Parameters,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
@@ -491,10 +491,10 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &query::Method,
+    method_from: &parameters::Method,
 
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
-    query: &Query,
+    query: &Parameters,
     link_lookup_for_method: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
 ) {
     let link_ends = link_ends_by_label
@@ -541,7 +541,11 @@ fn create_links(
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
-fn find_locations_of_row(row: &Row, boundary: Boundary, query: &Query) -> Vec<ChunkIdInFirstPart> {
+fn find_locations_of_row(
+    row: &Row,
+    boundary: Boundary,
+    query: &Parameters,
+) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut locations = Vec::new();
     for (method_idx, method) in query.methods.iter_enumerated() {

@@ -2,12 +2,16 @@ use std::collections::HashSet;
 
 use crate::{
     graph::{Graph, LinkSide},
+    parameters::Parameters,
     prove_length::RefinedRanges,
-    query::Query,
 };
 
 /// Removes dangling references from the [`Graph`]
-pub(super) fn remove_dangling_refs(graph: &mut Graph, _query: &Query, _ranges: &RefinedRanges) {
+pub(super) fn remove_dangling_refs(
+    graph: &mut Graph,
+    _query: &Parameters,
+    _ranges: &RefinedRanges,
+) {
     // Strip dangling starts and ends
     for starts_or_ends in [&mut graph.starts, &mut graph.ends] {
         starts_or_ends.retain(|(_link_id, chunk_id)| graph.chunks.contains_key(chunk_id));

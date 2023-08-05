@@ -10,7 +10,7 @@ use bellframe::{
 };
 use itertools::Itertools;
 
-use crate::query::{self, CallVec, MethodIdx, MethodVec};
+use crate::parameters::{self, CallVec, MethodIdx, MethodVec};
 
 use super::{EndIndices, OptionalRangeInclusive};
 
@@ -258,7 +258,7 @@ impl Method {
         non_duffer_courses: Option<&[CourseSet]>,
         part_head: &Row,
         stage: Stage,
-    ) -> crate::Result<query::Method> {
+    ) -> crate::Result<parameters::Method> {
         // Parse the allowed courses and expand them into allowed *lead* masks
         let allowed_course_masks = match self.override_courses {
             Some(unparsed_courses) => unparsed_courses
@@ -307,7 +307,7 @@ impl Method {
             end_indices = union;
         }
 
-        Ok(query::Method {
+        Ok(parameters::Method {
             shorthand: self
                 .custom_shorthand
                 .unwrap_or_else(|| default_shorthand(bellframe_method.title())),
@@ -456,7 +456,7 @@ pub fn default_shorthand(title: &str) -> String {
 /// (e.g. hunt bells in non-variable-hunt compositions).
 pub(super) fn fixed_bells(
     methods: &MethodVec<(bellframe::Method, self::Method)>,
-    calls: &CallVec<query::Call>,
+    calls: &CallVec<parameters::Call>,
     start_row: &Row,
     stage: Stage,
 ) -> Vec<(Bell, usize)> {
@@ -476,7 +476,7 @@ pub(super) fn fixed_bells(
 /// method (e.g. hunt bells in non-variable-hunt compositions).
 fn fixed_bells_of_method(
     method: &bellframe::Method,
-    calls: &CallVec<query::Call>,
+    calls: &CallVec<parameters::Call>,
 ) -> HashSet<Bell> {
     // Start the set with the bells which are fixed by the plain lead of every method
     let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
@@ -492,7 +492,7 @@ fn fixed_bells_of_method(
 // by placing the call at this location.
 fn filter_bells_fixed_by_call(
     method: &bellframe::Method,
-    call: &query::Call,
+    call: &parameters::Call,
     set: &mut HashSet<Bell>,
 ) {
     // Note that all calls are required to only substitute one piece of place notation.

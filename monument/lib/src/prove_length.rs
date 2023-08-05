@@ -11,7 +11,7 @@ use itertools::Itertools;
 use crate::{
     builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    query::{MethodIdx, MethodVec, Query},
+    parameters::{MethodIdx, MethodVec, Parameters},
     utils::lengths::TotalLength,
 };
 
@@ -26,7 +26,7 @@ pub(crate) struct RefinedRanges {
 /// Attempt to prove which composition lengths and method counts are possible.  This result can
 /// then be used to either refine the bounds provided by the user (e.g. a peal of Royal can often
 /// only be exactly 5040 changes) or generate an error explaining why the query is impossible.
-pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<RefinedRanges> {
+pub(crate) fn prove_lengths(graph: &Graph, query: &Parameters) -> crate::Result<RefinedRanges> {
     log::debug!("Proving lengths");
 
     /* TOTAL LENGTH */
@@ -103,7 +103,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
 
 /// Compute an ascending [`Vec`] of every possible [`TotalLength`] of the composition, up to *and
 /// including* the first length after the highest range.
-fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
+fn possible_lengths(graph: &Graph, query: &Parameters) -> Vec<TotalLength> {
     // To compute a list of possible lengths, we run a Dijkstra's-style algorithm where we keep a
     // frontier of `(distance, chunk)` where each entry means that `chunk` can be reached at a
     // given `distance`.  When `(distance, <end>)` is reached, it means that it is theoretically
@@ -229,7 +229,7 @@ type SimpleChunk = (RowIdx, Mask);
 /// performance cliff), this results in exactly one 'chunk' per method (for `1xxxxxxx`).  Even
 /// if it weren't cyclic, there'd be only 7 'chunks' per method (one for each position of the
 /// tenor).  Otherwise, we'd have 720 or 5040 chunks to process.
-fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
+fn compute_simplified_graph(query: &Parameters, graph: &Graph) -> SimpleGraph {
     let get_simple_chunks = |chunk_id: &ChunkId| -> Vec<SimpleChunk> {
         let mut simple_chunks = Vec::new();
         for mask in &query.methods[chunk_id.row_idx.method].allowed_lead_masks {
@@ -282,9 +282,9 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 /// perfectly accurate.
 fn possible_method_counts(
     method_idx: MethodIdx,
-    method: &crate::query::Method,
+    method: &crate::parameters::Method,
     graph: &Graph,
-    query: &Query,
+    query: &Parameters,
 ) -> Vec<TotalLength> {
     // In order to compute possible count ranges efficiently, we approximate the graph into the
     // following shape:
@@ -409,7 +409,7 @@ fn possible_method_counts(
 }
 
 fn method_bounds(
-    query: &Query,
+    query: &Parameters,
     total_len_range: &RangeInclusive<TotalLength>,
     bound: Bound,
 ) -> MethodVec<(BoundType, TotalLength)> {
@@ -462,7 +462,7 @@ fn refine_method_counts(
     (min_type, mut min_len): (BoundType, TotalLength),
     (max_type, mut max_len): (BoundType, TotalLength),
     possible_lengths: &[TotalLength],
-    method: &crate::query::Method,
+    method: &crate::parameters::Method,
 ) -> crate::Result<RangeInclusive<TotalLength>> {
     use BoundType::{Explicit as Expl, Preferred as Pref};
 
@@ -561,7 +561,7 @@ fn refine_method_counts(
 /// Print the refined method counts to the user in a pleasant and easily-digestible way
 fn print_method_counts(
     refined_method_counts: &MethodVec<RangeInclusive<TotalLength>>,
-    query: &Query,
+    query: &Parameters,
 ) {
     let mut methods_by_count_ranges = BTreeMap::<(TotalLength, TotalLength), Vec<MethodIdx>>::new();
     for (idx, range) in refined_method_counts.iter_enumerated() {

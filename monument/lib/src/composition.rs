@@ -8,7 +8,7 @@ use crate::{
     atw::{AtwBitmap, AtwTable, PlaceBellRange},
     builder::{methods::MethodId, CallDisplayStyle, MusicTypeId},
     group::PartHead,
-    query::{CallIdx, MethodIdx, MethodVec, Query},
+    parameters::{CallIdx, MethodIdx, MethodVec, Parameters},
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
@@ -42,7 +42,7 @@ pub struct Composition {
 
     /// The [`Query`] which generated this [`Composition`]
     // TODO: Remove this dependency, and make everything else calculated on the fly
-    pub(crate) query: Arc<Query>,
+    pub(crate) query: Arc<Parameters>,
     // TODO: Store expanded atw data, independently of the [`AtwTable`]?
     pub(crate) atw_table: Arc<AtwTable>,
 }
@@ -266,14 +266,14 @@ impl PathElem {
         self.call_to_end.is_none()
     }
 
-    pub(crate) fn end_sub_lead_idx(&self, query: &Query) -> usize {
+    pub(crate) fn end_sub_lead_idx(&self, query: &Parameters) -> usize {
         query.methods[self.method].add_sub_lead_idx(self.start_sub_lead_idx, self.length)
     }
 }
 
 /// A way to display a [`Composition`] by pairing it with a [`Query`]
 #[derive(Debug, Clone, Copy)]
-struct DisplayComposition<'a>(pub &'a Composition, pub &'a Query);
+struct DisplayComposition<'a>(pub &'a Composition, pub &'a Parameters);
 
 impl std::fmt::Display for DisplayComposition<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

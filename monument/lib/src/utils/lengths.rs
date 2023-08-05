@@ -9,12 +9,12 @@ use datasize::DataSize;
 /// disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
-pub(crate) struct PerPartLength(u32);
+pub struct PerPartLength(u32);
 
 /// The combined length **across all parts**.  This and [`PerPartLength`] allow the compiler to
 /// disallow mixing up the different definitions of 'length'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, DataSize)]
-pub(crate) struct TotalLength(u32);
+pub struct TotalLength(u32);
 
 impl PerPartLength {
     pub fn as_total(self, part_heads: &crate::group::PartHeadGroup) -> TotalLength {
