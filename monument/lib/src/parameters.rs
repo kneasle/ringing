@@ -22,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Parameters {
     // GENERAL
-    pub length_range: RangeInclusive<TotalLength>,
+    pub length: RangeInclusive<TotalLength>,
     pub stage: Stage,
     pub num_comps: usize,
     pub require_truth: bool,
@@ -60,12 +60,12 @@ pub struct Parameters {
 
 impl Parameters {
     pub fn max_length(&self) -> TotalLength {
-        *self.length_range.end()
+        *self.length.end()
     }
 
     pub fn length_range_usize(&self) -> RangeInclusive<usize> {
-        let start = self.length_range.start().as_usize();
-        let end = self.length_range.end().as_usize();
+        let start = self.length.start().as_usize();
+        let end = self.length.end().as_usize();
         start..=end
     }
 

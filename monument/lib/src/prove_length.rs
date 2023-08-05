@@ -35,7 +35,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Parameters) -> crate::Result<
     let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, &query.length_range) {
+    let refined_len_range = match matching_lengths(&possible_lengths, &query.length) {
         LengthMatches {
             range: Some(range), ..
         } => range,
