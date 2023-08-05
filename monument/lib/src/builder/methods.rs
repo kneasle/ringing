@@ -20,6 +20,7 @@ use super::SearchBuilder;
 const NUM_METHOD_SUGGESTIONS: usize = 10;
 
 /// Builder API for a method.
+#[derive(Debug)]
 pub struct Method {
     source: MethodSource,
     lead_labels: HashMap<String, Vec<isize>>,
@@ -31,6 +32,7 @@ pub struct Method {
     override_courses: Option<Vec<String>>,
 }
 
+#[derive(Debug)]
 enum MethodSource {
     /// A method with this title should be found in the Central Council's method library.
     Title(String),

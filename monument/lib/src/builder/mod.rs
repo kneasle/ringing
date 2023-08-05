@@ -31,6 +31,7 @@ use bellframe::Row;
 use self::methods::MethodSet;
 
 /// Builder API for constructing searches.
+#[derive(Debug)]
 pub struct SearchBuilder {
     /* GENERAL */
     length_range: RangeInclusive<TotalLength>,
@@ -334,6 +335,7 @@ pub const DEFAULT_SINGLE_WEIGHT: f32 = -2.3;
 pub const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
 
 /// Builder API for a call.
+#[derive(Debug)]
 pub struct Call {
     symbol: String,
     calling_positions: Option<Vec<String>>,
@@ -733,6 +735,7 @@ impl OptionalRangeInclusive {
 }
 
 /// Where in a lead can a method finish.
+#[derive(Debug)]
 pub enum EndIndices {
     /// The composition is allowed to end at any index.
     Any,
