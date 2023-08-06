@@ -165,12 +165,10 @@ pub enum Update {
     Comp(Composition),
     /// A thread is sending a status update
     Progress(Progress),
-    /// The search is being aborted
-    Aborting,
 }
 
 /// How much of a [`Search`] has been completed so far.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Progress {
     /// How many times the core composing loop has been run so far.
     pub iter_count: usize,
@@ -186,6 +184,8 @@ pub struct Progress {
 
     /// `true` if the search routine is currently shortening the prefix queue to save memory.
     pub truncating_queue: bool,
+    /// `true` if the search routine is in the process of aborting
+    pub aborting: bool,
 }
 
 impl Progress {
@@ -199,6 +199,7 @@ impl Progress {
         max_length: 0,
 
         truncating_queue: false,
+        aborting: false,
     };
 }
 
