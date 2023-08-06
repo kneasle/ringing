@@ -294,7 +294,7 @@ fn make_bell_place_to_bitmap_index(
 // accounted for
 fn total_unique_row_positions(
     working_bells: &[Bell],
-    methods: &MethodVec<crate::query::UsedMethod>,
+    methods: &MethodVec<crate::query::Method>,
     flags: &[AtwFlag],
 ) -> usize {
     let total_unique_row_positions = working_bells.len() // Working bells
@@ -344,7 +344,7 @@ fn place_bell_range_boundaries(
 fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    methods: &MethodVec<crate::query::UsedMethod>,
+    methods: &MethodVec<crate::query::Method>,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
@@ -392,7 +392,7 @@ fn range_boundaries_to_flags(
 fn bell_place_sets(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    method: &crate::query::UsedMethod,
+    method: &crate::query::Method,
 ) -> Vec<Vec<(Bell, u8)>> {
     let mut bells_left_to_track = working_bells.iter().copied().collect::<HashSet<_>>();
     let mut bell_place_sets = Vec::<Vec<(Bell, u8)>>::new();

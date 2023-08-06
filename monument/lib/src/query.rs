@@ -30,7 +30,7 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct Query {
     pub parameters: Parameters,
-    pub methods: MethodVec<UsedMethod>,
+    pub methods: MethodVec<Method>,
     pub calls: CallVec<crate::parameters::Call>,
 
     pub fixed_bells: Vec<(Bell, usize)>,
@@ -39,7 +39,7 @@ pub(crate) struct Query {
 
 // TODO: Rename to `Method`
 #[derive(Debug)]
-pub(crate) struct UsedMethod {
+pub(crate) struct Method {
     pub inner: crate::parameters::Method,
 
     /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
@@ -64,7 +64,7 @@ impl Deref for Query {
     }
 }
 
-impl Deref for UsedMethod {
+impl Deref for Method {
     type Target = crate::parameters::Method;
 
     fn deref(&self) -> &Self::Target {
@@ -135,7 +135,7 @@ impl Query {
     }
 }
 
-impl UsedMethod {
+impl Method {
     /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
     pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
         self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
@@ -179,7 +179,7 @@ impl Query {
         Self {
             methods: used_methods
                 .into_iter()
-                .map(|m| UsedMethod::new(m, &fixed_bells))
+                .map(|m| Method::new(m, &fixed_bells))
                 .collect(),
             fixed_bells,
             calls: used_calls,
@@ -189,7 +189,7 @@ impl Query {
     }
 }
 
-impl UsedMethod {
+impl Method {
     fn new(method: crate::parameters::Method, fixed_bells: &[(Bell, usize)]) -> Self {
         let plain_course = method.plain_course().map_annots(|a| a.labels.to_vec());
         Self {

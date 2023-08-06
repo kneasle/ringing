@@ -491,7 +491,7 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &crate::query::UsedMethod,
+    method_from: &crate::query::Method,
 
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
     query: &Query,
