@@ -92,6 +92,15 @@ impl Mask {
         }
     }
 
+    /// Creates a `Mask` that matches any [`Row`] of a given [`Stage`] (i.e. a mask where no
+    /// [`Bell`] is fixed, written as `xxxx...`).
+    ///
+    /// Exactly equivalent to `Mask::empty`
+    #[inline]
+    pub fn any(stage: Stage) -> Self {
+        Self::empty(stage)
+    }
+
     /// Creates a `Mask` that fixes the given [`Bell`]s into their corresponding 'home' place.
     ///
     /// # Panics
