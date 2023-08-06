@@ -104,6 +104,9 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
     if search.config.leak_search_memory {
         std::mem::forget(frontier);
     }
+
+    // Signal that the search is complete
+    update_fn(Update::Complete);
 }
 
 fn send_progress_update(

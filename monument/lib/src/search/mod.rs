@@ -165,6 +165,8 @@ pub enum Update {
     Comp(Composition),
     /// A thread is sending a status update
     Progress(Progress),
+    /// The search has completed
+    Complete,
 }
 
 /// How much of a [`Search`] has been completed so far.

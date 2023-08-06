@@ -72,6 +72,7 @@ impl SingleLineProgressLogger {
         match update {
             Update::Comp(comp) => return Some(comp),
             Update::Progress(progress) => self.last_progress = progress,
+            Update::Complete => {} // Nothing to do, we're just about to return anyway
         }
         None
     }
