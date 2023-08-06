@@ -196,7 +196,7 @@ impl CourseSet {
     pub(crate) fn to_course_masks(
         allowed_courses: &[CourseSet],
         method: &Method,
-        fixed_bells: &&[(Bell, usize)],
+        fixed_bells: &[(Bell, usize)],
     ) -> Vec<Mask> {
         allowed_courses
             .iter()

@@ -293,8 +293,8 @@ fn check_query(query: &Query) -> crate::Result<()> {
             if m1.shorthand() == m2.shorthand() {
                 return Err(crate::Error::DuplicateShorthand {
                     shorthand: m1.shorthand(),
-                    title1: m1.title().to_owned(),
-                    title2: m2.title().to_owned(),
+                    title1: m1.title(),
+                    title2: m2.title(),
                 });
             }
         }

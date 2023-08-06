@@ -138,7 +138,7 @@ impl MethodLib {
         best_suggestions.reverse();
         best_suggestions
             .into_iter()
-            .map(|Suggestion((title, edit_distance))| (title.to_owned(), edit_distance))
+            .map(|Suggestion((title, edit_distance))| (title, edit_distance))
             .collect_vec()
     }
 

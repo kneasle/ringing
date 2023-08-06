@@ -198,17 +198,17 @@ impl Method {
             specified_course_head_masks: CourseSet::to_course_masks(
                 &method.allowed_courses,
                 &method,
-                &fixed_bells,
+                fixed_bells,
             ),
             allowed_lead_masks: CourseSet::to_lead_masks(
                 &method.allowed_courses,
                 &method,
-                &fixed_bells,
+                fixed_bells,
             ),
             non_duffer_lead_masks: CourseSet::to_lead_masks(
                 &method.non_duffer_courses,
                 &method,
-                &fixed_bells,
+                fixed_bells,
             ),
 
             inner: method,

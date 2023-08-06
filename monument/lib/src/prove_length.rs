@@ -545,7 +545,7 @@ fn refine_method_counts(
                 (None, None) => {
                     assert_ne!((min_type, max_type), (Pref, Pref));
                     return Err(crate::Error::UnachievableMethodCount {
-                        method_name: method.title().to_owned(),
+                        method_name: method.title(),
                         requested_range: method.count_range,
                         next_shorter_len: next_smaller.map(TotalLength::as_usize),
                         next_longer_len: next_larger.map(TotalLength::as_usize),

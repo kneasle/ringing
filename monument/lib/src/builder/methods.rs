@@ -245,7 +245,7 @@ impl Method {
                 .map(|mask_str| {
                     Mask::parse_with_stage(&mask_str, stage).map_err(|error| {
                         crate::Error::CustomCourseMaskParse {
-                            method_title: bellframe_method.title().to_owned(),
+                            method_title: bellframe_method.title(),
                             mask_str,
                             error,
                         }
