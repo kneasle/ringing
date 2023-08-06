@@ -55,4 +55,5 @@ pub mod utils;
 pub use builder::SearchBuilder;
 pub use composition::Composition;
 pub use error::{Error, Result};
+pub use group::PartHeadGroup;
 pub use search::{Config, Progress, Search, Update};

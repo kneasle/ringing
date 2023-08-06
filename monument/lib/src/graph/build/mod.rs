@@ -292,9 +292,9 @@ fn check_query(query: &Parameters) -> crate::Result<()> {
     // Two methods using the same shorthand
     for (i1, m1) in query.methods.iter_enumerated() {
         for m2 in &query.methods[..i1] {
-            if m1.shorthand == m2.shorthand {
+            if m1.shorthand() == m2.shorthand() {
                 return Err(crate::Error::DuplicateShorthand {
-                    shorthand: m1.shorthand.clone(),
+                    shorthand: m1.shorthand(),
                     title1: m1.title().to_owned(),
                     title2: m2.title().to_owned(),
                 });

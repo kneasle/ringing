@@ -239,7 +239,7 @@ fn reduce_masks(
     masks_used_in_all_parts: &mut HashSet<(ChunkRange, Mask)>,
     query: &Parameters,
 ) {
-    let mut fixed_bell_mask = Mask::empty(query.stage);
+    let mut fixed_bell_mask = Mask::any(query.stage);
     for &(bell, place) in &query.fixed_bells {
         fixed_bell_mask
             .set_bell(bell, place)
@@ -273,7 +273,7 @@ fn reduce_masks(
     if !reduced_ranges.is_empty() {
         let fmt_range = |range: &ChunkRange| -> String {
             let method = &query.methods[range.start.method];
-            let mut s = method.shorthand.clone();
+            let mut s = method.shorthand();
             if range.start.sub_lead_idx == 0 && range.len.as_usize() == method.lead_len() {
                 // Whole lead; don't add any extra annotation
             } else {

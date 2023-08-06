@@ -2,10 +2,12 @@
 
 use std::ops::{Deref, Range, RangeInclusive};
 
-use bellframe::{music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
+use bellframe::{
+    method::LABEL_LEAD_END, music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+};
+use itertools::Itertools;
 
 use crate::{
-    builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
     graph::ChunkId,
     group::PartHeadGroup,
     utils::{
@@ -63,6 +65,7 @@ impl Parameters {
         *self.length.end()
     }
 
+    // TODO: Remove this, now that the field is public anyway
     pub fn length_range_usize(&self) -> RangeInclusive<usize> {
         let start = self.length.start().as_usize();
         let end = self.length.end().as_usize();
@@ -79,6 +82,14 @@ impl Parameters {
 
     pub fn is_multipart(&self) -> bool {
         self.num_parts() > 1
+    }
+
+    pub fn methods_used(&self) -> usize {
+        self.methods.iter().filter(|m| m.used).count()
+    }
+
+    pub fn calls_used(&self) -> usize {
+        self.calls.iter().filter(|c| c.used).count()
     }
 
     /// For a given chunk, split that chunk's range into segments where each one falls within a
@@ -150,34 +161,74 @@ impl Parameters {
 /// A `Method` used in a [`Query`].
 #[derive(Debug, Clone)]
 pub struct Method {
-    pub(crate) inner: bellframe::Method,
+    pub id: MethodId,
+    pub used: bool,
+
+    pub name: String, // TODO: Move this into `bellframe::Method`
+
+    pub inner: bellframe::Method,
+
+    /// Short [`String`] used to identify this method in spliced.  If empty, a default value will
+    /// be generated.
+    pub custom_shorthand: String,
+
+    // TODO: Move these somewhere else, or compute them
     /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
     /// labels assigned to that row.
-    pub(crate) plain_course: Block<Vec<String>>,
+    pub plain_course: Block<Vec<String>>,
 
-    /// Short [`String`] used to identify this method in spliced
-    pub(crate) shorthand: String,
     /// The number of rows of this method must fit within this range
-    pub(crate) count_range: OptionalRangeInclusive,
+    pub count_range: OptionalRangeInclusive,
 
     /// The indices in which we can start a composition during this `Method`.  These are guaranteed
     /// to fit within `inner.lead_len()`.
-    pub(crate) start_indices: Vec<usize>,
+    pub start_indices: Vec<usize>,
     /// The indices in which we can end a composition during this `Method`.  These are guaranteed
     /// to fit within `inner.lead_len()`.
-    pub(crate) end_indices: Vec<usize>,
+    pub end_indices: Vec<usize>,
 
     /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
-    pub(crate) allowed_course_masks: Vec<Mask>,
+    pub allowed_course_masks: Vec<Mask>,
     /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
     /// [`crate::SearchBuilder::courses`].
-    pub(crate) allowed_lead_masks: Vec<Mask>,
+    pub allowed_lead_masks: Vec<Mask>,
     /// List of lead heads which are part of
     /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
-    pub(crate) non_duffer_lead_masks: Vec<Mask>,
+    pub non_duffer_lead_masks: Vec<Mask>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MethodId(pub u16);
+
+/// The different styles of spliced that can be generated.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum SpliceStyle {
+    /// Splices could happen at any lead label (usually just
+    /// [lead ends](bellframe::method::LABEL_LEAD_END)).
+    LeadLabels,
+    /// Splices only happen at calls.
+    Calls,
+}
+
+impl Default for SpliceStyle {
+    fn default() -> Self {
+        Self::LeadLabels
+    }
 }
 
 impl Method {
+    pub fn shorthand(&self) -> String {
+        if self.custom_shorthand.is_empty() {
+            default_shorthand(self.title())
+        } else {
+            self.custom_shorthand.clone()
+        }
+    }
+
+    pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+        (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
+
     /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
     pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
         self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
@@ -188,10 +239,6 @@ impl Method {
             .non_duffer_lead_masks
             .iter()
             .any(|mask| mask.matches(lead_head))
-    }
-
-    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
 
     pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
@@ -210,6 +257,15 @@ impl std::ops::Deref for Method {
     }
 }
 
+/// Get a default shorthand given a method's title.
+pub fn default_shorthand(title: &str) -> String {
+    title
+        .chars()
+        .next()
+        .expect("Can't have empty method title")
+        .to_string()
+}
+
 ///////////
 // CALLS //
 ///////////
@@ -217,6 +273,9 @@ impl std::ops::Deref for Method {
 /// A type of call (e.g. bob or single)
 #[derive(Debug, Clone)]
 pub struct Call {
+    pub id: CallId,
+    pub used: bool,
+
     pub symbol: String,
     pub calling_positions: Vec<String>,
 
@@ -226,6 +285,18 @@ pub struct Call {
     pub place_notation: PlaceNot,
 
     pub weight: f32,
+}
+
+#[derive(Debug, Clone, Copy, Hash)]
+pub struct CallId(pub u16);
+
+/// How the calls in a given composition should be displayed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallDisplayStyle {
+    /// Calls should be displayed as a count since the last course head.
+    Positional,
+    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
+    CallingPositions(Bell),
 }
 
 impl Call {
@@ -238,6 +309,87 @@ impl Call {
             s => s,          // All other calls use their explicit symbol
         }
     }
+
+    /// Create a [`parameters::Call`] which replaces the lead end with a given [`PlaceNot`]
+    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
+        Self {
+            id,
+            used: true,
+
+            symbol: symbol.to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            label_from: LABEL_LEAD_END.to_owned(),
+            label_to: LABEL_LEAD_END.to_owned(),
+            place_notation: place_not,
+            weight,
+        }
+    }
+}
+
+#[allow(clippy::branches_sharing_code)]
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
+
+    // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
+
+    // Generate calling positions that aren't M, W or H
+    let mut positions =
+        // Start off with the single-char position names
+        named_positions
+        .chars()
+        .map(|c| c.to_string())
+        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
+        // calling positions)
+        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
+        // But we consume one value per place in the Stage
+        .take(place_not.stage().num_bells())
+        .collect_vec();
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a given (0-indexed) place
+    macro_rules! replace_pos {
+        ($idx: expr, $new_val: expr) => {
+            if let Some(v) = positions.get_mut($idx) {
+                v.clear();
+                v.push($new_val);
+            }
+        };
+    }
+
+    // Edge case: if 2nds are made in `place_not`, then I/B are replaced with B/T.  Note that
+    // places are 0-indexed
+    if place_not.contains(1) {
+        replace_pos!(1, 'B');
+        replace_pos!(2, 'T');
+    }
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a place indexed from the end of the stage (so 0 is the highest place)
+    macro_rules! replace_mwh {
+        ($ind: expr, $new_val: expr) => {
+            if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
+                if place >= 4 {
+                    if let Some(v) = positions.get_mut(place) {
+                        v.clear();
+                        v.push($new_val);
+                    }
+                }
+            }
+        };
+    }
+
+    // Add MWH (M and W are swapped round for odd stages)
+    if place_not.stage().is_even() {
+        replace_mwh!(2, 'M');
+        replace_mwh!(1, 'W');
+        replace_mwh!(0, 'H');
+    } else {
+        replace_mwh!(2, 'W');
+        replace_mwh!(1, 'M');
+        replace_mwh!(0, 'H');
+    }
+
+    positions
 }
 
 ///////////
@@ -287,9 +439,101 @@ impl StrokeSet {
 // MISC TYPES //
 ////////////////
 
+// TODO: Replace these with `ID`s and use `HashMap`s for everything
 index_vec::define_index_type! { pub struct MethodIdx = usize; }
 index_vec::define_index_type! { pub struct CallIdx = usize; }
 index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
 pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
 pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
 pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
+
+/// An inclusive range where each side is optionally bounded.
+///
+/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
+/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
+/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OptionalRangeInclusive {
+    pub min: Option<usize>,
+    pub max: Option<usize>,
+}
+
+impl OptionalRangeInclusive {
+    /// An [`OptionalRangeInclusive`] which is unbounded at both ends.  Equivalent to
+    /// `OptionalRangeInclusive { min: None, max: None }`.
+    pub const OPEN: Self = Self {
+        min: None,
+        max: None,
+    };
+
+    /// Returns `true` if at least one of `min` or `max` is set
+    pub fn is_set(self) -> bool {
+        self.min.is_some() || self.max.is_some()
+    }
+
+    /// Applies [`Option::or`] to both `min` and `max`
+    pub fn or(self, other: Self) -> Self {
+        Self {
+            min: self.min.or(other.min),
+            max: self.max.or(other.max),
+        }
+    }
+
+    pub fn or_range(self, other: &Range<usize>) -> Range<usize> {
+        let min = self.min.unwrap_or(other.start);
+        let max = self
+            .max
+            .map(|x| x + 1) // +1 because `OptRange` is inclusive
+            .unwrap_or(other.end);
+        min..max
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bellframe::{PlaceNot, Stage};
+    use itertools::Itertools;
+
+    /// Converts a string to a list of strings, one of each [`char`] in the input.
+    fn char_vec(string: &str) -> Vec<String> {
+        string.chars().map(|c| c.to_string()).collect_vec()
+    }
+
+    #[test]
+    fn default_calling_positions() {
+        #[rustfmt::skip]
+        let cases = &[
+            ("145", Stage::DOUBLES, char_vec("LIBFH")),
+            ("125", Stage::DOUBLES, char_vec("LBTFH")),
+            ("1", Stage::DOUBLES, char_vec("LIBFH")),
+
+            ("14", Stage::MINOR, char_vec("LIBFWH")),
+            ("1234", Stage::MINOR, char_vec("LBTFWH")),
+            ("1456", Stage::MINOR, char_vec("LIBFWH")),
+
+            ("147", Stage::TRIPLES, char_vec("LIBFWMH")),
+            ("12347", Stage::TRIPLES, char_vec("LBTFWMH")),
+
+            ("14", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1234", Stage::MAJOR, char_vec("LBTFVMWH")),
+            ("16", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1678", Stage::MAJOR, char_vec("LIBFVMWH")),
+            ("1256", Stage::MAJOR, char_vec("LBTFVMWH")),
+            ("123456", Stage::MAJOR, char_vec("LBTFVMWH")),
+
+            ("14", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("16", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("18", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+            ("1890", Stage::ROYAL, char_vec("LIBFVXSMWH")),
+
+            ("14", Stage::MAXIMUS, char_vec("LIBFVXSENMWH")),
+            ("1234", Stage::MAXIMUS, char_vec("LBTFVXSENMWH")),
+        ];
+
+        for (pn_str, stage, exp_positions) in cases {
+            let positions =
+                super::default_calling_positions(&PlaceNot::parse(pn_str, *stage).unwrap());
+            assert_eq!(positions, *exp_positions);
+        }
+    }
+}

@@ -2,24 +2,27 @@
 
 pub mod methods;
 
-use std::ops::{Range, RangeInclusive};
+use std::ops::RangeInclusive;
 
 use bellframe::{
     method::LABEL_LEAD_END,
     music::{Elem, Pattern},
-    Bell, Mask, PlaceNot, RowBuf, Stage, Stroke,
+    Mask, PlaceNot, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
 use crate::{
     group::PartHeadGroup,
-    parameters::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Parameters, StrokeSet},
+    parameters::{
+        self, CallDisplayStyle, CallVec, MethodId, MethodVec, MusicTypeIdx, MusicTypeVec,
+        OptionalRangeInclusive, Parameters, SpliceStyle, StrokeSet,
+    },
     search::{Config, Search, Update},
     utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
 
-pub use methods::{CourseSet, Method, SpliceStyle};
+pub use methods::{CourseSet, Method};
 
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
@@ -256,13 +259,20 @@ impl SearchBuilder {
         if let Some(base_calls) = base_calls {
             calls.extend(base_calls.into_calls(stage));
         }
-        calls.extend(custom_calls.into_iter().map(Call::build));
+        let num_base_calls = calls.len();
+        calls.extend(
+            custom_calls
+                .into_iter()
+                .enumerate()
+                .map(|(idx, c)| c.build(idx + num_base_calls)),
+        );
 
         // Methods
         let fixed_bells = self::methods::fixed_bells(&methods, &calls, &start_row, stage);
         let mut built_methods = MethodVec::new();
-        for (bellframe_method, method_builder) in methods {
+        for (idx, (bellframe_method, method_builder)) in methods.into_iter_enumerated() {
             built_methods.push(method_builder.build(
+                MethodId(idx.index() as u16),
                 bellframe_method,
                 &fixed_bells,
                 default_method_count,
@@ -392,12 +402,15 @@ impl Call {
     }
 
     /// Builds a [`Call`] into a [`crate::query::Call`].
-    fn build(self) -> parameters::Call {
+    fn build(self, idx: usize) -> parameters::Call {
         parameters::Call {
+            id: parameters::CallId(idx as u16),
+            used: true,
+
             symbol: self.symbol,
             calling_positions: self
                 .calling_positions
-                .unwrap_or_else(|| default_calling_positions(&self.place_notation)),
+                .unwrap_or_else(|| parameters::default_calling_positions(&self.place_notation)),
 
             label_from: self.label_from,
             label_to: self.label_to,
@@ -406,15 +419,6 @@ impl Call {
             weight: self.weight,
         }
     }
-}
-
-/// How the calls in a given composition should be displayed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CallDisplayStyle {
-    /// Calls should be displayed as a count since the last course head.
-    Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
-    CallingPositions(Bell),
 }
 
 ////////////////
@@ -452,7 +456,12 @@ impl BaseCalls {
                 BaseCallType::Near => PlaceNot::parse("14", stage).unwrap(),
                 BaseCallType::Far => PlaceNot::from_slice(&mut [0, n - 3], stage).unwrap(),
             };
-            calls.push(lead_end_call(bob_pn, "-", bob_weight)); // Hide in display; '-' in debug
+            calls.push(parameters::Call::lead_end_call(
+                parameters::CallId(calls.len() as u16),
+                bob_pn,
+                "-",
+                bob_weight,
+            ));
         }
         // Add single
         if let Some(single_weight) = self.single_weight {
@@ -462,7 +471,12 @@ impl BaseCalls {
                     PlaceNot::from_slice(&mut [0, n - 3, n - 2, n - 1], stage).unwrap()
                 }
             };
-            calls.push(lead_end_call(single_pn, "s", single_weight));
+            calls.push(parameters::Call::lead_end_call(
+                parameters::CallId(calls.len() as u16),
+                single_pn,
+                "s",
+                single_weight,
+            ));
         }
 
         calls
@@ -476,133 +490,6 @@ impl Default for BaseCalls {
             ty: BaseCallType::Near,
             bob_weight: Some(DEFAULT_BOB_WEIGHT),
             single_weight: Some(DEFAULT_SINGLE_WEIGHT),
-        }
-    }
-}
-
-/// Create a [`query::Call`] which replaces the lead end with a given [`PlaceNot`]
-fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> parameters::Call {
-    parameters::Call {
-        symbol: symbol.to_owned(),
-        calling_positions: default_calling_positions(&place_not),
-        label_from: LABEL_LEAD_END.to_owned(),
-        label_to: LABEL_LEAD_END.to_owned(),
-        place_notation: place_not,
-        weight,
-    }
-}
-
-#[allow(clippy::branches_sharing_code)]
-pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
-    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
-
-    // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
-
-    // Generate calling positions that aren't M, W or H
-    let mut positions =
-        // Start off with the single-char position names
-        named_positions
-        .chars()
-        .map(|c| c.to_string())
-        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
-        // calling positions)
-        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
-        // But we consume one value per place in the Stage
-        .take(place_not.stage().num_bells())
-        .collect_vec();
-
-    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
-    /// position at a given (0-indexed) place
-    macro_rules! replace_pos {
-        ($idx: expr, $new_val: expr) => {
-            if let Some(v) = positions.get_mut($idx) {
-                v.clear();
-                v.push($new_val);
-            }
-        };
-    }
-
-    // Edge case: if 2nds are made in `place_not`, then I/B are replaced with B/T.  Note that
-    // places are 0-indexed
-    if place_not.contains(1) {
-        replace_pos!(1, 'B');
-        replace_pos!(2, 'T');
-    }
-
-    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
-    /// position at a place indexed from the end of the stage (so 0 is the highest place)
-    macro_rules! replace_mwh {
-        ($ind: expr, $new_val: expr) => {
-            if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
-                if place >= 4 {
-                    if let Some(v) = positions.get_mut(place) {
-                        v.clear();
-                        v.push($new_val);
-                    }
-                }
-            }
-        };
-    }
-
-    // Add MWH (M and W are swapped round for odd stages)
-    if place_not.stage().is_even() {
-        replace_mwh!(2, 'M');
-        replace_mwh!(1, 'W');
-        replace_mwh!(0, 'H');
-    } else {
-        replace_mwh!(2, 'W');
-        replace_mwh!(1, 'M');
-        replace_mwh!(0, 'H');
-    }
-
-    positions
-}
-
-#[cfg(test)]
-mod tests {
-    use bellframe::{PlaceNot, Stage};
-    use itertools::Itertools;
-
-    /// Converts a string to a list of strings, one of each [`char`] in the input.
-    fn char_vec(string: &str) -> Vec<String> {
-        string.chars().map(|c| c.to_string()).collect_vec()
-    }
-
-    #[test]
-    fn default_calling_positions() {
-        #[rustfmt::skip]
-        let cases = &[
-            ("145", Stage::DOUBLES, char_vec("LIBFH")),
-            ("125", Stage::DOUBLES, char_vec("LBTFH")),
-            ("1", Stage::DOUBLES, char_vec("LIBFH")),
-
-            ("14", Stage::MINOR, char_vec("LIBFWH")),
-            ("1234", Stage::MINOR, char_vec("LBTFWH")),
-            ("1456", Stage::MINOR, char_vec("LIBFWH")),
-
-            ("147", Stage::TRIPLES, char_vec("LIBFWMH")),
-            ("12347", Stage::TRIPLES, char_vec("LBTFWMH")),
-
-            ("14", Stage::MAJOR, char_vec("LIBFVMWH")),
-            ("1234", Stage::MAJOR, char_vec("LBTFVMWH")),
-            ("16", Stage::MAJOR, char_vec("LIBFVMWH")),
-            ("1678", Stage::MAJOR, char_vec("LIBFVMWH")),
-            ("1256", Stage::MAJOR, char_vec("LBTFVMWH")),
-            ("123456", Stage::MAJOR, char_vec("LBTFVMWH")),
-
-            ("14", Stage::ROYAL, char_vec("LIBFVXSMWH")),
-            ("16", Stage::ROYAL, char_vec("LIBFVXSMWH")),
-            ("18", Stage::ROYAL, char_vec("LIBFVXSMWH")),
-            ("1890", Stage::ROYAL, char_vec("LIBFVXSMWH")),
-
-            ("14", Stage::MAXIMUS, char_vec("LIBFVXSENMWH")),
-            ("1234", Stage::MAXIMUS, char_vec("LBTFVXSENMWH")),
-        ];
-
-        for (pn_str, stage, exp_positions) in cases {
-            let positions =
-                super::default_calling_positions(&PlaceNot::parse(pn_str, *stage).unwrap());
-            assert_eq!(positions, *exp_positions);
         }
     }
 }
@@ -683,48 +570,6 @@ pub enum Length {
     Peal,
     /// Custom range
     Range(RangeInclusive<usize>),
-}
-
-/// An inclusive range where each side is optionally bounded.
-///
-/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
-/// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
-/// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct OptionalRangeInclusive {
-    pub min: Option<usize>,
-    pub max: Option<usize>,
-}
-
-impl OptionalRangeInclusive {
-    /// An [`OptionalRangeInclusive`] which is unbounded at both ends.  Equivalent to
-    /// `OptionalRangeInclusive { min: None, max: None }`.
-    pub const OPEN: Self = Self {
-        min: None,
-        max: None,
-    };
-
-    /// Returns `true` if at least one of `min` or `max` is set
-    pub fn is_set(self) -> bool {
-        self.min.is_some() || self.max.is_some()
-    }
-
-    /// Applies [`Option::or`] to both `min` and `max`
-    pub fn or(self, other: Self) -> Self {
-        Self {
-            min: self.min.or(other.min),
-            max: self.max.or(other.max),
-        }
-    }
-
-    pub fn or_range(self, other: &Range<usize>) -> Range<usize> {
-        let min = self.min.unwrap_or(other.start);
-        let max = self
-            .max
-            .map(|x| x + 1) // +1 because `OptRange` is inclusive
-            .unwrap_or(other.end);
-        min..max
-    }
 }
 
 /// Where in a lead can a method finish.

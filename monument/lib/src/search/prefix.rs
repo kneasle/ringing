@@ -12,10 +12,11 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     atw::AtwBitmap,
-    builder::{MusicTypeId, SpliceStyle},
+    builder::MusicTypeId,
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
+    parameters::SpliceStyle,
     utils::{
         counts::Counts,
         div_rounding_up,

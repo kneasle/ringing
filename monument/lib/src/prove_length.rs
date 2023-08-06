@@ -9,9 +9,8 @@ use bellframe::Mask;
 use itertools::Itertools;
 
 use crate::{
-    builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    parameters::{MethodIdx, MethodVec, Parameters},
+    parameters::{MethodIdx, MethodVec, OptionalRangeInclusive, Parameters},
     utils::lengths::TotalLength,
 };
 
@@ -317,7 +316,7 @@ fn possible_method_counts(
     // or
     //  - exactly one count from `start_end_counts`
 
-    log::trace!("Computing method counts for {}:", method.shorthand);
+    log::trace!("Computing method counts for {}:", method.shorthand());
 
     // Split the chunk counts into start/internal/end
     let mut start_counts = HashSet::new();
@@ -466,7 +465,7 @@ fn refine_method_counts(
 ) -> crate::Result<RangeInclusive<TotalLength>> {
     use BoundType::{Explicit as Expl, Preferred as Pref};
 
-    log::trace!("Refining method counts for {}", method.shorthand);
+    log::trace!("Refining method counts for {}", method.shorthand());
     log::trace!(
         "  initial bounds: {}{} ..= {}{}",
         min_len,
@@ -579,7 +578,7 @@ fn print_method_counts(
         let methods_string = if methods.len() == query.methods.len() {
             "all methods".to_owned()
         } else {
-            let shorthand = |idx: &MethodIdx| -> &str { &query.methods[*idx].shorthand };
+            let shorthand = |idx: &MethodIdx| -> String { query.methods[*idx].shorthand() };
 
             match methods.as_slice() {
                 [] => unreachable!(),
@@ -588,12 +587,12 @@ fn print_method_counts(
                 [idxs @ .., idx2, idx3] => {
                     let mut s = String::new();
                     for idx in idxs {
-                        s.push_str(shorthand(idx));
+                        s.push_str(&shorthand(idx));
                         s.push_str(", ");
                     }
-                    s.push_str(shorthand(idx2));
+                    s.push_str(&shorthand(idx2));
                     s.push_str(" and ");
-                    s.push_str(shorthand(idx3));
+                    s.push_str(&shorthand(idx3));
                     s
                 }
             }

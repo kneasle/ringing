@@ -113,8 +113,8 @@ impl Search {
         &self.query.methods[id.index]
     }
 
-    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
-        &self.query.methods[id.index].shorthand
+    pub fn get_method_shorthand(&self, id: &MethodId) -> String {
+        self.query.methods[id.index].shorthand()
     }
 
     /// Gets the range of counts required of the given [`MethodId`].
@@ -123,11 +123,11 @@ impl Search {
         range.start().as_usize()..=range.end().as_usize()
     }
 
-    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
+    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, String)> {
         self.query
             .methods
             .iter_enumerated()
-            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
+            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand()))
     }
 
     pub fn is_spliced(&self) -> bool {

@@ -8,10 +8,9 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    builder::SpliceStyle,
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    parameters::{self, CallIdx, MethodIdx, MethodVec, Parameters},
+    parameters::{self, CallIdx, MethodIdx, MethodVec, Parameters, SpliceStyle},
     utils::{
         lengths::{PerPartLength, TotalLength},
         Boundary, FrontierItem,

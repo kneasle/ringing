@@ -169,7 +169,7 @@ impl CompositionPrinter {
                 .map(|(id, _method, shorthand)| {
                     let max_count_width = search.method_count_range(&id).end().to_string().len();
                     let max_width = max_count_width.max(shorthand.len());
-                    (max_width, shorthand.to_owned())
+                    (max_width, shorthand)
                 })
                 .collect_vec(),
             comps_printed: 0,

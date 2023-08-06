@@ -10,9 +10,9 @@ use bellframe::{
 };
 use itertools::Itertools;
 
-use crate::parameters::{self, CallVec, MethodIdx, MethodVec};
+use crate::parameters::{self, CallVec, MethodIdx, MethodVec, OptionalRangeInclusive};
 
-use super::{EndIndices, OptionalRangeInclusive};
+use super::EndIndices;
 
 #[allow(unused_imports)] // Only used by doc comments
 use super::SearchBuilder;
@@ -134,22 +134,6 @@ impl Method {
     }
 }
 
-/// The different styles of spliced that can be generated.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub enum SpliceStyle {
-    /// Splices could happen at any lead label (usually just
-    /// [lead ends](bellframe::method::LABEL_LEAD_END)).
-    LeadLabels,
-    /// Splices only happen at calls.
-    Calls,
-}
-
-impl Default for SpliceStyle {
-    fn default() -> Self {
-        Self::LeadLabels
-    }
-}
-
 /// The unique identifier for a [`Method`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MethodId {
@@ -249,6 +233,7 @@ impl Method {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn build(
         self,
+        id: crate::parameters::MethodId,
         bellframe_method: bellframe::Method,
         fixed_bells: &[(Bell, usize)],
         default_method_count: OptionalRangeInclusive,
@@ -308,9 +293,12 @@ impl Method {
         }
 
         Ok(parameters::Method {
-            shorthand: self
-                .custom_shorthand
-                .unwrap_or_else(|| default_shorthand(bellframe_method.title())),
+            id,
+            used: true,
+
+            name: bellframe_method.name().to_owned(),
+
+            custom_shorthand: self.custom_shorthand.unwrap_or_default(),
             count_range: self.override_count_range.or(default_method_count),
             plain_course: bellframe_method
                 .plain_course()
@@ -326,7 +314,7 @@ impl Method {
                     .iter()
                     .flat_map(|c| c.as_lead_masks(&bellframe_method, fixed_bells))
                     .collect_vec(),
-                None => vec![Mask::empty(stage)], // `None` means all courses are non-duffers
+                None => vec![Mask::any(stage)], // `None` means all courses are non-duffers
             },
 
             inner: bellframe_method,
@@ -441,15 +429,6 @@ fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<u
             (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
         })
         .collect_vec()
-}
-
-/// Get a default shorthand given a method's title.
-pub fn default_shorthand(title: &str) -> String {
-    title
-        .chars()
-        .next()
-        .expect("Can't have empty method title")
-        .to_string()
 }
 
 /// Returns the place bells which are always preserved by plain leads and all calls of all methods

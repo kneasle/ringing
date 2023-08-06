@@ -6,9 +6,9 @@ use bellframe::{Block, Row, RowBuf};
 
 use crate::{
     atw::{AtwBitmap, AtwTable, PlaceBellRange},
-    builder::{methods::MethodId, CallDisplayStyle, MusicTypeId},
+    builder::{methods::MethodId, MusicTypeId},
     group::PartHead,
-    parameters::{CallIdx, MethodIdx, MethodVec, Parameters},
+    parameters::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, Parameters},
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
@@ -84,7 +84,7 @@ impl Composition {
                     path_elem.length,
                 );
                 for _ in 0..num_leads_covered {
-                    s.push_str(&method.shorthand);
+                    s.push_str(&method.shorthand());
                 }
             }
             // Call text
@@ -222,7 +222,7 @@ impl Composition {
     pub fn music_score(&self) -> f32 {
         self.music_counts
             .iter()
-            .map(|(id, count)| f32::from(self.query.music_types[id.index].weight) * *count as f32)
+            .map(|(id, count)| self.query.music_types[id.index].weight * *count as f32)
             .sum::<f32>()
     }
 

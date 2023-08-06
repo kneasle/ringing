@@ -10,9 +10,8 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{
-        self, CallDisplayStyle, EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
-    },
+    builder::{self, EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
+    parameters::CallDisplayStyle,
     Config, Search, SearchBuilder,
 };
 use serde::Deserialize;
@@ -258,7 +257,7 @@ impl TomlFile {
             // If the user specifies some courses, use them
             Some(ch_strings) => Some(parse_masks("course mask", ch_strings, stage)?),
             // If the user specifies no courses but sets `split_tenors` then force every course
-            None if self.split_tenors => Some(vec![Mask::empty(stage)]),
+            None if self.split_tenors => Some(vec![Mask::any(stage)]),
             // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
             // 'tenors' which are unaffected by the part head).
             None => None,
@@ -490,11 +489,11 @@ pub enum SpliceStyle {
     Calls,
 }
 
-impl From<self::SpliceStyle> for monument::builder::SpliceStyle {
+impl From<self::SpliceStyle> for monument::parameters::SpliceStyle {
     fn from(style: self::SpliceStyle) -> Self {
         match style {
-            self::SpliceStyle::LeadLabels => monument::builder::SpliceStyle::LeadLabels,
-            self::SpliceStyle::Calls => monument::builder::SpliceStyle::Calls,
+            self::SpliceStyle::LeadLabels => monument::parameters::SpliceStyle::LeadLabels,
+            self::SpliceStyle::Calls => monument::parameters::SpliceStyle::Calls,
         }
     }
 }

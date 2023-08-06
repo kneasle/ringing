@@ -6,7 +6,8 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    builder::{MusicType, MusicTypeId, OptionalRangeInclusive},
+    builder::{MusicType, MusicTypeId},
+    parameters::OptionalRangeInclusive,
     Search, SearchBuilder,
 };
 use serde::Deserialize;
