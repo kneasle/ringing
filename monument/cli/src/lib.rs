@@ -15,7 +15,10 @@ pub mod utils;
 use std::{
     path::Path,
     str::FromStr,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
@@ -83,20 +86,24 @@ pub fn run(
     }
 
     // In CLI mode, attach `ctrl-C` to the abort flag
+    let abort_flag = Arc::new(AtomicBool::new(false));
     if env == Environment::Cli {
-        let search = Arc::clone(&search);
-        if let Err(e) = ctrlc::set_handler(move || search.signal_abort()) {
+        let abort_flag = Arc::clone(&abort_flag);
+        if let Err(e) = ctrlc::set_handler(move || abort_flag.store(true, Ordering::SeqCst)) {
             log::warn!("Error setting ctrl-C handler: {}", e);
         }
     }
 
     // Run the search, collecting the compositions as the search runs
     let mut comps = Vec::<Composition>::new();
-    search.run(|update| {
-        if let Some(comp) = update_logger.log(update) {
-            comps.push(comp);
-        }
-    });
+    search.run(
+        |update| {
+            if let Some(comp) = update_logger.log(update) {
+                comps.push(comp);
+            }
+        },
+        &abort_flag,
+    );
 
     // Once the search has completed, sort the compositions and return
     fn rounded_float(f: f32) -> OrderedFloat<f32> {
@@ -115,7 +122,7 @@ pub fn run(
         comps,
         comp_printer,
         duration: start_time.elapsed(),
-        aborted: search.was_aborted(),
+        aborted: abort_flag.load(Ordering::SeqCst),
 
         search,
     }))

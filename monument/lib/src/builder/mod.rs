@@ -2,7 +2,7 @@
 
 pub mod methods;
 
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, sync::atomic::AtomicBool};
 
 use bellframe::{
     method::LABEL_LEAD_END,
@@ -203,7 +203,7 @@ impl SearchBuilder {
                 comps.push(comp);
             }
         };
-        Search::new(self.into_query()?, config)?.run(update_fn);
+        Search::new(self.into_query()?, config)?.run(update_fn, &AtomicBool::new(false));
         Ok(comps)
     }
 

@@ -46,8 +46,6 @@ pub struct Search {
     graph: self::graph::Graph,
     atw_table: Arc<AtwTable>,
     refined_ranges: RefinedRanges,
-    /* Concurrency control */
-    abort_flag: AtomicBool,
 }
 
 impl Search {
@@ -77,31 +75,17 @@ impl Search {
             config,
             refined_ranges,
             graph,
-
-            abort_flag: AtomicBool::new(false),
         })
     }
 
     /// Runs the search, **blocking the current thread** until either the search is completed or an
     /// [abort is signalled](Self::signal_abort).
-    pub fn run(&self, update_fn: impl FnMut(Update)) {
+    pub fn run(&self, update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
-        self.abort_flag.store(false, Ordering::SeqCst);
-        best_first::search(self, update_fn, &self.abort_flag);
-    }
-
-    /// Signal that the search should be aborted as soon as possible.  `Search` is [`Sync`] and
-    /// uses interior mutability, so `signal_abort` can be called from a different thread to the
-    /// one blocking on [`Search::run`].
-    pub fn signal_abort(&self) {
-        self.abort_flag.store(true, Ordering::Relaxed);
-    }
-
-    /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
-    pub fn was_aborted(&self) -> bool {
-        self.abort_flag.load(Ordering::SeqCst)
+        abort_flag.store(false, Ordering::SeqCst);
+        best_first::search(self, update_fn, abort_flag);
     }
 }
 

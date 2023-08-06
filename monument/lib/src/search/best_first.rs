@@ -43,6 +43,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
                 iter_count,
                 num_comps,
                 $truncating_queue,
+                abort_flag.load(Ordering::SeqCst),
             );
         };
     }
