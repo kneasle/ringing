@@ -24,6 +24,18 @@ monument_cli`.  If you don't already have Rust ~what are you doing with your lif
 a pre-built copy of the latest version from
 [here](https://github.com/kneasle/ringing/releases/latest).
 
+### Library `libssl.so.1.1` not found
+
+If you're installing on some Ubuntu systems, you may get an error when running Monument that the
+library `libssl.so.1.1` can't be found.  libSSL is a system library for handling web connections,
+which Monument uses to download the Central Council's method library.
+
+It can be installed on Ubuntu by running the following commands at a terminal:
+```bash
+wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+```
+
 ---
 
 ## Example
