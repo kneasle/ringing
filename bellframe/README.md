@@ -11,8 +11,8 @@ The two fundamental goals of BellFrame are **reliability** and **performance**, 
 Reliability means that BellFrame's behaviour is always well defined and never causes Undefined
 Behaviour, even for pathological inputs.  Performance means, specifically, that BellFrame's code
 should never be the limiting factor in a project.  However, reliability is more important than
-unbeatable performance so I'm not going write complex optimised code until I at least know that
-operation is a bottleneck - it's just so much easier to know that simple code is correct.
+unbeatable performance; I'm not going write complex optimised code until I at least know that
+an operation is a bottleneck.  It's just so much easier to maintain simple code.
 
 ## Contents
 
