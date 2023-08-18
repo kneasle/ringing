@@ -41,6 +41,7 @@ pub struct Composition {
     pub(crate) total_duffer: TotalLength,
 
     /// The [`Query`] which generated this [`Composition`]
+    // TODO: Remove this dependency, and make everything else calculated on the fly
     pub(crate) query: Arc<Query>,
     // TODO: Store expanded atw data, independently of the [`AtwTable`]?
     pub(crate) atw_table: Arc<AtwTable>,
@@ -88,7 +89,7 @@ impl Composition {
                 }
             }
             // Call text
-            if let Some(call_idx) = path_elem.call {
+            if let Some(call_idx) = path_elem.call_to_end {
                 let call = &self.query.calls[call_idx];
 
                 s.push_str(if needs_brackets { "[" } else { "" });
@@ -173,7 +174,7 @@ impl Composition {
                     .expect("All path elems should have the same stage");
             }
             // If this PathElem ends in a call, then change the `leftover_row` to suit
-            if let Some(call_idx) = elem.call {
+            if let Some(call_idx) = elem.call_to_end {
                 let last_non_leftover_row = first_part.rows().next_back().unwrap();
                 let new_leftover_row = last_non_leftover_row
                     * self.query.calls[call_idx].place_notation.transposition();
@@ -257,12 +258,12 @@ pub(crate) struct PathElem {
     pub method: MethodIdx,
     pub start_sub_lead_idx: usize,
     pub length: PerPartLength,
-    pub call: Option<CallIdx>,
+    pub call_to_end: Option<CallIdx>,
 }
 
 impl PathElem {
-    pub(crate) fn ends_with_plain(&self) -> bool {
-        self.call.is_none()
+    pub fn ends_with_plain(&self) -> bool {
+        self.call_to_end.is_none()
     }
 
     pub(crate) fn end_sub_lead_idx(&self, query: &Query) -> usize {

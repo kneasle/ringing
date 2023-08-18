@@ -48,19 +48,19 @@ impl Method {
     /// Create a new [`Method`] by loading a method from the Central Council library by its
     /// [`title`](bellframe::Method::title).
     pub fn with_title(title: String) -> Self {
-        Self::new(MethodSource::Title(title))
+        Self::from_source(MethodSource::Title(title))
     }
 
     /// Create a new [`Method`] with custom place notation.
     pub fn with_custom_pn(name: String, pn_str: String, stage: Stage) -> Self {
-        Self::new(MethodSource::CustomPn {
+        Self::from_source(MethodSource::CustomPn {
             name,
             pn_str,
             stage,
         })
     }
 
-    fn new(source: MethodSource) -> Self {
+    fn from_source(source: MethodSource) -> Self {
         Self {
             source,
             lead_labels: hmap::hmap! { LABEL_LEAD_END.to_owned() => vec![0] },

@@ -54,6 +54,7 @@ pub(crate) struct Query {
     pub music_types: MusicTypeVec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
+    // TODO: Compute this automatically from sub-lead index
     pub start_stroke: Stroke,
 }
 

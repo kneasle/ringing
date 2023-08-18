@@ -437,7 +437,7 @@ impl CompPrefix {
                 method: method_idx,
                 start_sub_lead_idx: sub_lead_idx,
                 length: chunk.per_part_length,
-                call: succ_link.call,
+                call_to_end: succ_link.call,
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
