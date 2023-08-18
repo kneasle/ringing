@@ -314,8 +314,8 @@ fn check_query(query: &Query) -> crate::Result<()> {
     // Calls referring to non-existent labels
     let mut defined_labels = HashSet::<&String>::new();
     for m in &query.methods {
-        for annot in m.plain_course().annots() {
-            defined_labels.extend(annot.labels);
+        for labels in m.first_lead().annots() {
+            defined_labels.extend(labels);
         }
     }
     for call in &query.calls {

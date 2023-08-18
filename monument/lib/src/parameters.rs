@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashSet,
+    marker::PhantomData,
     ops::{Range, RangeInclusive},
 };
 
@@ -12,10 +13,7 @@ use itertools::Itertools;
 
 use crate::{
     group::PartHeadGroup,
-    utils::{
-        lengths::{PerPartLength, TotalLength},
-        Boundary,
-    },
+    utils::lengths::{PerPartLength, TotalLength},
 };
 
 /// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
@@ -44,6 +42,7 @@ pub struct Parameters {
     // NOTE: Course masks are defined on each `Method`
     pub start_row: RowBuf,
     pub end_row: RowBuf,
+    // TODO: Explicitly compute PH group, leave user to just input rows?
     pub part_head_group: PartHeadGroup,
     /// [`Score`]s applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
@@ -54,7 +53,7 @@ pub struct Parameters {
     pub max_total_duffer: Option<TotalLength>,
 
     // MUSIC
-    pub music_types: MusicTypeVec<MusicType>,
+    pub maybe_unused_music_types: Vec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
     // TODO: Compute this automatically from sub-lead index
@@ -103,21 +102,21 @@ impl Parameters {
 pub struct Method {
     pub id: MethodId,
     pub used: bool,
+    pub inner: bellframe::Method,
 
     /// Short [`String`] used to identify this method in spliced.  If empty, a default value will
     /// be generated.
     pub custom_shorthand: String,
-    pub inner: bellframe::Method,
 
     /// The number of rows of this method must fit within this range
     pub count_range: OptionalRangeInclusive,
 
     /// The indices in which we can start a composition during this `Method`.  These are guaranteed
     /// to fit within `inner.lead_len()`.
-    pub start_indices: Vec<usize>,
+    pub start_indices: Vec<isize>,
     /// The indices in which we can end a composition during this `Method`.  These are guaranteed
     /// to fit within `inner.lead_len()`.
-    pub end_indices: Vec<usize>,
+    pub end_indices: Vec<isize>,
 
     /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
     pub allowed_courses: Vec<CourseSet>,
@@ -127,6 +126,18 @@ pub struct Method {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MethodId(pub u16);
+
+impl From<u16> for MethodId {
+    fn from(value: u16) -> Self {
+        Self(value)
+    }
+}
+
+impl From<MethodId> for u16 {
+    fn from(value: MethodId) -> Self {
+        value.0
+    }
+}
 
 /// The different styles of spliced that can be generated.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -156,14 +167,285 @@ impl Method {
     pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
+}
 
-    pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
-        match boundary {
-            Boundary::Start => &self.start_indices,
-            Boundary::End => &self.end_indices,
+impl std::ops::Deref for Method {
+    type Target = bellframe::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+/// Get a default shorthand given a method's title.
+pub fn default_shorthand(title: &str) -> String {
+    title
+        .chars()
+        .next()
+        .expect("Can't have empty method title")
+        .to_string()
+}
+
+///////////
+// CALLS //
+///////////
+
+/// A type of call (e.g. bob or single)
+#[derive(Debug, Clone)]
+pub struct Call {
+    pub id: CallId,
+    pub used: bool,
+
+    pub symbol: String,
+    pub calling_positions: Vec<String>,
+
+    pub label_from: String,
+    pub label_to: String,
+    // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
+    pub place_notation: PlaceNot,
+
+    pub weight: f32,
+}
+
+#[derive(Debug, Clone, Copy, Hash)]
+pub struct CallId(pub u16);
+
+impl From<u16> for CallId {
+    fn from(value: u16) -> Self {
+        Self(value)
+    }
+}
+
+impl From<CallId> for u16 {
+    fn from(value: CallId) -> Self {
+        value.0
+    }
+}
+
+/// How the calls in a given composition should be displayed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallDisplayStyle {
+    /// Calls should be displayed as a count since the last course head.
+    Positional,
+    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
+    CallingPositions(Bell),
+}
+
+impl Call {
+    /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
+    /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
+    /// `-WsW-WsW-H`.
+    pub(crate) fn short_symbol(&self) -> &str {
+        match self.symbol.as_str() {
+            "-" | "–" => "", // Convert `-` to ``
+            s => s,          // All other calls use their explicit symbol
+        }
+    }
+
+    /// Create a [`parameters::Call`] which replaces the lead end with a given [`PlaceNot`]
+    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
+        Self {
+            id,
+            used: true,
+
+            symbol: symbol.to_owned(),
+            calling_positions: default_calling_positions(&place_not),
+            label_from: LABEL_LEAD_END.to_owned(),
+            label_to: LABEL_LEAD_END.to_owned(),
+            place_notation: place_not,
+            weight,
         }
     }
 }
+
+/// The different types of [`BaseCalls`] that can be created.
+#[derive(Debug, Clone, Copy)]
+pub enum BaseCallType {
+    /// `14` bobs and `1234` singles
+    Near,
+    /// `1<n-2>` bobs and `1<n-2><n-1><n>` singles
+    Far,
+}
+
+/// Default weight given to bobs.
+pub const DEFAULT_BOB_WEIGHT: f32 = -1.8;
+/// Default weight given to singles.
+pub const DEFAULT_SINGLE_WEIGHT: f32 = -2.3;
+/// Default weight given to user-specified [`Call`]s.
+pub const DEFAULT_MISC_CALL_WEIGHT: f32 = -3.0;
+
+pub fn base_calls(
+    id_generator: &mut IdGenerator<CallId>,
+    type_: BaseCallType,
+    bob_weight: Option<f32>,
+    single_weight: Option<f32>,
+    stage: Stage,
+) -> Vec<Call> {
+    let n = stage.num_bells_u8();
+
+    let mut calls = Vec::new();
+    // Add bob
+    if let Some(bob_weight) = bob_weight {
+        let bob_pn = match type_ {
+            BaseCallType::Near => PlaceNot::parse("14", stage).unwrap(),
+            BaseCallType::Far => PlaceNot::from_slice(&mut [0, n - 3], stage).unwrap(),
+        };
+        calls.push(Call::lead_end_call(
+            id_generator.next(),
+            bob_pn,
+            "-",
+            bob_weight,
+        ));
+    }
+    // Add single
+    if let Some(single_weight) = single_weight {
+        let single_pn = match type_ {
+            BaseCallType::Near => PlaceNot::parse("1234", stage).unwrap(),
+            BaseCallType::Far => {
+                PlaceNot::from_slice(&mut [0, n - 3, n - 2, n - 1], stage).unwrap()
+            }
+        };
+        calls.push(Call::lead_end_call(
+            id_generator.next(),
+            single_pn,
+            "s",
+            single_weight,
+        ));
+    }
+
+    calls
+}
+
+#[allow(clippy::branches_sharing_code)]
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
+
+    // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
+
+    // Generate calling positions that aren't M, W or H
+    let mut positions =
+        // Start off with the single-char position names
+        named_positions
+        .chars()
+        .map(|c| c.to_string())
+        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
+        // calling positions)
+        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
+        // But we consume one value per place in the Stage
+        .take(place_not.stage().num_bells())
+        .collect_vec();
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a given (0-indexed) place
+    macro_rules! replace_pos {
+        ($idx: expr, $new_val: expr) => {
+            if let Some(v) = positions.get_mut($idx) {
+                v.clear();
+                v.push($new_val);
+            }
+        };
+    }
+
+    // Edge case: if 2nds are made in `place_not`, then I/B are replaced with B/T.  Note that
+    // places are 0-indexed
+    if place_not.contains(1) {
+        replace_pos!(1, 'B');
+        replace_pos!(2, 'T');
+    }
+
+    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
+    /// position at a place indexed from the end of the stage (so 0 is the highest place)
+    macro_rules! replace_mwh {
+        ($ind: expr, $new_val: expr) => {
+            if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
+                if place >= 4 {
+                    if let Some(v) = positions.get_mut(place) {
+                        v.clear();
+                        v.push($new_val);
+                    }
+                }
+            }
+        };
+    }
+
+    // Add MWH (M and W are swapped round for odd stages)
+    if place_not.stage().is_even() {
+        replace_mwh!(2, 'M');
+        replace_mwh!(1, 'W');
+        replace_mwh!(0, 'H');
+    } else {
+        replace_mwh!(2, 'W');
+        replace_mwh!(1, 'M');
+        replace_mwh!(0, 'H');
+    }
+
+    positions
+}
+
+///////////
+// MUSIC //
+///////////
+
+/// A class of music that Monument should care about
+#[derive(Debug, Clone)]
+pub struct MusicType {
+    pub id: MusicTypeId,
+    pub used: bool,
+
+    pub patterns: Vec<Pattern>,
+    pub strokes: StrokeSet,
+    pub weight: f32,
+    pub count_range: OptionalRangeInclusive,
+}
+
+impl MusicType {
+    /// Return the total number of possible instances of this music type, or `None` if the
+    /// computation caused `usize` to overflow.
+    pub(crate) fn max_count(&self) -> Option<usize> {
+        let mut sum = 0;
+        for r in &self.patterns {
+            sum += r.num_matching_rows()?;
+        }
+        Some(sum)
+    }
+}
+
+/// A set of at least one [`Stroke`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl StrokeSet {
+    pub fn contains(self, stroke: Stroke) -> bool {
+        match self {
+            Self::Both => true,
+            Self::Hand => stroke == Stroke::Hand,
+            Self::Back => stroke == Stroke::Back,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MusicTypeId(pub u16);
+
+impl From<u16> for MusicTypeId {
+    fn from(value: u16) -> Self {
+        Self(value)
+    }
+}
+
+impl From<MusicTypeId> for u16 {
+    fn from(value: MusicTypeId) -> Self {
+        value.0
+    }
+}
+
+////////////////
+// MISC TYPES //
+////////////////
 
 /// Convenient description of a set of courses via [`Mask`]s.
 #[derive(Debug, Clone)]
@@ -300,204 +582,6 @@ fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mas
     Some(mask)
 }
 
-impl std::ops::Deref for Method {
-    type Target = bellframe::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-/// Get a default shorthand given a method's title.
-pub fn default_shorthand(title: &str) -> String {
-    title
-        .chars()
-        .next()
-        .expect("Can't have empty method title")
-        .to_string()
-}
-
-///////////
-// CALLS //
-///////////
-
-/// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
-pub struct Call {
-    pub id: CallId,
-    pub used: bool,
-
-    pub symbol: String,
-    pub calling_positions: Vec<String>,
-
-    pub label_from: String,
-    pub label_to: String,
-    // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
-    pub place_notation: PlaceNot,
-
-    pub weight: f32,
-}
-
-#[derive(Debug, Clone, Copy, Hash)]
-pub struct CallId(pub u16);
-
-/// How the calls in a given composition should be displayed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CallDisplayStyle {
-    /// Calls should be displayed as a count since the last course head.
-    Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
-    CallingPositions(Bell),
-}
-
-impl Call {
-    /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
-    /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
-    /// `-WsW-WsW-H`.
-    pub(crate) fn short_symbol(&self) -> &str {
-        match self.symbol.as_str() {
-            "-" | "–" => "", // Convert `-` to ``
-            s => s,          // All other calls use their explicit symbol
-        }
-    }
-
-    /// Create a [`parameters::Call`] which replaces the lead end with a given [`PlaceNot`]
-    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
-        Self {
-            id,
-            used: true,
-
-            symbol: symbol.to_owned(),
-            calling_positions: default_calling_positions(&place_not),
-            label_from: LABEL_LEAD_END.to_owned(),
-            label_to: LABEL_LEAD_END.to_owned(),
-            place_notation: place_not,
-            weight,
-        }
-    }
-}
-
-#[allow(clippy::branches_sharing_code)]
-pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
-    let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
-
-    // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
-
-    // Generate calling positions that aren't M, W or H
-    let mut positions =
-        // Start off with the single-char position names
-        named_positions
-        .chars()
-        .map(|c| c.to_string())
-        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
-        // calling positions)
-        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
-        // But we consume one value per place in the Stage
-        .take(place_not.stage().num_bells())
-        .collect_vec();
-
-    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
-    /// position at a given (0-indexed) place
-    macro_rules! replace_pos {
-        ($idx: expr, $new_val: expr) => {
-            if let Some(v) = positions.get_mut($idx) {
-                v.clear();
-                v.push($new_val);
-            }
-        };
-    }
-
-    // Edge case: if 2nds are made in `place_not`, then I/B are replaced with B/T.  Note that
-    // places are 0-indexed
-    if place_not.contains(1) {
-        replace_pos!(1, 'B');
-        replace_pos!(2, 'T');
-    }
-
-    /// A cheeky macro which generates the code to perform an in-place replacement of a calling
-    /// position at a place indexed from the end of the stage (so 0 is the highest place)
-    macro_rules! replace_mwh {
-        ($ind: expr, $new_val: expr) => {
-            if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
-                if place >= 4 {
-                    if let Some(v) = positions.get_mut(place) {
-                        v.clear();
-                        v.push($new_val);
-                    }
-                }
-            }
-        };
-    }
-
-    // Add MWH (M and W are swapped round for odd stages)
-    if place_not.stage().is_even() {
-        replace_mwh!(2, 'M');
-        replace_mwh!(1, 'W');
-        replace_mwh!(0, 'H');
-    } else {
-        replace_mwh!(2, 'W');
-        replace_mwh!(1, 'M');
-        replace_mwh!(0, 'H');
-    }
-
-    positions
-}
-
-///////////
-// MUSIC //
-///////////
-
-/// A class of music that Monument should care about
-#[derive(Debug, Clone)]
-pub struct MusicType {
-    pub patterns: Vec<Pattern>,
-    pub strokes: StrokeSet,
-    pub weight: f32,
-    pub count_range: OptionalRangeInclusive,
-}
-
-impl MusicType {
-    /// Return the total number of possible instances of this music type, or `None` if the
-    /// computation caused `usize` to overflow.
-    pub(crate) fn max_count(&self) -> Option<usize> {
-        let mut sum = 0;
-        for r in &self.patterns {
-            sum += r.num_matching_rows()?;
-        }
-        Some(sum)
-    }
-}
-
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StrokeSet {
-    Hand,
-    Back,
-    Both,
-}
-
-impl StrokeSet {
-    pub fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
-        }
-    }
-}
-
-////////////////
-// MISC TYPES //
-////////////////
-
-// TODO: Replace these with `ID`s and use `HashMap`s for everything
-index_vec::define_index_type! { pub struct MethodIdx = usize; }
-index_vec::define_index_type! { pub struct CallIdx = usize; }
-index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
-pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
-
 /// An inclusive range where each side is optionally bounded.
 ///
 /// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
@@ -539,6 +623,36 @@ impl OptionalRangeInclusive {
         min..max
     }
 }
+
+/// Struct which generates unique `Id`s.  Can be used with any of [`MethodId`] or [`CallId`].
+#[derive(Debug, Clone)]
+pub struct IdGenerator<Id> {
+    next_id: u16,
+    _id: PhantomData<Id>,
+}
+
+impl<Id: From<u16> + Into<u16>> IdGenerator<Id> {
+    pub fn starting_at_zero() -> Self {
+        Self {
+            next_id: 0,
+            _id: PhantomData,
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> Id {
+        let id = Id::from(self.next_id);
+        self.next_id += 1;
+        id
+    }
+}
+
+index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
+index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
+index_vec::define_index_type! { pub(crate) struct MusicTypeIdx = usize; }
+pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
+pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub(crate) type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
 
 #[cfg(test)]
 mod tests {

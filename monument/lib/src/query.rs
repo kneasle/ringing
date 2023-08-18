@@ -8,8 +8,9 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    parameters::{CallVec, CourseSet, MethodVec, Parameters},
-    utils::PerPartLength,
+    parameters::{CallVec, CourseSet, MethodVec, MusicType, MusicTypeId, MusicTypeVec, Parameters},
+    utils::{Boundary, PerPartLength},
+    PartHeadGroup,
 };
 
 /// Extra data precomputed from a set of [`Parameters`], to be used while generating the graph.
@@ -32,6 +33,7 @@ pub(crate) struct Query {
     pub parameters: Parameters,
     pub methods: MethodVec<Method>,
     pub calls: CallVec<crate::parameters::Call>,
+    pub music_types: MusicTypeVec<MusicType>,
 
     pub fixed_bells: Vec<(Bell, usize)>,
     // TODO: Compute lengths
@@ -41,10 +43,12 @@ pub(crate) struct Query {
 #[derive(Debug)]
 pub(crate) struct Method {
     pub inner: crate::parameters::Method,
-
     /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
     /// labels assigned to that row.
     pub plain_course: Block<Vec<String>>,
+
+    pub start_indices: Vec<usize>,
+    pub end_indices: Vec<usize>,
 
     /// The expanded version of `inner.allowed_courses`
     pub specified_course_head_masks: Vec<Mask>,
@@ -73,6 +77,11 @@ impl Deref for Method {
 }
 
 impl Query {
+    pub(crate) fn music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
+        // TODO: if this is a bottleneck, we can optimise this with a hashmap
+        self.music_types.iter().find(|mt| mt.id == id).unwrap()
+    }
+
     /// For a given chunk, split that chunk's range into segments where each one falls within a
     /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`
     /// and length 18 would return the following regions:
@@ -147,6 +156,13 @@ impl Method {
             .iter()
             .any(|mask| mask.matches(lead_head))
     }
+
+    pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
+        match boundary {
+            Boundary::Start => &self.start_indices,
+            Boundary::End => &self.end_indices,
+        }
+    }
 }
 
 /////////////////////////
@@ -168,6 +184,12 @@ impl Query {
             .filter(|c| c.used)
             .cloned()
             .collect();
+        let used_music_types: MusicTypeVec<_> = parameters
+            .maybe_unused_music_types
+            .iter()
+            .filter(|mt| mt.used)
+            .cloned()
+            .collect();
         // Generate fixed bells
         let fixed_bells = fixed_bells(
             &used_methods,
@@ -179,21 +201,45 @@ impl Query {
         Self {
             methods: used_methods
                 .into_iter()
-                .map(|m| Method::new(m, &fixed_bells))
+                .map(|m| Method::new(m, &fixed_bells, &parameters.part_head_group))
                 .collect(),
-            fixed_bells,
             calls: used_calls,
+            music_types: used_music_types,
 
+            fixed_bells,
             parameters,
         }
     }
 }
 
 impl Method {
-    fn new(method: crate::parameters::Method, fixed_bells: &[(Bell, usize)]) -> Self {
+    fn new(
+        method: crate::parameters::Method,
+        fixed_bells: &[(Bell, usize)],
+        part_heads: &PartHeadGroup,
+    ) -> Self {
+        // Wrap indices
+        let mut start_indices = wrap_sub_lead_indices(&method.start_indices, &method);
+        let mut end_indices = wrap_sub_lead_indices(&method.end_indices, &method);
+        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
+        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
+        // this, we set both `{start,end}_indices` to the union between `start_indices` and
+        // `end_indices`.
+        if part_heads.is_multi_part() {
+            let union = start_indices
+                .iter()
+                .filter(|idx| end_indices.contains(idx))
+                .copied()
+                .collect_vec();
+            start_indices = union.clone();
+            end_indices = union;
+        }
+
         let plain_course = method.plain_course().map_annots(|a| a.labels.to_vec());
         Self {
             plain_course,
+            start_indices,
+            end_indices,
 
             specified_course_head_masks: CourseSet::to_course_masks(
                 &method.allowed_courses,
@@ -214,6 +260,16 @@ impl Method {
             inner: method,
         }
     }
+}
+
+fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<usize> {
+    indices
+        .iter()
+        .map(|idx| {
+            let lead_len_i = method.lead_len() as isize;
+            (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
+        })
+        .collect_vec()
 }
 
 //////////////////

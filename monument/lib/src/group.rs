@@ -60,6 +60,14 @@ impl PartHeadGroup {
         self.part_heads.len()
     }
 
+    pub fn is_one_part(&self) -> bool {
+        self.size() == 1
+    }
+
+    pub fn is_multi_part(&self) -> bool {
+        !self.is_one_part()
+    }
+
     /// Returns an [`Iterator`] over the [`Row`]s in this `PartHeadGroup`
     pub fn rows(&self) -> impl Iterator<Item = &Row> + Clone {
         self.part_heads.iter().map(Deref::deref)

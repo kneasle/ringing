@@ -6,9 +6,9 @@ use bellframe::{Block, Row, RowBuf};
 
 use crate::{
     atw::{AtwBitmap, AtwTable, PlaceBellRange},
-    builder::{methods::MethodId, MusicTypeId},
+    builder::methods::MethodId,
     group::PartHead,
-    parameters::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, Parameters},
+    parameters::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, MusicTypeId, Parameters},
     query::Query,
     utils::{
         counts::Counts,
@@ -223,7 +223,7 @@ impl Composition {
     pub fn music_score(&self) -> f32 {
         self.music_counts
             .iter()
-            .map(|(id, count)| self.query.music_types[id.index].weight * *count as f32)
+            .map(|(id, count)| self.query.music_type_by_id(*id).weight * *count as f32)
             .sum::<f32>()
     }
 

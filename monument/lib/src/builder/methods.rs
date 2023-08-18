@@ -265,26 +265,11 @@ impl Method {
             .override_start_indices
             .as_deref()
             .unwrap_or(default_start_indices);
-        let mut start_indices = wrap_sub_lead_indices(not_wrapped_start_indices, &bellframe_method);
-        let mut end_indices = match (&self.override_end_indices, default_end_indices) {
-            (Some(indices), _) | (None, EndIndices::Specific(indices)) => {
-                wrap_sub_lead_indices(indices, &bellframe_method)
-            }
-            (None, EndIndices::Any) => (0..bellframe_method.lead_len()).collect_vec(),
+        let start_indices = not_wrapped_start_indices.to_vec();
+        let end_indices = match (&self.override_end_indices, default_end_indices) {
+            (Some(indices), _) | (None, EndIndices::Specific(indices)) => indices.to_vec(),
+            (None, EndIndices::Any) => (0..bellframe_method.lead_len() as isize).collect_vec(),
         };
-        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
-        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
-        // this, we set both `{start,end}_indices` to the union between `start_indices` and
-        // `end_indices`.
-        if !part_head.is_rounds() {
-            let union = start_indices
-                .iter()
-                .filter(|idx| end_indices.contains(idx))
-                .copied()
-                .collect_vec();
-            start_indices = union.clone();
-            end_indices = union;
-        }
 
         Ok(parameters::Method {
             id,
@@ -301,14 +286,4 @@ impl Method {
             inner: bellframe_method,
         })
     }
-}
-
-fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<usize> {
-    indices
-        .iter()
-        .map(|idx| {
-            let lead_len_i = method.lead_len() as isize;
-            (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
-        })
-        .collect_vec()
 }

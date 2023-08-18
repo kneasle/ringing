@@ -19,8 +19,8 @@ use sysinfo::SystemExt;
 
 use crate::{
     atw::AtwTable,
-    builder::{methods::MethodId, MusicTypeId},
-    parameters::Parameters,
+    builder::methods::MethodId,
+    parameters::{MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
     utils::lengths::{PerPartLength, TotalLength},
@@ -55,7 +55,7 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub(crate) fn new(params: Parameters, config: Config) -> crate::Result<Self> {
+    pub fn new(params: Parameters, config: Config) -> crate::Result<Self> {
         let query = Query::new(params);
 
         // Build and optimise the graph
@@ -120,14 +120,12 @@ impl Search {
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
-        self.query
-            .music_types
-            .iter_enumerated()
-            .map(|(index, _)| MusicTypeId { index })
+        self.query.music_types.iter().map(|ty| ty.id)
     }
 
-    pub fn max_music_count(&self, id: &MusicTypeId) -> usize {
-        self.query.music_types[id.index]
+    pub fn max_music_count(&self, id: MusicTypeId) -> usize {
+        self.query
+            .music_type_by_id(id)
             .max_count()
             .unwrap_or(usize::MAX)
     }

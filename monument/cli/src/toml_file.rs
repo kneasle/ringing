@@ -2,17 +2,25 @@ use std::{
     collections::HashMap,
     fmt::Write,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use anyhow::anyhow;
-use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke};
+use bellframe::{
+    method::LABEL_LEAD_END,
+    method_lib::QueryError,
+    music::{Elem, Pattern},
+    place_not::PnBlockParseError,
+    Bell, Mask, MethodLib, RowBuf, Stage, Stroke,
+};
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
-    parameters::CallDisplayStyle,
-    Config, Search, SearchBuilder,
+    parameters::{
+        BaseCallType, CallDisplayStyle, CallId, IdGenerator, MethodId, MusicType,
+        OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
+    },
+    utils::{PerPartLength, TotalLength},
+    Config, PartHeadGroup,
 };
 use serde::Deserialize;
 
@@ -171,40 +179,44 @@ impl TomlFile {
     }
 
     /// Build a [`Search`] which corresponds to this `TomlFile`
-    pub fn to_search(
-        &self,
-        toml_path: &Path,
-        opts: &crate::args::Options,
-        leak_search_memory: bool,
-    ) -> anyhow::Result<(Arc<Search>, Vec<MusicDisplay>)> {
+    pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<(Parameters, Vec<MusicDisplay>)> {
         log::debug!("Generating query");
 
+        // Error on deprecated paramaters
+        if self.allow_false.is_some() {
+            anyhow::bail!("`allow_false` has been replaced with `require_truth`");
+        }
+        if self.course_heads.is_some() {
+            anyhow::bail!("`course_heads` has been renamed to `courses`");
+        }
+
+        let cc_lib =
+            bellframe::MethodLib::cc_lib().expect("Couldn't load Central Council method library");
         // Build the methods first so that we can compute the overall `Stage` *before* parsing
         // everything else.
-        let method_builders = self
-            .methods
+        let all_methods = self.methods.iter().chain(self.method.as_ref());
+        let mut parsed_methods = Vec::new();
+        for m in all_methods {
+            parsed_methods.push((m.as_bellframe_method(&cc_lib)?, m.common()));
+        }
+        // Compute the stage so we can use it to help with parsing the rest of the file
+        let stage = parsed_methods
             .iter()
-            .chain(self.method.as_ref())
-            .cloned()
-            .map(TomlMethod::into_builder)
-            .collect::<anyhow::Result<Vec<_>>>()?;
-        let length = monument::builder::Length::Range(self.length.range.clone());
-        let mut search_builder =
-            SearchBuilder::with_methods(method_builders, length).map_err(improve_error_message)?;
-        let stage = search_builder.get_stage();
+            .map(|(m, _)| m.stage())
+            .max()
+            .ok_or_else(|| {
+                anyhow!("No methods specified.  Try something like `method = \"Bristol Surprise Major\"`.")
+            })?;
 
-        // Lower `TomlMethod`s into `bellframe::Method`s.
+        let (music_displays, music_types) = self.music(toml_path, stage)?;
+        let part_head = parse_row("part head", &self.part_head, stage)?;
+
         let calling_bell = match self.calling_bell {
             Some(v) => Bell::from_number(v).ok_or_else(|| {
                 anyhow::Error::msg("Invalid calling bell: bell number 0 doesn't exist.")
             })?,
             None => stage.tenor(),
         };
-
-        // Parse the CH mask and calls, and combine these with the `bellframe::Method`s to get
-        // `layout::new::Method`s
-        let part_head = parse_row("part head", &self.part_head, stage)?;
-
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
@@ -213,89 +225,27 @@ impl TomlFile {
             CallDisplayStyle::Positional
         };
 
-        if self.allow_false.is_some() {
-            return Err(anyhow!(
-                "`allow_false` has been replaced with `require_truth`"
-            ));
-        }
-
-        // General params
-        search_builder.num_comps = self.num_comps;
-        search_builder.require_truth = self.require_truth;
-        // Methods
-        search_builder.default_method_count = self.method_count.into();
-        search_builder.default_start_indices = match &self.start_indices {
-            Some(indices) => indices.clone(),
-            // TODO: Compute actual snaps for multi-treble-dodge methods
-            None if self.snap_start => vec![2],
-            None => vec![0],
+        let params = monument::parameters::Parameters {
+            length: self.length.as_total_length_range(),
+            stage,
+            num_comps: self.num_comps,
+            require_truth: self.require_truth,
+            maybe_unused_methods: self.build_methods(parsed_methods, &part_head, stage)?,
+            splice_style: self.splice_style.into(),
+            splice_weight: self.splice_weight,
+            maybe_unused_calls: self.calls(stage)?,
+            call_display_style,
+            atw_weight: self.atw_weight,
+            start_row: parse_row("start row", &self.start_row, stage)?,
+            end_row: parse_row("end row", &self.end_row, stage)?,
+            part_head_group: PartHeadGroup::new(&part_head),
+            course_weights: self.course_weights(stage)?,
+            max_contiguous_duffer: self.max_contiguous_duffer.map(PerPartLength::new),
+            max_total_duffer: self.max_total_duffer.map(TotalLength::new),
+            maybe_unused_music_types: music_types,
+            start_stroke: self.start_stroke,
         };
-        search_builder.default_end_indices = match &self.end_indices {
-            Some(idxs) => EndIndices::Specific(idxs.to_vec()),
-            None => EndIndices::Any,
-        };
-        search_builder.splice_style = self.splice_style.into();
-        search_builder.splice_weight = self.splice_weight;
-        search_builder.atw_weight = self.atw_weight;
-        // Calls
-        search_builder.base_calls = self.base_calls()?;
-        search_builder.custom_calls = self
-            .calls
-            .iter()
-            .cloned()
-            .map(|specific_call| specific_call.into_call_builder(stage))
-            .collect::<anyhow::Result<_>>()?;
-        search_builder.call_display_style = call_display_style;
-        // Courses
-        search_builder.start_row = parse_row("start row", &self.start_row, stage)?;
-        search_builder.end_row = parse_row("end row", &self.end_row, stage)?;
-        search_builder.part_head = part_head;
-        if self.course_heads.is_some() {
-            return Err(anyhow!("`course_heads` has been renamed to `courses`"));
-        }
-        search_builder.courses = match &self.courses {
-            // If the user specifies some courses, use them
-            Some(ch_strings) => Some(parse_masks("course mask", ch_strings, stage)?),
-            // If the user specifies no courses but sets `split_tenors` then force every course
-            None if self.split_tenors => Some(vec![Mask::any(stage)]),
-            // If the user doesn't specify anything, leave it at Monument's default (i.e. fix any
-            // 'tenors' which are unaffected by the part head).
-            None => None,
-        };
-        search_builder.course_weights = self.parse_ch_weights(stage)?;
-        search_builder = search_builder.handbell_coursing_weight(self.handbell_coursing_weight);
-        // Music
-        let music_displays = self.music(toml_path, &mut search_builder)?;
-        search_builder.start_stroke = self.start_stroke;
-        // Non-duffer
-        if let Some(non_duffer_courses) = &self.non_duffer_courses {
-            let mut course_sets = Vec::new();
-            for non_duffer in non_duffer_courses {
-                course_sets.push(non_duffer.as_monument_course_set("non duffer mask", stage)?);
-            }
-            search_builder.non_duffer_courses = Some(course_sets);
-        }
-        search_builder.max_contiguous_duffer = self.max_contiguous_duffer;
-        search_builder.max_total_duffer = self.max_total_duffer;
-
-        // Build the search
-        let search = search_builder.build(self.config(opts, leak_search_memory))?;
-
-        // Warn when using plain bob calls in Stedman or Grandsire
-        for (_id, method, _shorthand) in search.methods() {
-            if self.base_calls != BaseCalls::None {
-                match method.name.as_str() {
-                    // TODO: More precisely, we should check for Grandsire-like methods
-                    "Grandsire" | "Stedman" => log::warn!(
-                        "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
-                        method.name
-                    ),
-                    _ => {}
-                }
-            }
-        }
-
-        Ok((Arc::new(search), music_displays))
+        Ok((params, music_displays))
     }
 
     pub fn atw_specified(&self) -> bool {
@@ -306,7 +256,7 @@ impl TomlFile {
         self.non_duffer_courses.is_some()
     }
 
-    fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
+    pub fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
         let mut config = Config {
             thread_limit: opts.num_threads,
             leak_search_memory,
@@ -321,15 +271,31 @@ impl TomlFile {
         config
     }
 
-    /// Convert [`crate::calls::BaseCalls`] into an [`Option`]`<`[`monument::query::BaseCalls`]`>`.
     /// Also check that `bobs_only` and `singles_only` aren't set at the same time.
-    fn base_calls(&self) -> anyhow::Result<Option<monument::builder::BaseCalls>> {
-        /* Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight */
+    fn calls(&self, stage: Stage) -> anyhow::Result<Vec<monument::parameters::Call>> {
+        let mut call_id_generator = IdGenerator::<CallId>::starting_at_zero();
+        // Convert base calls
+        let mut calls = self.base_calls(&mut call_id_generator, stage)?;
+        // Convert custom calls
+        for custom_call in &self.calls {
+            calls.push(custom_call.as_monument_call(call_id_generator.next(), stage)?);
+        }
+        Ok(calls)
+    }
 
-        /// Any value of `{bob,single}_weight` smaller than this will trigger a warning to set
-        /// `{single,bob}s_only = true`.
+    fn base_calls(
+        &self,
+        id_gen: &mut IdGenerator<CallId>,
+        stage: Stage,
+    ) -> anyhow::Result<Vec<monument::parameters::Call>> {
+        let base_call_type = match self.base_calls {
+            BaseCalls::Near => BaseCallType::Near,
+            BaseCalls::Far => BaseCallType::Far,
+            BaseCalls::None => return Ok(vec![]), // No base calls to generate
+        };
+
+        // Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight
         const BIG_NEGATIVE_WEIGHT: f32 = -100.0;
-
         if let Some(w) = self.bob_weight {
             if w <= BIG_NEGATIVE_WEIGHT {
                 log::warn!("It looks like you're trying to make a singles only composition; consider using `singles_only = true` explicitly.");
@@ -340,32 +306,27 @@ impl TomlFile {
                 log::warn!("It looks like you're trying to make a bobs only composition; consider using `bobs_only = true` explicitly.");
             }
         }
-
-        /* Check that `{bobs,singles}_only` aren't set at the same time */
+        // Check that `{bobs,singles}_only` aren't set at the same time
         if self.bobs_only && self.singles_only {
             return Err(anyhow::Error::msg(
                 "Composition can't be both `bobs_only` and `singles_only`",
             ));
         }
 
-        /* Convert the base_calls */
-        Ok(self
-            .base_calls
-            .as_monument_type()
-            .map(|ty| monument::builder::BaseCalls {
-                ty,
-                bob_weight: (!self.singles_only)
-                    .then_some(self.bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
-                single_weight: (!self.bobs_only)
-                    .then_some(self.single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
-            }))
+        Ok(monument::parameters::base_calls(
+            id_gen,
+            base_call_type,
+            (!self.singles_only).then_some(self.bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
+            (!self.bobs_only).then_some(self.single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
+            stage,
+        ))
     }
 
     fn music(
         &self,
         toml_path: &Path,
-        search: &mut SearchBuilder,
-    ) -> anyhow::Result<Vec<MusicDisplay>> {
+        stage: Stage,
+    ) -> anyhow::Result<(Vec<MusicDisplay>, Vec<MusicType>)> {
         // Load TOML for the music file
         let music_file_str = match &self.music_file {
             Some(relative_music_path) => {
@@ -383,14 +344,36 @@ impl TomlFile {
             &self.music,
             self.base_music,
             music_file_str.as_deref(),
-            search,
+            stage,
         )
+    }
+
+    fn course_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
+        let mut course_weights = self.parse_ch_weights(stage)?;
+
+        // Handbell coursing weight
+        if self.handbell_coursing_weight != 0.0 {
+            // For every handbell pair ...
+            for right_bell in stage.bells().step_by(2) {
+                let left_bell = right_bell + 1;
+                // ... add patterns for `*<left><right>` and `*<right><left>`
+                for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
+                    let pattern =
+                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage)
+                            .expect("Handbell patterns should always be valid regexes");
+                    let mask = Mask::from_pattern(&pattern)
+                        .expect("Handbell patterns should only have one `*`");
+                    course_weights.push((mask, self.handbell_coursing_weight));
+                }
+            }
+        }
+        Ok(course_weights)
     }
 
     fn parse_ch_weights(&self, stage: Stage) -> anyhow::Result<Vec<(Mask, f32)>> {
         let mut weights = Vec::new();
         if self.ch_weights.is_some() {
-            return Err(anyhow!("`ch_weights` has been renamed to `course_weights`",));
+            anyhow::bail!("`ch_weights` has been renamed to `course_weights`");
         }
         // Add explicit patterns from the `ch_weights` parameter
         for pattern in &self.course_weights {
@@ -406,6 +389,129 @@ impl TomlFile {
             }
         }
         Ok(weights)
+    }
+
+    fn build_methods(
+        &self,
+        parsed_methods: Vec<(bellframe::Method, MethodCommon)>,
+        part_head: &Row,
+        stage: Stage,
+    ) -> anyhow::Result<Vec<monument::parameters::Method>> {
+        // Warn when using plain bob calls in Stedman or Grandsire
+        for (method, _) in &parsed_methods {
+            if self.base_calls != BaseCalls::None {
+                match method.name.as_str() {
+                    // TODO: More precisely, we should check for Grandsire-like methods
+                    "Grandsire" | "Stedman" => log::warn!(
+                        "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
+                        method.name
+                    ),
+                    _ => {}
+                }
+            }
+        }
+
+        /* DEFAULT VALUES */
+
+        let default_method_count = OptionalRangeInclusive::from(self.method_count);
+        let default_start_indices = match &self.start_indices {
+            Some(indices) => indices.clone(),
+            // TODO: Compute actual snaps for multi-treble-dodge methods
+            None if self.snap_start => vec![2],
+            None => vec![0],
+        };
+        let default_allowed_courses = match &self.courses {
+            // If the user specifies some courses, use them
+            Some(ch_strings) => parse_masks("course mask", ch_strings, stage)?,
+            // If the user specifies no courses but sets `split_tenors` then allow every course
+            None if self.split_tenors => vec![Mask::any(stage)],
+            // If no courses are set, fix any bell >=7 which aren't affected by the part head.
+            // Usually this will be either all (e.g. 1-part or a part head of `1342` or `124365`)
+            // or all (e.g. cyclic), but any other combinations are possible.  E.g. a composition
+            // of Maximus with part head of `1765432` will still preserve 8 through 12.
+            None => {
+                let tenors_unaffected_by_part_head =
+                    stage.bells().skip(6).filter(|&b| part_head.is_fixed(b));
+                vec![Mask::with_fixed_bells(
+                    stage,
+                    tenors_unaffected_by_part_head,
+                )]
+            }
+        };
+        let default_non_duffer_coures = match &self.non_duffer_courses {
+            Some(non_duffer_courses) => {
+                let mut course_sets = Vec::new();
+                for non_duffer in non_duffer_courses {
+                    course_sets.push(non_duffer.as_monument_course_set("non duffer mask", stage)?);
+                }
+                course_sets
+            }
+            None => vec![monument::parameters::CourseSet::from(Mask::any(stage))],
+        };
+
+        /* BUILD METHODS */
+
+        let mut id_gen = IdGenerator::<MethodId>::starting_at_zero();
+        let mut methods = Vec::new();
+        // TODO: Add dummy unused method, to make sure that Monument handles them correctly
+        for (mut method, common) in parsed_methods {
+            let lead_len_isize = method.lead_len() as isize;
+            let wrap_idxs = |idxs: Vec<isize>| -> Vec<usize> {
+                let mut wrapped_idxs = Vec::new();
+                for idx in idxs {
+                    let wrapped_idx = ((idx % lead_len_isize) + lead_len_isize) % lead_len_isize;
+                    wrapped_idxs.push(wrapped_idx as usize);
+                }
+                wrapped_idxs
+            };
+
+            // Error for using deprecated terms
+            if common.lead_locations.is_some() {
+                anyhow::bail!("`methods.lead_locations` has been renamed to `labels`");
+            }
+            if common.course_heads.is_some() {
+                anyhow::bail!("`methods.course_heads` has been renamed to `courses`");
+            }
+            // Add lead labels
+            let labels = common.labels.unwrap_or_else(|| {
+                hmap::hmap! {
+                    LABEL_LEAD_END.to_owned() => LeadLabels::JustOne(0)
+                }
+            });
+            for (label, indices) in labels {
+                for idx in wrap_idxs(indices.into_indices()) {
+                    method.add_label(idx, label.clone());
+                }
+            }
+            // Build method
+            let allowed_courses = match common.courses {
+                Some(ch_strings) => parse_masks("course mask", &ch_strings, stage)?,
+                None => default_allowed_courses.clone(),
+            };
+            let start_indices = common
+                .start_indices
+                .unwrap_or_else(|| default_start_indices.clone());
+            let end_indices = common
+                .end_indices
+                .unwrap_or_else(|| match &self.end_indices {
+                    Some(idxs) => idxs.clone(),
+                    None => (0..method.lead_len() as isize).collect_vec(),
+                });
+            methods.push(monument::parameters::Method {
+                id: id_gen.next(),
+                used: true,
+                inner: method,
+
+                custom_shorthand: common.shorthand.unwrap_or_default(),
+                count_range: OptionalRangeInclusive::from(common.count_range)
+                    .or(default_method_count),
+                start_indices,
+                end_indices,
+                allowed_courses: vec![monument::parameters::CourseSet::from(allowed_courses)],
+                non_duffer_courses: default_non_duffer_coures.clone(),
+            });
+        }
+        Ok(methods)
     }
 }
 
@@ -520,49 +626,37 @@ impl LeadLabels {
     }
 }
 
+const NUM_METHOD_SUGGESTIONS: usize = 10;
+
 impl TomlMethod {
-    fn into_builder(self) -> anyhow::Result<Method> {
-        let (mut method_builder, common) = match self {
-            TomlMethod::JustTitle(title) => (Method::with_title(title), None),
-            TomlMethod::FromCcLib { title, common } => (Method::with_title(title), Some(common)),
+    fn as_bellframe_method(&self, cc_lib: &MethodLib) -> anyhow::Result<bellframe::Method> {
+        match self {
+            TomlMethod::JustTitle(title) | TomlMethod::FromCcLib { title, .. } => cc_lib
+                .get_by_title_with_suggestions(title, NUM_METHOD_SUGGESTIONS)
+                .map_err(|error| match error {
+                    QueryError::PnParseErr { pn, error } => {
+                        panic!("Error parsing {pn} in CCCBR library: {error}")
+                    }
+                    QueryError::NotFound(suggestions) => {
+                        anyhow::Error::msg(method_suggestion_message(title, suggestions))
+                    }
+                }),
             TomlMethod::Custom {
                 name,
                 place_notation,
                 stage,
-                common,
-            } => (
-                Method::with_custom_pn(name, place_notation, stage),
-                Some(common),
-            ),
-        };
-        if let Some(common) = common {
-            if common.lead_locations.is_some() {
-                return Err(anyhow!(
-                    "`methods.lead_locations` has been renamed to `labels`",
-                ));
-            }
-            if common.course_heads.is_some() {
-                return Err(anyhow!(
-                    "`methods.course_heads` has been renamed to `courses`",
-                ));
-            }
-
-            method_builder = method_builder
-                .count_range(common.count_range.into())
-                .courses(common.courses)
-                .shorthand(common.shorthand)
-                .start_indices(common.start_indices)
-                .end_indices(common.end_indices);
-            if let Some(labels) = common.labels {
-                method_builder = method_builder.lead_labels(
-                    labels
-                        .into_iter()
-                        .map(|(label, locs)| (label, locs.into_indices()))
-                        .collect(),
-                );
-            }
+                common: _,
+            } => bellframe::Method::from_place_not_string(name.to_owned(), *stage, place_notation)
+                .map_err(|error| anyhow::Error::msg(pn_parse_err_msg(name, place_notation, error))),
         }
-        Ok(method_builder)
+    }
+
+    fn common(&self) -> MethodCommon {
+        match self {
+            TomlMethod::JustTitle(_) => MethodCommon::default(),
+            TomlMethod::FromCcLib { common, .. } => common.clone(),
+            TomlMethod::Custom { common, .. } => common.clone(),
+        }
     }
 }
 
@@ -590,11 +684,9 @@ impl CourseSet {
         stage: Stage,
     ) -> anyhow::Result<monument::parameters::CourseSet> {
         Ok(match self {
-            CourseSet::OneMask(mask_str) => monument::parameters::CourseSet {
-                masks: vec![parse_mask("non-duffer", mask_str, stage)?],
-                any_stroke: false,
-                any_bells: false,
-            },
+            CourseSet::OneMask(mask_str) => {
+                monument::parameters::CourseSet::from(parse_mask("non-duffer", mask_str, stage)?)
+            }
             CourseSet::WithOptions {
                 courses: masks,
                 any_stroke,
@@ -618,6 +710,7 @@ mod length {
         ops::{Range, RangeInclusive},
     };
 
+    use monument::utils::TotalLength;
     use serde::{
         de::{Error, MapAccess, Visitor},
         Deserialize, Deserializer,
@@ -635,6 +728,14 @@ mod length {
     #[repr(transparent)]
     pub(super) struct Length {
         pub(super) range: RangeInclusive<usize>,
+    }
+
+    impl Length {
+        pub(super) fn as_total_length_range(&self) -> RangeInclusive<TotalLength> {
+            let start = TotalLength::new(*self.range.start());
+            let end = TotalLength::new(*self.range.end());
+            start..=end
+        }
     }
 
     /////////////
@@ -765,34 +866,6 @@ mod length {
 ////////////////////
 // ERROR MESSAGES //
 ////////////////////
-
-/// Take a [`monument::Error`] and convert it to an [`anyhow::Error`], possibly overwriting the
-/// error message with a more verbose coloured one.
-fn improve_error_message(error: monument::Error) -> anyhow::Error {
-    let message = match error {
-        monument::Error::MethodNotFound { title, suggestions } => {
-            method_suggestion_message(&title, suggestions)
-        }
-        monument::Error::MethodPnParse {
-            name,
-            place_notation_string,
-            error,
-        } => pn_parse_err_msg(&name, &place_notation_string, error),
-        /*
-        monument::Error::CustomCourseMaskParse {
-            method_title,
-            mask_str,
-            error,
-        } => mask_parse_error(mask_kind, string, e),
-        */
-        monument::Error::NoMethods => {
-            "No methods specified.  Try something like `method = \"Bristol Surprise Major\"`."
-                .to_owned()
-        }
-        e => e.to_string(),
-    };
-    anyhow::Error::msg(message)
-}
 
 /// Constructs an error message for an unknown method, complete with suggestions and pretty diffs.
 /// The message looks something like the following:

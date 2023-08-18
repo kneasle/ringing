@@ -12,7 +12,6 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     atw::AtwBitmap,
-    builder::MusicTypeId,
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
@@ -362,9 +361,9 @@ impl CompPrefix {
             music_counts: search
                 .query
                 .music_types
-                .iter_enumerated()
+                .iter()
                 .zip_eq(music_counts.iter())
-                .map(|((index, _), count)| (MusicTypeId { index }, *count))
+                .map(|(music_type, count)| (music_type.id, *count))
                 .collect(),
             total_score: score,
 

@@ -66,8 +66,14 @@ pub fn run(
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     let leak_search_memory = env == Environment::Cli;
     // Convert the `TomlFile` into a `Layout` and other data required for running a search
-    let (search, music_displays) = toml_file.to_search(toml_path, options, leak_search_memory)?;
-    debug_print!(Query, search);
+    let (params, music_displays) = toml_file.to_params(toml_path)?;
+    debug_print!(Params, params);
+    // Build the search
+    let search = Arc::new(Search::new(
+        params,
+        toml_file.config(options, leak_search_memory),
+    )?);
+    debug_print!(Search, search);
 
     // Build all the data structures for the search
     let comp_printer = CompositionPrinter::new(
@@ -170,7 +176,8 @@ impl QueryResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DebugOption {
     Toml,
-    Query,
+    Params,
+    Search,
     Graph,
     /// Stop just before the search starts, to let the user see what's been printed out without
     /// scrolling
@@ -183,12 +190,13 @@ impl FromStr for DebugOption {
     fn from_str(v: &str) -> Result<Self, String> {
         Ok(match v.to_lowercase().as_str() {
             "toml" => Self::Toml,
-            "query" => Self::Query,
+            "params" => Self::Params,
+            "search" => Self::Search,
             "graph" => Self::Graph,
             "no-search" => Self::StopBeforeSearch,
             #[rustfmt::skip] // See https://github.com/rust-lang/rustfmt/issues/5204
             _ => return Err(format!(
-                "Unknown value {:?}. Expected `toml`, `query`, `layout`, `graph` or `no-search`.",
+                "Unknown value {:?}. Expected `toml`, `params`, `search`, `graph` or `no-search`.",
                 v
             )),
         })

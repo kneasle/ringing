@@ -161,6 +161,7 @@ impl SearchBuilder {
 
     /// Adds [`course_weights`](Self::course_weights) representing every handbell pair coursing,
     /// each with the given `weight`.
+    // TODO: Allow more coursing positions
     pub fn handbell_coursing_weight(mut self, weight: f32) -> Self {
         if weight == 0.0 {
             return self; // Ignore weights of zero
@@ -313,7 +314,7 @@ impl SearchBuilder {
             end_row,
             course_weights,
 
-            music_types: music_types.into_iter().collect(),
+            maybe_unused_music_types: music_types.into_iter().collect(),
             start_stroke,
             max_contiguous_duffer: max_contiguous_duffer.map(PerPartLength::new),
             max_total_duffer: max_total_duffer.map(TotalLength::new), // TODO: Cap `total <= contiguous`
@@ -505,6 +506,9 @@ impl MusicType {
     pub fn new(patterns: impl IntoIterator<Item = Pattern>) -> Self {
         Self {
             music_type: parameters::MusicType {
+                id: todo!(),
+                used: true,
+
                 patterns: patterns.into_iter().collect_vec(),
                 strokes: StrokeSet::Both,
                 weight: 1.0,
