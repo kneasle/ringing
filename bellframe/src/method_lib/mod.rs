@@ -245,6 +245,7 @@ impl CompactMethod {
 
 #[derive(Debug, Clone)]
 pub enum QueryError<T> {
+    // TODO: Validate PN while parsing the library
     PnParseErr {
         pn: String,
         error: PnBlockParseError,
