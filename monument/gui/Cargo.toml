@@ -1,0 +1,20 @@
+[package]
+name = "monument_gui"
+version = "0.14.3"
+edition = "2021"
+
+authors = ["Ben White-Horne <kneasle@gmail.com>"]
+description = "Graphical interface to Monument, a fast and flexible composing engine."
+readme = "../README.md"
+license = "MIT"
+repository = "https://github.com/kneasle/ringing"
+
+[dependencies]
+bellframe = { version = "0.13.0", path = "../../bellframe/", features = ["serde"] }
+monument = { version = "0.14.3", path = "../lib/" }
+eframe = "0.20"
+itertools = "0.11.0"
+ordered-float = "3.7"
+index_vec = "0.1"
+simple_logger = "4.2"
+log = "0.4"
