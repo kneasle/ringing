@@ -4,6 +4,7 @@ use std::{
     collections::HashSet,
     marker::PhantomData,
     ops::{Range, RangeInclusive},
+    sync::atomic::AtomicBool,
 };
 
 use bellframe::{
@@ -14,6 +15,7 @@ use itertools::Itertools;
 use crate::{
     group::PartHeadGroup,
     utils::lengths::{PerPartLength, TotalLength},
+    Composition, Config, Search, Update,
 };
 
 /// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
@@ -61,6 +63,25 @@ pub struct Parameters {
 }
 
 impl Parameters {
+    /// Finish building and run the search with the default [`Config`], blocking until the required
+    /// compositions have been generated.
+    pub fn run(self) -> crate::Result<Vec<Composition>> {
+        self.run_with_config(Config::default())
+    }
+
+    /// Finish building and run the search with a custom [`Config`], blocking until the required
+    /// number of [`Composition`]s have been generated.
+    pub fn run_with_config(self, config: Config) -> crate::Result<Vec<Composition>> {
+        let mut comps = Vec::<Composition>::new();
+        let update_fn = |update| {
+            if let Update::Comp(comp) = update {
+                comps.push(comp);
+            }
+        };
+        Search::new(self, config)?.run(update_fn, &AtomicBool::new(false));
+        Ok(comps)
+    }
+
     pub fn max_length(&self) -> TotalLength {
         *self.length.end()
     }

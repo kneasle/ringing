@@ -8,7 +8,10 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    parameters::{CallVec, CourseSet, MethodVec, MusicType, MusicTypeId, MusicTypeVec, Parameters},
+    parameters::{
+        CallVec, CourseSet, MethodId, MethodIdx, MethodVec, MusicType, MusicTypeId, MusicTypeVec,
+        Parameters,
+    },
     utils::{Boundary, PerPartLength},
     PartHeadGroup,
 };
@@ -60,24 +63,17 @@ pub(crate) struct Method {
     pub non_duffer_lead_masks: Vec<Mask>,
 }
 
-impl Deref for Query {
-    type Target = Parameters;
-
-    fn deref(&self) -> &Self::Target {
-        &self.parameters
-    }
-}
-
-impl Deref for Method {
-    type Target = crate::parameters::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 impl Query {
-    pub(crate) fn music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
+    pub(crate) fn get_method_by_id(&self, id: MethodId) -> MethodIdx {
+        self.methods
+            .iter()
+            .find_position(|m| m.id == id)
+            .unwrap()
+            .0
+            .into()
+    }
+
+    pub(crate) fn get_music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
         // TODO: if this is a bottleneck, we can optimise this with a hashmap
         self.music_types.iter().find(|mt| mt.id == id).unwrap()
     }
@@ -162,6 +158,22 @@ impl Method {
             Boundary::Start => &self.start_indices,
             Boundary::End => &self.end_indices,
         }
+    }
+}
+
+impl Deref for Query {
+    type Target = Parameters;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parameters
+    }
+}
+
+impl Deref for Method {
+    type Target = crate::parameters::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 

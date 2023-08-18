@@ -6,9 +6,10 @@ use bellframe::{Block, Row, RowBuf};
 
 use crate::{
     atw::{AtwBitmap, AtwTable, PlaceBellRange},
-    builder::methods::MethodId,
     group::PartHead,
-    parameters::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, MusicTypeId, Parameters},
+    parameters::{
+        CallDisplayStyle, CallIdx, MethodId, MethodIdx, MethodVec, MusicTypeId, Parameters,
+    },
     query::Query,
     utils::{
         counts::Counts,
@@ -18,7 +19,7 @@ use crate::{
 
 #[allow(unused_imports)] // Used by doc comments
 use crate::{
-    builder::{Method, MusicType, SearchBuilder},
+    parameters::{Method, MusicType},
     Search,
 };
 
@@ -144,11 +145,8 @@ impl Composition {
         let plain_courses = self
             .query
             .methods
-            .iter_enumerated()
-            .map(|(index, m)| {
-                m.plain_course()
-                    .map_annots(|a| (MethodId { index }, a.sub_lead_idx))
-            })
+            .iter()
+            .map(|m| m.plain_course().map_annots(|a| (m.id, a.sub_lead_idx)))
             .collect::<MethodVec<_>>();
 
         // Generate the first part
@@ -223,7 +221,7 @@ impl Composition {
     pub fn music_score(&self) -> f32 {
         self.music_counts
             .iter()
-            .map(|(id, count)| self.query.music_type_by_id(*id).weight * *count as f32)
+            .map(|(id, count)| self.query.get_music_type_by_id(*id).weight * *count as f32)
             .sum::<f32>()
     }
 
@@ -239,13 +237,13 @@ impl Composition {
     }
 
     /// Return an [`Iterator`] over the number of [`Row`]s in each transition between
-    /// [`non_duffer_courses`](SearchBuilder::non_duffer_courses).
+    /// [`non_duffer_courses`](Parameters::non_duffer_courses).
     pub fn contiguous_duffer_lengths(&self) -> impl DoubleEndedIterator<Item = usize> + '_ {
         self.contiguous_duffer_lengths.iter().map(|l| l.as_usize())
     }
 
     /// Returns the total number of [`Row`]s of duffer courses (i.e. those not in
-    /// [`SearchBuilder::non_duffer_courses`]) present in this composition.
+    /// [`Parameters::non_duffer_courses`]) present in this composition.
     pub fn total_duffer(&self) -> usize {
         self.total_duffer.as_usize()
     }

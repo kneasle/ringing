@@ -19,23 +19,19 @@ use sysinfo::SystemExt;
 
 use crate::{
     atw::AtwTable,
-    builder::methods::MethodId,
-    parameters::{MusicTypeId, Parameters},
+    parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
     utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
 
-#[allow(unused_imports)] // Only used for doc comments
-use crate::SearchBuilder;
-
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
-/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
+/// want to run a (hopefully quick) search, use [`Parameters::run`] or
+/// [`Parameters::run_with_config`].  Both of those will deal with handling the [`Search`] for
 /// you.
 // TODO: Rename all instances from `data` to `search`
 #[derive(Debug)]
@@ -94,29 +90,15 @@ impl Search {
         self.query.length_range_usize()
     }
 
-    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
-        &self.query.methods[id.index]
-    }
-
-    pub fn get_method_shorthand(&self, id: &MethodId) -> String {
-        self.query.methods[id.index].shorthand()
-    }
-
     /// Gets the range of counts required of the given [`MethodId`].
-    pub fn method_count_range(&self, id: &MethodId) -> RangeInclusive<usize> {
-        let range = &self.refined_ranges.method_counts[id.index];
+    pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
+        let idx = self.query.get_method_by_id(id);
+        let range = &self.refined_ranges.method_counts[idx];
         range.start().as_usize()..=range.end().as_usize()
     }
 
-    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, String)> {
-        self.query
-            .methods
-            .iter_enumerated()
-            .map(|(index, method)| (MethodId { index }, &method.inner.inner, method.shorthand()))
-    }
-
-    pub fn is_spliced(&self) -> bool {
-        self.query.is_spliced()
+    pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
+        self.query.methods.iter().map(|m| (&m.inner, m.shorthand()))
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
@@ -125,7 +107,7 @@ impl Search {
 
     pub fn max_music_count(&self, id: MusicTypeId) -> usize {
         self.query
-            .music_type_by_id(id)
+            .get_music_type_by_id(id)
             .max_count()
             .unwrap_or(usize::MAX)
     }

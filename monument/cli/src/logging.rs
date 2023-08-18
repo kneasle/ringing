@@ -162,8 +162,9 @@ impl CompositionPrinter {
             length_width: search.length_range().end().to_string().len(),
             method_counts: search
                 .methods()
-                .map(|(id, _method, shorthand)| {
-                    let max_count_width = search.method_count_range(&id).end().to_string().len();
+                .map(|(method, shorthand)| {
+                    let max_count_width =
+                        search.method_count_range(method.id).end().to_string().len();
                     let max_width = max_count_width.max(shorthand.len());
                     (max_width, shorthand)
                 })
