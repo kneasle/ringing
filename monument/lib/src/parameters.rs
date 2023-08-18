@@ -1,14 +1,16 @@
 //! Instructions for Monument about what compositions should be generated.
 
-use std::ops::{Deref, Range, RangeInclusive};
+use std::{
+    collections::HashSet,
+    ops::{Range, RangeInclusive},
+};
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
 use crate::{
-    graph::ChunkId,
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -30,12 +32,11 @@ pub struct Parameters {
     pub require_truth: bool,
 
     // METHODS & CALLING
-    pub methods: MethodVec<Method>,
+    pub maybe_unused_methods: Vec<Method>,
     pub splice_style: SpliceStyle,
     pub splice_weight: f32, // TODO: Do we need so many instances of 'Score'
-    pub calls: CallVec<Call>,
+    pub maybe_unused_calls: Vec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
-    pub fixed_bells: Vec<(Bell, usize)>,
     pub atw_weight: Option<f32>,
 
     // COURSES
@@ -73,7 +74,7 @@ impl Parameters {
     }
 
     pub fn is_spliced(&self) -> bool {
-        self.methods.len() > 1
+        self.methods_used() > 1
     }
 
     pub fn num_parts(&self) -> usize {
@@ -85,72 +86,11 @@ impl Parameters {
     }
 
     pub fn methods_used(&self) -> usize {
-        self.methods.iter().filter(|m| m.used).count()
+        self.maybe_unused_methods.iter().filter(|m| m.used).count()
     }
 
     pub fn calls_used(&self) -> usize {
-        self.calls.iter().filter(|c| c.used).count()
-    }
-
-    /// For a given chunk, split that chunk's range into segments where each one falls within a
-    /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`
-    /// and length 18 would return the following regions:
-    /// ```text
-    ///                           12345678
-    ///                            1
-    ///                  +     +    1
-    ///                  |     |     1
-    ///                  |     |     1
-    ///                  |     |    1
-    ///                  |     |   1
-    ///                  |     +  1
-    ///                  |     +  16482735
-    ///                  |     |   1
-    ///                  |     |    1
-    ///   Original range |     |     1
-    ///                  |     |     1
-    ///                  |     |    1
-    ///                  |     |   1
-    ///                  |     +  1
-    ///                  |     +  17856342
-    ///                  |     |   1
-    ///                  |     |    1
-    ///                  +     +     1
-    ///                      /       1
-    ///                     /       1
-    ///    Output ranges --/       1
-    ///                           1
-    /// ```
-    pub(crate) fn chunk_lead_regions(
-        &self,
-        id: &ChunkId,
-        length: PerPartLength,
-    ) -> Vec<(RowBuf, Range<usize>)> {
-        let method = &self.methods[id.method];
-
-        let mut lead_head: RowBuf = id.lead_head.deref().to_owned();
-        let mut length_left = length.as_usize();
-        let mut sub_lead_idx = id.sub_lead_idx;
-
-        let mut lead_regions = Vec::new();
-        while length_left > 0 {
-            // Add a region for as much of this lead as we can
-            let length_left_in_lead = method.lead_len() - sub_lead_idx;
-            let chunk_len = usize::min(length_left_in_lead, length_left);
-            let chunk_end = sub_lead_idx + chunk_len;
-            lead_regions.push((lead_head.clone(), sub_lead_idx..chunk_end));
-            // Move to after this region, moving forward a lead if necessary
-            assert!(chunk_len <= method.lead_len());
-            length_left -= chunk_len;
-            sub_lead_idx += chunk_len;
-            assert!(sub_lead_idx <= method.lead_len());
-            if sub_lead_idx == method.lead_len() {
-                // Next chunk starts in a new lead, so update the lead head accordingly
-                sub_lead_idx = 0;
-                lead_head *= method.lead_head();
-            }
-        }
-        lead_regions
+        self.maybe_unused_calls.iter().filter(|c| c.used).count()
     }
 }
 
@@ -164,16 +104,10 @@ pub struct Method {
     pub id: MethodId,
     pub used: bool,
 
-    pub inner: bellframe::Method,
-
     /// Short [`String`] used to identify this method in spliced.  If empty, a default value will
     /// be generated.
     pub custom_shorthand: String,
-
-    // TODO: Move these somewhere else, or compute them
-    /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
-    /// labels assigned to that row.
-    pub plain_course: Block<Vec<String>>,
+    pub inner: bellframe::Method,
 
     /// The number of rows of this method must fit within this range
     pub count_range: OptionalRangeInclusive,
@@ -186,13 +120,9 @@ pub struct Method {
     pub end_indices: Vec<usize>,
 
     /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
-    pub allowed_course_masks: Vec<Mask>,
-    /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
-    /// [`crate::SearchBuilder::courses`].
-    pub allowed_lead_masks: Vec<Mask>,
-    /// List of lead heads which are part of
-    /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
-    pub non_duffer_lead_masks: Vec<Mask>,
+    pub allowed_courses: Vec<CourseSet>,
+    /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
+    pub non_duffer_courses: Vec<CourseSet>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -227,24 +157,147 @@ impl Method {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
 
-    /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
-    pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
-        self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
-    }
-
-    pub(crate) fn is_lead_head_duffer(&self, lead_head: &Row) -> bool {
-        !self
-            .non_duffer_lead_masks
-            .iter()
-            .any(|mask| mask.matches(lead_head))
-    }
-
     pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
         match boundary {
             Boundary::Start => &self.start_indices,
             Boundary::End => &self.end_indices,
         }
     }
+}
+
+/// Convenient description of a set of courses via [`Mask`]s.
+#[derive(Debug, Clone)]
+pub struct CourseSet {
+    /// List of [`Mask`]s, of which courses should match at least one.
+    pub masks: Vec<Mask>,
+    /// If `true`, the [`Mask`]s will be expanded so that the mask matches on both strokes.  For
+    /// example, `"*5678"` might expand to `["*5678", "*6587"]`.
+    pub any_stroke: bool,
+    /// If `true`, every [`Bell`] in every [`Mask`] will be added/subtracted from to get every
+    /// combination.  For example, `"*3456"` would expand to
+    /// `["*1234", "*2345", "*3456", "*4567", "*5678"]`.
+    pub any_bells: bool,
+}
+
+impl CourseSet {
+    /// Convert many `CourseSet`s into the corresponding lead head [`Mask`]s.
+    pub(crate) fn to_lead_masks(
+        allowed_courses: &[CourseSet],
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+    ) -> Vec<Mask> {
+        allowed_courses
+            .iter()
+            .flat_map(|c| c.as_lead_masks(method, fixed_bells))
+            .collect_vec()
+    }
+
+    /// Convert many `CourseSet`s into the corresponding course head [`Mask`]s.
+    pub(crate) fn to_course_masks(
+        allowed_courses: &[CourseSet],
+        method: &Method,
+        fixed_bells: &&[(Bell, usize)],
+    ) -> Vec<Mask> {
+        allowed_courses
+            .iter()
+            .flat_map(|c| c.as_course_masks(method, fixed_bells))
+            .collect_vec()
+    }
+
+    /// Returns a list of [`Mask`]s which match any lead head of the courses represented by `self`.
+    fn as_lead_masks(
+        &self,
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+    ) -> Vec<Mask> {
+        let course_masks = self.as_course_masks(method, fixed_bells);
+        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
+        // user, but Monument is internally based completely on lead heads - courses are only used to
+        // interact with the user).
+        let mut lead_head_masks = HashSet::new();
+        for course_mask in course_masks {
+            for lead_head in method.lead_head().closure() {
+                lead_head_masks.insert(&course_mask * &lead_head);
+            }
+        }
+        // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
+        // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
+        // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
+        // means that perfect duplicates have already been eliminated, so we only need to check for
+        // strict subset-ness.
+        let mut filtered_lead_head_masks = Vec::new();
+        for mask in &lead_head_masks {
+            let is_implied_by_another_mask = lead_head_masks
+                .iter()
+                .any(|mask2| mask.is_strict_subset_of(mask2));
+            if !is_implied_by_another_mask {
+                filtered_lead_head_masks.push(mask.clone());
+            }
+        }
+        filtered_lead_head_masks
+    }
+
+    /// Expand `self` into a single set of [`Mask`]s
+    fn as_course_masks(
+        &self,
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+    ) -> Vec<Mask> {
+        let mut course_masks: Vec<Mask> = self.masks.clone();
+        // Expand `any_bells`, by offsetting the bells in the mask in every possible way
+        if self.any_bells {
+            let mut expanded_masks = Vec::new();
+            for mask in &course_masks {
+                let min_bell = mask.bells().flatten().min().unwrap_or(Bell::TREBLE);
+                let max_bell = mask.bells().flatten().max().unwrap_or(Bell::TREBLE);
+                let min_offset = -(min_bell.index_u8() as i16);
+                let max_offset = (method.stage().num_bells_u8() - max_bell.number()) as i16;
+                for offset in min_offset..=max_offset {
+                    expanded_masks.push(Mask::from_bells(
+                        mask.bells()
+                            .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
+                    ));
+                }
+            }
+            course_masks = expanded_masks;
+        }
+        // Expand `any_stroke`
+        if self.any_stroke {
+            course_masks = course_masks
+                .into_iter()
+                .flat_map(|mask| [&mask * method.lead_end(), mask])
+                .collect_vec();
+        }
+        // Set fixed bells
+        course_masks
+            .into_iter()
+            .filter_map(|mask| try_fixing_bells(mask, fixed_bells))
+            .collect_vec()
+    }
+}
+
+impl From<Mask> for CourseSet {
+    fn from(value: Mask) -> Self {
+        Self::from(vec![value])
+    }
+}
+
+impl From<Vec<Mask>> for CourseSet {
+    fn from(masks: Vec<Mask>) -> Self {
+        Self {
+            masks,
+            any_bells: false,
+            any_stroke: false,
+        }
+    }
+}
+
+/// Attempt to fix the `fixed_bells` in the [`Mask`], returning `None` if it was not possible.
+fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mask> {
+    for &(bell, place) in fixed_bells {
+        mask.set_bell(bell, place).ok()?;
+    }
+    Some(mask)
 }
 
 impl std::ops::Deref for Method {

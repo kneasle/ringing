@@ -9,6 +9,7 @@ use crate::{
     builder::{methods::MethodId, MusicTypeId},
     group::PartHead,
     parameters::{CallDisplayStyle, CallIdx, MethodIdx, MethodVec, Parameters},
+    query::Query,
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
@@ -41,7 +42,7 @@ pub struct Composition {
 
     /// The [`Query`] which generated this [`Composition`]
     // TODO: Remove this dependency, and make everything else calculated on the fly
-    pub(crate) query: Arc<Parameters>,
+    pub(crate) query: Arc<Query>,
     // TODO: Store expanded atw data, independently of the [`AtwTable`]?
     pub(crate) atw_table: Arc<AtwTable>,
 }
@@ -265,7 +266,7 @@ impl PathElem {
         self.call_to_end.is_none()
     }
 
-    pub(crate) fn end_sub_lead_idx(&self, query: &Parameters) -> usize {
+    pub(crate) fn end_sub_lead_idx(&self, query: &Query) -> usize {
         query.methods[self.method].add_sub_lead_idx(self.start_sub_lead_idx, self.length)
     }
 }

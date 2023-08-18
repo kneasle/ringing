@@ -10,7 +10,8 @@ use itertools::Itertools;
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    parameters::{self, CallIdx, MethodIdx, MethodVec, Parameters, SpliceStyle},
+    parameters::{CallIdx, MethodIdx, MethodVec, SpliceStyle},
+    query::Query,
     utils::{
         lengths::{PerPartLength, TotalLength},
         Boundary, FrontierItem,
@@ -25,7 +26,7 @@ use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 /// This is the only item exported by this module; all the other code should be considered
 /// implementation detail of this function
 pub(super) fn chunk_lengths<'q>(
-    query: &'q Parameters,
+    query: &'q Query,
     config: &Config,
 ) -> crate::Result<(
     ChunkEquivalenceMap<'q>,
@@ -121,7 +122,7 @@ struct ChunkFactory {
 }
 
 impl ChunkFactory {
-    fn new(query: &Parameters) -> Self {
+    fn new(query: &Query) -> Self {
         Self {
             end_lookup_table: EndLookupTable::new(query),
             link_lookup_table: LinkLookupTable::new(query),
@@ -134,7 +135,7 @@ impl ChunkFactory {
     fn build_chunk(
         &self,
         chunk_id: ChunkId,
-        query: &Parameters,
+        query: &Query,
     ) -> (
         PerPartLength,
         Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
@@ -198,7 +199,7 @@ struct EndLookupTable {
 }
 
 impl EndLookupTable {
-    fn new(query: &Parameters) -> Self {
+    fn new(query: &Query) -> Self {
         // Create lookup table for ends
         let mut end_lookup = HashMap::new();
         for part_head in query.part_head_group.rows() {
@@ -240,7 +241,7 @@ impl EndLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Parameters,
+        query: &Query,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
@@ -288,7 +289,7 @@ struct LinkLookupEntry {
 }
 
 impl LinkLookupTable {
-    fn new(query: &Parameters) -> Self {
+    fn new(query: &Query) -> Self {
         // Treat non-spliced comps as having `SpliceStyle::Calls`
         let splice_style = if query.is_spliced() {
             query.splice_style
@@ -444,7 +445,7 @@ impl LinkLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Parameters,
+        query: &Query,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
@@ -490,10 +491,10 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &parameters::Method,
+    method_from: &crate::query::UsedMethod,
 
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
-    query: &Parameters,
+    query: &Query,
     link_lookup_for_method: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
 ) {
     let link_ends = link_ends_by_label
@@ -514,7 +515,7 @@ fn create_links(
             // Check if `lead_head_mask_from` can actually be reached (i.e. is there some LH mask
             // which is compatible with it?).  This doesn't change the results, but has a massive
             // performance benefit since chunk expansion is linear in the size of
-            // `link_lookup_for_method`.  For example, this simple pruning causes a ~4x speedup for
+            // `link_lookup_for_method`.  This simple pruning often causes a ~4x speedup for
             // tenors-together comps.
             let is_mask_reachable = method_from
                 .allowed_lead_masks
@@ -540,11 +541,7 @@ fn create_links(
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
-fn find_locations_of_row(
-    row: &Row,
-    boundary: Boundary,
-    query: &Parameters,
-) -> Vec<ChunkIdInFirstPart> {
+fn find_locations_of_row(row: &Row, boundary: Boundary, query: &Query) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut locations = Vec::new();
     for (method_idx, method) in query.methods.iter_enumerated() {

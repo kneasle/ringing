@@ -10,7 +10,7 @@ use bellframe::{place_not::PnBlockParseError, Bell, Mask, RowBuf, Stage, Stroke}
 use colored::Colorize;
 use itertools::Itertools;
 use monument::{
-    builder::{self, EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
+    builder::{EndIndices, Method, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT},
     parameters::CallDisplayStyle,
     Config, Search, SearchBuilder,
 };
@@ -588,9 +588,9 @@ impl CourseSet {
         &self,
         mask_kind: &str,
         stage: Stage,
-    ) -> anyhow::Result<builder::CourseSet> {
+    ) -> anyhow::Result<monument::parameters::CourseSet> {
         Ok(match self {
-            CourseSet::OneMask(mask_str) => builder::CourseSet {
+            CourseSet::OneMask(mask_str) => monument::parameters::CourseSet {
                 masks: vec![parse_mask("non-duffer", mask_str, stage)?],
                 any_stroke: false,
                 any_bells: false,
@@ -599,7 +599,7 @@ impl CourseSet {
                 courses: masks,
                 any_stroke,
                 any_bells,
-            } => builder::CourseSet {
+            } => monument::parameters::CourseSet {
                 masks: parse_masks(mask_kind, masks, stage)?,
                 any_stroke: *any_stroke,
                 any_bells: *any_bells,

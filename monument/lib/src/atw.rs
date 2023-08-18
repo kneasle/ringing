@@ -6,7 +6,8 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    parameters::{MethodIdx, MethodVec, Parameters},
+    parameters::{MethodIdx, MethodVec},
+    query::Query,
     utils::{div_rounding_up, lengths::PerPartLength},
 };
 
@@ -49,7 +50,7 @@ impl AtwFlag {
 }
 
 impl AtwTable {
-    pub fn new(query: &Parameters, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
+    pub fn new(query: &Query, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
         let Some(atw_weight) = query.atw_weight else {
             return Self::empty();
         };
@@ -109,7 +110,7 @@ impl AtwTable {
     /// stores all of that chunk's ATW information.
     pub fn bitmap_for_chunk(
         &self,
-        query: &Parameters,
+        query: &Query,
         id: &ChunkId,
         chunk_len: PerPartLength,
     ) -> AtwBitmap {
@@ -293,7 +294,7 @@ fn make_bell_place_to_bitmap_index(
 // accounted for
 fn total_unique_row_positions(
     working_bells: &[Bell],
-    methods: &MethodVec<crate::parameters::Method>,
+    methods: &MethodVec<crate::query::UsedMethod>,
     flags: &[AtwFlag],
 ) -> usize {
     let total_unique_row_positions = working_bells.len() // Working bells
@@ -312,7 +313,7 @@ fn total_unique_row_positions(
 /// Determine how the (bell, place bell, method, sub-lead idx) tuples can be combined into
 /// individual bitflags.
 fn place_bell_range_boundaries(
-    query: &Parameters,
+    query: &Query,
     chunk_lengths: &HashMap<ChunkId, PerPartLength>,
 ) -> HashMap<(Bell, u8, MethodIdx), Vec<usize>> {
     // For each (bell, place bell, method) triple, determine at which sub-lead indices the chunks
@@ -343,7 +344,7 @@ fn place_bell_range_boundaries(
 fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    methods: &MethodVec<crate::parameters::Method>,
+    methods: &MethodVec<crate::query::UsedMethod>,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
@@ -391,7 +392,7 @@ fn range_boundaries_to_flags(
 fn bell_place_sets(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    method: &crate::parameters::Method,
+    method: &crate::query::UsedMethod,
 ) -> Vec<Vec<(Bell, u8)>> {
     let mut bells_left_to_track = working_bells.iter().copied().collect::<HashSet<_>>();
     let mut bell_place_sets = Vec::<Vec<(Bell, u8)>>::new();
@@ -413,7 +414,7 @@ fn bell_place_sets(
     }
     // If only one course mask is specified (e.g. `1*7890...`), then all those bells can
     // tracked together.
-    if method.allowed_course_masks.len() == 1 {
+    if method.specified_course_head_masks.len() == 1 {
         // The lead head masks specify exactly which sets of place bells are visited by
         // these fixed tenors
         for lead_mask in &method.allowed_lead_masks {
@@ -428,7 +429,7 @@ fn bell_place_sets(
             bell_place_sets.push(bell_place_pairs);
         }
         // Mark these bells as covered
-        for bell in method.allowed_course_masks[0].bells().flatten() {
+        for bell in method.allowed_lead_masks[0].bells().flatten() {
             bells_left_to_track.remove(&bell);
         }
     }

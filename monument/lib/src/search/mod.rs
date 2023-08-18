@@ -22,6 +22,7 @@ use crate::{
     builder::{methods::MethodId, MusicTypeId},
     parameters::Parameters,
     prove_length::{prove_lengths, RefinedRanges},
+    query::Query,
     utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
@@ -40,13 +41,11 @@ use crate::SearchBuilder;
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    query: Arc<Parameters>,
-    atw_table: Arc<AtwTable>,
+    query: Arc<Query>,
     config: Config,
-    // TODO: Reintroduce this to make the search graph smaller
-    // source_graph: crate::graph::Graph,
-    refined_ranges: RefinedRanges,
     graph: self::graph::Graph,
+    atw_table: Arc<AtwTable>,
+    refined_ranges: RefinedRanges,
     /* Concurrency control */
     abort_flag: AtomicBool,
 }
@@ -58,7 +57,9 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub(crate) fn new(query: Parameters, config: Config) -> crate::Result<Self> {
+    pub(crate) fn new(params: Parameters, config: Config) -> crate::Result<Self> {
+        let query = Query::new(params);
+
         // Build and optimise the graph
         let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&query, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count
@@ -127,7 +128,7 @@ impl Search {
         self.query
             .methods
             .iter_enumerated()
-            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand()))
+            .map(|(index, method)| (MethodId { index }, &method.inner.inner, method.shorthand()))
     }
 
     pub fn is_spliced(&self) -> bool {

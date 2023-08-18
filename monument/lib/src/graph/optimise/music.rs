@@ -4,15 +4,15 @@ use itertools::Itertools;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
-    parameters::Parameters,
     prove_length::RefinedRanges,
+    query::Query,
     utils::MusicBreakdown,
 };
 
 /// How many chunks will be searched to determine which chunk patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
 
-pub(super) fn required_music_min(graph: &mut Graph, query: &Parameters, _ranges: &RefinedRanges) {
+pub(super) fn required_music_min(graph: &mut Graph, query: &Query, _ranges: &RefinedRanges) {
     // log::debug!("\n\n\n");
 
     // For each `MusicType`, maps its index to minimum count
@@ -94,7 +94,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Parameters, _ranges:
 /// 0 (i.e. any chunks with that music should be removed).
 pub(crate) fn remove_chunks_exceeding_max_count(
     graph: &mut Graph,
-    query: &Parameters,
+    query: &Query,
     _ranges: &RefinedRanges,
 ) {
     let mut counts_from_required_chunks = MusicBreakdown::zero(query.music_types.len());

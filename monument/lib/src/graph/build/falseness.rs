@@ -16,7 +16,7 @@ use itertools::Itertools;
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 use crate::{
     graph::{Chunk, ChunkId, PerPartLength, RowIdx},
-    parameters::Parameters,
+    query::Query,
 };
 
 /// Set the falseness links for some [`Chunk`]s, removing any which are false against themselves.
@@ -26,7 +26,7 @@ use crate::{
 pub(super) fn set_links(
     chunks: &mut HashMap<ChunkId, Chunk>,
     chunk_equiv_map: &mut ChunkEquivalenceMap,
-    query: &Parameters,
+    query: &Query,
 ) {
     let start = Instant::now();
     let chunk_ids_and_lengths = chunks
@@ -85,7 +85,7 @@ enum FalsenessEntry {
 impl FalsenessTable {
     /// Creates a `FalsenessTable` capable of efficiently generating falseness between a given set
     /// of chunks.
-    fn new(chunks: &HashSet<(ChunkId, PerPartLength)>, query: &Parameters) -> Self {
+    fn new(chunks: &HashSet<(ChunkId, PerPartLength)>, query: &Query) -> Self {
         // Determine which (lead head mask, range) pairs are **actually** used in the graph.  We
         // will produce a 'FCH' tables for every one of these, which will be used as lookups when
         // generating false links.
@@ -237,7 +237,7 @@ type FalseTranspositions<'masks, 'groups> =
 fn reduce_masks(
     masks_used: &mut HashSet<(ChunkRange, Mask)>,
     masks_used_in_all_parts: &mut HashSet<(ChunkRange, Mask)>,
-    query: &Parameters,
+    query: &Query,
 ) {
     let mut fixed_bell_mask = Mask::any(query.stage);
     for &(bell, place) in &query.fixed_bells {
@@ -320,7 +320,7 @@ fn reduce_masks(
 /// multiple times).
 fn group_rows(
     masks_used_in_all_parts: HashSet<(ChunkRange, Mask)>,
-    query: &Parameters,
+    query: &Query,
 ) -> (
     HashSet<ChunkRange>,
     HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&Row>>>,

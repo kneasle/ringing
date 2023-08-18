@@ -9,8 +9,8 @@ use std::{
 };
 
 use crate::{
-    parameters::Parameters,
     prove_length::RefinedRanges,
+    query::Query,
     utils::{
         lengths::{PerPartLength, TotalLength},
         FrontierItem,
@@ -24,7 +24,7 @@ use Direction::{Backward, Forward};
 impl Graph {
     /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
     /// made.
-    pub(crate) fn optimise(&mut self, query: &Parameters, ranges: &RefinedRanges) {
+    pub(crate) fn optimise(&mut self, query: &Query, ranges: &RefinedRanges) {
         const ITERATION_LIMIT: usize = 20;
 
         let passes = self::passes::default();
@@ -110,11 +110,11 @@ impl Graph {
     }
 }
 
-type SinglePass = Box<dyn FnMut(&mut Graph, &Parameters, &RefinedRanges)>;
+type SinglePass = Box<dyn FnMut(&mut Graph, &Query, &RefinedRanges)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  Very useful
 /// when some graph operation is agnostic to the directionality of the graph, e.g.  computing
 /// distances to/from rounds.
-type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Parameters, &RefinedRanges)>;
+type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query, &RefinedRanges)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
@@ -128,7 +128,7 @@ enum Pass {
 
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
-    fn run(&mut self, graph: &mut Graph, query: &Parameters, ranges: &RefinedRanges) {
+    fn run(&mut self, graph: &mut Graph, query: &Query, ranges: &RefinedRanges) {
         match self {
             Pass::Single(pass) => pass(graph, query, ranges),
             Pass::BothDirections(pass) => {
@@ -326,8 +326,8 @@ mod passes {
 
     use crate::{
         graph::{ChunkId, Graph, LinkSide},
-        parameters::Parameters,
         prove_length::RefinedRanges,
+        query::Query,
     };
 
     use super::{DirectionalView, Pass};
@@ -364,7 +364,7 @@ mod passes {
     /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
     fn remove_links_between_false_chunks() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Parameters, _ranges: &RefinedRanges| {
+            |graph: &mut Graph, _query: &Query, _ranges: &RefinedRanges| {
                 graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
                     !chunk_from.false_chunks.contains(id_to)
                 })
@@ -374,7 +374,7 @@ mod passes {
 
     fn remove_chunks_with_long_method_counts() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Parameters, ranges: &RefinedRanges| {
+            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
                 graph.chunks.retain(|id, chunk| {
                     chunk.total_length <= *ranges.method_counts[id.method].end()
                 })
@@ -384,7 +384,7 @@ mod passes {
 
     fn remove_links_with_long_method_counts() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Parameters, ranges: &RefinedRanges| {
+            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
                 graph.retain_internal_links(|_link, id_from, chunk_from, id_to, chunk_to| {
                     if id_from.method == id_to.method {
                         let max_method_count = *ranges.method_counts[id_from.method].end();
@@ -403,7 +403,7 @@ mod passes {
     /// removing any which can't reach rounds in either direction.
     fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(
-            |mut view: DirectionalView, query: &Parameters, _ranges: &RefinedRanges| {
+            |mut view: DirectionalView, query: &Query, _ranges: &RefinedRanges| {
                 let expanded_chunk_distances = super::compute_distances(
                     view.starts().iter().map(|(_, chunk_id)| chunk_id),
                     &view,
@@ -427,7 +427,7 @@ mod passes {
     /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
     fn strip_long_chunks() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, query: &Parameters, _ranges: &RefinedRanges| {
+            |graph: &mut Graph, query: &Query, _ranges: &RefinedRanges| {
                 graph.chunks.retain(|_id, chunk| {
                     let min_comp_length_with_chunk = chunk.lb_distance_from_rounds
                         + chunk.total_length
@@ -480,7 +480,7 @@ mod passes {
 
     fn compute_duffer_distances() -> Pass {
         Pass::BothDirections(Box::new(
-            |mut graph_view: DirectionalView, query: &Parameters, _ranges: &RefinedRanges| {
+            |mut graph_view: DirectionalView, query: &Query, _ranges: &RefinedRanges| {
                 // Find which chunks follow directly from non-duffer chunks
                 let mut successors_of_non_duffers = HashSet::<ChunkId>::new();
                 for (_id, chunk_view) in graph_view.chunks().filter(|(_, v)| !v.chunk.duffer) {
@@ -524,7 +524,7 @@ mod passes {
 
     fn strip_long_duffers() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, query: &Parameters, _ranges: &RefinedRanges| {
+            |graph: &mut Graph, query: &Query, _ranges: &RefinedRanges| {
                 if let Some(duffer_limit) = query.max_contiguous_duffer {
                     graph.chunks.retain(|_id, chunk| {
                         // The length of the shortest chunk of duffer containing this chunk

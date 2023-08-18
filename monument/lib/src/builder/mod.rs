@@ -14,7 +14,7 @@ use itertools::Itertools;
 use crate::{
     group::PartHeadGroup,
     parameters::{
-        self, CallDisplayStyle, CallVec, MethodId, MethodVec, MusicTypeIdx, MusicTypeVec,
+        self, CallDisplayStyle, CourseSet, MethodId, MethodVec, MusicTypeIdx, MusicTypeVec,
         OptionalRangeInclusive, Parameters, SpliceStyle, StrokeSet,
     },
     search::{Config, Search, Update},
@@ -22,7 +22,7 @@ use crate::{
     Composition,
 };
 
-pub use methods::{CourseSet, Method};
+pub use methods::Method;
 
 #[allow(unused_imports)] // Only used for doc comments
 use bellframe::Row;
@@ -255,7 +255,7 @@ impl SearchBuilder {
         });
 
         // Calls
-        let mut calls = CallVec::new();
+        let mut calls = Vec::new();
         if let Some(base_calls) = base_calls {
             calls.extend(base_calls.into_calls(stage));
         }
@@ -267,19 +267,20 @@ impl SearchBuilder {
                 .map(|(idx, c)| c.build(idx + num_base_calls)),
         );
 
+        let non_duffer_courses =
+            non_duffer_courses.unwrap_or_else(|| vec![Mask::any(stage).into()]);
+
         // Methods
-        let fixed_bells = self::methods::fixed_bells(&methods, &calls, &start_row, stage);
-        let mut built_methods = MethodVec::new();
+        let mut built_methods = Vec::new();
         for (idx, (bellframe_method, method_builder)) in methods.into_iter_enumerated() {
             built_methods.push(method_builder.build(
                 MethodId(idx.index() as u16),
                 bellframe_method,
-                &fixed_bells,
                 default_method_count,
                 &default_start_indices,
                 &default_end_indices,
                 &courses,
-                non_duffer_courses.as_deref(),
+                non_duffer_courses.clone(),
                 &part_head,
                 stage,
             )?);
@@ -303,12 +304,11 @@ impl SearchBuilder {
             num_comps,
             require_truth,
 
-            methods: built_methods,
+            maybe_unused_methods: built_methods,
             splice_style,
             splice_weight,
-            calls,
+            maybe_unused_calls: calls,
             call_display_style,
-            fixed_bells,
             atw_weight,
 
             start_row,
