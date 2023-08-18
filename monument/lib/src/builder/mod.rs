@@ -10,16 +10,12 @@ use bellframe::{
     Bell, Mask, PlaceNot, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
-use ordered_float::OrderedFloat;
 
 use crate::{
     group::PartHeadGroup,
     parameters::{self, CallVec, MethodVec, MusicTypeIdx, MusicTypeVec, Parameters, StrokeSet},
     search::{Config, Search, Update},
-    utils::{
-        lengths::{PerPartLength, TotalLength},
-        Score,
-    },
+    utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
 
@@ -292,25 +288,22 @@ impl SearchBuilder {
         let part_head_group = PartHeadGroup::new(&part_head);
 
         Ok(Parameters {
-            length_range,
+            length: length_range,
             stage,
             num_comps,
             require_truth,
 
             methods: built_methods,
             splice_style,
-            splice_weight: OrderedFloat(splice_weight),
+            splice_weight,
             calls,
             call_display_style,
             fixed_bells,
-            atw_weight: atw_weight.map(OrderedFloat),
+            atw_weight,
 
             start_row,
             end_row,
-            course_weights: course_weights
-                .into_iter()
-                .map(|(mask, weight)| (mask, OrderedFloat(weight)))
-                .collect(),
+            course_weights,
 
             music_types: music_types.into_iter().collect(),
             start_stroke,
@@ -410,7 +403,7 @@ impl Call {
             label_to: self.label_to,
             place_notation: self.place_notation,
 
-            weight: Score::from(self.weight),
+            weight: self.weight,
         }
     }
 }
@@ -495,7 +488,7 @@ fn lead_end_call(place_not: PlaceNot, symbol: &str, weight: f32) -> parameters::
         label_from: LABEL_LEAD_END.to_owned(),
         label_to: LABEL_LEAD_END.to_owned(),
         place_notation: place_not,
-        weight: Score::from(weight),
+        weight,
     }
 }
 
@@ -629,7 +622,7 @@ impl MusicType {
             music_type: parameters::MusicType {
                 patterns: patterns.into_iter().collect_vec(),
                 strokes: StrokeSet::Both,
-                weight: Score::from(1.0),
+                weight: 1.0,
                 count_range: OptionalRangeInclusive::OPEN,
             },
         }
@@ -637,7 +630,7 @@ impl MusicType {
 
     /// Set the weight of each instance of this music type.  If unset, defaults to `1.0`.
     pub fn weight(mut self, weight: f32) -> Self {
-        self.music_type.weight = Score::from(weight);
+        self.music_type.weight = weight;
         self
     }
 

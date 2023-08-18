@@ -8,6 +8,7 @@ use bellframe::Row;
 use bit_vec::BitVec;
 use datasize::DataSize;
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
 
 use crate::{
     atw::AtwBitmap,
@@ -19,7 +20,6 @@ use crate::{
         counts::Counts,
         div_rounding_up,
         lengths::{PerPartLength, TotalLength},
-        Score,
     },
 };
 
@@ -33,7 +33,7 @@ use super::{
 #[derive(Debug, Clone)]
 pub(super) struct CompPrefix {
     /// Total score generated so far
-    score: Score,
+    score: f32,
     /// Length refers to the **end** of the current chunk.  We use `u32` because [`Score`] is also
     /// 32 bits long, making `CompPrefix` pack into 128 bits
     length: TotalLength,
@@ -87,7 +87,7 @@ impl CompPrefix {
             .map(|(start_idx, &(chunk_idx, _link_id, part_head))| {
                 let chunk = &search.graph.chunks[chunk_idx];
                 Self {
-                    score: Score::from(0.0), // Start links can't have any score
+                    score: 0.0, // Start links can't have any score
                     length: TotalLength::ZERO,
                     inner: Box::new(PrefixInner {
                         path: paths.add_start(start_idx),
@@ -113,8 +113,8 @@ impl CompPrefix {
             + self.inner.atw_bitmap.estimate_heap_size()
     }
 
-    pub fn avg_score(&self) -> Score {
-        self.score / self.length.as_usize() as f32
+    pub fn avg_score(&self) -> OrderedFloat<f32> {
+        OrderedFloat(self.score / self.length.as_usize() as f32)
     }
 
     pub fn path_head(&self) -> PathId {

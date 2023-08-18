@@ -10,7 +10,7 @@ use crate::{
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
-        Boundary, Score,
+        Boundary,
     },
 };
 
@@ -30,11 +30,11 @@ pub struct Parameters {
     // METHODS & CALLING
     pub methods: MethodVec<Method>,
     pub splice_style: SpliceStyle,
-    pub splice_weight: Score,
+    pub splice_weight: f32, // TODO: Do we need so many instances of 'Score'
     pub calls: CallVec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub fixed_bells: Vec<(Bell, usize)>,
-    pub atw_weight: Option<Score>,
+    pub atw_weight: Option<f32>,
 
     // COURSES
     //
@@ -44,7 +44,7 @@ pub struct Parameters {
     pub part_head_group: PartHeadGroup,
     /// [`Score`]s applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
-    pub course_weights: Vec<(Mask, Score)>,
+    pub course_weights: Vec<(Mask, f32)>,
 
     // NON-DUFFERS
     pub max_contiguous_duffer: Option<PerPartLength>,
@@ -225,7 +225,7 @@ pub struct Call {
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_notation: PlaceNot,
 
-    pub weight: Score,
+    pub weight: f32,
 }
 
 impl Call {
@@ -249,7 +249,7 @@ impl Call {
 pub struct MusicType {
     pub patterns: Vec<Pattern>,
     pub strokes: StrokeSet,
-    pub weight: Score,
+    pub weight: f32,
     pub count_range: OptionalRangeInclusive,
 }
 

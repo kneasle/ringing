@@ -7,7 +7,7 @@ use itertools::Itertools;
 use crate::{
     graph::ChunkId,
     parameters::{MethodIdx, MethodVec, Parameters},
-    utils::{div_rounding_up, lengths::PerPartLength, Score},
+    utils::{div_rounding_up, lengths::PerPartLength},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -20,7 +20,7 @@ const FLAGS_PER_CHUNK: usize = Chunk::BITS as usize;
 
 #[derive(Debug, Clone)]
 pub(crate) struct AtwTable {
-    atw_weight: Score,
+    atw_weight: f32,
     total_unique_row_positions: UniqueRowCount,
 
     /// One for every [`Chunk`] in the bitmaps representing the inclusion of [`AtwFlag`]s
@@ -97,7 +97,7 @@ impl AtwTable {
 
     fn empty() -> Self {
         Self {
-            atw_weight: Score::from(0.0),
+            atw_weight: 0.0,
             total_unique_row_positions: 1, // Should really be `0`, set to `1` to avoid div by 0
             bitmap_chunk_multipliers: Vec::new(),
             flag_per_bit: Vec::new(),
@@ -169,7 +169,7 @@ impl AtwTable {
         place_bell_ranges
     }
 
-    pub fn atw_score(&self, bitmap: &AtwBitmap) -> Score {
+    pub fn atw_score(&self, bitmap: &AtwBitmap) -> f32 {
         let factor = self.atw_factor(bitmap);
         self.atw_weight * factor * factor
     }

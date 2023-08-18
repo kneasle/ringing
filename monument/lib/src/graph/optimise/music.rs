@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
-use ordered_float::OrderedFloat;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
@@ -47,7 +46,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Parameters, _ranges:
         required_music_counts[*idx] = *min;
     }
     let mut counts_needed_from_non_required_chunks = MusicBreakdown {
-        score: OrderedFloat(0.0),
+        score: 0.0,
         counts: required_music_counts.into(),
     };
     for (_id, chunk) in required_chunks {

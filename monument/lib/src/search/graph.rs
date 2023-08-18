@@ -8,11 +8,9 @@ use crate::{
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
-        Score,
     },
 };
 use bit_vec::BitVec;
-use ordered_float::OrderedFloat;
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
@@ -26,7 +24,7 @@ pub(super) struct Graph {
 pub(super) struct Chunk {
     pub id: crate::graph::ChunkId,
 
-    pub score: Score,
+    pub score: f32,
     pub music_counts: Counts, // PERF: Not used in search
 
     pub per_part_length: PerPartLength, // PERF: Not used in search
@@ -51,7 +49,7 @@ pub(super) struct Chunk {
 pub(super) struct SuccLink {
     pub call: Option<CallIdx>,
     pub next: LinkSide<ChunkIdx>,
-    pub score: Score,
+    pub score: f32,
     pub ph_rotation: PhRotation,
 }
 
@@ -152,9 +150,7 @@ fn link_score(
     source_chunk: &crate::graph::Chunk,
     link: &crate::graph::Link,
     query: &Parameters,
-) -> Score {
-    const ZERO: Score = OrderedFloat(0.0);
-
+) -> f32 {
     let is_splice = match (&link.from, &link.to) {
         // A link between chunks is a splice iff c2's RowIdx directly
         // follows from c1's (i.e. it's the same method and is one row
@@ -175,9 +171,9 @@ fn link_score(
     };
     let call_weight = match link.call {
         Some(idx) => query.calls[idx].weight,
-        None => ZERO, // Plain leads have no weight
+        None => 0.0, // Plain leads have no weight
     };
-    let splice_weight = if is_splice { query.splice_weight } else { ZERO };
+    let splice_weight = if is_splice { query.splice_weight } else { 0.0 };
     (call_weight + splice_weight) * query.num_parts() as f32
 }
 
