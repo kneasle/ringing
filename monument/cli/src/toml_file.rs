@@ -284,11 +284,11 @@ impl TomlFile {
         // Warn when using plain bob calls in Stedman or Grandsire
         for (_id, method, _shorthand) in search.methods() {
             if self.base_calls != BaseCalls::None {
-                match method.name() {
+                match method.name.as_str() {
                     // TODO: More precisely, we should check for Grandsire-like methods
                     "Grandsire" | "Stedman" => log::warn!(
                         "It looks like you're using Plain Bob calls in {}.  Try `base_calls = \"none\"`?",
-                        method.name()
+                        method.name
                     ),
                     _ => {}
                 }

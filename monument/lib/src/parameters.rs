@@ -164,8 +164,6 @@ pub struct Method {
     pub id: MethodId,
     pub used: bool,
 
-    pub name: String, // TODO: Move this into `bellframe::Method`
-
     pub inner: bellframe::Method,
 
     /// Short [`String`] used to identify this method in spliced.  If empty, a default value will
@@ -219,7 +217,7 @@ impl Default for SpliceStyle {
 impl Method {
     pub fn shorthand(&self) -> String {
         if self.custom_shorthand.is_empty() {
-            default_shorthand(self.title())
+            default_shorthand(&self.title())
         } else {
             self.custom_shorthand.clone()
         }

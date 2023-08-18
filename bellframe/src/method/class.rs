@@ -22,7 +22,9 @@ pub struct FullClass {
 }
 
 impl FullClass {
-    pub fn new(is_jump: bool, is_little: bool, is_differential: bool, class: Class) -> Self {
+    pub const PRINCIPLE: Self = Self::new(false, false, false, Class::Principle);
+
+    pub const fn new(is_jump: bool, is_little: bool, is_differential: bool, class: Class) -> Self {
         Self {
             is_jump,
             is_little,

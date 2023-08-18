@@ -296,8 +296,6 @@ impl Method {
             id,
             used: true,
 
-            name: bellframe_method.name().to_owned(),
-
             custom_shorthand: self.custom_shorthand.unwrap_or_default(),
             count_range: self.override_count_range.or(default_method_count),
             plain_course: bellframe_method
