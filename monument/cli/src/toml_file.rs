@@ -62,12 +62,12 @@ pub struct TomlFile {
     /// At which locations method splices are allowed
     #[serde(default)]
     splice_style: SpliceStyle,
-    /// Bounds on how many rows of each method is allowed
-    #[serde(default)]
-    method_count: OptRangeInclusive,
     /// Score which is applied for every change of method.  Defaults to `0.0`
     #[serde(default)]
     splice_weight: f32,
+    /// Bounds on how many rows of each method is allowed
+    #[serde(default)]
+    method_count: OptRangeInclusive,
     /// Set to `true` to allow comps to not start at the lead head.
     #[serde(default)]
     snap_start: bool,
