@@ -267,8 +267,16 @@ impl SearchBuilder {
                 .map(|(idx, c)| c.build(idx + num_base_calls)),
         );
 
+        // Non-duffer
         let non_duffer_courses =
             non_duffer_courses.unwrap_or_else(|| vec![Mask::any(stage).into()]);
+        // Here we also force `max_contiguous_duffer` to be no bigger than `max_total_duffer`
+        // (which clearly can't happen because we'd blow our entire duffer budget in one place).
+        let max_contiguous_duffer = match (max_contiguous_duffer, max_total_duffer) {
+            (Some(contiguous), Some(total)) => Some(usize::min(contiguous, total)),
+            (None, Some(one_val)) | (Some(one_val), None) => Some(one_val),
+            (None, None) => None,
+        };
 
         // Methods
         let mut built_methods = Vec::new();
@@ -285,16 +293,6 @@ impl SearchBuilder {
                 stage,
             )?);
         }
-
-        // Non-duffer
-        //
-        // Here we also force `max_contiguous_duffer` to be no bigger than `max_total_duffer`
-        // (which clearly can't happen because we'd blow our entire duffer budget in one place).
-        let max_contiguous_duffer = match (max_contiguous_duffer, max_total_duffer) {
-            (Some(contiguous), Some(total)) => Some(usize::min(contiguous, total)),
-            (None, Some(one_val)) | (Some(one_val), None) => Some(one_val),
-            (None, None) => None,
-        };
 
         let part_head_group = PartHeadGroup::new(&part_head);
 
