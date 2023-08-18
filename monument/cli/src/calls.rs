@@ -1,6 +1,8 @@
 use bellframe::{method::LABEL_LEAD_END, PlaceNot, Stage};
 use itertools::Itertools;
-use monument::builder::{BaseCallType, Call, DEFAULT_MISC_CALL_WEIGHT};
+use monument::parameters::{
+    default_calling_positions, BaseCallType, CallId, DEFAULT_MISC_CALL_WEIGHT,
+};
 use serde::Deserialize;
 
 /// The values of the `base_calls` attribute
@@ -39,6 +41,7 @@ pub struct CustomCall {
     label: CallLabel,
     /// Deprecated alias for `label`
     lead_location: Option<CallLabel>,
+    // TODO: Make this only allow strings
     calling_positions: Option<CallingPositions>,
     #[serde(default = "default_misc_call_score")]
     weight: f32,
@@ -55,7 +58,11 @@ pub enum CallLabel {
 }
 
 impl CustomCall {
-    pub(crate) fn into_call_builder(self, stage: Stage) -> anyhow::Result<Call> {
+    pub(super) fn as_monument_call(
+        &self,
+        id: CallId,
+        stage: Stage,
+    ) -> anyhow::Result<monument::parameters::Call> {
         let place_notation = PlaceNot::parse(&self.place_notation, stage).map_err(|e| {
             anyhow::Error::msg(format!(
                 "Can't parse place notation {:?} for call {:?}: {}",
@@ -72,20 +79,25 @@ impl CustomCall {
                 "`debug_symbol` is now calculated automatically.  Use `symbol = \"-\" for bobs.`",
             ));
         }
-        let (label_from, label_to) = match self.label {
+        let (label_from, label_to) = match self.label.clone() {
             CallLabel::Same(loc) => (loc.clone(), loc),
             CallLabel::Different { from, to } => (from, to),
         };
+        let calling_positions = match &self.calling_positions {
+            Some(c) => c.as_vec(),
+            None => default_calling_positions(&place_notation),
+        };
 
-        let builder = Call::new(self.symbol, place_notation)
-            .maybe_calling_positions(
-                self.calling_positions
-                    .as_ref()
-                    .map(CallingPositions::as_vec),
-            )
-            .label_from_to(label_from, label_to)
-            .weight(self.weight);
-        Ok(builder)
+        Ok(monument::parameters::Call {
+            id,
+            used: true,
+            symbol: self.symbol.to_owned(),
+            calling_positions,
+            label_from,
+            label_to,
+            place_notation,
+            weight: self.weight,
+        })
     }
 }
 

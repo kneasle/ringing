@@ -18,7 +18,6 @@ pub struct SingleLineProgressLogger {
     comp_printer: Option<CompositionPrinter>,
 
     last_progress: Progress,
-    is_aborting: bool,
     /// The number of characters in the last line we printed.  `UpdateLogger` will use this add
     /// enough spaces to the end of the next message to completely overwrite the last one
     last_line_length: usize,
@@ -30,7 +29,6 @@ impl SingleLineProgressLogger {
             comp_printer,
 
             last_progress: Progress::START,
-            is_aborting: false,
             last_line_length: 0,
         }
     }
@@ -74,14 +72,14 @@ impl SingleLineProgressLogger {
         match update {
             Update::Comp(comp) => return Some(comp),
             Update::Progress(progress) => self.last_progress = progress,
-            Update::Aborting => self.is_aborting = true,
+            Update::Complete => {} // Nothing to do, we're just about to return anyway
         }
         None
     }
 
     /// Append a progress summary to some [`String`] buffer
     fn append_progress_string(&self, buf: &mut String) {
-        let p = &self.last_progress;
+        let p = self.last_progress;
         write!(
             buf,
             "    {} iters, {} comps :: {} items in queue, avg/max len {:.0}/{}",
@@ -92,14 +90,12 @@ impl SingleLineProgressLogger {
             p.max_length
         )
         .unwrap();
-        buf.push_str(
-            match (self.is_aborting, self.last_progress.truncating_queue) {
-                (false, false) => "",
-                (true, false) => ".  Aborting...",
-                (false, true) => ".  Truncating queue...",
-                (true, true) => unreachable!("Must either be aborting or truncating queue"),
-            },
-        );
+        buf.push_str(match (p.aborting, p.truncating_queue) {
+            (false, false) => "",
+            (true, false) => ".  Aborting...",
+            (false, true) => ".  Truncating queue...",
+            (true, true) => unreachable!("Must either be aborting or truncating queue"),
+        });
     }
 
     /// Add whitespace to the end of a string to make sure it will cover the last thing we printed.
@@ -166,10 +162,11 @@ impl CompositionPrinter {
             length_width: search.length_range().end().to_string().len(),
             method_counts: search
                 .methods()
-                .map(|(id, _method, shorthand)| {
-                    let max_count_width = search.method_count_range(&id).end().to_string().len();
+                .map(|(method, shorthand)| {
+                    let max_count_width =
+                        search.method_count_range(method.id).end().to_string().len();
                     let max_width = max_count_width.max(shorthand.len());
-                    (max_width, shorthand.to_owned())
+                    (max_width, shorthand)
                 })
                 .collect_vec(),
             comps_printed: 0,

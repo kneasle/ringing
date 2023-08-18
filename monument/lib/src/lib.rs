@@ -42,17 +42,17 @@
 #![allow(clippy::result_large_err)]
 
 mod atw;
-pub mod builder;
 mod composition;
 mod error;
 mod graph;
 mod group;
+pub mod parameters;
 mod prove_length;
 mod query;
 mod search;
-mod utils;
+pub mod utils;
 
-pub use builder::SearchBuilder;
 pub use composition::Composition;
 pub use error::{Error, Result};
+pub use group::PartHeadGroup;
 pub use search::{Config, Progress, Search, Update};

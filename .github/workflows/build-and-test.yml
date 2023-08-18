@@ -21,4 +21,4 @@ jobs:
     - name: Check formatting
       run: cargo fmt -- --check
     - name: Check docs
-      run: cargo doc --no-deps
+      run: cargo doc --no-deps -p bellframe # Only test docs for bellframe

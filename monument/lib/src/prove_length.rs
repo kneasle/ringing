@@ -9,9 +9,9 @@ use bellframe::Mask;
 use itertools::Itertools;
 
 use crate::{
-    builder::OptionalRangeInclusive,
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    query::{MethodIdx, MethodVec, Query},
+    parameters::{MethodIdx, MethodVec, OptionalRangeInclusive},
+    query::Query,
     utils::lengths::TotalLength,
 };
 
@@ -35,7 +35,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
     let possible_lengths = possible_lengths(graph, query);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, &query.length_range) {
+    let refined_len_range = match matching_lengths(&possible_lengths, &query.length) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -282,7 +282,7 @@ fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
 /// perfectly accurate.
 fn possible_method_counts(
     method_idx: MethodIdx,
-    method: &crate::query::Method,
+    method: &crate::parameters::Method,
     graph: &Graph,
     query: &Query,
 ) -> Vec<TotalLength> {
@@ -317,7 +317,7 @@ fn possible_method_counts(
     // or
     //  - exactly one count from `start_end_counts`
 
-    log::trace!("Computing method counts for {}:", method.shorthand);
+    log::trace!("Computing method counts for {}:", method.shorthand());
 
     // Split the chunk counts into start/internal/end
     let mut start_counts = HashSet::new();
@@ -462,11 +462,11 @@ fn refine_method_counts(
     (min_type, mut min_len): (BoundType, TotalLength),
     (max_type, mut max_len): (BoundType, TotalLength),
     possible_lengths: &[TotalLength],
-    method: &crate::query::Method,
+    method: &crate::parameters::Method,
 ) -> crate::Result<RangeInclusive<TotalLength>> {
     use BoundType::{Explicit as Expl, Preferred as Pref};
 
-    log::trace!("Refining method counts for {}", method.shorthand);
+    log::trace!("Refining method counts for {}", method.shorthand());
     log::trace!(
         "  initial bounds: {}{} ..= {}{}",
         min_len,
@@ -545,7 +545,7 @@ fn refine_method_counts(
                 (None, None) => {
                     assert_ne!((min_type, max_type), (Pref, Pref));
                     return Err(crate::Error::UnachievableMethodCount {
-                        method_name: method.title().to_owned(),
+                        method_name: method.title(),
                         requested_range: method.count_range,
                         next_shorter_len: next_smaller.map(TotalLength::as_usize),
                         next_longer_len: next_larger.map(TotalLength::as_usize),
@@ -579,7 +579,7 @@ fn print_method_counts(
         let methods_string = if methods.len() == query.methods.len() {
             "all methods".to_owned()
         } else {
-            let shorthand = |idx: &MethodIdx| -> &str { &query.methods[*idx].shorthand };
+            let shorthand = |idx: &MethodIdx| -> String { query.methods[*idx].shorthand() };
 
             match methods.as_slice() {
                 [] => unreachable!(),
@@ -588,12 +588,12 @@ fn print_method_counts(
                 [idxs @ .., idx2, idx3] => {
                     let mut s = String::new();
                     for idx in idxs {
-                        s.push_str(shorthand(idx));
+                        s.push_str(&shorthand(idx));
                         s.push_str(", ");
                     }
-                    s.push_str(shorthand(idx2));
+                    s.push_str(&shorthand(idx2));
                     s.push_str(" and ");
-                    s.push_str(shorthand(idx3));
+                    s.push_str(&shorthand(idx3));
                     s
                 }
             }

@@ -44,23 +44,10 @@ impl From<&MethodLib> for MethodLibSerde {
                     // 'Uncompact' the `CompactMethod`s
                     let methods = compact_methods
                         .into_iter()
-                        .map(|comp_method| {
-                            // Check if the title follows the standard construction.  If it does,
-                            // we don't store the title explicitly, but if it isn't standard (e.g.
-                            // for Grandsire) then we need to store it explicitly
-                            let title = &comp_method.title;
-                            let override_title =
-                                if &generate_title(&comp_method.name, full_class, stage) == title {
-                                    None
-                                } else {
-                                    Some(title.to_owned())
-                                };
-
-                            CompactMethodSerde {
-                                title: override_title,
-                                name: comp_method.name.to_owned(),
-                                place_notation: comp_method.place_notation.to_owned(),
-                            }
+                        .map(|comp_method| CompactMethodSerde {
+                            title: comp_method.omit_class.then(|| comp_method.title()),
+                            name: comp_method.name.to_owned(),
+                            place_notation: comp_method.place_notation.to_owned(),
                         })
                         .collect_vec();
 
@@ -106,15 +93,18 @@ impl From<MethodLibSerde> for MethodLib {
                     name,
                     place_notation,
                 } = m;
-                let title = title.unwrap_or_else(|| generate_title(&name, full_class, stage));
 
+                let omit_class = title.is_some();
                 method_map.insert(
-                    title.to_lowercase(),
+                    title
+                        .unwrap_or_else(|| generate_title(&name, full_class, false, stage))
+                        .to_lowercase(),
                     CompactMethod {
                         name,
-                        title,
                         full_class,
+                        omit_class,
                         place_notation,
+                        stage,
                     },
                 );
             }

@@ -44,6 +44,11 @@ impl PartHeadGroup {
         }
     }
 
+    /// Create a new `PartHeadGroup` containing only one part.
+    pub fn one_part(stage: Stage) -> Self {
+        Self::new(&RowBuf::rounds(stage))
+    }
+
     /// Return the maximum [`effective_stage`](Row::effective_stage) of every [`Row`] in this
     /// `PartHeadGroup`
     pub fn effective_stage(&self) -> Stage {
@@ -53,6 +58,14 @@ impl PartHeadGroup {
     /// Returns the number of unique [`PartHead`]s in this `PartHeadGroup`.
     pub fn size(&self) -> usize {
         self.part_heads.len()
+    }
+
+    pub fn is_one_part(&self) -> bool {
+        self.size() == 1
+    }
+
+    pub fn is_multi_part(&self) -> bool {
+        !self.is_one_part()
     }
 
     /// Returns an [`Iterator`] over the [`Row`]s in this `PartHeadGroup`

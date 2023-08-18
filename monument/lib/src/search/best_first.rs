@@ -43,9 +43,13 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
                 iter_count,
                 num_comps,
                 $truncating_queue,
+                abort_flag.load(Ordering::SeqCst),
             );
         };
     }
+
+    // Send 'empty' update before search starts
+    send_progress_update!(truncating_queue = false);
 
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
@@ -76,7 +80,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
 
         // Check for abort every so often
         if iter_count % ITERS_BETWEEN_ABORT_CHECKS == 0 && abort_flag.load(Ordering::Relaxed) {
-            update_fn(Update::Aborting);
+            send_progress_update!(truncating_queue = false);
             break;
         }
         // Send stats every so often
@@ -100,6 +104,9 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
     if search.config.leak_search_memory {
         std::mem::forget(frontier);
     }
+
+    // Signal that the search is complete
+    update_fn(Update::Complete);
 }
 
 fn send_progress_update(
@@ -108,6 +115,7 @@ fn send_progress_update(
     iter_count: usize,
     num_comps: usize,
     truncating_queue: bool,
+    aborting: bool,
 ) {
     let mut total_len = 0u64; // NOTE: We have use `u64` here to avoid overflow
     let mut max_length = TotalLength::ZERO;
@@ -128,6 +136,7 @@ fn send_progress_update(
         max_length: max_length.as_usize(),
 
         truncating_queue,
+        aborting,
     }));
 }
 

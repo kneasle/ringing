@@ -19,36 +19,29 @@ use sysinfo::SystemExt;
 
 use crate::{
     atw::AtwTable,
-    builder::{MethodId, MusicTypeId},
+    parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
     utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
 
-#[allow(unused_imports)] // Only used for doc comments
-use crate::SearchBuilder;
-
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
 /// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`SearchBuilder::run`] or
-/// [`SearchBuilder::run_with_config`].  Both of those will deal with handling the [`Search`] for
+/// want to run a (hopefully quick) search, use [`Parameters::run`] or
+/// [`Parameters::run_with_config`].  Both of those will deal with handling the [`Search`] for
 /// you.
 // TODO: Rename all instances from `data` to `search`
 #[derive(Debug)]
 pub struct Search {
     /* Data */
     query: Arc<Query>,
-    atw_table: Arc<AtwTable>,
     config: Config,
-    // TODO: Reintroduce this to make the search graph smaller
-    // source_graph: crate::graph::Graph,
-    refined_ranges: RefinedRanges,
     graph: self::graph::Graph,
-    /* Concurrency control */
-    abort_flag: AtomicBool,
+    atw_table: Arc<AtwTable>,
+    refined_ranges: RefinedRanges,
 }
 
 impl Search {
@@ -58,7 +51,9 @@ impl Search {
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
-    pub(crate) fn new(query: Query, config: Config) -> crate::Result<Self> {
+    pub fn new(params: Parameters, config: Config) -> crate::Result<Self> {
+        let query = Query::new(params);
+
         // Build and optimise the graph
         let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&query, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count
@@ -76,31 +71,17 @@ impl Search {
             config,
             refined_ranges,
             graph,
-
-            abort_flag: AtomicBool::new(false),
         })
     }
 
     /// Runs the search, **blocking the current thread** until either the search is completed or an
     /// [abort is signalled](Self::signal_abort).
-    pub fn run(&self, update_fn: impl FnMut(Update)) {
+    pub fn run(&self, update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
-        self.abort_flag.store(false, Ordering::SeqCst);
-        best_first::search(self, update_fn, &self.abort_flag);
-    }
-
-    /// Signal that the search should be aborted as soon as possible.  `Search` is [`Sync`] and
-    /// uses interior mutability, so `signal_abort` can be called from a different thread to the
-    /// one blocking on [`Search::run`].
-    pub fn signal_abort(&self) {
-        self.abort_flag.store(true, Ordering::Relaxed);
-    }
-
-    /// Returns `true` if the last attempt at this `Search` [was aborted](Self::signal_abort).
-    pub fn was_aborted(&self) -> bool {
-        self.abort_flag.load(Ordering::SeqCst)
+        abort_flag.store(false, Ordering::SeqCst);
+        best_first::search(self, update_fn, abort_flag);
     }
 }
 
@@ -109,40 +90,24 @@ impl Search {
         self.query.length_range_usize()
     }
 
-    pub fn get_method(&self, id: &MethodId) -> &bellframe::Method {
-        &self.query.methods[id.index]
-    }
-
-    pub fn get_method_shorthand(&self, id: &MethodId) -> &str {
-        &self.query.methods[id.index].shorthand
-    }
-
     /// Gets the range of counts required of the given [`MethodId`].
-    pub fn method_count_range(&self, id: &MethodId) -> RangeInclusive<usize> {
-        let range = &self.refined_ranges.method_counts[id.index];
+    pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
+        let idx = self.query.get_method_by_id(id);
+        let range = &self.refined_ranges.method_counts[idx];
         range.start().as_usize()..=range.end().as_usize()
     }
 
-    pub fn methods(&self) -> impl Iterator<Item = (MethodId, &bellframe::Method, &str)> {
-        self.query
-            .methods
-            .iter_enumerated()
-            .map(|(index, method)| (MethodId { index }, &method.inner, method.shorthand.as_str()))
-    }
-
-    pub fn is_spliced(&self) -> bool {
-        self.query.is_spliced()
+    pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
+        self.query.methods.iter().map(|m| (&m.inner, m.shorthand()))
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
-        self.query
-            .music_types
-            .iter_enumerated()
-            .map(|(index, _)| MusicTypeId { index })
+        self.query.music_types.iter().map(|ty| ty.id)
     }
 
-    pub fn max_music_count(&self, id: &MusicTypeId) -> usize {
-        self.query.music_types[id.index]
+    pub fn max_music_count(&self, id: MusicTypeId) -> usize {
+        self.query
+            .get_music_type_by_id(id)
             .max_count()
             .unwrap_or(usize::MAX)
     }
@@ -180,12 +145,12 @@ pub enum Update {
     Comp(Composition),
     /// A thread is sending a status update
     Progress(Progress),
-    /// The search is being aborted
-    Aborting,
+    /// The search has completed
+    Complete,
 }
 
 /// How much of a [`Search`] has been completed so far.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Progress {
     /// How many times the core composing loop has been run so far.
     pub iter_count: usize,
@@ -201,6 +166,8 @@ pub struct Progress {
 
     /// `true` if the search routine is currently shortening the prefix queue to save memory.
     pub truncating_queue: bool,
+    /// `true` if the search routine is in the process of aborting
+    pub aborting: bool,
 }
 
 impl Progress {
@@ -214,6 +181,7 @@ impl Progress {
         max_length: 0,
 
         truncating_queue: false,
+        aborting: false,
     };
 }
 

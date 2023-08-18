@@ -4,7 +4,11 @@ use edit_distance::edit_distance;
 use itertools::Itertools;
 use shortlist::Shortlist;
 
-use crate::{method::class::FullClass, place_not::PnBlockParseError, Method, PnBlock, Stage};
+use crate::{
+    method::{class::FullClass, generate_title},
+    place_not::PnBlockParseError,
+    Method, PnBlock, Stage,
+};
 
 mod lib_serde;
 pub(crate) mod parse_cc_lib;
@@ -52,7 +56,7 @@ impl MethodLib {
             .method_map
             .get(&stage)?
             .get(lower_case_title)?
-            .to_method(stage);
+            .to_method();
         Some(method)
     }
 
@@ -79,18 +83,18 @@ impl MethodLib {
         num_suggestions: usize,
     ) -> Vec<(String, usize)> {
         /// A new-type over the suggestions, which is ordered by the edit distance
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone)]
         // Forcing `repr` transparent will make sure that the memory layout is identical to `(&str,
         // usize)` which will usually let LLVM optimise away the allocation in
         // `Shortlist::into_sorted_vec`
         #[repr(transparent)]
-        struct Suggestion<'s>((&'s str, usize));
+        struct Suggestion((String, usize));
 
-        impl<'s> Suggestion<'s> {
+        impl Suggestion {
             fn new(
                 actual_title: &str,
                 suggestion_title_lower: &str,
-                suggestion_title: &'s str,
+                suggestion_title: String,
             ) -> Self {
                 Suggestion((
                     suggestion_title,
@@ -99,13 +103,13 @@ impl MethodLib {
             }
         }
 
-        impl<'s> PartialOrd for Suggestion<'s> {
+        impl PartialOrd for Suggestion {
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
 
-        impl<'s> Ord for Suggestion<'s> {
+        impl Ord for Suggestion {
             fn cmp(&self, other: &Self) -> Ordering {
                 // Make sure to sort them in reverse order, because the best suggestions have the
                 // smallest edit distance
@@ -113,19 +117,19 @@ impl MethodLib {
             }
         }
 
-        impl<'s> PartialEq for Suggestion<'s> {
+        impl PartialEq for Suggestion {
             fn eq(&self, other: &Self) -> bool {
                 self.0 .1 == other.0 .1
             }
         }
 
-        impl<'s> Eq for Suggestion<'s> {}
+        impl Eq for Suggestion {}
 
         // Test each method as a suggestion, pushing the suggestions into a shortlist
         let mut suggestion_shortlist = Shortlist::new(num_suggestions);
         for methods in self.method_map.values() {
             suggestion_shortlist.append(methods.iter().map(|(stored_title, method)| {
-                Suggestion::new(lower_case_title, stored_title, &method.title)
+                Suggestion::new(lower_case_title, stored_title, method.title())
             }));
         }
 
@@ -134,18 +138,18 @@ impl MethodLib {
         best_suggestions.reverse();
         best_suggestions
             .into_iter()
-            .map(|Suggestion((title, edit_distance))| (title.to_owned(), edit_distance))
+            .map(|Suggestion((title, edit_distance))| (title, edit_distance))
             .collect_vec()
     }
 
     // This method is only used by the method classification test suite
     #[cfg(test)]
-    pub(crate) fn all_pns_and_classes(&self) -> Vec<(&str, PnBlock, FullClass)> {
+    pub(crate) fn all_pns_and_classes(&self) -> Vec<(String, PnBlock, FullClass)> {
         let mut v = Vec::new();
         for (stage, meths) in &self.method_map {
             for m in meths.values() {
                 v.push((
-                    m.title.as_str(),
+                    m.title(),
                     PnBlock::parse(&m.place_notation, *stage).unwrap(),
                     m.full_class,
                 ));
@@ -225,26 +229,32 @@ impl MethodLib {
 #[derive(Debug, Clone)]
 struct CompactMethod {
     name: String,
-    title: String,
+    omit_class: bool,
     full_class: FullClass,
     place_notation: String,
+    stage: Stage,
 }
 
 impl CompactMethod {
-    fn to_method(&self, stage: Stage) -> Result<Method, (String, PnBlockParseError)> {
+    fn to_method(&self) -> Result<Method, (String, PnBlockParseError)> {
         Ok(Method::new(
-            self.title.to_owned(),
             self.name.to_owned(),
             self.full_class,
-            PnBlock::parse(&self.place_notation, stage)
+            self.omit_class,
+            PnBlock::parse(&self.place_notation, self.stage)
                 .map_err(|e| (self.place_notation.clone(), e))?
                 .to_block_from_rounds(),
         ))
+    }
+
+    fn title(&self) -> String {
+        generate_title(&self.name, self.full_class, self.omit_class, self.stage)
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum QueryError<T> {
+    // TODO: Validate PN while parsing the library
     PnParseErr {
         pn: String,
         error: PnBlockParseError,

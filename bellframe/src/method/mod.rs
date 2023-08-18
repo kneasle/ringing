@@ -17,8 +17,8 @@ pub const LABEL_LEAD_END: &str = "LE";
 /// works.
 #[derive(Debug, Clone)]
 pub struct Method {
-    title: String,
-    name: String,
+    pub name: String,
+    omit_class: bool, // Set to `true` for methods like Grandsire, who's title omits the class
     class: FullClass,
     /// The first lead of this [`Method`], where each row can be given any number of arbitrary
     /// labels.
@@ -33,14 +33,14 @@ impl Method {
 
     /// Creates a new `Method` from its raw parts
     pub fn new(
-        title: String,
         name: String,
         class: FullClass,
+        omit_class: bool,
         first_lead: Block<Vec<String>>,
     ) -> Self {
         Self {
-            title,
             name,
+            omit_class,
             class,
             first_lead,
         }
@@ -50,8 +50,8 @@ impl Method {
     pub fn with_name(name: String, first_lead: Block<Vec<String>>) -> Self {
         let class = FullClass::classify(&first_lead);
         Self {
-            title: generate_title(&name, class, first_lead.stage()),
             name,
+            omit_class: false,
             class,
             first_lead,
         }
@@ -131,19 +131,11 @@ impl Method {
         self.class
     }
 
-    /// Gets the **name** of this `Method` - i.e. the [`title`](Self::title) without the
-    /// classification or [`Stage`].  Take Bristol Major as an example: its name is
-    /// `"Bristol"` but its title is `"Bristol Surprise Major"`.
-    #[inline]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     /// Gets the **title** of this `Method` - i.e. including the classification or [`Stage`].
     /// Take Bristol Major as an example: its name is `"Bristol"` but its title is `"Bristol
     /// Surprise Major"`.
-    pub fn title(&self) -> &str {
-        self.title.as_ref()
+    pub fn title(&self) -> String {
+        generate_title(&self.name, self.class, self.omit_class, self.stage())
     }
 
     //////////////////////////////
@@ -219,7 +211,7 @@ impl Method {
 /// Generate the (standard) title of a [`Method`] from its parts, according to the Framework's
 /// rules.  Some methods (e.g. Grandsire and Union) do not follow this convention, and therefore
 /// their titles must be stored separately.
-pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
+pub fn generate_title(name: &str, class: FullClass, omit_class: bool, stage: Stage) -> String {
     let mut s = String::new();
 
     // Push the name, followed by a space (if the name is non-empty)
@@ -230,11 +222,13 @@ pub fn generate_title(name: &str, class: FullClass, stage: Stage) -> String {
     // Push the classification, and add another space if the classification wasn't the empty string
     // (which we check indirectly by measuring the length of `s` before and after adding the
     // classification string)
-    let len_before_class = s.len();
-    class.fmt_name(&mut s, true).unwrap();
-    if s.len() > len_before_class {
-        // If the class made the string longer, we need another space before the stage
-        s.push(' ');
+    if !omit_class {
+        let len_before_class = s.len();
+        class.fmt_name(&mut s, true).unwrap();
+        if s.len() > len_before_class {
+            // If the class made the string longer, we need another space before the stage
+            s.push(' ');
+        }
     }
     // Always push the stage
     s.push_str(stage.name().expect("Stage was too big to generate a name"));

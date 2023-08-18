@@ -16,7 +16,8 @@ use itertools::Itertools;
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    query::{Call, Query, StrokeSet},
+    parameters::{Call, StrokeSet},
+    query::Query,
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
 };
@@ -289,11 +290,11 @@ fn check_query(query: &Query) -> crate::Result<()> {
     // Two methods using the same shorthand
     for (i1, m1) in query.methods.iter_enumerated() {
         for m2 in &query.methods[..i1] {
-            if m1.shorthand == m2.shorthand {
+            if m1.shorthand() == m2.shorthand() {
                 return Err(crate::Error::DuplicateShorthand {
-                    shorthand: m1.shorthand.clone(),
-                    title1: m1.title().to_owned(),
-                    title2: m2.title().to_owned(),
+                    shorthand: m1.shorthand(),
+                    title1: m1.title(),
+                    title2: m2.title(),
                 });
             }
         }
@@ -313,8 +314,8 @@ fn check_query(query: &Query) -> crate::Result<()> {
     // Calls referring to non-existent labels
     let mut defined_labels = HashSet::<&String>::new();
     for m in &query.methods {
-        for annot in m.plain_course().annots() {
-            defined_labels.extend(annot.labels);
+        for labels in m.first_lead().annots() {
+            defined_labels.extend(labels);
         }
     }
     for call in &query.calls {
@@ -333,11 +334,11 @@ fn check_query(query: &Query) -> crate::Result<()> {
 
     // Course head masks which don't exist in other parts
     //
-    // TODO: Remove this?
+    // TODO: Make this actually output a mask specified by the user
     //
     // For every CH mask ...
     for method in &query.methods {
-        for mask_in_first_part in &method.allowed_course_masks {
+        for mask_in_first_part in &method.specified_course_head_masks {
             // ... for every part ...
             for part_head in query.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some lead mask

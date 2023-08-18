@@ -1,83 +1,81 @@
-//! Instructions for Monument about what compositions should be generated.
-
-use std::ops::{Deref, Range, RangeInclusive};
-
-use bellframe::{music::Pattern, Bell, Block, Mask, PlaceNot, Row, RowBuf, Stage, Stroke};
-
-use crate::{
-    builder::{CallDisplayStyle, OptionalRangeInclusive, SpliceStyle},
-    graph::ChunkId,
-    group::PartHeadGroup,
-    utils::{
-        lengths::{PerPartLength, TotalLength},
-        Boundary, Score,
-    },
+use std::{
+    collections::HashSet,
+    ops::{Deref, Range},
 };
 
-/// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
+use bellframe::{Bell, Block, Mask, Row, RowBuf, Stage};
+use itertools::Itertools;
+
+use crate::{
+    graph::ChunkId,
+    parameters::{
+        CallVec, CourseSet, MethodId, MethodIdx, MethodVec, MusicType, MusicTypeId, MusicTypeVec,
+        Parameters,
+    },
+    utils::{Boundary, PerPartLength},
+    PartHeadGroup,
+};
+
+/// Extra data precomputed from a set of [`Parameters`], to be used while generating the graph.
 ///
-/// Compare this to [`search::Config`](crate::search::Config), which determines _how_ those
-/// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the
-/// results are generated).
-#[derive(Debug, Clone)]
+/// This is required because using the [`Parameters`] directly in a search is not useful for two
+/// major reasons:
+///
+/// 1. To allow the GUI to edit the [`Parameters`] directly, it is highly useful to be able to
+///    include methods/calls/music types in a set of [`Parameters`] but then mark them as 'unused'.
+///    However, the graph build and search algorithms only care about which methods are used, so
+///    in a [`Query`] we can do that filtering and provide cheap access to only used
+///    methods/calls/music types.
+///
+/// 2. We want to pre-compute and cache useful data which is used often in the core algorithms.  We
+///    don't want to add this 'derived' data directly into [`Parameters`] directly, since the
+///    consumer of the API would have to keep internal data up-to-date.  By putting it in `Query`,
+///    we can precompute them and provide them to the rest of the code.
+#[derive(Debug)]
 pub(crate) struct Query {
-    // GENERAL
-    pub length_range: RangeInclusive<TotalLength>,
-    pub stage: Stage,
-    pub num_comps: usize,
-    pub require_truth: bool,
-
-    // METHODS & CALLING
+    pub parameters: Parameters,
     pub methods: MethodVec<Method>,
-    pub splice_style: SpliceStyle,
-    pub splice_weight: Score,
-    pub calls: CallVec<Call>,
-    pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
-    pub fixed_bells: Vec<(Bell, usize)>,
-    pub atw_weight: Option<Score>,
-
-    // COURSES
-    //
-    // NOTE: Course masks are defined on each `Method`
-    pub start_row: RowBuf,
-    pub end_row: RowBuf,
-    pub part_head_group: PartHeadGroup,
-    /// [`Score`]s applied to every row in every course containing a lead head matching the
-    /// corresponding [`Mask`].
-    pub course_weights: Vec<(Mask, Score)>,
-
-    // NON-DUFFERS
-    pub max_contiguous_duffer: Option<PerPartLength>,
-    pub max_total_duffer: Option<TotalLength>,
-
-    // MUSIC
+    pub calls: CallVec<crate::parameters::Call>,
     pub music_types: MusicTypeVec<MusicType>,
-    /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
-    /// `self.start_row`
-    pub start_stroke: Stroke,
+
+    pub fixed_bells: Vec<(Bell, usize)>,
+    // TODO: Compute lengths
+}
+
+// TODO: Rename to `Method`
+#[derive(Debug)]
+pub(crate) struct Method {
+    pub inner: crate::parameters::Method,
+    /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
+    /// labels assigned to that row.
+    pub plain_course: Block<Vec<String>>,
+
+    pub start_indices: Vec<usize>,
+    pub end_indices: Vec<usize>,
+
+    /// The expanded version of `inner.allowed_courses`
+    pub specified_course_head_masks: Vec<Mask>,
+    /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
+    /// [`crate::SearchBuilder::courses`].
+    pub allowed_lead_masks: Vec<Mask>,
+    /// List of lead heads which are part of
+    /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
+    pub non_duffer_lead_masks: Vec<Mask>,
 }
 
 impl Query {
-    pub fn max_length(&self) -> TotalLength {
-        *self.length_range.end()
+    pub(crate) fn get_method_by_id(&self, id: MethodId) -> MethodIdx {
+        self.methods
+            .iter()
+            .find_position(|m| m.id == id)
+            .unwrap()
+            .0
+            .into()
     }
 
-    pub fn length_range_usize(&self) -> RangeInclusive<usize> {
-        let start = self.length_range.start().as_usize();
-        let end = self.length_range.end().as_usize();
-        start..=end
-    }
-
-    pub fn is_spliced(&self) -> bool {
-        self.methods.len() > 1
-    }
-
-    pub fn num_parts(&self) -> usize {
-        self.part_head_group.size()
-    }
-
-    pub fn is_multipart(&self) -> bool {
-        self.num_parts() > 1
+    pub(crate) fn get_music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
+        // TODO: if this is a bottleneck, we can optimise this with a hashmap
+        self.music_types.iter().find(|mt| mt.id == id).unwrap()
     }
 
     /// For a given chunk, split that chunk's range into segments where each one falls within a
@@ -109,7 +107,7 @@ impl Query {
     ///    Output ranges --/       1
     ///                           1
     /// ```
-    pub fn chunk_lead_regions(
+    pub(crate) fn chunk_lead_regions(
         &self,
         id: &ChunkId,
         length: PerPartLength,
@@ -142,40 +140,6 @@ impl Query {
     }
 }
 
-/////////////
-// METHODS //
-/////////////
-
-/// A `Method` used in a [`Query`].
-#[derive(Debug, Clone)]
-pub(crate) struct Method {
-    pub(crate) inner: bellframe::Method,
-    /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
-    /// labels assigned to that row.
-    pub(crate) plain_course: Block<Vec<String>>,
-
-    /// Short [`String`] used to identify this method in spliced
-    pub(crate) shorthand: String,
-    /// The number of rows of this method must fit within this range
-    pub(crate) count_range: OptionalRangeInclusive,
-
-    /// The indices in which we can start a composition during this `Method`.  These are guaranteed
-    /// to fit within `inner.lead_len()`.
-    pub(crate) start_indices: Vec<usize>,
-    /// The indices in which we can end a composition during this `Method`.  These are guaranteed
-    /// to fit within `inner.lead_len()`.
-    pub(crate) end_indices: Vec<usize>,
-
-    /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
-    pub(crate) allowed_course_masks: Vec<Mask>,
-    /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
-    /// [`crate::SearchBuilder::courses`].
-    pub(crate) allowed_lead_masks: Vec<Mask>,
-    /// List of lead heads which are part of
-    /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
-    pub(crate) non_duffer_lead_masks: Vec<Mask>,
-}
-
 impl Method {
     /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
     pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
@@ -189,10 +153,6 @@ impl Method {
             .any(|mask| mask.matches(lead_head))
     }
 
-    pub(crate) fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
-    }
-
     pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
         match boundary {
             Boundary::Start => &self.start_indices,
@@ -201,94 +161,199 @@ impl Method {
     }
 }
 
-impl std::ops::Deref for Method {
-    type Target = bellframe::Method;
+impl Deref for Query {
+    type Target = Parameters;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parameters
+    }
+}
+
+impl Deref for Method {
+    type Target = crate::parameters::Method;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-///////////
-// CALLS //
-///////////
+/////////////////////////
+// BUILDING EXTRA DATA //
+/////////////////////////
 
-/// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
-pub(crate) struct Call {
-    pub(crate) symbol: String,
-    pub(crate) calling_positions: Vec<String>,
+impl Query {
+    pub(crate) fn new(parameters: Parameters) -> Self {
+        // Filter methods and calls
+        let used_methods = parameters
+            .maybe_unused_methods
+            .iter()
+            .filter(|m| m.used)
+            .cloned()
+            .collect_vec();
+        let used_calls: CallVec<_> = parameters
+            .maybe_unused_calls
+            .iter()
+            .filter(|c| c.used)
+            .cloned()
+            .collect();
+        let used_music_types: MusicTypeVec<_> = parameters
+            .maybe_unused_music_types
+            .iter()
+            .filter(|mt| mt.used)
+            .cloned()
+            .collect();
+        // Generate fixed bells
+        let fixed_bells = fixed_bells(
+            &used_methods,
+            used_calls.as_raw_slice(),
+            &parameters.start_row,
+            parameters.stage,
+        );
 
-    pub(crate) label_from: String,
-    pub(crate) label_to: String,
-    // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
-    pub(crate) place_notation: PlaceNot,
+        Self {
+            methods: used_methods
+                .into_iter()
+                .map(|m| Method::new(m, &fixed_bells, &parameters.part_head_group))
+                .collect(),
+            calls: used_calls,
+            music_types: used_music_types,
 
-    pub(crate) weight: Score,
-}
-
-impl Call {
-    /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
-    /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
-    /// `-WsW-WsW-H`.
-    pub(crate) fn short_symbol(&self) -> &str {
-        match self.symbol.as_str() {
-            "-" | "–" => "", // Convert `-` to ``
-            s => s,          // All other calls use their explicit symbol
+            fixed_bells,
+            parameters,
         }
     }
 }
 
-///////////
-// MUSIC //
-///////////
-
-/// A class of music that Monument should care about
-#[derive(Debug, Clone)]
-pub(crate) struct MusicType {
-    pub(crate) patterns: Vec<Pattern>,
-    pub(crate) strokes: StrokeSet,
-    pub(crate) weight: Score,
-    pub(crate) count_range: OptionalRangeInclusive,
-}
-
-impl MusicType {
-    /// Return the total number of possible instances of this music type, or `None` if the
-    /// computation caused `usize` to overflow.
-    pub(crate) fn max_count(&self) -> Option<usize> {
-        let mut sum = 0;
-        for r in &self.patterns {
-            sum += r.num_matching_rows()?;
+impl Method {
+    fn new(
+        method: crate::parameters::Method,
+        fixed_bells: &[(Bell, usize)],
+        part_heads: &PartHeadGroup,
+    ) -> Self {
+        // Wrap indices
+        let mut start_indices = wrap_sub_lead_indices(&method.start_indices, &method);
+        let mut end_indices = wrap_sub_lead_indices(&method.end_indices, &method);
+        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
+        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
+        // this, we set both `{start,end}_indices` to the union between `start_indices` and
+        // `end_indices`.
+        if part_heads.is_multi_part() {
+            let union = start_indices
+                .iter()
+                .filter(|idx| end_indices.contains(idx))
+                .copied()
+                .collect_vec();
+            start_indices = union.clone();
+            end_indices = union;
         }
-        Some(sum)
+
+        let plain_course = method.plain_course().map_annots(|a| a.labels.to_vec());
+        Self {
+            plain_course,
+            start_indices,
+            end_indices,
+
+            specified_course_head_masks: CourseSet::to_course_masks(
+                &method.allowed_courses,
+                &method,
+                fixed_bells,
+            ),
+            allowed_lead_masks: CourseSet::to_lead_masks(
+                &method.allowed_courses,
+                &method,
+                fixed_bells,
+            ),
+            non_duffer_lead_masks: CourseSet::to_lead_masks(
+                &method.non_duffer_courses,
+                &method,
+                fixed_bells,
+            ),
+
+            inner: method,
+        }
     }
 }
 
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum StrokeSet {
-    Hand,
-    Back,
-    Both,
+fn wrap_sub_lead_indices(indices: &[isize], method: &bellframe::Method) -> Vec<usize> {
+    indices
+        .iter()
+        .map(|idx| {
+            let lead_len_i = method.lead_len() as isize;
+            (*idx % lead_len_i + lead_len_i) as usize % method.lead_len()
+        })
+        .collect_vec()
 }
 
-impl StrokeSet {
-    pub(crate) fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
+//////////////////
+// FIXING BELLS //
+//////////////////
+
+/// Returns the place bells which are always preserved by plain leads and all calls of all methods
+/// (e.g. hunt bells in non-variable-hunt compositions).
+pub(super) fn fixed_bells(
+    methods: &[crate::parameters::Method],
+    calls: &[crate::parameters::Call],
+    start_row: &Row,
+    stage: Stage,
+) -> Vec<(Bell, usize)> {
+    let mut fixed_bells = stage.bells().collect_vec();
+    for m in methods {
+        let f = fixed_bells_of_method(m, calls);
+        fixed_bells.retain(|b| f.contains(b));
+    }
+    // Currently, these `fixed_bells` assume that the start_row is rounds
+    fixed_bells
+        .iter()
+        .map(|b| (start_row[b.index()], b.index()))
+        .collect_vec()
+}
+
+/// Returns the place bells which are always preserved by plain leads and all calls of a single
+/// method (e.g. hunt bells in non-variable-hunt compositions).
+fn fixed_bells_of_method(
+    method: &bellframe::Method,
+    calls: &[crate::parameters::Call],
+) -> HashSet<Bell> {
+    // Start the set with the bells which are fixed by the plain lead of every method
+    let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
+    for call in calls {
+        // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
+        // Grandsire is unaffected by a plain lead, but affected by calls)
+        filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+    }
+    fixed_bells
+}
+
+// For every position that this call could be placed, remove any bells which **aren't** preserved
+// by placing the call at this location.
+fn filter_bells_fixed_by_call(
+    method: &bellframe::Method,
+    call: &crate::parameters::Call,
+    set: &mut HashSet<Bell>,
+) {
+    // Note that all calls are required to only substitute one piece of place notation.
+    for sub_lead_idx_after_call in method.label_indices(&call.label_from) {
+        // TODO: Handle different from/to locations
+        let idx_before_call = (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
+        let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
+
+        // The row before a call in this location in the _first lead_
+        let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
+        // The row after a plain call in this location in the _first lead_
+        let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
+        // The row after a call in this location in the _first lead_
+        let mut row_after_call = row_before_call.to_owned();
+        call.place_notation.permute(&mut row_after_call).unwrap();
+
+        // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
+        // `row_after_no_call`.  These should be removed from the set, because they are no longer
+        // fixed.
+        for (bell_after_no_call, bell_after_call) in
+            row_after_no_call.bell_iter().zip(&row_after_call)
+        {
+            if bell_after_call != bell_after_no_call {
+                set.remove(&bell_after_call);
+            }
         }
     }
 }
-
-////////////////
-// MISC TYPES //
-////////////////
-
-index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct MusicTypeIdx = usize; }
-pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub(crate) type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;

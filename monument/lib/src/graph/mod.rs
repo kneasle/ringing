@@ -19,7 +19,7 @@ use datasize::DataSize;
 use crate::{
     atw::AtwBitmap,
     group::PhRotation,
-    query::{CallIdx, MethodIdx},
+    parameters::{CallIdx, MethodIdx},
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},

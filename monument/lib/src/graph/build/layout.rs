@@ -8,10 +8,10 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    builder::SpliceStyle,
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    query::{self, CallIdx, MethodIdx, MethodVec, Query},
+    parameters::{CallIdx, MethodIdx, MethodVec, SpliceStyle},
+    query::Query,
     utils::{
         lengths::{PerPartLength, TotalLength},
         Boundary, FrontierItem,
@@ -491,7 +491,7 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &query::Method,
+    method_from: &crate::query::Method,
 
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
     query: &Query,
@@ -515,7 +515,7 @@ fn create_links(
             // Check if `lead_head_mask_from` can actually be reached (i.e. is there some LH mask
             // which is compatible with it?).  This doesn't change the results, but has a massive
             // performance benefit since chunk expansion is linear in the size of
-            // `link_lookup_for_method`.  For example, this simple pruning causes a ~4x speedup for
+            // `link_lookup_for_method`.  This simple pruning often causes a ~4x speedup for
             // tenors-together comps.
             let is_mask_reachable = method_from
                 .allowed_lead_masks
