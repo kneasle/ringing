@@ -1,0 +1,36 @@
+# General
+length = { min = 720, max = 720}
+num_comps = 100
+
+# Methods
+method = "Plain Bob Minor"
+
+# Calls
+base_calls = "near"
+bob_weight = -5
+single_weight = -7
+
+# Music
+base_music = "none"
+music = [
+    # 56s
+    { patterns = ["*56"], weight = 1 }, # Boost 56s
+	
+	# 4 and 5 Bell Runs
+    { run_lengths = [4, 5] },
+    
+    # Combination Near Misses
+    { patterns = ["123465", "123546", "124356", "132456", "213456", "124365",
+    			  "132465", "132546", "213465", "213546", "214356", "214365"], weight = 1 },
+
+    # Named Rows
+    { patterns = [ "123456", "132546", "135246", "142536", # Rounds, Priory/The Intermediate, Queens, Tittums
+                   "145236", "154326", "213546", "321456", # Jacks, Jokers, Burdette, See-saw
+                   "341256", "342516", "531246", "532146", # Hagdyke, Exploded Tittums, Kings/Whittingtons, Princes
+                   "654321" ], weight = 1 },               # Backrounds
+
+    { pattern = "*65", weight = -2, stroke = "back" }, # Slightly penalise 65s at back
+]
+
+# Courses
+split_tenors = true

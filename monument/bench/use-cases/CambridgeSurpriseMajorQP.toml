@@ -1,0 +1,54 @@
+# General
+length = { min = 1250, max = 1346 }
+num_comps = 100
+
+# Methods
+method = { title = "Cambridge Surprise Major" }
+
+# Calls
+base_calls = "near"
+bob_weight = -4
+single_weight = -6
+
+# Music
+base_music = "none"
+music = [
+    # 56s & 65s
+    { patterns = ["5678*", "*5678", "6578*", "*6578"], weight = 1 }, # Boost 5678s and 6578s
+    
+    #crus
+    { patterns = ["4578*", "*4578", "4678*", "*4678", "5478*", "*5478", "5678*", "*5678",
+    			  "6478*", "*6478", "6578*", "*6578"], weight = 1 }, # Boost 5678s, 4678s, 5478s, 5678s, 6478s and 6578s
+	
+	# 4, 5, 6, and 7 Bell Runs
+    { run_lengths = [4, 5, 6, 7] },
+    
+    # Combination Near Misses
+    { patterns = ["12345687", "12345768", "12346578", "12354678", "12435678", "13245678",
+    			  "21345678", "12346587", "12354768", "12435687", "12436578", "12436587",
+    			  "13245768", "13254768", "21345687", "21346587", "21436587"], weight = 1 },
+    
+    # 5678 combinations
+    { patterns = ["5678*", "*5678", "6578*", "*6578", # From 5678 and 6578
+                  "7568*", "*7568", "7658*", "*7658", # From 7568, 7658
+                  "8765*", "*8765"], weight = 1 },    # From 8765
+    
+    # Combinations from named rows
+    { patterns = ["*1357", "*2468", "*3468", "*3478",          # From Queens, Whittingtons, Hagdyke
+                  "*3578", "*5768", "*7468", "*7568",          # From 3578s, Bowbells, Princesses, Burdette
+                  "*7658", "*8765", "x5x6x7x8"], weight = 1 }, # From Rollercoaster, Esso-Blues, tittums
+
+    # Named Rows
+    { patterns = [ "12345678", "12563478", "12753468", "13245768", # Rounds, Hagdyke, Whittingtons, Bowbells
+                   "13254768", "13527468", "13572468", "14327658", # Priory/The Intermediate, Princesses, Queens, Rollercoaster
+                   "15263748", "16745238", "17652438", "17654328", # Tittums, Jacks, St Michael's, Jokers
+                   "31247568", "43215678", "56781234", "45362718", # Burdette, See-saw, Saw-see, Exploded Tittums
+                   "65432178", "75312468", "75321468", "87123456", # Reverse Waterfall, Kings, Princes, Waterfall
+                   "87654321" ], weight = 1 },                     # Backrounds
+    
+    # Undesirables
+    { pattern = "*87", weight = -2, stroke = "back" }, # Slightly penalise 87s at back
+]
+
+# Courses
+split_tenors = true
