@@ -1,0 +1,6 @@
+# Test to give complib score for 10 triples comps
+
+length = { min = 84, max = 240 }
+method = "Plain Bob Triples"
+num_comps = 10
+base_music = "complib"

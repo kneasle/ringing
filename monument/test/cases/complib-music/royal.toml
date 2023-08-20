@@ -1,0 +1,11 @@
+# Test to give complib music minus wrap score for 10 royal comps
+
+length = { min = 600, max = 800 }
+method = "Yorkshire Surprise Royal"
+num_comps = 10
+base_music = "complib"
+
+[[calls]]
+symbol = "x"
+place_notation = "16"
+weight = -5

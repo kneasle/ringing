@@ -2,6 +2,7 @@
 "examples/basic.toml" = ''
 "examples/big-bob.toml" = ''
 "examples/call-weights.toml" = ''
+"examples/complib-music.toml" = ''
 "examples/custom-course-heads.toml" = ''
 "examples/custom-length.toml" = ''
 "examples/custom-music.toml" = ''
@@ -736,6 +737,38 @@ len    Y   C |  music  | avg score | calling
 1344 : 224 448 448 224 | 18234567 |  194.00 :  123 ( 53f  70b)   41 (19f 22b)   18 ( 9f  9b)    8 (4f 4b)     4 (2f 2b)  |  0.144345 | #DLSYSL
 -----------------------|----------|--------------------------------------------------------------------------------------|-----------|-----------
  len    D   L   S   Y  |    PH    |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs | avg score | calling
+'''
+"test/cases/complib-music/royal.toml" = '''
+len |  music     567890s   657890s       4-bell runs    | avg score | calling
+----|---------------------------------------------------|-----------|-----------
+720 |  116.00 :   0f  6b    0f  0b     41 (  15f   26b) |  0.149722 | WsHsWH
+720 |  122.00 :   0f  6b    0f  0b     47 (  17f   30b) |  0.159444 | WHWH
+720 |  124.00 :   0f  6b    0f  0b     64 (  26f   38b) |  0.160833 | MHsMsH
+720 |  126.00 :   0f  6b    0f  0b     50 (  20f   30b) |  0.163611 | sWHWsH
+762 |  129.00 :   0f  5b    0f  0b     54 (  21f   33b) |  0.154987 | xBMWsM>
+762 |  129.00 :   0f  5b    0f  0b     53 (  22f   31b) |  0.154987 | xBWsHM>
+720 |  132.00 :   0f  6b    0f  0b     56 (  22f   34b) |  0.170556 | sWsHsWsH
+762 |  135.00 :   0f  5b    0f  0b     60 (  23f   37b) |  0.159186 | xBsMWsHsM>
+720 |  149.00 :   0f  6b    0f  0b     57 (  23f   34b) |  0.200556 | sWsW
+720 |  171.00 :   0f 12b    0f  0b     62 (  26f   36b) |  0.231111 | sHsH
+----|---------------------------------------------------|-----------|-----------
+len |  music     567890s   657890s       4-bell runs    | avg score | calling
+'''
+"test/cases/complib-music/triples.toml" = '''
+len |  music     *567   *657   *457   *467   *547   *647    4-bell runs | avg score | calling
+----|-------------------------------------------------------------------|-----------|-----------
+ 84 |   76.00 :    4      4      0      0      0      0    14 ( 7f  7b) |  0.904762 | 
+168 |  104.00 :    8      8      0      0      0      0    16 ( 8f  8b) |  0.564286 | sBsHsBsH
+168 |  104.00 :    8      8      0      0      0      0    16 ( 8f  8b) |  0.591667 | sBsB
+168 |  104.00 :    8      8      0      0      0      0    16 ( 8f  8b) |  0.591667 | sHsH
+224 |  130.00 :   10     10      0      0      0      0    20 (10f 10b) |  0.527678 | sHHWsFMH
+224 |  130.00 :   10     10      0      0      0      0    20 (10f 10b) |  0.527678 | sHHsWFMH
+224 |  132.00 :   10     10      0      0      0      0    20 (10f 10b) |  0.532143 | sHHsWsFsMH
+224 |  132.00 :   10     10      0      0      0      0    20 (10f 10b) |  0.536607 | sHHWFsMH
+238 |  135.00 :    8      8      0      3      0      3    14 ( 7f  7b) |  0.527311 | HFsMIH
+238 |  137.00 :    8      8      1      3      1      3    14 ( 7f  7b) |  0.535714 | HsFMIH
+----|-------------------------------------------------------------------|-----------|-----------
+len |  music     *567   *657   *457   *467   *547   *647    4-bell runs | avg score | calling
 '''
 "test/cases/default-music/major.toml" = '''
 len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
