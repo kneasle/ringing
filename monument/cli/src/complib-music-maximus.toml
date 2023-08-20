@@ -1,0 +1,40 @@
+# Music file for 12-bell complib music compositions
+
+# 56s & 65s
+[[music]]
+patterns = ["567890ET*", "*567890ET", "657890ET*", "*657890ET"]  # Boost 5678s and 6578s
+weight = 1
+
+# 4, 5, 6, 7, 8, 9, 10 and 11 Bell Runs
+[[music]]
+run_length = 4
+weight = 1
+
+[[music]]
+run_lengths = [5, 6, 7, 8, 9, 10, 11]
+weight = 1
+show = false  # Only show 4-bell runs
+
+# Near Misses
+[[music]]
+patterns = ["1234567890TE", "123456789E0T", "1234567809ET", "1234567980ET", "1234568790ET", "1234576890ET",
+            "1234657890ET", "1235467890ET", "1243567890ET", "1324567890ET", "2134567890ET"]
+weight = 1
+show = false
+
+# Combinations from named rows
+[[music]]
+patterns = ["*24680T", "*9078ET", "*E9780T", "xxxxx9x0xExT"]  # From Queens, Hagdyke, Whittingtons and tittums
+weight = 1
+show = false
+
+# Named Rows
+[[music]]
+patterns = ["1234567890ET", "1256349078ET", "132547698E0T", "135792E4680T", # Rounds, Hagdyke, Priory/The Intermediate, Princesses
+            "13579E24680T", "15926037E48T", "172839405E6T", "10E89674523T", # Queens, Emmanuel, Tittums, Jacks
+            "1E098765432T", "213546879E0T", "21543876E09T", "2579E641380T", # Jokers, Burdette, Rollercoaster, Boogie-Woogie
+            "31247568E90T", "123456E9780T", "531246E9780T", "6543217890ET", # Ripple Tittums, Single Whittingtons, Double Whittingtons, See-saw/Reverse Waterfall
+            "675849302E1T", "E9753124680T", "E9753214680T", "TE0987123456", # Exploded Tittums, Kings, Princes, Waterfall
+            "TE0987654321" ]                                                # Backrounds
+weight = 1
+show = false

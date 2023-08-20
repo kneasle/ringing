@@ -1,0 +1,59 @@
+# Music file for 7-bell complib music compositions
+
+# 56s & 65s
+[[music]]
+patterns = ["*567", "*657"]  # Boost 567s and 657s
+weight = 1
+
+#crus
+[[music]]
+patterns = ["*457", "*467", "*547", "*567", "*647", "*657"]  # Boost 457s, 467s, 547s, 567s, 647s and 657s
+weight = 1
+
+# 4, 5, and 6 Bell Runs
+[[music]]
+run_length = 4
+weight = 1
+
+[[music]]
+run_lengths = [5, 6]
+weight = 1
+show = false  # Only show 4-bell runs
+
+# Combination Near Misses
+[[music]]
+patterns = ["1234576", "1234657", "1235467", "1243567", "1324567",
+            "2134567", "1235476", "1243657", "1324576", "1325476"]
+weight = 1
+show = false
+
+# 567 combinations
+[[music]]
+patterns = ["*567", "*576", "*657",  # From 567 and 576
+            "*675", "*756", "*765"]  # From 756 and 765
+weight = 1
+show = false
+
+# 46s (Breakdown)
+[[music]]
+patterns = ["*46", "*246", "*746", "*7546"]
+weight = 1
+show = false
+
+# Combinations from named rows
+[[music]]
+patterns = ["*246", "*346", "*347", "*357",    # From Queens, Whittingtons, Hagdyke
+            "*374", "*576", "*746", "*756",    # From Tittums, Bowbells, Princesses, Burdette
+            "*765", "x5x6x7x"]                # From Rollercoaster, Tittums
+weight = 1
+show = false
+
+# Named Rows
+[[music]]
+patterns = [ "1234567", "1256347", "1275346", "1324576",  # Rounds, Hagdyke, Whittingtons, Bowbells
+             "1325476", "1352746", "1357246", "1432765",  # Priory/The Intermediate, Princesses, Queens, Rollercoaster
+             "1526374", "1674523", "1765243", "1765432",  # Tittums, Jacks, St Michael's, Jokers
+             "3124756", "4321567", "4536271", "7531246",  # Burdette, See-saw, Exploded Tittums, Kings
+             "7532146", "7654321"]                       # Princes, Backrounds
+weight = 1
+show = false
