@@ -20,7 +20,9 @@ pub enum BaseMusic {
     None,
     /// A default music profile is used
     Default,
-    // TODO: Other music profiles, e.g. CompLib's
+    /// Complib music profile is used
+    Complib,
+    // TODO: Other music profiles
 }
 
 /// The specification for a music file
@@ -185,6 +187,19 @@ impl BaseMusic {
                 }
                 toml
             }
+            BaseMusic::Complib => {
+                let toml = complib_music_toml(stage);
+                match toml {
+                    Some(_) => log::info!(
+                        r#"Using complib music.  If you want no music, set `base_usic = "none"`"#
+                    ),
+                    None => log::warn!(
+                        "No complib music profile for {}.  No music will be scored.",
+                        stage
+                    ),
+                }
+                toml
+            }
         }
     }
 }
@@ -192,6 +207,16 @@ impl BaseMusic {
 impl Default for BaseMusic {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+trait Complib {
+    fn complib() -> Self;
+}
+
+impl Complib for BaseMusic {
+    fn complib() -> Self {
+        Self::Complib
     }
 }
 
@@ -203,6 +228,20 @@ fn default_music_toml(stage: Stage) -> Option<&'static str> {
         Stage::MAJOR   => Some(include_str!("default-music-major.toml")),
         Stage::ROYAL   => Some(include_str!("default-music-royal.toml")),
         Stage::MAXIMUS => Some(include_str!("default-music-maximus.toml")),
+        _ => None,
+    }
+}
+
+#[rustfmt::skip] // So the `=>`s can line up
+fn complib_music_toml(stage: Stage) -> Option<&'static str> {
+    match stage {
+        Stage::MINOR   => Some(include_str!("complib-music-minor.toml")),
+        Stage::TRIPLES => Some(include_str!("complib-music-triples.toml")),
+        Stage::MAJOR   => Some(include_str!("complib-music-major.toml")),
+        Stage::CATERS  => Some(include_str!("complib-music-caters.toml")),
+        Stage::ROYAL   => Some(include_str!("complib-music-royal.toml")),
+        Stage::CINQUES => Some(include_str!("complib-music-cinques.toml")),
+        Stage::MAXIMUS => Some(include_str!("complib-music-maximus.toml")),
         _ => None,
     }
 }
