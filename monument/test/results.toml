@@ -738,6 +738,22 @@ len    Y   C |  music  | avg score | calling
 -----------------------|----------|--------------------------------------------------------------------------------------|-----------|-----------
  len    D   L   S   Y  |    PH    |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs | avg score | calling
 '''
+"test/cases/complib-music/major.toml" = '''
+len |  music      5678s     6578s     4578s     4678s     5478s     6478s      4-bell runs   | avg score | calling
+----|----------------------------------------------------------------------------------------|-----------|-----------
+448 |   62.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    13 (  3f  10b) |  0.120089 | WsHsWH
+448 |   64.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    21 (  7f  14b) |  0.126786 | MHMH
+448 |   64.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    15 (  3f  12b) |  0.126786 | WHWH
+448 |   73.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    22 (  8f  14b) |  0.144643 | sWHWsH
+448 |   74.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    28 ( 10f  18b) |  0.146875 | MHsMsH
+448 |   75.00 :   0f  6b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    24 (  8f  16b) |  0.146875 | sWsHsWsH
+576 |   85.00 :   0f  4b    1f  1b    0f  4b    2f  2b    1f  1b    0f  0b    26 ( 11f  15b) |  0.122222 | sWsHsMWHBsH
+448 |   87.00 :   0f  6b    0f  0b    0f  0b    2f  2b    0f  0b    0f  0b    25 (  9f  16b) |  0.183929 | sWsW
+576 |   94.00 :   0f  6b    0f  0b    0f  0b    2f  2b    0f  0b    0f  0b    35 ( 11f  24b) |  0.153819 | MBW
+448 |  127.00 :   0f 12b    0f  0b    0f  0b    1f  1b    1f  1b    0f  0b    38 ( 14f  24b) |  0.273214 | sHsH
+----|----------------------------------------------------------------------------------------|-----------|-----------
+len |  music      5678s     6578s     4578s     4678s     5478s     6478s      4-bell runs   | avg score | calling
+'''
 "test/cases/complib-music/minor.toml" = '''
 len |  music     *56    4-bell runs | avg score | calling
 ----|-------------------------------|-----------|-----------
