@@ -1,0 +1,6 @@
+# Test to give complib score for 10 caters comps
+
+length = { min = 144, max = 480 }
+method = "Plain Bob Caters"
+num_comps = 10
+base_music = "complib"
