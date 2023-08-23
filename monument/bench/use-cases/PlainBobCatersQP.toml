@@ -30,8 +30,7 @@ music = [
     # Named Rows
     { patterns = [ "123456789", "128634975", "132547698", "135729468",  # Rounds, Heywood's, Priory/The Intermediate, Princesses
                    "135792468", "153974286", "162738495", "186429753",  # Queens, Kennet, Tittums, Yeovil Octaves
-                   "187529643",  # Hereford Octaves,
-                   #"187529643",  # The Octaves  # Leaving this commented out whilst waiting to see if this is a bug where it either should not be here or is mistyped, due to it being the same row as for Hereford Octaves
+                   "187529643",  # Hereford Octaves/The Octaves,
                    "189674523", "198765432",  # Jacks, Jokers
                    "312458679", "312497568", "321654987", "543216789",  # Burdette, Whittingtons, Rollercoaster, See-saw
                    "564738291", "654321789", "975312468", "975321468",  # Exploded Tittums, Reverse Waterfall, Kings, Princes
