@@ -503,6 +503,12 @@ internal = true               # Optional; defaults to `false`
 patterns = ["*6578", "6578*"]       # or a single pattern: `pattern = "*5x6x7x8*"`
 count_each = { min = 12, max = 24 } # Count range applied per-pattern.
                                     # Optional; defaults to allowing anything
+# or
+preset = "crus"
+# or
+preset = "5678 combinations"
+# or
+preset = "near misses"
 
 # common values:
 weight = 2    # Score applied per instance of this music type.  Optional; defaults to `1`
