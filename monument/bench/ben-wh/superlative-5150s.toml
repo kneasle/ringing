@@ -1,0 +1,7 @@
+length = 5150
+method = "Superlative Surprise Major"
+start_indices = [2]
+end_indices = [0]
+
+bob_weight = -5
+single_weight = -8

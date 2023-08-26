@@ -1,0 +1,17 @@
+length = 5022
+method = "Bristol Surprise Major"
+start_indices = [2]
+end_indices = [0]
+
+split_tenors = true
+course_weights = [{ pattern = "*78", weight = 0.03 }]
+
+bob_weight = -7
+single_weight = -12
+
+music = [
+    { patterns = ["*7654", "*4567", "4567*", "7654*"], weight = 0.6 },
+    # Boost music off the front, to prevent Monument from jamming loads of calls together
+    { patterns = ["5678*", "8765*"], weight = 2 },
+    { pattern = "*6578", weight = 1 },
+]

@@ -10,7 +10,7 @@ methods = [
 method_count = 960
 
 part_head = "134265"
-course_heads = ["*78", "*7856", "*7865"]
+courses = ["*78", "*7856", "*7865"]
 
 [[music]]
 preset = "5678 combinations"

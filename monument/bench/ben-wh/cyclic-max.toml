@@ -1,0 +1,30 @@
+length = { min = 5000, max = 5104 }
+methods = [
+    { name = "Slinky", place_notation = "-4-4.5.6.3.6,T", stage = 12, count.max = 176, shorthand = "K" },
+    "Deimos Alliance Maximus",
+    "Phobos Surprise Maximus",
+    "Maypole Alliance Maximus",
+    "Ariel Surprise Maximus",
+    "Zanussi Surprise Maximus",
+]
+
+part_head = "1T234567890E" # cyclic
+courses = [
+    "1234567890ET",
+    "134567890ET2",
+    "14567890ET23",
+    "1567890ET234",
+    "167890ET2345",
+    "17890ET23456",
+    "1890ET234567",
+    "190ET2345678",
+    "10ET23456789",
+    "1ET234567890",
+    "1T234567890E",
+]
+
+base_music = "none"
+music = [
+    { run_lengths = [4,  6,  8,          ] },
+    { run_lengths = [  5,  7,  9,10,11,12], show = false },
+]

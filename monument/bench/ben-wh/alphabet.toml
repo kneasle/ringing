@@ -1,0 +1,43 @@
+length = "peal"
+methods = [
+    { labels = { LE = 0, call = 0 }, title = "Adelaide Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Bristol Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Cambridge Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Double Dublin Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Ely Surprise Major" },
+    { labels = { LE = 0           }, title = "Falmouth Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Gainsborough Little Bob Major", count = 84 }, # 12
+    { labels = { LE = 0           }, title = "Hereward Bob Major", count = 112 }, # 16
+    { labels = { LE = 0, call = 0 }, title = "Indian Queens Delight Major" },
+    { labels = { LE = 0, call = 0 }, title = "Jovium Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Kingsbury Little Surprise Major", count = 112 }, # 16
+    { labels = { LE = 0, call = 0 }, title = "Little Bob Major", count = 56 }, # 8
+    { labels = { LE = 0, call = 0 }, title = "Mortimer Little Surprise Major", count = 168 }, # 24
+    { labels = { LE = 0, call = 0 }, title = "Nickel Little Surprise Major", count = 168 }, # 24
+    { labels = { LE = 0, call = 0 }, title = "Oxford Treble Bob Major" },
+    { labels = { LE = 0, call = 0 }, title = "Plain Bob Major", count = 112 }, # 16
+    { labels = { LE = 0, call = 0 }, title = "Queenie Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Rook and Gaskill Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Superlative Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Turramurra Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Uxbridge Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Venusium Surprise Major" },
+    { labels = { LE = 0           }, title = "Woodstock Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Xarob Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "York Surprise Major" },
+    { labels = { LE = 0, call = 0 }, title = "Zephyranthes Surprise Major" },
+]
+method_count = 224
+part_head = "18234567"
+
+base_calls = "none"
+[[calls]]
+symbol = "-"
+place_notation = "14"
+label = { from = "call", to = "LE" }
+weight = -10
+# [[calls]]
+# symbol = "s"
+# place_notation = "1234"
+# label = { from = "call", to = "LE" }
+# weight = -7

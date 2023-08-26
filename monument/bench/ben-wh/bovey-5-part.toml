@@ -1,0 +1,11 @@
+length = "peal"
+methods = [
+    { title = "Bovey Tracey Surprise Major", shorthand = "S" },
+    { title = "Bovey Tracey Alliance Major", shorthand = "A" },
+    { title = "Bovey Castle Surprise Major", shorthand = "C" },
+]
+part_head = "156342"
+method_count = { min = 1300, max = 2100 }
+
+bob_weight = -15
+single_weight = -20
