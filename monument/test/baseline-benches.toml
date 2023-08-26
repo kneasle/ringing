@@ -1,0 +1,99 @@
+["bench\\b8-ala-MBD.toml"]
+secs = 0
+nanos = 85696200
+
+["bench\\bristol-royal-peal-far-places.toml"]
+secs = 3
+nanos = 434112800
+
+["bench\\bristol-royal-peal.toml"]
+secs = 3
+nanos = 104059500
+
+["bench\\lincoln-spliced.toml"]
+secs = 0
+nanos = 78241300
+
+["bench\\non-duffer\\bristol-s8.toml"]
+secs = 0
+nanos = 30678300
+
+["bench\\use-cases\\BohemianRhapsody4SplicedMinor720.toml"]
+secs = 8
+nanos = 461316300
+
+["bench\\use-cases\\BristolSurpriseMajorQP.toml"]
+secs = 6
+nanos = 170370400
+
+["bench\\use-cases\\BristolSurpriseMajorQP_withHalfLeadCalls.toml"]
+secs = 0
+nanos = 32578200
+
+["bench\\use-cases\\BristolSurpriseMaxPeal.toml"]
+secs = 2
+nanos = 414197200
+
+["bench\\use-cases\\BristolSurpriseMaxQP.toml"]
+secs = 2
+nanos = 308959700
+
+["bench\\use-cases\\BristolSurpriseRoyalQP.toml"]
+secs = 0
+nanos = 779697600
+
+["bench\\use-cases\\CambridgeSurpriseMajorQP.toml"]
+secs = 3
+nanos = 444607900
+
+["bench\\use-cases\\DevaSurpriseMajorQP.toml"]
+secs = 0
+nanos = 37454200
+
+["bench\\use-cases\\DoubleOxfordBobMajorQP.toml"]
+secs = 12
+nanos = 139390700
+
+["bench\\use-cases\\PetersboroughSurpriseMajorQP.toml"]
+secs = 12
+nanos = 566636900
+
+["bench\\use-cases\\PlainBobCatersQP.toml"]
+secs = 20
+nanos = 101804000
+
+["bench\\use-cases\\PlainBobCinquesQP.toml"]
+secs = 0
+nanos = 813903200
+
+["bench\\use-cases\\PlainBobMajorQP.toml"]
+secs = 6
+nanos = 864045500
+
+["bench\\use-cases\\PlainBobMinor720.toml"]
+secs = 90
+nanos = 489697900
+
+["bench\\use-cases\\PlainBobTriplesQP.toml"]
+secs = 0
+nanos = 577911900
+
+["bench\\use-cases\\Standard8SplicedSurpriseMajorPracticeTouch.toml"]
+secs = 42
+nanos = 432760200
+
+["bench\\use-cases\\Standard8SplicedSurpriseMajorQP.toml"]
+secs = 98
+nanos = 206554000
+
+["bench\\use-cases\\VenusiumSurpriseMajorQP.toml"]
+secs = 8
+nanos = 858750000
+
+["bench\\use-cases\\YorkshireSurpriseMajorPeal.toml"]
+secs = 7
+nanos = 103961800
+
+["bench\\yorkshire-major-qp.toml"]
+secs = 1
+nanos = 341812400

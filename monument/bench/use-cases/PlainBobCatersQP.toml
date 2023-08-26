@@ -1,0 +1,41 @@
+# General
+length = "QP"
+num_comps = 100
+
+# Methods
+method = { title = "Plain Bob Caters" }
+
+# Calls
+base_calls = "near"
+bob_weight = -4
+single_weight = -6
+
+# Music
+base_music = "none"
+music = [
+    # 56s & 65s
+    { patterns = ["*56789", "*65789"], weight = 1 }, # Boost 567s and 657s
+
+    # 4, 5, 6, 7, and 8 Bell Runs
+    { run_lengths = [4, 5, 6, 7, 8] },
+    
+    # Near Misses
+    { patterns = ["123456798", "123456879", "123457689", "123465789", "123546789", "124356789",
+                  "132456789", "213456789"], weight = 1 },
+
+    # Combinations from named rows
+    { patterns = ["*468", "*987", "*2468",                         # From Queens, Rollercoaster, Queens
+                  "*8495", "*97568", "*xxx7x8x9x"], weight = 1 },  # From Tittums, Whittingtons, Tittums
+
+    # Named Rows
+    { patterns = [ "123456789", "128634975", "132547698", "135729468",  # Rounds, Heywood's, Priory/The Intermediate, Princesses
+                   "135792468", "153974286", "162738495", "186429753",  # Queens, Kennet, Tittums, Yeovil Octaves
+                   "187529643",  # Hereford Octaves/The Octaves,
+                   "189674523", "198765432",  # Jacks, Jokers
+                   "312458679", "312497568", "321654987", "543216789",  # Burdette, Whittingtons, Rollercoaster, See-saw
+                   "564738291", "654321789", "975312468", "975321468",  # Exploded Tittums, Reverse Waterfall, Kings, Princes
+                   "987123456", "987654321"], weight = 1 },             # Waterfall, Backrounds
+]
+
+# Courses
+split_tenors = true

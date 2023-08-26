@@ -1,0 +1,42 @@
+# General
+length = "Peal"
+num_comps = 100
+
+# Methods
+method = { title = "Bristol Surprise Maximus" }
+
+# Calls
+base_calls = "near"
+bob_weight = -4
+single_weight = -6
+
+# Music
+base_music = "none"
+music = [
+    # 56s & 65s
+    { patterns = ["567890ET*", "*567890ET", "657890ET*", "*657890ET"], weight = 1 }, # Boost 5678s and 6578s
+
+    # 4, 5, 6, 7, 8, 9, 10 and 11 Bell Runs
+    { run_lengths = [4, 5, 6, 7, 8, 9, 10, 11] },
+    
+    # Near Misses
+    { patterns = ["1234567890TE", "123456789E0T", "1234567809ET", "1234567980ET", "1234568790ET", "1234576890ET",
+                  "1234657890ET", "1235467890ET", "1243567890ET", "1324567890ET", "2134567890ET"], weight = 1 },
+    
+    # Combinations from named rows
+    { patterns = ["*24680T", "*9078ET", "*E9780T", "xxxxx9x0xExT"], weight = 1 }, # From Queens, Hagdyke, Whittingtons and tittums
+
+    # Named Rows
+    { patterns = [ "1234567890ET", "1256349078ET", "132547698E0T", "135792E4680T", # Rounds, Hagdyke, Priory/The Intermediate, Princesses
+                   "13579E24680T", "15926037E48T", "172839405E6T", "10E89674523T", # Queens, Emmanuel, Tittums, Jacks
+                   "1E098765432T", "213546879E0T", "21543876E09T", "2579E641380T", # Jokers, Burdette, Rollercoaster, Boogie-Woogie
+                   "31247568E90T", "123456E9780T", "531246E9780T", "6543217890ET", # Ripple Tittums, Single Whittingtons, Double Whittingtons, See-saw/Reverse Waterfall
+                   "675849302E1T", "E9753124680T", "E9753214680T", "TE0987123456", # Exploded Tittums, Kings, Princes, Waterfall
+                   "TE0987654321" ], weight = 1 },                                 # Backrounds
+    
+    # Undesirables
+    { pattern = "*TE", weight = -2, stroke = "back" }, # Slightly penalise TEs at back
+]
+
+# Courses
+split_tenors = false
