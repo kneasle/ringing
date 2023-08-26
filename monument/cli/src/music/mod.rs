@@ -22,7 +22,6 @@ pub enum BaseMusic {
     Default,
     /// Complib music profile is used
     Complib,
-    // TODO: Other music profiles
 }
 
 /// The specification for a music file
