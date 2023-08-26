@@ -210,16 +210,6 @@ impl Default for BaseMusic {
     }
 }
 
-trait Complib {
-    fn complib() -> Self;
-}
-
-impl Complib for BaseMusic {
-    fn complib() -> Self {
-        Self::Complib
-    }
-}
-
 #[rustfmt::skip] // So the `=>`s can line up
 fn default_music_toml(stage: Stage) -> Option<&'static str> {
     match stage {
