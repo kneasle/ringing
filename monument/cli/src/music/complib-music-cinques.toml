@@ -9,13 +9,13 @@
 # Display 56s
 [[music]]
 name = "56s"
-patterns = ["*567890E"]
+pattern = "*567890E"
 weight = 0
 
 # Display 65s
 [[music]]
 name = "65s"
-patterns = ["*657890E"]
+pattern = "*657890E"
 weight = 0
 
 # 4-bell Runs
