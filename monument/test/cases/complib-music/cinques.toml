@@ -2,5 +2,5 @@
 
 length = { min = 220, max = 440 }
 method = "Plain Bob Cinques"
-num_comps = 10
+num_comps = 20
 base_music = "complib"
