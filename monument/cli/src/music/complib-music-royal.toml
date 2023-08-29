@@ -1,31 +1,57 @@
 # Music file for 10-bell complib music compositions
+# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# weighting) and the second gives the scoring that counts towards the total music score.
+
+#--------------------------#
+#- Displayed header music -#
+#--------------------------#
+
+# Display 56s
+[[music]]
+name = "56s"
+patterns = ["567890*", "*567890"]
+weight = 0
+
+# Display 65s
+[[music]]
+name = "56s"
+patterns = ["657890*", "*657890"]
+weight = 0
+
+# 4-bell Runs
+[[music]]
+run_length = 4
+weight = 0
+
+# Display 09s at back
+[[music]]
+pattern = "*09"
+stroke = "back"
+weight = 0
+
+#-----------------#
+#- Music scoring -#
+#-----------------#
 
 # 56s & 65s
 [[music]]
-patterns = ["567890*", "*567890", "657890*", "*657890"]  # Boost 5678s and 6578s
-weight = 1
+patterns = ["567890*", "*567890", "657890*", "*657890"]  # Boost 56s and 65s
+show = false
 
 # 4, 5, 6, 7, 8 and 9 Bell Runs
 [[music]]
-run_length = 4
-weight = 1
-
-[[music]]
-run_lengths = [5, 6, 7, 8, 9]
-weight = 1
-show = false  # Only show 4-bell runs
+run_lengths = [4, 5, 6, 7, 8, 9]
+show = false
 
 # Near Misses
 [[music]]
 patterns = ["1234567809", "1234567980", "1234568790", "1234576890", "1234657890", "1235467890",
             "1243567890", "1324567890", "2134567890"]
-weight = 1
 show = false
 
 # Combinations from named rows
 [[music]]
 patterns = ["*24680", "*975680", "x6x7x8x9x0"]  # From Queens, Whittingtons and Tittums
-weight = 1
 show = false
 
 # Named Rows
@@ -36,5 +62,4 @@ patterns = ["1234567890", "1256349078", "1286349750", "1325476980", # Rounds, Ha
             "3124586790", "3124975680", "3216549870", "5432167890", # Burdette, Whittingtons, Rollercoaster, See-saw
             "5647382910", "6543217890", "9753124680", "9753214680", # Exploded Tittums, Reverse Waterfall, Kings, Princes
             "0987123456", "0987654321" ]                            # Waterfall, Backrounds
-weight = 1
 show = false

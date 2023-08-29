@@ -23,6 +23,12 @@ weight = 0
 run_length = 4
 weight = 0
 
+# Display TEs at back
+[[music]]
+pattern = "*TE"
+stroke = "back"
+weight = 0
+
 #-----------------#
 #- Music scoring -#
 #-----------------#

@@ -38,6 +38,12 @@ weight = 0
 patterns = ["8765*", "*8765"]
 weight = 0
 
+# Display 87s at back
+[[music]]
+pattern = "*87"
+stroke = "back"
+weight = 0
+
 #-----------------#
 #- Music scoring -#
 #-----------------#
