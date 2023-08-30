@@ -487,7 +487,7 @@ Like [`base_calls`](#base_calls), `base_music` adds a set of music definitions t
    - [Major](src/music/default-music-major.toml)
    - [Royal](src/music/default-music-royal.toml)
    - [Maximus](src/music/default-music-maximus.toml)
-3. `base_music = "complib"` **_(since v0.14.0)_**: For most stages, this adds a music profile that follows the complib music
+3. `base_music = "complib"` _(since v0.14.0)_: For most stages, this adds a music profile that follows the complib music
    scoring (without the scoring for wraps included currently).
 
    The complib music profiles are equivalent to importing the following music files:
