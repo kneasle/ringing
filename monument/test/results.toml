@@ -811,20 +811,18 @@ len |  music     CRUs    5678s     6578s      4-bell runs        5678 combs     
  len |  music     65s   65s       4-bell runs       *TE | avg score | calling
 '''
 "test/cases/complib-music/minor.toml" = '''
-len |  music     *56    4-bell runs | avg score | calling
-----|-------------------------------|-----------|-----------
-144 |   30.00 :    8    6 ( 2f  4b) |  0.183333 | IW
-120 |   30.00 :    8    6 ( 2f  4b) |  0.250000 | 
-144 |   43.00 :   16    8 ( 5f  3b) |  0.273611 | HB
-144 |   44.00 :   16   12 ( 7f  5b) |  0.280556 | BH
- 72 |   46.00 :   24    7 ( 5f  2b) |  0.563889 | HHH
-240 |   55.00 :   24   11 ( 6f  5b) |  0.199167 | HHFI
-288 |   58.00 :   24   10 ( 7f  3b) |  0.170139 | HHFWW
-216 |   59.00 :   24   10 ( 6f  4b) |  0.223148 | HHIBWW
-240 |   61.00 :   24   18 (10f  8b) |  0.224167 | HFIH
-288 |   62.00 :   24   13 ( 7f  6b) |  0.184028 | HHIBI
-----|-------------------------------|-----------|-----------
-len |  music     *56    4-bell runs | avg score | calling
+len |  music     *65 | avg score | calling
+----|----------------|-----------|-----------
+144 |   30.00 :    0 |  0.183333 | IW
+120 |   30.00 :    0 |  0.250000 | 
+144 |   43.00 :    0 |  0.273611 | HB
+144 |   44.00 :    0 |  0.280556 | BH
+ 72 |   46.00 :    0 |  0.563889 | HHH
+216 |   49.00 :    0 |  0.176852 | IBWWHH
+216 |   51.00 :    0 |  0.186111 | HIBWWH
+216 |   59.00 :    0 |  0.223148 | HHIBWW
+----|----------------|-----------|-----------
+len |  music     *65 | avg score | calling
 '''
 "test/cases/complib-music/royal.toml" = '''
 len |  music     567890s   657890s       4-bell runs    | avg score | calling
