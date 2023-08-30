@@ -1,8 +1,8 @@
 # Test to give complib music minus wrap score for 10 royal comps
 
-length = { min = 360, max = 800 }
+length = { min = 360, max = 602 }
 method = "Yorkshire Surprise Royal"
-num_comps = 10
+num_comps = 20
 base_music = "complib"
 
 [[calls]]
