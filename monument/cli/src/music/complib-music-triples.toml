@@ -1,0 +1,86 @@
+# Music file for 7-bell complib music compositions
+# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# weighting) and the second gives the scoring that counts towards the total music score.
+
+#--------------------------#
+#- Displayed header music -#
+#--------------------------#
+
+# Display 567s & 657s
+[[music]]
+name = "567s"
+pattern = "*567"
+weight = 0
+
+# Display 657s
+[[music]]
+name = "657s"
+pattern = "*657"
+weight = 0
+
+#crus
+[[music]]
+preset = "crus"
+weight = 0
+
+# 4-bell Runs
+[[music]]
+run_length = 4
+weight = 0
+
+# 46s
+[[music]]
+name = "46s"
+pattern = "*46"
+weight = 0
+
+#-----------------#
+#- Music scoring -#
+#-----------------#
+
+# 56s & 65s
+[[music]]
+patterns = ["*567", "*657"]  # Boost 567s and 657s
+show = false
+
+# crus
+[[music]]
+preset = "crus"
+show = false
+
+# 4, 5, and 6 Bell Runs
+[[music]]
+run_lengths = [4, 5, 6]
+show = false
+
+# Combination Near Misses
+[[music]]
+patterns = ["1234576", "1234657", "1235467", "1243567", "1324567",
+            "2134567", "1235476", "1243657", "1324576", "1325476"]
+show = false
+
+# 567 combinations
+[[music]]
+preset = "5678 combinations"
+show = false
+
+# 46s (Breakdown)
+[[music]]
+patterns = ["*46", "*246", "*746", "*7546"]
+show = false
+
+# Combinations from named rows
+[[music]]
+patterns = ["*246", "*346", "*347", "*357",    # From Queens, Whittingtons, Hagdyke
+            "*374", "*576", "*746", "*756",    # From Tittums, Bowbells, Princesses, Burdette
+            "*765", "x5x6x7x"]                 # From Rollercoaster, Tittums
+show = false
+
+# Named Rows
+[[music]]
+patterns = [ "1234567", "1256347", "1275346", "1324576",  # Rounds, Hagdyke, Whittingtons, Bowbells
+             "1325476", "1352746", "1357246", "1432765",  # Priory/The Intermediate, Princesses, Queens, Rollercoaster
+             "1526374", "1674523", "1765243", "1765432",  # Tittums, Jacks, St Michael's, Jokers
+             "3124756", "4321567", "4536271", "7531246",  # Burdette, See-saw, Exploded Tittums, Kings
+             "7532146", "7654321"]                        # Princes, Backrounds
+show = false

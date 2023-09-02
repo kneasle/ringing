@@ -1,0 +1,5 @@
+# Uses a music profile that matches the music scoring of Complib (minus the wraps)
+
+length = "QP"
+method = "Yorkshire Surprise Major"
+base_music = "complib"

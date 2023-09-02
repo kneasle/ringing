@@ -1,0 +1,60 @@
+# Music file for 11-bell complib music compositions
+# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# weighting) and the second gives the scoring that counts towards the total music score.
+
+#--------------------------#
+#- Displayed header music -#
+#--------------------------#
+
+# Display 56s
+[[music]]
+name = "56s"
+pattern = "*567890E"
+weight = 0
+
+# Display 65s
+[[music]]
+name = "65s"
+pattern = "*657890E"
+weight = 0
+
+# 4-bell Runs
+[[music]]
+run_length = 4
+weight = 0
+
+#-----------------#
+#- Music scoring -#
+#-----------------#
+
+# 56s & 65s
+[[music]]
+patterns = ["*567890E", "*657890E"]  # Boost 56s and 65s
+show = false
+
+# 4, 5, 6, 7, 8, 9, and 10 Bell Runs
+[[music]]
+run_lengths = [4, 5, 6, 7, 8, 9, 10]
+show = false
+
+# Near Misses
+[[music]]
+patterns = ["123456789E0", "1234567809E", "1234567980E", "1234568790E", "1234576890E",
+            "1234657890E", "1235467890E", "1243567890E", "1324567890E", "2134567890E"]
+show = false
+
+# Combinations from named rows
+[[music]]
+patterns = ["*E09", "*4680", "*24680", "*E9780",  # From Rollercoaster, Queens, Queens, Whittingtons
+            "*9078E", "xxxxx9x0xEx"]              # From Hagdyke, Tittums
+show = false
+
+# Named Rows
+[[music]]
+patterns = ["1234567890E", "1256349078E", "132547698E0", "135792E4680",  # Rounds, Hagdyke, Priory/The Intermediate, Princesses
+            "13579E24680", "15926037E48", "172839405E6", "10E89674523",  # Queens, Emmanuel, Tittums, Jacks
+            "1E098765432", "213546879E0", "21543876E09", "2579E641380",  # Jokers, Burdette, Rollercoaster, Boogie-Woogie
+            "31247568E90", "123456E9780", "531246E9780", "6543217890E",  # Ripple Tittums, Single Whittingtons, Double Whittingtons, See-saw/Reverse Waterfall
+            "675849302E1", "E9753124680", "E9753214680", "E0987123456",  # Exploded Tittums, Kings, Princes, Waterfall
+            "E0987654321"]                                               # Backrounds
+show = false

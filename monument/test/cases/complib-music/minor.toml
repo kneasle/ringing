@@ -1,0 +1,6 @@
+# Test to give complib music minus wrap score for 10 minor comps
+
+length = { min = 72, max = 216 }
+method = "Norwich Surprise Minor"
+num_comps = 20
+base_music = "complib"

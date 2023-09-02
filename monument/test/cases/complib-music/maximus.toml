@@ -1,0 +1,6 @@
+# Test to give complib music minus wrap score for 10 maximus comps
+
+length = 1056
+method = "Yorkshire Surprise Maximus"
+num_comps = 20
+base_music = "complib"

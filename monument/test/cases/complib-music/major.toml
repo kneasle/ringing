@@ -1,0 +1,6 @@
+# Test to give complib music minus wrap score for 10 major comps
+
+length = { min = 448, max = 448 }
+method = "Yorkshire Surprise Major"
+num_comps = 20
+base_music = "complib"

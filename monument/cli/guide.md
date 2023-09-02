@@ -472,8 +472,8 @@ See `base_music`:
 
 #### `base_music`
 
-Like [`base_calls`](#base_calls), `base_music` adds a set of basic music definitions to the search.
-`base_music` has two values, the default being `base_music = "default"`:
+Like [`base_calls`](#base_calls), `base_music` adds a set of music definitions to the search.
+`base_music` has three values, the default being `base_music = "default"`:
 
 1. `base_music = "none"`:  Adds no music to the search; the only music will be what you explicitly
    specify.
@@ -482,11 +482,22 @@ Like [`base_calls`](#base_calls), `base_music` adds a set of basic music definit
    summary line shown below every composition.
 
    The default music profiles are equivalent to importing the following music files:
-   - [Minor](src/default-music-minor.toml)
-   - [Triples](src/default-music-triples.toml)
-   - [Major](src/default-music-major.toml)
-   - [Royal](src/default-music-royal.toml)
-   - [Maximus](src/default-music-maximus.toml)
+   - [Minor](src/music/default-music-minor.toml)
+   - [Triples](src/music/default-music-triples.toml)
+   - [Major](src/music/default-music-major.toml)
+   - [Royal](src/music/default-music-royal.toml)
+   - [Maximus](src/music/default-music-maximus.toml)
+3. `base_music = "complib"` _(since v0.14.0)_: For most stages, this adds a music profile that follows the complib music
+   scoring (without the scoring for wraps included currently).
+
+   The complib music profiles are equivalent to importing the following music files:
+   - [Minor](src/music/complib-music-minor.toml)
+   - [Triples](src/music/complib-music-triples.toml)
+   - [Major](src/music/complib-music-major.toml)
+   - [Caters](src/music/complib-music-caters.toml)
+   - [Royal](src/music/complib-music-royal.toml)
+   - [Cinques](src/music/complib-music-cinques.toml)
+   - [Maximus](src/music/complib-music-maximus.toml)
 
 #### `music_file`
 

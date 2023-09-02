@@ -1,0 +1,61 @@
+# Music file for 9-bell complib music compositions
+# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# weighting) and the second gives the scoring that counts towards the total music score.
+
+#--------------------------#
+#- Displayed header music -#
+#--------------------------#
+
+# Display 56s
+[[music]]
+name = "56s"
+pattern = "*56789"
+weight = 0
+
+# Display 65s
+[[music]]
+name = "65s"
+pattern = "*65789"
+weight = 0
+
+# 4-bell runs
+[[music]]
+run_length = 4
+weight = 0
+
+#-----------------#
+#- Music scoring -#
+#-----------------#
+
+# 56s & 65s
+[[music]]
+patterns = ["*56789", "*65789"]  # Boost 56s and 65s
+show = false
+
+# 4, 5, 6, 7, and 8 Bell Runs
+[[music]]
+run_lengths = [4, 5, 6, 7, 8]
+show = false
+
+# Near Misses
+[[music]]
+patterns = ["123456798", "123456879", "123457689", "123465789", "123546789", "124356789",
+            "132456789", "213456789"]
+show = false
+
+# Combinations from named rows
+[[music]]
+patterns = ["*468", "*987", "*2468",          # From Queens, Rollercoaster, Queens
+            "*8495", "*97568", "*xxx7x8x9x"]  # From Tittums, Whittingtons, Tittums
+show = false
+
+# Named Rows
+[[music]]
+patterns = [ "123456789", "128634975", "132547698", "135729468",  # Rounds, Heywood's, Priory/The Intermediate, Princesses
+             "135792468", "153974286", "162738495", "186429753",  # Queens, Kennet, Tittums, Yeovil Octaves
+             "187529643",  # Hereford Octaves/The Octaves,
+             "189674523", "198765432",  # Jacks, Jokers
+             "312458679", "312497568", "321654987", "543216789",  # Burdette, Whittingtons, Rollercoaster, See-saw
+             "564738291", "654321789", "975312468", "975321468",  # Exploded Tittums, Reverse Waterfall, Kings, Princes
+             "987123456", "987654321"]                            # Waterfall, Backrounds
+show = false
