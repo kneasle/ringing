@@ -81,7 +81,7 @@ checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "bellframe"
-version = "0.11.5"
+version = "0.11.6"
 dependencies = [
  "dirs",
  "edit-distance",
@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "kneasle_ringing_utils"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "number_prefix",
 ]
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "monument"
-version = "0.13.4"
+version = "0.14.0"
 dependencies = [
  "bellframe",
  "bit-vec",
@@ -711,7 +711,7 @@ dependencies = [
 
 [[package]]
 name = "monument_cli"
-version = "0.13.4"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "bellframe",
