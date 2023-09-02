@@ -9,6 +9,7 @@ use std::{
 };
 
 use anyhow::Context;
+use path_slash::PathExt;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -28,9 +29,8 @@ pub fn load_cases<D>(
             // Get the path of the file, relative to the `monument` directory
             let entry = entry.context("Error reading directory")?;
             let extension = entry.path().extension().and_then(|s| s.to_str());
-            let path_from_monument = PathFromMonument {
-                path: entry.path().components().skip(1).collect::<PathBuf>(),
-            };
+            let path_from_monument =
+                PathFromMonument::new(entry.path().components().skip(1).collect::<PathBuf>());
 
             match extension {
                 Some("toml") => {
@@ -170,7 +170,7 @@ fn load_ignore(path: &str) -> anyhow::Result<HashMap<PathFromMonument, IgnoreRea
     let ignore_file: IgnoreFile = toml::from_str(&ignore_toml)
         .with_context(|| format!("Error parsing ignore file ({:?})", full_ignore_path))?;
     // Flatten the `IgnoreFile` into a single `HashMap`
-    let mut ignore_map: HashMap<PathBuf, IgnoreReason> = ignore_file
+    let mut ignore_map: HashMap<PathFromMonument, IgnoreReason> = ignore_file
         .ignore
         .into_iter()
         .map(|path| (path, IgnoreReason::ExplicitIgnore))
@@ -185,17 +185,14 @@ fn load_ignore(path: &str) -> anyhow::Result<HashMap<PathFromMonument, IgnoreRea
         ignore_map.insert(path, IgnoreReason::MusicFile);
     }
     // Wrap the paths in `PathFromMonument`s
-    Ok(ignore_map
-        .into_iter()
-        .map(|(path, ign)| (PathFromMonument { path }, ign))
-        .collect())
+    Ok(ignore_map)
 }
 
 /// The contents of the `ignore.toml` file, found at [`IGNORE_PATH`].
 #[derive(Debug, Deserialize)]
 struct IgnoreFile {
-    ignore: HashSet<PathBuf>,
-    music_files: HashSet<PathBuf>,
+    ignore: HashSet<PathFromMonument>,
+    music_files: HashSet<PathFromMonument>,
 }
 
 /// Reasons why a given test file could be ignored
@@ -220,7 +217,7 @@ pub fn load_results<'s, T: Deserialize<'s>>(
     path: impl AsRef<Path>,
     toml_buf: &'s mut String,
 ) -> anyhow::Result<ResultsFile<T>> {
-    let full_path = PathFromMonument::new(path.as_ref()).relative_to_cargo_toml();
+    let full_path = PathFromMonument::new(path).relative_to_cargo_toml();
     if !full_path.exists() {
         return Ok(ResultsFile::new()); // Return empty results if file doesn't exist
     }
@@ -251,7 +248,8 @@ pub fn write_results<T: Serialize>(results: &ResultsFile<T>, path: &str) -> anyh
 #[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct PathFromMonument {
-    path: PathBuf,
+    /// String representing the path, always using forward slashes
+    path: String,
 }
 
 const PATH_TO_MONUMENT_DIR: &str = "../";
@@ -259,7 +257,7 @@ const PATH_TO_MONUMENT_DIR: &str = "../";
 impl PathFromMonument {
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
-            path: path.as_ref().to_owned(),
+            path: path.as_ref().to_slash_lossy().into_owned(),
         }
     }
 
@@ -272,6 +270,6 @@ impl PathFromMonument {
 
 impl std::fmt::Display for PathFromMonument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.path.as_os_str().to_string_lossy())
+        write!(f, "{}", self.path)
     }
 }

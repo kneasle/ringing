@@ -31,6 +31,7 @@ toml = "0.5"
 rayon = "1.7"
 regex = "1.8"
 walkdir = "2.3"
+path-slash = "0.2.1"
 
 [[test]]
 name = "integration"
