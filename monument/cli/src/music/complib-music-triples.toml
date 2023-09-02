@@ -28,10 +28,10 @@ weight = 0
 run_length = 4
 weight = 0
 
-# 46s (Breakdown)
+# 46s
 [[music]]
 name = "46s"
-patterns = ["*46", "*246", "*746", "*7546"]
+pattern = "*46"
 weight = 0
 
 #-----------------#
