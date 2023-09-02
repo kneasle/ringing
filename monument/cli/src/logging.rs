@@ -159,7 +159,7 @@ impl CompositionPrinter {
         print_duffers: bool,
     ) -> Self {
         Self {
-            length_width: search.length_range().end().to_string().len(),
+            length_width: search.length_range().end().to_string().len().max(3),
             method_counts: search
                 .methods()
                 .map(|(method, shorthand)| {
