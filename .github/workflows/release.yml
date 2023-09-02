@@ -89,16 +89,16 @@ jobs:
         build: [linux, macos, windows-64, windows-32]
         include:
         - build: linux
-          os: ubuntu-18.04
+          os: ubuntu-latest
           target: x86_64-unknown-linux-musl
         - build: macos
           os: macos-latest
           target: x86_64-apple-darwin
         - build: windows-64
-          os: windows-2019
+          os: windows-latest
           target: x86_64-pc-windows-msvc
         - build: windows-32
-          os: windows-2019
+          os: windows-latest
           target: i686-pc-windows-msvc
 
     steps:
