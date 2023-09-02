@@ -4,17 +4,24 @@
 
 #### Headline Features
 - (#284) Allow scoring of all-the-work compositions, using the `atw_weight` parameter.
+- (#306) Add new option `base_music = "complib"`, which adds base music which exactly matches that
+    of CompLib (except that Monument can't count wraps).  Thanks, @samuelsenior!
 
 #### Smaller Changes
 - (#205) Remove chunks and links which contribute too much method counts.  This should have a small
     speed improvement for compositions which include one lead of each method in each part
     (e.g. 23-spliced Surprise Major).
-- (#221) In the guide, use valid values for `{start,end}_rows`.
+- (#221) In the guide, always use valid values for `{start,end}_rows`.
+- (#309) Align columns correctly when the maximum composition length is 2-digits long.
 
 #### Internal Improvements
 - (#203) Automate the release workflow.  Now, `cargo cut-release` is enough to trigger the
     whole release pipeline.
-- (#204) Implement benchmark runner.
+- (#204, #304, #310) Implement benchmark runner, and add benchmarks from real use-case (first
+    contribution; thanks @samuelsenior!).
+- (#296) Add `ARCHITECTURE.md` to help new contributors getting an idea of the code
+- (#303) Completely rewrite the interface of Monument's internal library to make it more amenable
+    to a graphical interface.
 
 ### Bellframe v0.12.0
 - (#221) Add `Bell::MAX`, which returns the largest `Bell` possible (i.e. the 254th)
