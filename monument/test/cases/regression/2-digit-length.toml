@@ -1,0 +1,5 @@
+# Tests that the columns of the output align when the maximum length is <100 (previously Monument
+# wouldn't pad the lengths to 3 columns, and therefore cause the misalignment)
+
+length = { min = 0, max = 84 }
+method = "Plain Bob Triples"
