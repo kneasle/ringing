@@ -8,6 +8,7 @@ use itertools::Itertools;
 use common::PathFromMonument;
 use ringing_utils::PrettyDuration;
 
+const BASELINE_DURATIONS_PATH: &'static str = "test/baseline-benches.toml";
 const PINNED_DURATIONS_PATH: &'static str = "test/.pinned-benches.toml";
 const LAST_DURATIONS_PATH: &'static str = "test/.last-benches.toml";
 
@@ -19,16 +20,21 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run() -> anyhow::Result<()> {
-    // Load benchmarks
+    // Load previous results
+    let baseline_durations =
+        common::load_results::<'_, Duration>(BASELINE_DURATIONS_PATH, &mut String::new())?;
     let mut pinned_durations =
         common::load_results::<'_, Duration>(PINNED_DURATIONS_PATH, &mut String::new())?;
     let mut last_durations =
         common::load_results::<'_, Duration>(LAST_DURATIONS_PATH, &mut String::new())?;
-    let unrun_cases = common::load_cases(&["bench/"], "test/ignore.toml", |path, _| CaseData {
-        pinned_duration: pinned_durations.remove(path),
-        last_duration: last_durations.remove(path),
-    })?;
-
+    // Load benchmarks
+    let mut unrun_cases =
+        common::load_cases(&["bench/"], "test/ignore.toml", |path, _| CaseData {
+            pinned_duration: pinned_durations.remove(path),
+            last_duration: last_durations.remove(path),
+        })?;
+    // Sort results with `new cases < fast cases < slow cases`
+    unrun_cases.sort_by_key(|case| baseline_durations.get(&case.path));
     // Run benchmarks
     let run_cases = unrun_cases.into_iter().map(run_test).collect_vec();
 
