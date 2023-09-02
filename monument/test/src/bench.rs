@@ -1,9 +1,8 @@
 mod common;
 
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 use colored::{ColoredString, Colorize};
-use itertools::Itertools;
 
 use common::PathFromMonument;
 use ringing_utils::PrettyDuration;
@@ -36,19 +35,23 @@ fn run() -> anyhow::Result<()> {
     // Sort results with `new cases < fast cases < slow cases`
     unrun_cases.sort_by_key(|case| baseline_durations.get(&case.path));
     // Run benchmarks
-    let run_cases = unrun_cases.into_iter().map(run_test).collect_vec();
-
-    // Save times
-    common::write_results(
-        &run_cases
-            .iter()
-            .map(|case| (case.path.clone(), case.duration))
-            .collect(),
-        LAST_DURATIONS_PATH,
-    )
+    let mut run_cases = Vec::new();
+    for case in unrun_cases {
+        run_cases.push(run_bench(case));
+        // Save times after every benchmark finishes.  This way, if we ctrl-C the benchmark runner
+        // it will still have last/pinned versions for the benches that we did actually run.
+        common::write_results(
+            &run_cases
+                .iter()
+                .map(|case| (case.path.clone(), case.duration))
+                .collect::<BTreeMap<_, _>>(),
+            LAST_DURATIONS_PATH,
+        )?;
+    }
+    Ok(())
 }
 
-fn run_test(unrun_case: common::UnrunTestCase<CaseData>) -> common::RunTestCase<CaseData> {
+fn run_bench(unrun_case: common::UnrunTestCase<CaseData>) -> common::RunTestCase<CaseData> {
     println!();
     println!("Running {}", unrun_case.name().white().bold());
 
