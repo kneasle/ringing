@@ -6,6 +6,7 @@ use colored::{ColoredString, Colorize};
 use itertools::Itertools;
 
 use common::PathFromMonument;
+use ringing_utils::PrettyDuration;
 
 const PINNED_DURATIONS_PATH: &'static str = "test/.pinned-benches.toml";
 const LAST_DURATIONS_PATH: &'static str = "test/.last-benches.toml";
@@ -50,10 +51,8 @@ fn run_test(unrun_case: common::UnrunTestCase<CaseData>) -> common::RunTestCase<
     // Print summary
     println!();
     print!(
-        "Completed in {} (",
-        format!("{:.2?}s", run_case.duration.as_secs_f64())
-            .white()
-            .bold()
+        "Completed in {}",
+        PrettyDuration(run_case.duration).to_string().white().bold()
     );
     if let Some(pinned) = run_case.pinned_duration {
         print!(
@@ -75,6 +74,7 @@ fn run_test(unrun_case: common::UnrunTestCase<CaseData>) -> common::RunTestCase<
     run_case
 }
 
+/// Prints the ratio between two [`Duration`]s as a string like `###x faster` or `###x slower`.
 fn relative_time_string(current: Duration, other: Duration) -> ColoredString {
     let ratio = current.as_secs_f64() / other.as_secs_f64();
     let (direction, bold_color, ratio) = if ratio < 1.0 {
