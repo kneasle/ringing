@@ -63,22 +63,26 @@ fn run_bench(unrun_case: common::UnrunTestCase<CaseData>) -> common::RunTestCase
         "Completed in {}",
         PrettyDuration(run_case.duration).to_string().white().bold()
     );
-    if let Some(pinned) = run_case.pinned_duration {
-        print!(
-            "{} than pinned",
-            relative_time_string(run_case.duration, pinned)
-        );
-        if run_case.last_duration.is_some() {
-            print!("; "); // Delimiter between outputs
+    if run_case.pinned_duration.is_some() || run_case.last_duration.is_some() {
+        print!(" (");
+        if let Some(pinned) = run_case.pinned_duration {
+            print!(
+                "{} than pinned",
+                relative_time_string(run_case.duration, pinned)
+            );
+            if run_case.last_duration.is_some() {
+                print!("; "); // Delimiter between outputs
+            }
         }
+        if let Some(last) = run_case.last_duration {
+            print!(
+                "{} than last",
+                relative_time_string(run_case.duration, last)
+            );
+        }
+        print!(")");
     }
-    if let Some(last) = run_case.last_duration {
-        print!(
-            "{} than last",
-            relative_time_string(run_case.duration, last)
-        );
-    }
-    println!(")");
+    println!(); // Always finish with a newline
 
     run_case
 }
