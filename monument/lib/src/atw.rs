@@ -172,7 +172,7 @@ impl AtwTable {
 
     pub fn atw_score(&self, bitmap: &AtwBitmap) -> f32 {
         let factor = self.atw_factor(bitmap);
-        self.atw_weight * factor * factor
+        self.atw_weight * factor
     }
 
     /// Factor from `0.0..=1.0`, where `0.0` means no place bells are rung and `1.0` means the comp

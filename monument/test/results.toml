@@ -34,205 +34,205 @@ len |  music     *87 | avg score | calling
 "test/cases/atw/5-part.toml" = '''
  len     C    Y    S    P  | atw |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
-5120 :    0    0 2240 2880 | 50% | 156342 |   80.00 :   47 ( 23f  24b)    0f  6b    0f  0b    4f  8b     0 |  0.002930 | PP[B]PP[H]PPP[M]SSSSSSS[M]P[W]PPP[H]PPP[M]P[W]SSSSSSS[W]PPP[H]
-5120 :    0  320 2240 2560 | 62% | 156342 |   80.00 :   47 ( 23f  24b)    0f  6b    0f  0b    4f  8b     0 |  0.005739 | PP[B]PP[H]PPP[M]SSSSSSS[M]Y[W]PPP[H]PPP[M]Y[W]SSSSSSS[W]PPP[H]
-5120 :    0  640 1600 2880 | 61% | 142635 |  116.00 :   68 ( 33f  35b)    0f 10b    6f  4b    0f  6b     0 |  0.014280 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :    0  480 1600 3040 | 62% | 142635 |  116.00 :   67 ( 34f  33b)    1f 10b    6f  4b    0f  6b     0 |  0.014528 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :    0    0 1600 3520 | 48% | 142635 |  119.00 :   69 ( 35f  34b)    2f 10b    6f  4b    0f  6b     0 |  0.012107 | PPP[M]P[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  320 1600 3200 | 62% | 142635 |  119.00 :   69 ( 35f  34b)    2f 10b    6f  4b    0f  6b     0 |  0.015114 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :    0  480 1600 3040 | 62% | 142635 |  119.00 :   70 ( 34f  36b)    1f 10b    6f  4b    0f  6b     0 |  0.015114 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :    0  480 1760 2880 | 62% | 142635 |  119.00 :   69 ( 35f  34b)    0f 10b    8f  4b    0f  6b     0 |  0.015114 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0  640 1760 2720 | 61% | 135264 |  120.00 :   71 ( 32f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.013303 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
-5120 :    0  320 1760 3040 | 62% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.013551 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  480 1760 2880 | 62% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.013551 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :  160  480 1760 2720 | 75% | 135264 |  120.00 :   71 ( 32f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.016996 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
-5120 :  160  160 1760 3040 | 76% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.017299 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :  160  320 1760 2880 | 76% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.017299 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0    0 1760 3360 | 50% | 142635 |  121.00 :   69 ( 36f  33b)    1f 10b    8f  4b    0f  6b     0 |  0.012695 | PPP[M]S[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  640 1760 2720 | 61% | 135264 |  121.00 :   72 ( 33f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.013498 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :    0  480 1760 2880 | 62% | 135264 |  121.00 :   71 ( 34f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.013746 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :    0  480 1760 2880 | 62% | 142635 |  121.00 :   70 ( 35f  35b)    0f 10b    8f  4b    0f  6b     0 |  0.015504 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :    0  320 1760 3040 | 63% | 142635 |  121.00 :   69 ( 36f  33b)    1f 10b    8f  4b    0f  6b     0 |  0.015756 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :  160  480 1760 2720 | 75% | 135264 |  121.00 :   72 ( 33f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.017191 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :  160  320 1760 2880 | 76% | 135264 |  121.00 :   71 ( 34f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.017494 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :    0    0 1760 3360 | 50% | 142635 |  122.00 :   71 ( 36f  35b)    1f 10b    8f  4b    0f  6b     0 |  0.012891 | PPP[M]P[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :    0  320 1760 3040 | 63% | 142635 |  122.00 :   71 ( 36f  35b)    1f 10b    8f  4b    0f  6b     0 |  0.015952 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :  160    0 1760 3200 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014137 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  160 1760 3200 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014137 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  320 1760 3040 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014137 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  480 1760 2880 | 62% | 135264 |  123.00 :   73 ( 33f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.014137 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
-5120 :    0  480 1920 2720 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.014137 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.014389 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160  160 1760 3040 | 76% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.017885 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :  160  320 1760 2880 | 76% | 135264 |  123.00 :   73 ( 33f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.017885 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
-5120 :  160  320 1920 2720 | 76% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.017885 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160  160 1920 2880 | 77% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.018192 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0    0 1920 3200 | 50% | 142635 |  124.00 :   71 ( 37f  34b)    0f 10b   10f  4b    0f  6b     0 |  0.013281 | PPP[M]S[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :  160    0 1760 3200 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014332 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  160 1760 3200 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014332 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  320 1760 3040 | 62% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.014332 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :    0  320 1760 3040 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.014332 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :    0  480 1760 2880 | 62% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.014332 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :    0  480 1920 2720 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.014332 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0  320 1920 2880 | 62% | 142635 |  124.00 :   71 ( 37f  34b)    0f 10b   10f  4b    0f  6b     0 |  0.016090 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :  160  160 1760 3040 | 76% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.018080 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :  160  160 1760 3040 | 76% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018080 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :  160  320 1760 2880 | 76% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.018080 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :  160  320 1920 2720 | 76% | 135264 |  124.00 :   73 ( 35f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.018080 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0  480 1920 2720 | 62% | 135264 |  125.00 :   73 ( 34f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.014528 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
-5120 :  160    0 1920 3040 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014780 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014780 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014780 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :  160  320 1920 2720 | 76% | 135264 |  125.00 :   73 ( 34f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.018275 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :    0    0 2240 2880 | 50% | 156342 |   80.00 :   47 ( 23f  24b)    0f  6b    0f  0b    4f  8b     0 |  0.007812 | PP[B]PP[H]PPP[M]SSSSSSS[M]P[W]PPP[H]PPP[M]P[W]SSSSSSS[W]PPP[H]
+5120 :    0  320 2240 2560 | 62% | 156342 |   80.00 :   47 ( 23f  24b)    0f  6b    0f  0b    4f  8b     0 |  0.010304 | PP[B]PP[H]PPP[M]SSSSSSS[M]Y[W]PPP[H]PPP[M]Y[W]SSSSSSS[W]PPP[H]
+5120 :    0  640 1600 2880 | 61% | 142635 |  116.00 :   68 ( 33f  35b)    0f 10b    6f  4b    0f  6b     0 |  0.018893 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :    0  480 1600 3040 | 62% | 142635 |  116.00 :   67 ( 34f  33b)    1f 10b    6f  4b    0f  6b     0 |  0.019093 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :    0    0 1600 3520 | 48% | 142635 |  119.00 :   69 ( 35f  34b)    2f 10b    6f  4b    0f  6b     0 |  0.016988 | PPP[M]P[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  320 1600 3200 | 62% | 142635 |  119.00 :   69 ( 35f  34b)    2f 10b    6f  4b    0f  6b     0 |  0.019679 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :    0  480 1600 3040 | 62% | 142635 |  119.00 :   70 ( 34f  36b)    1f 10b    6f  4b    0f  6b     0 |  0.019679 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :    0  480 1760 2880 | 62% | 142635 |  119.00 :   69 ( 35f  34b)    0f 10b    8f  4b    0f  6b     0 |  0.019679 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0  640 1760 2720 | 61% | 135264 |  120.00 :   71 ( 32f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.017917 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :    0  320 1760 3040 | 62% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.018116 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  480 1760 2880 | 62% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.018116 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :  160  480 1760 2720 | 75% | 135264 |  120.00 :   71 ( 32f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.020607 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :  160  160 1760 3040 | 76% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.020807 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :  160  320 1760 2880 | 76% | 135264 |  120.00 :   70 ( 33f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.020807 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0    0 1760 3360 | 50% | 142635 |  121.00 :   69 ( 36f  33b)    1f 10b    8f  4b    0f  6b     0 |  0.017578 | PPP[M]S[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  640 1760 2720 | 61% | 135264 |  121.00 :   72 ( 33f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.018112 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :    0  480 1760 2880 | 62% | 135264 |  121.00 :   71 ( 34f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.018312 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :    0  480 1760 2880 | 62% | 142635 |  121.00 :   70 ( 35f  35b)    0f 10b    8f  4b    0f  6b     0 |  0.020069 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :    0  320 1760 3040 | 63% | 142635 |  121.00 :   69 ( 36f  33b)    1f 10b    8f  4b    0f  6b     0 |  0.020269 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :  160  480 1760 2720 | 75% | 135264 |  121.00 :   72 ( 33f  39b)    4f  8b    4f  2b    0f  8b     0 |  0.020803 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :  160  320 1760 2880 | 76% | 135264 |  121.00 :   71 ( 34f  37b)    5f  8b    4f  2b    0f  8b     0 |  0.021002 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :    0    0 1760 3360 | 50% | 142635 |  122.00 :   71 ( 36f  35b)    1f 10b    8f  4b    0f  6b     0 |  0.017773 | PPP[M]P[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :    0  320 1760 3040 | 63% | 142635 |  122.00 :   71 ( 36f  35b)    1f 10b    8f  4b    0f  6b     0 |  0.020464 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :  160    0 1760 3200 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018702 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  160 1760 3200 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018702 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  320 1760 3040 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018702 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  480 1760 2880 | 62% | 135264 |  123.00 :   73 ( 33f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.018702 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :    0  480 1920 2720 | 62% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.018702 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.018901 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160  160 1760 3040 | 76% | 135264 |  123.00 :   72 ( 34f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.021393 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :  160  320 1760 2880 | 76% | 135264 |  123.00 :   73 ( 33f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.021393 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :  160  320 1920 2720 | 76% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.021393 | PPP[M]Y[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  123.00 :   72 ( 34f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.021592 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0    0 1920 3200 | 50% | 142635 |  124.00 :   71 ( 37f  34b)    0f 10b   10f  4b    0f  6b     0 |  0.018164 | PPP[M]S[W]PPPPPP[M]P[W]SSSSS[B]SSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :  160    0 1760 3200 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018897 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  160 1760 3200 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018897 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  320 1760 3040 | 62% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.018897 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :    0  320 1760 3040 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.018897 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :    0  480 1760 2880 | 62% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.018897 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :    0  480 1920 2720 | 62% | 135264 |  124.00 :   73 ( 35f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.018897 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0  320 1920 2880 | 62% | 142635 |  124.00 :   71 ( 37f  34b)    0f 10b   10f  4b    0f  6b     0 |  0.020655 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSS[B]SSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :  160  160 1760 3040 | 76% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.021588 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :  160  160 1760 3040 | 76% | 135264 |  124.00 :   73 ( 35f  38b)    6f  8b    4f  2b    0f  8b     0 |  0.021588 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :  160  320 1760 2880 | 76% | 135264 |  124.00 :   74 ( 34f  40b)    5f  8b    4f  2b    0f  8b     0 |  0.021588 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :  160  320 1920 2720 | 76% | 135264 |  124.00 :   73 ( 35f  38b)    4f  8b    6f  2b    0f  8b     0 |  0.021588 | PPP[M]Y[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0  480 1920 2720 | 62% | 135264 |  125.00 :   73 ( 34f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.019093 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
+5120 :  160    0 1920 3040 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019292 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019292 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019292 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :  160  320 1920 2720 | 76% | 135264 |  125.00 :   73 ( 34f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.021783 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]Y[W]PPP
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
  len     C    Y    S    P  | atw |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
-5120 :  160  160 1920 2880 | 77% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.018582 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  480 1920 2720 | 62% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.014723 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :  160    0 1920 3040 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160    0 1920 3040 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.014975 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :  160  320 1920 2720 | 76% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.018471 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
-5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.018778 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.018778 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.018778 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
-5120 :  160    0 1920 3040 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.015171 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.015171 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :    0  320 1920 2880 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.015171 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :  160  160 1920 2880 | 77% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.018973 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0  320 2080 2720 | 62% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015114 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160    0 2080 2880 | 63% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015366 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0  160 2080 2880 | 63% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015366 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :  160  160 2080 2720 | 76% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.018861 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0  320 2080 2720 | 62% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015309 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0  160 1760 3200 | 62% | 135264 |  129.00 :   75 ( 35f  40b)    7f  8b    4f  2b    0f  8b     0 |  0.015309 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :  160    0 2080 2880 | 63% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015561 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :    0  160 2080 2880 | 63% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.015561 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :  160  160 2080 2720 | 76% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.019057 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
-5120 :    0    0 1760 3360 | 48% | 135264 |  132.00 :   77 ( 36f  41b)    8f  8b    4f  2b    0f  8b     0 |  0.012889 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  132.00 :   77 ( 36f  41b)    6f  8b    6f  2b    0f  8b     0 |  0.016147 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0    0 1760 3360 | 48% | 135264 |  133.00 :   78 ( 37f  41b)    8f  8b    4f  2b    0f  8b     0 |  0.013084 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  160 1760 3200 | 62% | 135264 |  133.00 :   79 ( 36f  43b)    7f  8b    4f  2b    0f  8b     0 |  0.016090 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :    0    0 1920 3200 | 50% | 135264 |  134.00 :   77 ( 37f  40b)    7f  8b    6f  2b    0f  8b     0 |  0.013477 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
-5120 :    0    0 1920 3200 | 50% | 135264 |  135.00 :   79 ( 37f  42b)    7f  8b    6f  2b    0f  8b     0 |  0.013672 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0    0 1920 3200 | 50% | 135264 |  135.00 :   78 ( 38f  40b)    7f  8b    6f  2b    0f  8b     0 |  0.013672 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
-5120 :    0  160 1920 3040 | 63% | 135264 |  135.00 :   79 ( 37f  42b)    6f  8b    6f  2b    0f  8b     0 |  0.016733 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
-5120 :    0    0 1920 3200 | 50% | 135264 |  136.00 :   80 ( 38f  42b)    7f  8b    6f  2b    0f  8b     0 |  0.013867 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
-5120 :    0    0 2080 3040 | 50% | 135264 |  137.00 :   79 ( 38f  41b)    6f  8b    8f  2b    0f  8b     0 |  0.014063 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
-5120 :    0    0 2080 3040 | 50% | 135264 |  138.00 :   80 ( 39f  41b)    6f  8b    8f  2b    0f  8b     0 |  0.014258 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  125.00 :   72 ( 35f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.021983 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  480 1920 2720 | 62% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.019288 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :  160    0 1920 3040 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160    0 1920 3040 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.019487 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :  160  320 1920 2720 | 76% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.021979 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]Y[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   74 ( 35f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.022178 | PPP[M]P[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   74 ( 35f  39b)    4f  8b    6f  2b    0f  8b     0 |  0.022178 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  126.00 :   73 ( 36f  37b)    5f  8b    6f  2b    0f  8b     0 |  0.022178 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]P[W]PPP
+5120 :  160    0 1920 3040 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019683 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019683 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :    0  320 1920 2880 | 63% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.019683 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :  160  160 1920 2880 | 77% | 135264 |  127.00 :   75 ( 36f  39b)    5f  8b    6f  2b    0f  8b     0 |  0.022373 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0  320 2080 2720 | 62% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.019679 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160    0 2080 2880 | 63% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.019878 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0  160 2080 2880 | 63% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.019878 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]Y[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :  160  160 2080 2720 | 76% | 135264 |  128.00 :   74 ( 36f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.022369 | PPP[M]S[W]PPPPPP[M]Y[W]SSSSSS[M]C[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0  320 2080 2720 | 62% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.019874 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0  160 1760 3200 | 62% | 135264 |  129.00 :   75 ( 35f  40b)    7f  8b    4f  2b    0f  8b     0 |  0.019874 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :  160    0 2080 2880 | 63% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.020073 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :    0  160 2080 2880 | 63% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.020073 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]Y[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :  160  160 2080 2720 | 76% | 135264 |  129.00 :   75 ( 37f  38b)    4f  8b    8f  2b    0f  8b     0 |  0.022565 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]C[W]SSSSSS[M]Y[W]PPPPPP[M]S[W]PPP
+5120 :    0    0 1760 3360 | 48% | 135264 |  132.00 :   77 ( 36f  41b)    8f  8b    4f  2b    0f  8b     0 |  0.017769 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  132.00 :   77 ( 36f  41b)    6f  8b    6f  2b    0f  8b     0 |  0.020659 | PPP[M]Y[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0    0 1760 3360 | 48% | 135264 |  133.00 :   78 ( 37f  41b)    8f  8b    4f  2b    0f  8b     0 |  0.017965 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  160 1760 3200 | 62% | 135264 |  133.00 :   79 ( 36f  43b)    7f  8b    4f  2b    0f  8b     0 |  0.020655 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :    0    0 1920 3200 | 50% | 135264 |  134.00 :   77 ( 37f  40b)    7f  8b    6f  2b    0f  8b     0 |  0.018359 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]P[W]PPP
+5120 :    0    0 1920 3200 | 50% | 135264 |  135.00 :   79 ( 37f  42b)    7f  8b    6f  2b    0f  8b     0 |  0.018555 | PPP[M]P[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0    0 1920 3200 | 50% | 135264 |  135.00 :   78 ( 38f  40b)    7f  8b    6f  2b    0f  8b     0 |  0.018555 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]P[W]PPP
+5120 :    0  160 1920 3040 | 63% | 135264 |  135.00 :   79 ( 37f  42b)    6f  8b    6f  2b    0f  8b     0 |  0.021245 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]Y[W]PPP
+5120 :    0    0 1920 3200 | 50% | 135264 |  136.00 :   80 ( 38f  42b)    7f  8b    6f  2b    0f  8b     0 |  0.018750 | PPP[M]P[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
+5120 :    0    0 2080 3040 | 50% | 135264 |  137.00 :   79 ( 38f  41b)    6f  8b    8f  2b    0f  8b     0 |  0.018945 | PPP[M]S[W]PPPPPP[M]P[W]SSSSSS[M]P[W]SSS[H]SS[B]PPPPP[M]S[W]PPP
+5120 :    0    0 2080 3040 | 50% | 135264 |  138.00 :   80 ( 39f  41b)    6f  8b    8f  2b    0f  8b     0 |  0.019141 | PPP[M]S[W]PPPPP[B]SS[H]SSS[M]P[W]SSSSSS[M]P[W]PPPPPP[M]S[W]PPP
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
  len     C    Y    S    P  | atw |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 '''
 "test/cases/atw/cyclic.toml" = '''
  len    C   Y   S   B   W   E  | atw |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 -------------------------------|-----|----------|----------------------------------------------------------------|-----------|-----------
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |   91.00 :   56 ( 20f  36b)    3f  3b    1f  6b    2f  2b     0 |  0.091253 | #WE[-]EY[-]BC[-]
-1344 : 224 224   0 448 224 224 | 83% | 17823456 |   92.00 :   55 ( 13f  42b)    2f  3b    0f  7b    2f  2b     0 |  0.091997 | #WE[-]BY[-]BC[-]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |   92.00 :   56 ( 20f  36b)    3f  3b    1f  6b    3f  2b     0 |  0.091997 | #WE[-]ES[-]BC[-]
-1344 : 224   0 224 448 224 224 | 83% | 17823456 |   93.00 :   55 ( 13f  42b)    2f  3b    0f  7b    3f  2b     0 |  0.092741 | #WE[-]BS[-]BC[-]
-1344 : 224   0 224 448 224 224 | 83% | 17823456 |   99.00 :   61 ( 19f  42b)    3f  3b    1f  7b    0f  2b     0 |  0.091997 | #WE[s]BS[s]BC[-]
-1344 : 224 224 224 224 224 224 | atw | 17823456 |   99.00 :   56 ( 19f  37b)    4f  7b    0f  2b    0f  2b     0 |  0.105357 | #B[s]W[s]C[-]ESY[-]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |   99.80 :   65 ( 19f  46b)    3f  3b    1f  8b    0f  2b     6 |  0.092593 | #WE[s]BY[-]EC[s]
-1344 : 224 224   0 448 224 224 | 83% | 17823456 |  100.80 :   66 ( 19f  47b)    3f  3b    1f  8b    0f  2b     6 |  0.093337 | #WE[s]BC[-]BY[s]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |  100.80 :   66 ( 19f  47b)    3f  3b    1f  8b    0f  2b     6 |  0.093337 | #WE[s]BC[-]EY[s]
-1344 :   0 224 224 448 224 224 | 83% | 17823456 |  100.90 :   63 ( 19f  44b)    3f  3b    1f  7b    0f  4b     3 |  0.093411 | #WE[s]BY[-]BS[s]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  100.90 :   63 ( 19f  44b)    3f  3b    1f  7b    0f  4b     3 |  0.093411 | #WE[s]BY[-]ES[s]
+1344 : 224 224 448   0 224 224 | 83% | 17823456 |  100.00 :   61 ( 28f  33b)    3f  3b    3f  4b    5f  2b     0 |  0.108284 | #CY[-]ES[-]SW[-]
+1344 : 224 224 448   0 224 224 | 83% | 17823456 |  100.00 :   61 ( 28f  33b)    3f  3b    3f  4b    5f  2b     0 |  0.108284 | #YC[-]ES[-]SW[-]
 1344 : 224 224 224 224 224 224 | atw | 17823456 |  100.90 :   56 ( 20f  36b)    4f  9b    0f  0b    0f  2b     3 |  0.106771 | #B[s]W[s]S[-]CEY[-]
-1344 : 224   0 224 448 224 224 | 83% | 17823456 |  101.90 :   64 ( 19f  45b)    3f  3b    1f  7b    0f  4b     3 |  0.094155 | #WE[s]BC[-]BS[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  101.90 :   64 ( 19f  45b)    3f  3b    1f  7b    0f  4b     3 |  0.094155 | #WE[s]BC[-]ES[s]
-1344 :   0 224 224 448 224 224 | 83% | 17823456 |  101.90 :   65 ( 19f  46b)    3f  3b    1f  8b    0f  2b     3 |  0.094155 | #WE[s]BS[-]BY[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  101.90 :   65 ( 19f  46b)    3f  3b    1f  8b    0f  2b     3 |  0.094155 | #WE[s]BS[-]EC[s]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  101.90 :   65 ( 19f  46b)    3f  3b    1f  8b    0f  2b     3 |  0.094155 | #WE[s]BS[-]EY[s]
 1344 : 224 224 224 224 224 224 | atw | 17823456 |  101.90 :   57 ( 20f  37b)    2f  7b    2f  2b    0f  2b     3 |  0.107515 | #B[s]W[s]C[-]SEY[-]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |  105.90 :   63 ( 27f  36b)    4f  3b    2f  6b    1f  2b     3 |  0.097131 | #WE[s]EY[s]BC[-]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  107.00 :   65 ( 20f  45b)    3f  5b    1f  6b    2f  3b     0 |  0.103158 | #WE[-]EY[-]BS[-]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  108.00 :   63 ( 27f  36b)    4f  3b    2f  6b    1f  2b     0 |  0.098694 | #WE[s]ES[s]BC[-]
-1344 :   0 224 224 448 224 224 | 83% | 17823456 |  108.00 :   64 ( 13f  51b)    2f  5b    0f  7b    2f  3b     0 |  0.103902 | #WE[-]BY[-]BS[-]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  108.00 :   64 ( 13f  51b)    2f  5b    0f  7b    2f  3b     0 |  0.103902 | #WE[-]BY[-]ES[-]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  109.90 :   65 ( 27f  38b)    4f  3b    2f  6b    1f  4b     3 |  0.100107 | #WE[s]EY[-]BS[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  110.90 :   66 ( 27f  39b)    4f  3b    2f  6b    1f  4b     3 |  0.100852 | #WE[s]EC[-]BS[s]
-1344 : 224 224   0 224 448 224 | 83% | 17823456 |  111.90 :   70 ( 20f  50b)    3f  4b    1f  7b    2f  4b     3 |  0.101596 | #WE[s]BY[s]CW[-]
-1344 :   0 224 224 448 224 224 | 83% | 17823456 |  112.90 :   70 ( 19f  51b)    3f  5b    1f  7b    0f  3b     3 |  0.102340 | #WE[s]BY[s]BS[-]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  112.90 :   70 ( 19f  51b)    3f  5b    1f  7b    0f  3b     3 |  0.102340 | #WE[s]BY[s]ES[-]
-1344 : 224   0 224 448 224 224 | 83% | 17823456 |  113.90 :   71 ( 19f  52b)    3f  5b    1f  7b    0f  3b     3 |  0.103084 | #WE[s]BC[s]BS[-]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  113.90 :   71 ( 19f  52b)    3f  5b    1f  7b    0f  3b     3 |  0.103084 | #WE[s]BC[s]ES[-]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  114.00 :   70 ( 20f  50b)    3f  4b    1f  7b    2f  4b     0 |  0.103158 | #WE[s]BS[s]CW[-]
-1344 : 224 224 224 224 448   0 | 83% | 17823456 |  115.90 :   65 ( 21f  44b)    4f 10b    0f  0b    2f  4b     3 |  0.095197 | #B[s]W[s]S[-]YCW[-]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  117.00 :   73 ( 29f  44b)    3f  4b    3f  6b    5f  4b     0 |  0.091997 | #WE[-]ES[-]YW[-]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  117.00 :   74 ( 29f  45b)    3f  4b    3f  6b    4f  4b     0 |  0.091997 | #WE[-]EY[-]SW[-]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  121.90 :   72 ( 27f  45b)    4f  5b    2f  6b    1f  3b     3 |  0.109036 | #WE[s]EY[s]BS[-]
-1344 : 224 224   0 224 448 224 | 83% | 17823456 |  122.90 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     3 |  0.109780 | #WE[s]BC[s]YW[-]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  122.90 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     3 |  0.109780 | #WE[s]BY[s]SW[-]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  122.90 :   73 ( 27f  46b)    4f  5b    2f  6b    1f  3b     3 |  0.109780 | #WE[s]EC[s]BS[-]
-1344 : 224   0 224   0 448 448 | 66% | 17823456 |  123.00 :   72 ( 28f  44b)    4f  4b    2f  6b    3f  4b     0 |  0.091253 | #WE[s]ES[s]CW[-]
-1344 : 448   0 224 224 448   0 | 66% | 13456782 |  123.90 :   67 ( 27f  40b)    4f  5b    2f  5b    0f  0b     3 |  0.091923 | #BWWC[s]S[-]C[s]
-1344 : 224 224 224 224 448   0 | 83% | 13456782 |  123.90 :   67 ( 27f  40b)    4f  5b    2f  5b    0f  0b     3 |  0.110524 | #BWWC[s]S[-]Y[s]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  123.90 :   80 ( 28f  52b)    3f  4b    3f  7b    2f  4b     3 |  0.110524 | #WE[s]BC[s]SW[-]
-1344 :   0   0 448 224 224 448 | 66% | 17823456 |  124.00 :   72 ( 27f  45b)    4f  5b    2f  6b    1f  3b     0 |  0.091997 | #WE[s]ES[s]BS[-]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  124.00 :   78 ( 28f  50b)    3f  4b    3f  7b    2f  4b     0 |  0.110599 | #WE[s]BS[s]YW[-]
-1344 : 224   0 448 224 448   0 | 66% | 13456782 |  125.00 :   65 ( 27f  38b)    4f  5b    2f  4b    0f  2b     0 |  0.092741 | #BWWC[s]S[-]S[s]
-1344 :   0   0 448 224 448 224 | 66% | 17823456 |  125.00 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     0 |  0.092741 | #WE[s]BS[s]SW[-]
-1344 : 224 224   0 448 224 224 | 83% | 13456782 |  125.80 :   80 (  8f  72b)    0f  4b    0f 13b    2f  2b     6 |  0.093188 | #WE[-]B[s]B[-]C[-]Y[s]
-1344 :   0 224 224 448 224 224 | 83% | 13456782 |  125.90 :   77 (  7f  70b)    0f  4b    0f 12b    2f  4b     3 |  0.093262 | #WE[-]B[s]B[-]Y[-]S[s]
-1344 : 224 224 224 224 448   0 | 83% | 17823456 |  125.90 :   73 ( 29f  44b)    4f 10b    2f  0b    2f  4b     3 |  0.102637 | #B[s]W[s]S[-]CYW[-]
-1344 : 448 224   0 224 448   0 | 66% | 13456782 |  126.80 :   71 ( 27f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.094081 | #BWWC[s]Y[-]C[s]
+1344 : 224 224 224   0 448 224 | 83% | 15678234 |  102.90 :   59 ( 19f  40b)    2f  8b    2f  0b    2f  5b     3 |  0.110441 | #ECW[-]SY[-]W[-]
+1344 : 224 224 224   0 224 448 | 83% | 15678234 |  103.90 :   62 ( 26f  36b)    3f  7b    3f  0b    2f  3b     3 |  0.111186 | #CEW[-]SY[-]E[-]
+1344 : 224 224 224   0 224 448 | 83% | 15678234 |  103.90 :   62 ( 26f  36b)    3f  7b    3f  0b    2f  3b     3 |  0.111186 | #CEW[-]YS[-]E[-]
+1344 : 224 224   0 224 224 448 | 83% | 17823456 |  105.90 :   63 ( 27f  36b)    4f  3b    2f  6b    1f  2b     3 |  0.107465 | #WE[s]EY[s]BC[-]
+1344 : 224 224 224   0 224 448 | 83% | 15678234 |  105.90 :   64 ( 26f  38b)    3f  7b    3f  0b    2f  3b     3 |  0.112674 | #SEW[-]YC[-]E[-]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  107.00 :   65 ( 20f  45b)    3f  5b    1f  6b    2f  3b     0 |  0.113492 | #WE[-]EY[-]BS[-]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  108.00 :   63 ( 27f  36b)    4f  3b    2f  6b    1f  2b     0 |  0.109028 | #WE[s]ES[s]BC[-]
+1344 :   0 224 224 448 224 224 | 83% | 17823456 |  108.00 :   64 ( 13f  51b)    2f  5b    0f  7b    2f  3b     0 |  0.114236 | #WE[-]BY[-]BS[-]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  108.00 :   64 ( 13f  51b)    2f  5b    0f  7b    2f  3b     0 |  0.114236 | #WE[-]BY[-]ES[-]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  109.90 :   65 ( 27f  38b)    4f  3b    2f  6b    1f  4b     3 |  0.110441 | #WE[s]EY[-]BS[s]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  110.90 :   66 ( 27f  39b)    4f  3b    2f  6b    1f  4b     3 |  0.111186 | #WE[s]EC[-]BS[s]
+1344 : 224 224   0 224 448 224 | 83% | 17823456 |  111.90 :   70 ( 20f  50b)    3f  4b    1f  7b    2f  4b     3 |  0.111930 | #WE[s]BY[s]CW[-]
+1344 :   0 224 224 448 224 224 | 83% | 17823456 |  112.90 :   70 ( 19f  51b)    3f  5b    1f  7b    0f  3b     3 |  0.112674 | #WE[s]BY[s]BS[-]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  112.90 :   70 ( 19f  51b)    3f  5b    1f  7b    0f  3b     3 |  0.112674 | #WE[s]BY[s]ES[-]
+1344 : 224   0 224 448 224 224 | 83% | 17823456 |  113.90 :   71 ( 19f  52b)    3f  5b    1f  7b    0f  3b     3 |  0.113418 | #WE[s]BC[s]BS[-]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  113.90 :   71 ( 19f  52b)    3f  5b    1f  7b    0f  3b     3 |  0.113418 | #WE[s]BC[s]ES[-]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  114.00 :   70 ( 20f  50b)    3f  4b    1f  7b    2f  4b     0 |  0.113492 | #WE[s]BS[s]CW[-]
+1344 : 448   0 224   0 224 448 | 66% | 15678234 |  115.90 :   70 ( 26f  44b)    3f  9b    3f  0b    2f  4b     3 |  0.107713 | #ECW[-]SC[-]E[-]
+1344 : 224 224 224   0 224 448 | 83% | 15678234 |  115.90 :   70 ( 26f  44b)    3f  9b    3f  0b    2f  4b     3 |  0.120114 | #ECW[-]SY[-]E[-]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  117.00 :   73 ( 29f  44b)    3f  4b    3f  6b    5f  4b     0 |  0.108532 | #WE[-]ES[-]YW[-]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  117.00 :   74 ( 29f  45b)    3f  4b    3f  6b    4f  4b     0 |  0.108532 | #WE[-]EY[-]SW[-]
+1344 : 448 224   0   0 224 448 | 66% | 15678234 |  118.00 :   70 ( 26f  44b)    3f  9b    3f  0b    2f  4b     0 |  0.109276 | #ECW[-]CY[-]E[-]
+1344 : 448 224   0   0 224 448 | 66% | 15678234 |  118.00 :   70 ( 26f  44b)    3f  9b    3f  0b    2f  4b     0 |  0.109276 | #ECW[-]YC[-]E[-]
+1344 : 224 448   0   0 224 448 | 66% | 15678234 |  118.00 :   70 ( 26f  44b)    3f  9b    3f  0b    2f  4b     0 |  0.109276 | #ECW[-]YY[-]E[-]
+1344 :   0 448   0 224 448 224 | 66% | 17823456 |  121.90 :   78 ( 28f  50b)    3f  4b    3f  7b    2f  4b     3 |  0.106969 | #WE[s]BY[s]YW[-]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  121.90 :   72 ( 27f  45b)    4f  5b    2f  6b    1f  3b     3 |  0.119370 | #WE[s]EY[s]BS[-]
+1344 : 224 224   0 224 448 224 | 83% | 17823456 |  122.90 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     3 |  0.120114 | #WE[s]BC[s]YW[-]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  122.90 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     3 |  0.120114 | #WE[s]BY[s]SW[-]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  122.90 :   73 ( 27f  46b)    4f  5b    2f  6b    1f  3b     3 |  0.120114 | #WE[s]EC[s]BS[-]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  123.00 :   72 ( 28f  44b)    4f  4b    2f  6b    3f  4b     0 |  0.107788 | #WE[s]ES[s]CW[-]
+1344 : 448   0 224 224 448   0 | 66% | 13456782 |  123.90 :   67 ( 27f  40b)    4f  5b    2f  5b    0f  0b     3 |  0.108457 | #BWWC[s]S[-]C[s]
+1344 : 224 224 224 224 448   0 | 83% | 13456782 |  123.90 :   67 ( 27f  40b)    4f  5b    2f  5b    0f  0b     3 |  0.120858 | #BWWC[s]S[-]Y[s]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  123.90 :   80 ( 28f  52b)    3f  4b    3f  7b    2f  4b     3 |  0.120858 | #WE[s]BC[s]SW[-]
+1344 :   0   0 448 224 224 448 | 66% | 17823456 |  124.00 :   72 ( 27f  45b)    4f  5b    2f  6b    1f  3b     0 |  0.108532 | #WE[s]ES[s]BS[-]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  124.00 :   78 ( 28f  50b)    3f  4b    3f  7b    2f  4b     0 |  0.120933 | #WE[s]BS[s]YW[-]
+1344 : 224   0 448 224 448   0 | 66% | 13456782 |  125.00 :   65 ( 27f  38b)    4f  5b    2f  4b    0f  2b     0 |  0.109276 | #BWWC[s]S[-]S[s]
+1344 :   0   0 448 224 448 224 | 66% | 17823456 |  125.00 :   79 ( 28f  51b)    3f  4b    3f  7b    2f  4b     0 |  0.109276 | #WE[s]BS[s]SW[-]
+1344 : 224 224 224 224 448   0 | 83% | 17823456 |  125.90 :   73 ( 29f  44b)    4f 10b    2f  0b    2f  4b     3 |  0.112971 | #B[s]W[s]S[-]CYW[-]
+1344 : 448 224   0 224 448   0 | 66% | 13456782 |  126.80 :   71 ( 27f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.110615 | #BWWC[s]Y[-]C[s]
+1344 : 224 448   0 224 448   0 | 66% | 13456782 |  126.80 :   71 ( 27f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.110615 | #BWWC[s]Y[-]Y[s]
+1344 : 224 224 224 224 448   0 | 83% | 17823456 |  126.90 :   74 ( 29f  45b)    2f  8b    4f  2b    2f  4b     3 |  0.113715 | #B[s]W[s]C[-]SYW[-]
+1344 : 224 224 224 224 448   0 | 83% | 17823456 |  127.00 :   75 ( 21f  54b)    2f 10b    2f  2b    2f  4b     0 |  0.113790 | #B[s]W[s]C[-]YSW[-]
+1344 : 448 224   0 224 448   0 | 66% | 13456782 |  127.80 :   72 ( 28f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.111359 | #BWWC[s]C[-]Y[s]
+1344 : 224 224 224 224 448   0 | 83% | 13456782 |  127.90 :   69 ( 27f  42b)    4f  6b    2f  4b    0f  2b     3 |  0.123834 | #BWWC[s]Y[-]S[s]
+1344 : 448   0 224 224 448   0 | 66% | 13456782 |  128.90 :   70 ( 28f  42b)    4f  6b    2f  4b    0f  2b     3 |  0.112178 | #BWWC[s]C[-]S[s]
+1344 : 224 224   0   0 448 448 | 66% | 17823456 |  131.90 :   81 ( 36f  45b)    4f  4b    4f  6b    3f  4b     3 |  0.114410 | #WE[s]EC[s]YW[-]
 -------------------------------|-----|----------|----------------------------------------------------------------|-----------|-----------
  len    C   Y   S   B   W   E  | atw |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 -------------------------------|-----|----------|----------------------------------------------------------------|-----------|-----------
-1344 : 224 448   0 224 448   0 | 66% | 13456782 |  126.80 :   71 ( 27f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.094081 | #BWWC[s]Y[-]Y[s]
-1344 : 224   0 224 448 224 224 | 83% | 13456782 |  126.90 :   78 (  8f  70b)    0f  4b    0f 12b    2f  4b     3 |  0.094006 | #WE[-]B[s]B[-]C[-]S[s]
-1344 : 224 224 224 224 448   0 | 83% | 17823456 |  126.90 :   74 ( 29f  45b)    2f  8b    4f  2b    2f  4b     3 |  0.103381 | #B[s]W[s]C[-]SYW[-]
-1344 : 224 224 224 224 448   0 | 83% | 17823456 |  127.00 :   75 ( 21f  54b)    2f 10b    2f  2b    2f  4b     0 |  0.103456 | #B[s]W[s]C[-]YSW[-]
-1344 : 448 224   0 224 448   0 | 66% | 13456782 |  127.80 :   72 ( 28f  44b)    4f  6b    2f  5b    0f  0b     6 |  0.094825 | #BWWC[s]C[-]Y[s]
-1344 : 224 224 224 224 448   0 | 83% | 13456782 |  127.90 :   69 ( 27f  42b)    4f  6b    2f  4b    0f  2b     3 |  0.113500 | #BWWC[s]Y[-]S[s]
-1344 : 448   0 224 224 448   0 | 66% | 13456782 |  128.90 :   70 ( 28f  42b)    4f  6b    2f  4b    0f  2b     3 |  0.095643 | #BWWC[s]C[-]S[s]
-1344 : 224 224   0   0 448 448 | 66% | 17823456 |  131.90 :   81 ( 36f  45b)    4f  4b    4f  6b    3f  4b     3 |  0.097875 | #WE[s]EC[s]YW[-]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  131.90 :   81 ( 36f  45b)    4f  4b    4f  6b    3f  4b     3 |  0.097875 | #WE[s]EY[s]SW[-]
-1344 : 224   0 224   0 448 448 | 66% | 17823456 |  132.90 :   82 ( 36f  46b)    4f  4b    4f  6b    3f  4b     3 |  0.098619 | #WE[s]EC[s]SW[-]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  133.00 :   80 ( 36f  44b)    4f  4b    4f  6b    3f  4b     0 |  0.098694 | #WE[s]ES[s]YW[-]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  142.00 :   81 ( 30f  51b)    2f  4b    4f  7b    2f  4b     0 |  0.123991 | #WE[-]BC[s]SW[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  143.00 :   84 ( 29f  55b)    2f  5b    4f  7b    3f  3b     0 |  0.124735 | #WE[-]BC[s]SE[s]
-1344 : 224 224   0 224 448 224 | 83% | 17823456 |  143.90 :   84 ( 30f  54b)    2f  4b    4f  7b    2f  4b     3 |  0.125405 | #WE[-]BC[s]YW[s]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |  144.90 :   87 ( 29f  58b)    2f  5b    4f  7b    3f  3b     3 |  0.126149 | #WE[-]BC[s]YE[s]
-1344 : 224   0 224   0 448 448 | 66% | 17823456 |  150.90 :   91 ( 45f  46b)    5f  4b    5f  6b    3f  4b     3 |  0.112012 | #WE[-]ES[s]CW[s]
-1344 : 224 224   0 224 448 224 | 83% | 17823456 |  150.90 :   90 ( 38f  52b)    4f  4b    4f  7b    2f  4b     3 |  0.130613 | #WE[-]BY[s]CW[s]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  151.90 :   90 ( 38f  52b)    4f  4b    4f  7b    3f  4b     3 |  0.131357 | #WE[-]BS[s]CW[s]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |  151.90 :   93 ( 37f  56b)    4f  5b    4f  7b    3f  3b     3 |  0.131357 | #WE[-]BY[s]CE[s]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  152.00 :   89 ( 38f  51b)    4f  4b    4f  7b    2f  4b     0 |  0.131432 | #WE[-]BY[s]SW[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  152.90 :   93 ( 37f  56b)    4f  5b    4f  7b    4f  3b     3 |  0.132102 | #WE[-]BS[s]CE[s]
-1344 :   0   0 448 224 448 224 | 66% | 17823456 |  153.00 :   89 ( 38f  51b)    4f  4b    4f  7b    3f  4b     0 |  0.113575 | #WE[-]BS[s]SW[s]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  153.00 :   92 ( 37f  55b)    4f  5b    4f  7b    3f  3b     0 |  0.132176 | #WE[-]BY[s]SE[s]
-1344 :   0 448   0 224 448 224 | 66% | 17823456 |  153.90 :   92 ( 38f  54b)    4f  4b    4f  7b    2f  4b     3 |  0.114244 | #WE[-]BY[s]YW[s]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  153.90 :   93 ( 45f  48b)    5f  4b    5f  6b    3f  4b     3 |  0.114244 | #WE[-]ES[s]YW[s]
-1344 :   0   0 448 224 224 448 | 66% | 17823456 |  154.00 :   92 ( 37f  55b)    4f  5b    4f  7b    4f  3b     0 |  0.114319 | #WE[-]BS[s]SE[s]
-1344 :   0 448   0 224 224 448 | 66% | 17823456 |  154.90 :   95 ( 37f  58b)    4f  5b    4f  7b    3f  3b     3 |  0.114988 | #WE[-]BY[s]YE[s]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  154.90 :   92 ( 38f  54b)    4f  4b    4f  7b    3f  4b     3 |  0.133590 | #WE[-]BS[s]YW[s]
-1344 : 224 224   0 224 448 224 | 83% | 17823456 |  155.80 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     6 |  0.134259 | #WE[s]BY[-]CW[s]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  155.90 :   95 ( 37f  58b)    4f  5b    4f  7b    4f  3b     3 |  0.134334 | #WE[-]BS[s]YE[s]
-1344 : 448   0   0 224 448 224 | 66% | 17823456 |  156.80 :   97 ( 44f  53b)    5f  4b    5f  7b    0f  4b     6 |  0.116402 | #WE[s]BC[-]CW[s]
-1344 : 224 224   0 224 224 448 | 83% | 17823456 |  156.80 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     6 |  0.135003 | #WE[s]BY[-]CE[s]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  156.90 :   95 ( 44f  51b)    5f  4b    5f  7b    0f  4b     3 |  0.135078 | #WE[s]BY[-]SW[s]
-1344 : 448   0   0 224 224 448 | 66% | 17823456 |  157.80 :  100 ( 43f  57b)    5f  5b    5f  7b    1f  3b     6 |  0.117146 | #WE[s]BC[-]CE[s]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  157.90 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     3 |  0.135822 | #WE[s]BC[-]SW[s]
-1344 : 224   0 224 224 448 224 | 83% | 17823456 |  157.90 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     3 |  0.135822 | #WE[s]BS[-]CW[s]
-1344 :   0 224 224 224 224 448 | 83% | 17823456 |  157.90 :   98 ( 43f  55b)    5f  5b    5f  7b    1f  3b     3 |  0.135822 | #WE[s]BY[-]SE[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  158.90 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     3 |  0.136566 | #WE[s]BC[-]SE[s]
-1344 : 224   0 224 224 224 448 | 83% | 17823456 |  158.90 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     3 |  0.136566 | #WE[s]BS[-]CE[s]
-1344 :   0   0 448 224 448 224 | 66% | 17823456 |  159.00 :   95 ( 44f  51b)    5f  4b    5f  7b    0f  4b     0 |  0.118039 | #WE[s]BS[-]SW[s]
-1344 :   0   0 448 224 224 448 | 66% | 17823456 |  160.00 :   98 ( 43f  55b)    5f  5b    5f  7b    1f  3b     0 |  0.118783 | #WE[s]BS[-]SE[s]
-1344 : 224 224   0   0 448 448 | 66% | 17823456 |  164.80 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     6 |  0.122355 | #WE[s]EY[-]CW[s]
-1344 : 448   0   0   0 448 448 | 50% | 17823456 |  165.80 :   99 ( 52f  47b)    6f  4b    6f  6b    1f  4b     6 |  0.108631 | #WE[s]EC[-]CW[s]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  165.90 :   97 ( 52f  45b)    6f  4b    6f  6b    1f  4b     3 |  0.123173 | #WE[s]EY[-]SW[s]
-1344 : 224   0 224   0 448 448 | 66% | 17823456 |  166.90 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     3 |  0.123917 | #WE[s]EC[-]SW[s]
-1344 : 224   0 224   0 448 448 | 66% | 17823456 |  166.90 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     3 |  0.123917 | #WE[s]ES[-]CW[s]
-1344 :   0 448   0   0 448 448 | 50% | 17823456 |  167.80 :  100 ( 52f  48b)    6f  4b    6f  6b    1f  4b     6 |  0.110119 | #WE[s]EY[-]YW[s]
-1344 :   0   0 448   0 448 448 | 50% | 17823456 |  168.00 :   97 ( 52f  45b)    6f  4b    6f  6b    1f  4b     0 |  0.110268 | #WE[s]ES[-]SW[s]
-1344 : 224 224   0   0 448 448 | 66% | 17823456 |  168.80 :  101 ( 52f  49b)    6f  4b    6f  6b    1f  4b     6 |  0.125331 | #WE[s]EC[-]YW[s]
-1344 :   0 224 224   0 448 448 | 66% | 17823456 |  169.90 :  100 ( 52f  48b)    6f  4b    6f  6b    1f  4b     3 |  0.126149 | #WE[s]ES[-]YW[s]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  131.90 :   81 ( 36f  45b)    4f  4b    4f  6b    3f  4b     3 |  0.114410 | #WE[s]EY[s]SW[-]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  132.90 :   82 ( 36f  46b)    4f  4b    4f  6b    3f  4b     3 |  0.115154 | #WE[s]EC[s]SW[-]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  133.00 :   80 ( 36f  44b)    4f  4b    4f  6b    3f  4b     0 |  0.115228 | #WE[s]ES[s]YW[-]
+1344 : 224 448 224 224 224   0 | 83% | 17823456 |  136.90 :   79 ( 37f  42b)    4f  3b    4f  5b    3f  2b     3 |  0.130531 | #CY[-]BS[s]YW[s]
+1344 : 224 448 224 224 224   0 | 83% | 17823456 |  136.90 :   79 ( 37f  42b)    4f  3b    4f  5b    3f  2b     3 |  0.130531 | #YC[-]BS[s]YW[s]
+1344 : 448   0   0 224 448 224 | 66% | 17823456 |  140.90 :   82 ( 30f  52b)    2f  4b    4f  7b    2f  4b     3 |  0.121106 | #WE[-]BC[s]CW[s]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  141.00 :   82 ( 37f  45b)    3f  4b    5f  6b    2f  4b     0 |  0.121181 | #WE[-]EC[s]SW[s]
+1344 : 448   0   0 224 224 448 | 66% | 17823456 |  141.90 :   85 ( 29f  56b)    2f  5b    4f  7b    3f  3b     3 |  0.121850 | #WE[-]BC[s]CE[s]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  142.00 :   81 ( 30f  51b)    2f  4b    4f  7b    2f  4b     0 |  0.134325 | #WE[-]BC[s]SW[s]
+1344 : 224 224   0   0 448 448 | 66% | 17823456 |  142.90 :   85 ( 37f  48b)    3f  4b    5f  6b    2f  4b     3 |  0.122594 | #WE[-]EC[s]YW[s]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  143.00 :   84 ( 29f  55b)    2f  5b    4f  7b    3f  3b     0 |  0.135069 | #WE[-]BC[s]SE[s]
+1344 : 224 224   0 224 448 224 | 83% | 17823456 |  143.90 :   84 ( 30f  54b)    2f  4b    4f  7b    2f  4b     3 |  0.135739 | #WE[-]BC[s]YW[s]
+1344 : 224 224   0 224 224 448 | 83% | 17823456 |  144.90 :   87 ( 29f  58b)    2f  5b    4f  7b    3f  3b     3 |  0.136483 | #WE[-]BC[s]YE[s]
+1344 : 224 224   0   0 448 448 | 66% | 17823456 |  149.90 :   91 ( 45f  46b)    5f  4b    5f  6b    2f  4b     3 |  0.127803 | #WE[-]EY[s]CW[s]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  150.90 :   91 ( 45f  46b)    5f  4b    5f  6b    3f  4b     3 |  0.128547 | #WE[-]ES[s]CW[s]
+1344 : 224 224   0 224 448 224 | 83% | 17823456 |  150.90 :   90 ( 38f  52b)    4f  4b    4f  7b    2f  4b     3 |  0.140947 | #WE[-]BY[s]CW[s]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  151.00 :   90 ( 45f  45b)    5f  4b    5f  6b    2f  4b     0 |  0.128621 | #WE[-]EY[s]SW[s]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  151.90 :   90 ( 38f  52b)    4f  4b    4f  7b    3f  4b     3 |  0.141691 | #WE[-]BS[s]CW[s]
+1344 : 224 224   0 224 224 448 | 83% | 17823456 |  151.90 :   93 ( 37f  56b)    4f  5b    4f  7b    3f  3b     3 |  0.141691 | #WE[-]BY[s]CE[s]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  152.00 :   89 ( 38f  51b)    4f  4b    4f  7b    2f  4b     0 |  0.141766 | #WE[-]BY[s]SW[s]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  152.90 :   93 ( 37f  56b)    4f  5b    4f  7b    4f  3b     3 |  0.142436 | #WE[-]BS[s]CE[s]
+1344 :   0   0 448 224 448 224 | 66% | 17823456 |  153.00 :   89 ( 38f  51b)    4f  4b    4f  7b    3f  4b     0 |  0.130109 | #WE[-]BS[s]SW[s]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  153.00 :   92 ( 37f  55b)    4f  5b    4f  7b    3f  3b     0 |  0.142510 | #WE[-]BY[s]SE[s]
+1344 :   0 448   0 224 448 224 | 66% | 17823456 |  153.90 :   92 ( 38f  54b)    4f  4b    4f  7b    2f  4b     3 |  0.130779 | #WE[-]BY[s]YW[s]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  153.90 :   93 ( 45f  48b)    5f  4b    5f  6b    3f  4b     3 |  0.130779 | #WE[-]ES[s]YW[s]
+1344 :   0   0 448 224 224 448 | 66% | 17823456 |  154.00 :   92 ( 37f  55b)    4f  5b    4f  7b    4f  3b     0 |  0.130853 | #WE[-]BS[s]SE[s]
+1344 :   0 448   0 224 224 448 | 66% | 17823456 |  154.90 :   95 ( 37f  58b)    4f  5b    4f  7b    3f  3b     3 |  0.131523 | #WE[-]BY[s]YE[s]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  154.90 :   92 ( 38f  54b)    4f  4b    4f  7b    3f  4b     3 |  0.143924 | #WE[-]BS[s]YW[s]
+1344 : 224 224   0 224 448 224 | 83% | 17823456 |  155.80 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     6 |  0.144593 | #WE[s]BY[-]CW[s]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  155.90 :   95 ( 37f  58b)    4f  5b    4f  7b    4f  3b     3 |  0.144668 | #WE[-]BS[s]YE[s]
+1344 : 448   0   0 224 448 224 | 66% | 17823456 |  156.80 :   97 ( 44f  53b)    5f  4b    5f  7b    0f  4b     6 |  0.132937 | #WE[s]BC[-]CW[s]
+1344 : 224 224   0 224 224 448 | 83% | 17823456 |  156.80 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     6 |  0.145337 | #WE[s]BY[-]CE[s]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  156.90 :   95 ( 44f  51b)    5f  4b    5f  7b    0f  4b     3 |  0.145412 | #WE[s]BY[-]SW[s]
+1344 : 448   0   0 224 224 448 | 66% | 17823456 |  157.80 :  100 ( 43f  57b)    5f  5b    5f  7b    1f  3b     6 |  0.133681 | #WE[s]BC[-]CE[s]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  157.90 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     3 |  0.146156 | #WE[s]BC[-]SW[s]
+1344 : 224   0 224 224 448 224 | 83% | 17823456 |  157.90 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     3 |  0.146156 | #WE[s]BS[-]CW[s]
+1344 :   0 224 224 224 224 448 | 83% | 17823456 |  157.90 :   98 ( 43f  55b)    5f  5b    5f  7b    1f  3b     3 |  0.146156 | #WE[s]BY[-]SE[s]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  158.90 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     3 |  0.146900 | #WE[s]BC[-]SE[s]
+1344 : 224   0 224 224 224 448 | 83% | 17823456 |  158.90 :   99 ( 43f  56b)    5f  5b    5f  7b    1f  3b     3 |  0.146900 | #WE[s]BS[-]CE[s]
+1344 :   0   0 448 224 448 224 | 66% | 17823456 |  159.00 :   95 ( 44f  51b)    5f  4b    5f  7b    0f  4b     0 |  0.134573 | #WE[s]BS[-]SW[s]
+1344 :   0   0 448 224 224 448 | 66% | 17823456 |  160.00 :   98 ( 43f  55b)    5f  5b    5f  7b    1f  3b     0 |  0.135317 | #WE[s]BS[-]SE[s]
+1344 : 224 224   0   0 448 448 | 66% | 17823456 |  164.80 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     6 |  0.138889 | #WE[s]EY[-]CW[s]
+1344 : 448   0   0   0 448 448 | 50% | 17823456 |  165.80 :   99 ( 52f  47b)    6f  4b    6f  6b    1f  4b     6 |  0.127232 | #WE[s]EC[-]CW[s]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  165.90 :   97 ( 52f  45b)    6f  4b    6f  6b    1f  4b     3 |  0.139707 | #WE[s]EY[-]SW[s]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  166.90 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     3 |  0.140451 | #WE[s]EC[-]SW[s]
+1344 : 224   0 224   0 448 448 | 66% | 17823456 |  166.90 :   98 ( 52f  46b)    6f  4b    6f  6b    1f  4b     3 |  0.140451 | #WE[s]ES[-]CW[s]
+1344 :   0 448   0   0 448 448 | 50% | 17823456 |  167.80 :  100 ( 52f  48b)    6f  4b    6f  6b    1f  4b     6 |  0.128720 | #WE[s]EY[-]YW[s]
+1344 :   0   0 448   0 448 448 | 50% | 17823456 |  168.00 :   97 ( 52f  45b)    6f  4b    6f  6b    1f  4b     0 |  0.128869 | #WE[s]ES[-]SW[s]
+1344 : 224 224   0   0 448 448 | 66% | 17823456 |  168.80 :  101 ( 52f  49b)    6f  4b    6f  6b    1f  4b     6 |  0.141865 | #WE[s]EC[-]YW[s]
+1344 :   0 224 224   0 448 448 | 66% | 17823456 |  169.90 :  100 ( 52f  48b)    6f  4b    6f  6b    1f  4b     3 |  0.142684 | #WE[s]ES[-]YW[s]
 -------------------------------|-----|----------|----------------------------------------------------------------|-----------|-----------
  len    C   Y   S   B   W   E  | atw |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 '''
@@ -247,24 +247,24 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 "test/cases/atw/snap-finishes.toml" = '''
 len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 ----|-----|----------------------------------------------------------------|-----------|-----------
-384 | 91% |   37.00 :   14 (  6f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.285260 | HMsMBsWW
-384 | 91% |   39.00 :   18 (  6f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.290468 | sMMMsMBW
-288 | 91% |   39.00 :   18 (  6f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.409513 | MBW
- 64 | 18% |   39.00 :   16 (  8f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.590212 | sHsH
-384 | 91% |   41.00 :   20 (  8f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.295677 | MBsWWWsW
-384 | 91% |   43.00 :   18 ( 10f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.300885 | MsMBsWWH
+384 | 91% |   37.00 :   14 (  6f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.304783 | HMsMBsWW
+384 | 91% |   39.00 :   18 (  6f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.309991 | sMMMsMBW
+288 | 91% |   39.00 :   18 (  6f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.435544 | MBW
+ 64 | 18% |   39.00 :   16 (  8f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.824490 | sHsH
+384 | 91% |   41.00 :   20 (  8f  12b)    0f  4b    0f  0b    0f  0b     0 |  0.315200 | MBsWWWsW
+384 | 91% |   43.00 :   18 ( 10f   8b)    0f  8b    0f  0b    0f  0b     0 |  0.320408 | MsMBsWWH
 384 | atw |   44.00 :   18 ( 10f   8b)    0f  8b    4f  0b    0f  0b     0 |  0.348958 | sMMWsWH
- 96 | 26% |   44.00 :   18 (  6f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.475404 | HHH
-384 | 91% |   50.00 :   22 ( 10f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.319114 | HMBsWWsH
-384 | atw |   51.00 :   22 ( 12f  10b)    0f  8b    4f  0b    0f  0b     0 |  0.367188 | HsMMWsW
-384 | 91% |   52.00 :   22 ( 10f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.324323 | MsMBWHsH
-384 | 91% |   52.00 :   24 ( 12f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.324322 | sHMsMBWH
-384 | 91% |   55.00 :   26 (  6f  20b)    0f 12b    0f  0b    0f  0b     0 |  0.332135 | HsHMsMBW
-384 | 91% |   55.00 :   24 ( 12f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.332135 | sHHMBsWW
+ 96 | 26% |   44.00 :   18 (  6f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.678444 | HHH
+384 | 91% |   50.00 :   22 ( 10f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.338637 | HMBsWWsH
+384 | atw |   51.00 :   22 ( 12f  10b)    0f  8b    4f  0b    0f  0b     0 |  0.367187 | HsMMWsW
+384 | 91% |   52.00 :   22 ( 10f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.343846 | MsMBWHsH
+384 | 91% |   52.00 :   24 ( 12f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.343846 | sHMsMBWH
+384 | 91% |   55.00 :   26 (  6f  20b)    0f 12b    0f  0b    0f  0b     0 |  0.351658 | HsHMsMBW
+384 | 91% |   55.00 :   24 ( 12f  12b)    0f 12b    0f  0b    0f  0b     0 |  0.351658 | sHHMBsWW
 384 | atw |   55.00 :   24 ( 12f  12b)    0f 12b    4f  0b    0f  0b     0 |  0.377604 | MMsMHsH
-128 | 24% |   55.00 :   24 (  8f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.412481 | HsHHsH
 352 | atw |   55.00 :   24 ( 12f  12b)    0f 12b    4f  0b    0f  0b     0 |  0.417045 | sMMHsH
-384 | 91% |   58.00 :   28 (  8f  20b)    0f 12b    0f  0b    0f  0b     0 |  0.339947 | MBsWWsHH
+128 | 24% |   55.00 :   24 (  8f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.556952 | HsHHsH
+384 | 91% |   58.00 :   28 (  8f  20b)    0f 12b    0f  0b    0f  0b     0 |  0.359471 | MBsWWsHH
 384 | atw |   58.00 :   26 ( 14f  12b)    0f 12b    4f  0b    0f  0b     0 |  0.385417 | HsWWWsH
 224 | atw |   58.00 :   20 ( 10f  10b)    0f  4b    4f  0b    0f  0b     0 |  0.705357 | 
 384 | atw |   60.00 :   26 ( 10f  16b)    0f 16b    4f  0b    0f  0b     0 |  0.390625 | HsHWsWH
@@ -272,18 +272,18 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 384 | atw |   61.00 :   28 ( 14f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.393229 | sHMMsMH
 352 | atw |   61.00 :   28 ( 16f  12b)    0f 12b    4f  0b    0f  0b     0 |  0.434091 | HWsWsH
 352 | atw |   61.00 :   28 ( 14f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.434091 | sHsMMH
-128 | 24% |   62.00 :   28 ( 12f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.467168 | sHHsHH
+128 | 24% |   62.00 :   28 ( 12f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.611639 | sHHsHH
 384 | atw |   67.00 :   30 ( 16f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.408854 | sHHsWWW
 384 | atw |   68.00 :   30 ( 12f  18b)    0f 16b    4f  0b    0f  0b     0 |  0.411458 | HsMMsHH
 352 | atw |   69.00 :   32 ( 18f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.456818 | sHHWsW
 384 | atw |   74.00 :   34 ( 16f  18b)    0f 16b    4f  0b    0f  0b     0 |  0.427083 | HHsHWsW
 384 | atw |   74.00 :   28 ( 10f  18b)    0f 12b    4f  0b    0f  0b     0 |  0.427083 | HsHMMsM
 352 | atw |   74.00 :   28 ( 10f  18b)    0f 12b    4f  0b    0f  0b     0 |  0.471023 | HsHsMM
-192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.381452 | HHsHHHsH
-192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.381452 | HsHHHsHH
-192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.381452 | sHHHsHHH
 384 | atw |   78.00 :   38 ( 16f  22b)    0f 16b    4f  0b    0f  0b     0 |  0.437500 | HHsMMsH
 384 | atw |   78.00 :   38 ( 16f  22b)    0f 16b    4f  0b    0f  0b     0 |  0.437500 | sHWsWHH
+192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.482972 | HHsHHHsH
+192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.482972 | HsHHHsHH
+192 | 26% |   78.00 :   36 ( 12f  24b)    0f 24b    0f  0b    0f  0b     0 |  0.482972 | sHHHsHHH
 352 | atw |   81.00 :   32 ( 14f  18b)    0f 12b    4f  0b    0f  0b     0 |  0.490909 | WsWsHH
 384 | atw |   83.00 :   34 ( 16f  18b)    0f 12b    4f  0b    0f  0b     0 |  0.450521 | sWWWsHH
 384 | atw |   92.00 :   38 ( 16f  22b)    0f 16b    4f  0b    0f  0b     0 |  0.473958 | WsWHHsH
@@ -295,43 +295,43 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 WARN  [monument_cli::music] No default music profile for Doubles.  No music will be scored.
 len    O  P | atw |  music  | avg score | calling
 ------------|-----|---------|-----------|-----------
-120 : 40 80 | 76% |    0.00 |  0.159815 | O[H]P[F]O[I]OO[B]P[B]OOO[I]O[L]O[B]P[B]O[F]P[H]
-120 : 40 80 | 76% |    0.00 |  0.159815 | O[H]P[F]O[I]P[I]O[L]O[B]OOO[I]P[I]OO[B]O[F]P[H]
-120 : 40 80 | 76% |    0.00 |  0.159815 | P[F]O[I]P[I]O[L]OO[F]P[H]OOO[L]O[B]O[F]P[H]O[H]
-120 : 40 80 | 76% |    0.00 |  0.159815 | P[F]O[I]P[I]O[L]P[L]O[B]O[F]OOO[B]P[B]OO[H]O[H]
-120 : 40 80 | 80% |    0.00 |  0.203333 | O[H]P[F]OO[L]O[B]O[F]P[H]OO[I]P[I]OO[B]O[F]P[H]
-120 : 40 80 | 80% |    0.00 |  0.203333 | O[H]P[F]O[I]OO[B]P[B]OO[H]P[F]O[I]O[L]OO[F]P[H]
-120 : 40 80 | 80% |    0.00 |  0.203333 | P[F]O[I]P[I]OO[B]O[F]O[I]P[I]OO[B]P[B]OO[H]O[H]
-120 : 40 80 | 80% |    0.00 |  0.203333 | P[F]O[I]P[I]O[L]OO[F]P[H]OO[I]P[I]O[L]O[B]OO[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | OOO[L]O[B]O[F]P[H]OO[I]P[I]O[L]P[L]O[B]O[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | OO[I]P[I]OO[B]P[B]O[F]O[I]P[I]OO[B]O[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | OO[I]P[I]O[L]O[B]OOO[I]P[I]O[L]P[L]O[B]O[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | OO[I]P[I]O[L]O[B]P[B]O[F]O[I]P[I]OOO[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]O[H]P[F]OOO[B]P[B]O[F]O[I]P[I]O[L]O[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]O[H]P[F]OO[L]P[L]OO[F]O[I]P[I]O[L]OO[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]O[H]P[F]O[I]OO[B]P[B]O[F]O[I]P[I]OO[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]O[H]P[F]O[I]O[L]P[L]OO[F]O[I]P[I]OOO[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]P[F]OOO[B]P[B]O[F]OO[L]P[L]O[B]O[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]P[F]OO[L]O[B]P[B]O[F]OO[L]P[L]OO[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OOO[I]O[L]O[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.248704 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OO[H]P[F]O[I]O[L]OO
-120 : 40 80 | 83% |    0.00 |  0.248704 | P[F]OOO[B]O[F]O[I]P[I]OO[B]P[B]O[F]P[H]O[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | P[F]OO[L]P[L]O[B]O[F]OOO[B]P[B]O[F]P[H]O[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | P[F]O[I]O[L]P[L]OO[F]P[H]OO[I]O[L]P[L]O[B]OO[H]
-120 : 40 80 | 83% |    0.00 |  0.248704 | P[F]O[I]O[L]P[L]O[B]O[F]P[H]OO[I]O[L]P[L]OOO[H]
-120 : 40 80 | 70% |    0.00 |  0.288333 | OO[I]PP[H]PPOO[B]OOOOO[B]O
-120 : 40 80 | 86% |    0.00 |  0.295926 | OOOO[B]P[B]O[F]O[I]P[I]O[L]P[L]O[B]O[F]P[H]O[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | OOO[L]O[B]P[B]O[F]O[I]P[I]O[L]P[L]OO[F]P[H]O[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]O[H]P[F]OOOO[F]O[I]P[I]O[L]O[B]P[B]O[F]P[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]O[H]P[F]OO[L]P[L]O[B]P[B]O[F]O[I]P[I]O[L]OO
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]O[H]P[F]O[I]OOO[F]O[I]P[I]OO[B]P[B]O[F]P[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]O[H]P[F]O[I]O[L]P[L]O[B]P[B]O[F]O[I]P[I]OOO
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]P[F]O[I]P[I]OO[B]P[B]O[F]OOO[B]O[F]P[H]O[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | O[H]P[F]O[I]P[I]O[L]O[B]P[B]O[F]OOOO[F]P[H]O[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | P[F]O[I]O[L]P[L]OOOO[I]O[L]P[L]O[B]O[F]P[H]O[H]
-120 : 40 80 | 86% |    0.00 |  0.295926 | P[F]O[I]O[L]P[L]O[B]OOO[I]O[L]P[L]OO[F]P[H]O[H]
-120 : 40 80 | 73% |    0.00 |  0.328148 | OO[I]POOOOO[H]PPOO[B]P[B]O
-120 : 40 80 | 80% |    0.00 |  0.413333 | OO[I]PO[I]P[I]OOOO[H]PPOOO
+120 : 40 80 | 76% |    0.00 |  0.308889 | O[H]P[F]O[I]OO[B]P[B]OOO[I]O[L]O[B]P[B]O[F]P[H]
+120 : 40 80 | 76% |    0.00 |  0.308889 | O[H]P[F]O[I]P[I]O[L]O[B]OOO[I]P[I]OO[B]O[F]P[H]
+120 : 40 80 | 76% |    0.00 |  0.308889 | P[F]O[I]P[I]O[L]OO[F]P[H]OOO[L]O[B]O[F]P[H]O[H]
+120 : 40 80 | 76% |    0.00 |  0.308889 | P[F]O[I]P[I]O[L]P[L]O[B]O[F]OOO[B]P[B]OO[H]O[H]
+120 : 40 80 | 80% |    0.00 |  0.336667 | O[H]P[F]OO[L]O[B]O[F]P[H]OO[I]P[I]OO[B]O[F]P[H]
+120 : 40 80 | 80% |    0.00 |  0.336667 | O[H]P[F]O[I]OO[B]P[B]OO[H]P[F]O[I]O[L]OO[F]P[H]
+120 : 40 80 | 80% |    0.00 |  0.336667 | P[F]O[I]P[I]OO[B]O[F]O[I]P[I]OO[B]P[B]OO[H]O[H]
+120 : 40 80 | 80% |    0.00 |  0.336667 | P[F]O[I]P[I]O[L]OO[F]P[H]OO[I]P[I]O[L]O[B]OO[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | OOO[L]O[B]O[F]P[H]OO[I]P[I]O[L]P[L]O[B]O[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]OO[B]P[B]O[F]O[I]P[I]OO[B]O[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]O[L]O[B]OOO[I]P[I]O[L]P[L]O[B]O[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]O[L]O[B]P[B]O[F]O[I]P[I]OOO[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]OOO[B]P[B]O[F]O[I]P[I]O[L]O[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]OO[L]P[L]OO[F]O[I]P[I]O[L]OO[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]O[I]OO[B]P[B]O[F]O[I]P[I]OO[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]O[I]O[L]P[L]OO[F]O[I]P[I]OOO[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]OOO[B]P[B]O[F]OO[L]P[L]O[B]O[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]OO[L]O[B]P[B]O[F]OO[L]P[L]OO[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OOO[I]O[L]O[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OO[H]P[F]O[I]O[L]OO
+120 : 40 80 | 83% |    0.00 |  0.364444 | P[F]OOO[B]O[F]O[I]P[I]OO[B]P[B]O[F]P[H]O[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]OO[L]P[L]O[B]O[F]OOO[B]P[B]O[F]P[H]O[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]O[I]O[L]P[L]OO[F]P[H]OO[I]O[L]P[L]O[B]OO[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]O[I]O[L]P[L]O[B]O[F]P[H]OO[I]O[L]P[L]OOO[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | OOOO[B]P[B]O[F]O[I]P[I]O[L]P[L]O[B]O[F]P[H]O[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | OOO[L]O[B]P[B]O[F]O[I]P[I]O[L]P[L]OO[F]P[H]O[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]O[H]P[F]OOOO[F]O[I]P[I]O[L]O[B]P[B]O[F]P[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]O[H]P[F]OO[L]P[L]O[B]P[B]O[F]O[I]P[I]O[L]OO
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]O[H]P[F]O[I]OOO[F]O[I]P[I]OO[B]P[B]O[F]P[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]O[H]P[F]O[I]O[L]P[L]O[B]P[B]O[F]O[I]P[I]OOO
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]P[F]O[I]P[I]OO[B]P[B]O[F]OOO[B]O[F]P[H]O[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | O[H]P[F]O[I]P[I]O[L]O[B]P[B]O[F]OOOO[F]P[H]O[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | P[F]O[I]O[L]P[L]OOOO[I]O[L]P[L]O[B]O[F]P[H]O[H]
+120 : 40 80 | 86% |    0.00 |  0.392222 | P[F]O[I]O[L]P[L]O[B]OOO[I]O[L]P[L]OO[F]P[H]O[H]
+120 : 40 80 | 70% |    0.00 |  0.463333 | OO[I]PP[H]PPOO[B]OOOOO[B]O
+120 : 40 80 | 73% |    0.00 |  0.491111 | OO[I]POOOOO[H]PPOO[B]P[B]O
+120 : 40 80 | 80% |    0.00 |  0.546667 | OO[I]PO[I]P[I]OOOO[H]PPOOO
 ------------|-----|---------|-----------|-----------
 len    O  P | atw |  music  | avg score | calling
 '''
