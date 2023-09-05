@@ -79,8 +79,8 @@ pub fn run(
     let comp_printer = CompositionPrinter::new(
         music_displays,
         search.clone(),
-        toml_file.atw_specified(),
-        toml_file.duffers_specified(),
+        toml_file.print_atw(),
+        toml_file.print_duffers(),
     );
     let mut update_logger = SingleLineProgressLogger::new(match options.only_display_update_line {
         true => None,

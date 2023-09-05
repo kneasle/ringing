@@ -313,6 +313,9 @@ impl CompPrefix {
         if !search.query.part_head_group.is_generator(self.part_head) {
             return None; // The part head reached wouldn't generate all the parts
         }
+        if search.query.require_atw && search.atw_table.atw_factor(&self.atw_bitmap) < 0.99999 {
+            return None; // The composition is not atw, but we were required to make it atw
+        }
 
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */

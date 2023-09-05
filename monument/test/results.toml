@@ -236,6 +236,168 @@ len |  music     *87 | avg score | calling
 -------------------------------|-----|----------|----------------------------------------------------------------|-----------|-----------
  len    C   Y   S   B   W   E  | atw |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 '''
+"test/cases/atw/don't-require-atw.toml" = '''
+len    P  S | atw |  music      4-bell runs   *56 | avg score | calling
+------------|-----|-------------------------------|-----------|-----------
+120 : 60 60 | 60% |    8.60 :   4 ( 2f  2b)     3 | -0.081667 | S[sT]P[sB]P[sT]P[sB]PS[sB]S[sF]S[sB]S[sF]P
+120 : 60 60 | 84% |    8.60 :   3 ( 1f  2b)     8 | -0.043333 | S[sT]S[sW]P[sF]PPP[sF]P[sH]S[sT]SS
+120 : 60 60 | 92% |    8.60 :   4 ( 2f  2b)     3 | -0.005000 | S[sT]SSSS[sB]PPPP[sF]P[sH]
+120 : 60 60 | 68% |    9.00 :   4 ( 2f  2b)     5 | -0.078333 | S[sT]S[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]P[sF]P
+120 : 60 60 | 92% |    9.00 :   4 ( 1f  3b)     5 | -0.001667 | S[sT]PPPP[sW]P[sF]S[sB]SSS
+120 : 60 60 | 52% |    9.80 :   4 ( 2f  2b)     9 | -0.071667 | S[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]P[sF]P
+120 : 60 60 | 92% |    9.80 :   4 ( 1f  3b)     9 |  0.005000 | S[sT]S[sW]P[sF]PPPP[sB]SSS
+120 : 60 60 | 92% |   10.40 :   4 ( 1f  3b)     7 |  0.010000 | SS[sB]PPPP[sF]P[sH]S[sT]SS
+120 : 60 60 | 92% |   10.40 :   4 ( 1f  3b)     7 |  0.010000 | SS[sB]S[sF]P[sH]PPPP[sT]SS
+120 : 60 60 | 68% |   10.80 :   5 ( 3f  2b)     9 | -0.063333 | S[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]P[sF]P
+120 : 60 60 | 92% |   10.80 :   3 ( 2f  1b)     4 |  0.013333 | S[sT]P[sB]PPPP[sF]SSSS[sH]
+120 : 60 60 | atw |   10.80 :   5 ( 1f  4b)     4 |  0.051667 | S[sT]PPPPP[sF]SSSS
+120 : 60 60 | 64% |   11.00 :   5 ( 3f  2b)     5 | -0.061667 | S[sT]S[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]P[sF]P
+120 : 60 60 | 64% |   11.20 :   6 ( 3f  3b)     6 | -0.060000 | SP[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 76% |   11.20 :   6 ( 3f  3b)     6 | -0.060000 | S[sT]SP[sF]P[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   11.40 :   6 ( 3f  3b)     7 | -0.058333 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   11.40 :   6 ( 3f  3b)     7 | -0.058333 | S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 68% |   11.60 :   7 ( 3f  4b)     3 | -0.056667 | S[sT]P[sB]P[sT]P[sB]SP[sB]S[sF]S[sB]S[sF]P
+120 : 60 60 | 64% |   11.60 :   4 ( 2f  2b)     3 | -0.056667 | S[sT]P[sB]P[sT]S[sW]PS[sW]P[sF]S[sB]S[sF]P
+120 : 60 60 | 64% |   11.60 :   4 ( 2f  2b)     3 | -0.056667 | S[sT]P[sB]P[sT]S[sW]SP[sW]P[sF]S[sB]S[sF]P
+120 : 60 60 | 64% |   11.60 :   6 ( 3f  3b)     8 | -0.056667 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 84% |   11.60 :   4 ( 2f  2b)     3 | -0.018333 | S[sT]SSS[sT]S[sW]P[sF]PPP[sF]P[sH]
+120 : 60 60 | atw |   11.60 :   5 ( 1f  4b)     8 |  0.058333 | SS[sB]PPPPP[sB]SSS
+120 : 60 60 | 60% |   12.40 :   6 ( 3f  3b)    12 | -0.050000 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 68% |   13.20 :   5 ( 3f  2b)     6 | -0.043333 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 64% |   13.20 :   5 ( 3f  2b)     6 | -0.043333 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 76% |   13.20 :   7 ( 4f  3b)     6 | -0.043333 | S[sT]P[sB]PS[sB]S[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 68% |   13.20 :   5 ( 3f  2b)     6 | -0.043333 | S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 64% |   13.20 :   5 ( 3f  2b)     6 | -0.043333 | S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 68% |   13.40 :   5 ( 3f  2b)     7 | -0.041667 | S[sT]PS[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   13.40 :   7 ( 4f  3b)     7 | -0.041667 | S[sT]PS[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   13.40 :   5 ( 3f  2b)     7 | -0.041667 | S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 60% |   13.40 :   5 ( 3f  2b)     7 | -0.041667 | S[sT]SP[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   13.40 :   7 ( 4f  3b)     7 | -0.041667 | S[sT]SP[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   13.40 :   5 ( 3f  2b)     7 | -0.041667 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 68% |   13.40 :   5 ( 3f  2b)     7 | -0.041667 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 64% |   13.40 :   7 ( 4f  3b)     7 | -0.041667 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 68% |   13.40 :   7 ( 4f  3b)    12 | -0.041667 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 64% |   13.60 :   7 ( 4f  3b)     8 | -0.040000 | SP[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 68% |   13.60 :   5 ( 3f  2b)     8 | -0.040000 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | atw |   13.60 :   7 ( 2f  5b)     8 |  0.075000 | SSS[sF]PPPPP[sT]SS
+120 : 60 60 | 60% |   13.80 :   5 ( 3f  2b)     9 | -0.038333 | S[sT]PS[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   13.80 :   5 ( 3f  2b)     9 | -0.038333 | S[sT]SP[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 68% |   13.80 :   7 ( 4f  3b)     9 | -0.038333 | S[sT]SP[sF]P[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   13.80 :   7 ( 3f  4b)     4 | -0.038333 | S[sT]S[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]P[sF]P
+120 : 60 60 | 52% |   13.80 :   5 ( 3f  2b)     9 | -0.038333 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 60% |   13.80 :   5 ( 3f  2b)     9 | -0.038333 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 68% |   13.80 :   7 ( 4f  3b)     9 | -0.038333 | S[sT]S[sW]SP[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 60% |   13.80 :   7 ( 3f  4b)     9 | -0.038333 | S[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]P[sF]P
+120 : 60 60 | 92% |   13.80 :   5 ( 2f  3b)     4 |  0.038333 | SSSS[sW]PPPP[sH]P[sW]S[sH]
+------------|-----|-------------------------------|-----------|-----------
+len    P  S | atw |  music      4-bell runs   *56 | avg score | calling
+------------|-----|-------------------------------|-----------|-----------
+120 : 60 60 | 64% |   14.20 :   6 ( 3f  3b)     6 | -0.035000 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]SP[sH]
+120 : 60 60 | 52% |   14.40 :   5 ( 3f  2b)    12 | -0.033333 | SP[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   14.40 :   5 ( 3f  2b)    12 | -0.033333 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | 92% |   15.00 :   6 ( 2f  4b)     5 |  0.048333 | SSSS[sW]S[sH]P[sW]PPPP[sH]
+120 : 60 60 | 68% |   15.40 :   8 ( 5f  3b)    12 | -0.025000 | SP[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   15.40 :   8 ( 5f  3b)    12 | -0.025000 | SP[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   15.40 :   6 ( 4f  2b)    12 | -0.025000 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | 64% |   15.80 :   7 ( 3f  4b)     4 | -0.021667 | S[sT]P[sB]S[sF]S[sB]PS[sB]P[sT]P[sB]S[sF]P
+120 : 60 60 | 64% |   16.20 :   7 ( 3f  4b)     6 | -0.018333 | PS[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   16.20 :   5 ( 3f  2b)     6 | -0.018333 | SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   16.20 :   5 ( 3f  2b)     6 | -0.018333 | S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   16.20 :   5 ( 3f  2b)     6 | -0.018333 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 68% |   16.20 :   5 ( 3f  2b)     6 | -0.018333 | S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 68% |   16.60 :   5 ( 3f  2b)     8 | -0.015000 | SP[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | 84% |   16.60 :   7 ( 3f  4b)     3 |  0.023333 | P[sW]PPP[sT]P[sB]S[sF]SSS[sW]S[sH]
+120 : 60 60 | 84% |   16.60 :   4 ( 1f  3b)     8 |  0.023333 | SS[sB]S[sF]P[sH]PPP[sB]P[sT]S[sW]S
+120 : 60 60 | atw |   16.60 :   7 ( 2f  5b)     8 |  0.100000 | SSSSS[sH]PPPPP[sH]
+120 : 60 60 | atw |   16.80 :   5 ( 1f  4b)     4 |  0.101667 | SSSS[sW]PPPPP[sW]S
+120 : 60 60 | 68% |   17.20 :   6 ( 4f  2b)     6 | -0.010000 | SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 84% |   17.60 :   8 ( 4f  4b)     8 |  0.031667 | PP[sF]P[sH]S[sT]SSS[sT]S[sW]P[sF]P
+120 : 60 60 | 84% |   18.00 :   6 ( 3f  3b)     5 |  0.035000 | S[sT]P[sB]PPP[sW]P[sF]S[sB]SSS[sH]
+120 : 60 60 | 68% |   18.60 :   8 ( 4f  4b)     8 |  0.001667 | PS[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 84% |   18.60 :   8 ( 4f  4b)     3 |  0.040000 | PPP[sB]P[sT]S[sW]SSS[sB]S[sF]P[sH]
+120 : 60 60 | 84% |   18.60 :   9 ( 5f  4b)     8 |  0.040000 | P[sW]P[sF]S[sB]SSS[sH]S[sT]P[sB]PP
+120 : 60 60 | 92% |   18.60 :   8 ( 4f  4b)     3 |  0.078333 | PPP[sB]P[sT]S[sW]SSSS[sF]P
+120 : 60 60 | 60% |   18.80 :   6 ( 3f  3b)     9 |  0.003333 | P[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]S[sT]S[sW]S
+120 : 60 60 | 68% |   18.80 :   6 ( 3f  3b)     9 |  0.003333 | P[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]S[sT]S[sW]S
+120 : 60 60 | 84% |   19.00 :   7 ( 2f  5b)     5 |  0.043333 | SSS[sF]S[sB]P[sT]PPP[sH]P[sW]S[sH]
+120 : 60 60 | 68% |   19.20 :   7 ( 3f  4b)     6 |  0.006667 | P[sW]PS[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   19.20 :   5 ( 3f  2b)     6 |  0.006667 | S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]P[sW]S[sH]
+120 : 60 60 | 60% |   19.40 :   6 ( 3f  3b)    12 |  0.008333 | PS[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   19.40 :   7 ( 4f  3b)     7 |  0.008333 | PS[sH]P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | 60% |   19.40 :   7 ( 5f  2b)    12 |  0.008333 | SP[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 76% |   19.40 :   5 ( 3f  2b)     7 |  0.008333 | SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]
+120 : 60 60 | 92% |   19.40 :   8 ( 4f  4b)     7 |  0.085000 | PPP[sB]SSSS[sT]S[sW]P[sF]P
+120 : 60 60 | 64% |   19.60 :   5 ( 2f  3b)     3 |  0.010000 | P[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]S
+120 : 60 60 | 64% |   19.60 :   5 ( 2f  3b)     3 |  0.010000 | P[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]S
+120 : 60 60 | 60% |   19.60 :   5 ( 2f  3b)     3 |  0.010000 | P[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]S
+120 : 60 60 | 92% |   19.60 :   7 ( 3f  4b)     3 |  0.086667 | P[sW]PPPP[sH]SSSS[sW]S[sH]
+120 : 60 60 | 92% |   19.80 :  10 ( 5f  5b)     9 |  0.088333 | PP[sF]P[sH]S[sT]SSSS[sB]PP
+120 : 60 60 | 92% |   19.80 :   7 ( 2f  5b)     9 |  0.088333 | SSS[sF]PPPP[sB]P[sT]S[sW]S
+120 : 60 60 | 64% |   20.00 :   5 ( 2f  3b)     5 |  0.013333 | P[sW]P[sF]S[sB]S[sF]PS[sT]P[sB]P[sT]S[sW]S
+120 : 60 60 | 76% |   20.40 :  10 ( 4f  6b)     7 |  0.016667 | PS[sH]S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]
+120 : 60 60 | 60% |   20.40 :   9 ( 5f  4b)    12 |  0.016667 | PS[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 52% |   20.40 :   9 ( 5f  4b)    12 |  0.016667 | PS[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 64% |   20.40 :  10 ( 5f  5b)     7 |  0.016667 | SP[sH]S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 84% |   20.60 :   8 ( 3f  5b)     3 |  0.056667 | P[sW]S[sH]SSS[sF]S[sB]P[sT]PPP[sH]
+120 : 60 60 | 60% |   20.80 :   8 ( 4f  4b)     9 |  0.020000 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 52% |   20.80 :   7 ( 4f  3b)     9 |  0.020000 | P[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]S[sT]S[sW]S
+120 : 60 60 | 92% |   20.80 :  10 ( 5f  5b)     4 |  0.096667 | PPPP[sT]SSSS[sB]S[sF]P[sH]
+------------|-----|-------------------------------|-----------|-----------
+len    P  S | atw |  music      4-bell runs   *56 | avg score | calling
+------------|-----|-------------------------------|-----------|-----------
+120 : 60 60 | 92% |   20.80 :  11 ( 5f  6b)     9 |  0.096667 | PP[sF]SSSS[sH]S[sT]P[sB]PP
+120 : 60 60 | 92% |   20.80 :   8 ( 3f  5b)     4 |  0.096667 | P[sW]S[sH]SSSS[sW]PPPP[sH]
+120 : 60 60 | atw |   20.80 :  10 ( 5f  5b)     4 |  0.135000 | PPPP[sT]SSSSS[sF]P
+120 : 60 60 | 64% |   21.20 :   6 ( 3f  3b)     6 |  0.023333 | PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 68% |   21.20 :  10 ( 4f  6b)     6 |  0.023333 | PS[sH]S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   21.40 :   6 ( 3f  3b)     7 |  0.025000 | P[sW]PS[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 60% |   21.40 :   8 ( 4f  4b)     7 |  0.025000 | P[sW]PS[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 52% |   21.40 :   8 ( 4f  4b)    12 |  0.025000 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 60% |   21.40 :   8 ( 4f  4b)    12 |  0.025000 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 64% |   21.60 :   6 ( 3f  3b)     8 |  0.026667 | PS[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | atw |   21.60 :  10 ( 5f  5b)     8 |  0.141667 | PPP[sB]SSSSS[sB]PP
+120 : 60 60 | 68% |   21.80 :   6 ( 3f  3b)     9 |  0.028333 | P[sW]PS[sW]S[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   21.80 :   8 ( 4f  4b)     9 |  0.028333 | P[sW]PS[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 92% |   22.00 :   7 ( 1f  6b)     5 |  0.106667 | SSS[sF]S[sB]P[sT]PPPP[sW]S
+120 : 60 60 | 64% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]SP[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]SP[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]S[sH]PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   22.20 :   7 ( 3f  4b)     6 |  0.031667 | P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   22.40 :   7 ( 3f  4b)     7 |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 92% |   22.40 :  11 ( 6f  5b)     7 |  0.110000 | P[sW]P[sF]S[sB]SSSS[sT]PPP
+120 : 60 60 | 68% |   22.60 :   7 ( 3f  4b)     8 |  0.035000 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   22.60 :   8 ( 3f  5b)     3 |  0.035000 | P[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]S
+120 : 60 60 | 68% |   22.80 :   7 ( 4f  3b)     9 |  0.036667 | P[sW]P[sF]PS[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 52% |   22.80 :   9 ( 5f  4b)     9 |  0.036667 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 92% |   23.00 :   9 ( 5f  4b)     5 |  0.115000 | PPPP[sT]P[sB]S[sF]SSSS[sH]
+120 : 60 60 | 60% |   23.40 :   7 ( 4f  3b)    12 |  0.041667 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 68% |   23.40 :   7 ( 4f  3b)    12 |  0.041667 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 92% |   23.60 :  10 ( 5f  5b)     3 |  0.120000 | P[sW]SSSS[sF]S[sB]P[sT]PPP
+120 : 60 60 | 64% |   23.80 :   6 ( 3f  3b)     4 |  0.045000 | P[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]S
+120 : 60 60 | 68% |   24.00 :   8 ( 3f  5b)     5 |  0.046667 | P[sW]P[sF]S[sB]S[sF]SP[sT]P[sB]P[sT]S[sW]S
+120 : 60 60 | 76% |   24.20 :   6 ( 3f  3b)     6 |  0.048333 | P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 76% |   24.20 :   6 ( 3f  3b)     6 |  0.048333 | P[sW]S[sH]SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 68% |   24.20 :   8 ( 4f  4b)     6 |  0.048333 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 64% |   24.20 :   6 ( 3f  3b)     6 |  0.048333 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]
+120 : 60 60 | 68% |   24.40 :   8 ( 5f  3b)    12 |  0.050000 | PS[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   24.40 :   6 ( 3f  3b)     7 |  0.050000 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 64% |   24.40 :   6 ( 3f  3b)     7 |  0.050000 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 60% |   24.40 :   8 ( 4f  4b)     7 |  0.050000 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 64% |   24.40 :   6 ( 3f  3b)     7 |  0.050000 | P[sW]SP[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 68% |   24.40 :   8 ( 4f  4b)     7 |  0.050000 | P[sW]SP[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 64% |   24.60 :   6 ( 3f  3b)     8 |  0.051667 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | atw |   24.60 :  13 ( 6f  7b)     8 |  0.166667 | PP[sF]SSSSS[sT]PPP
+120 : 60 60 | 60% |   24.80 :   8 ( 4f  4b)     9 |  0.053333 | P[sW]SP[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   25.40 :   7 ( 3f  4b)     7 |  0.058333 | P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | atw |   25.60 :  11 ( 6f  5b)     8 |  0.175000 | PPPPP[sH]SSSSS[sH]
+120 : 60 60 | 64% |   26.40 :   8 ( 3f  5b)     7 |  0.066667 | P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 76% |   26.80 :  10 ( 3f  7b)     4 |  0.070000 | P[sW]P[sF]S[sB]P[sT]PS[sF]S[sB]P[sT]S[sW]S
+120 : 60 60 | atw |   26.80 :  10 ( 5f  5b)     4 |  0.185000 | P[sW]SSSSS[sW]PPPP
+------------|-----|-------------------------------|-----------|-----------
+len    P  S | atw |  music      4-bell runs   *56 | avg score | calling
+'''
 "test/cases/atw/not-enough-atw.toml" = '''
 WARN  [monument::atw] Not enough place bells can be rung for a fully atw composition.
 len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
@@ -243,6 +405,22 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 130 | 58% |   13.00 :    5 (  2f   3b)    0f  3b    2f  0b    0f  0b     0 |  0.100000 | >
 ----|-----|----------------------------------------------------------------|-----------|-----------
 len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+'''
+"test/cases/atw/require-atw.toml" = '''
+len    P  S |  music      4-bell runs   *56 | avg score | calling
+------------|-------------------------------|-----------|-----------
+120 : 60 60 |   10.80 :   5 ( 1f  4b)     4 |  0.051667 | S[sT]PPPPP[sF]SSSS
+120 : 60 60 |   11.60 :   5 ( 1f  4b)     8 |  0.058333 | SS[sB]PPPPP[sB]SSS
+120 : 60 60 |   13.60 :   7 ( 2f  5b)     8 |  0.075000 | SSS[sF]PPPPP[sT]SS
+120 : 60 60 |   16.60 :   7 ( 2f  5b)     8 |  0.100000 | SSSSS[sH]PPPPP[sH]
+120 : 60 60 |   16.80 :   5 ( 1f  4b)     4 |  0.101667 | SSSS[sW]PPPPP[sW]S
+120 : 60 60 |   20.80 :  10 ( 5f  5b)     4 |  0.135000 | PPPP[sT]SSSSS[sF]P
+120 : 60 60 |   21.60 :  10 ( 5f  5b)     8 |  0.141667 | PPP[sB]SSSSS[sB]PP
+120 : 60 60 |   24.60 :  13 ( 6f  7b)     8 |  0.166667 | PP[sF]SSSSS[sT]PPP
+120 : 60 60 |   25.60 :  11 ( 6f  5b)     8 |  0.175000 | PPPPP[sH]SSSSS[sH]
+120 : 60 60 |   26.80 :  10 ( 5f  5b)     4 |  0.185000 | P[sW]SSSSS[sW]PPPP
+------------|-------------------------------|-----------|-----------
+len    P  S |  music      4-bell runs   *56 | avg score | calling
 '''
 "test/cases/atw/snap-finishes.toml" = '''
 len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling

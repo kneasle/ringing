@@ -180,6 +180,7 @@ take you to more in-depth docs about it.
 - [`splice_style = "leads"`](#splice_style)
 - [`splice_weight = 0.0`](#splice_weight) _(since v0.7.0)_
 - [`atw_weight`](#atw_weight) _(since v0.14.0)_
+- [`require_atw = false`](#require_atw) _(since v0.14.2)_
 
 **Calls:**
 - [`base_calls = "near"`](#base_calls)
@@ -362,6 +363,13 @@ Setting this to any value (even `0.0`) will cause the atw-ness of compositions t
 **NOTE:** Monument's current search algorithm finds it quite challenging to actually find fully atw
 compositions.  The algorithm is designed to generate 'all-rounder' compositions, and therefore
 struggles with 'all-or-nothing' metrics like atw.
+
+#### `require_atw`
+
+**_(since v0.14.2)_**
+
+If `require_atw = true`, then the only fully atw compositions will be outputted.  Defaults to
+`false` (i.e. emit all compositions, even if they are not atw).
 
 ### Calls
 

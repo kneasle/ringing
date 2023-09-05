@@ -51,8 +51,10 @@ impl AtwFlag {
 
 impl AtwTable {
     pub fn new(query: &Query, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
-        let Some(atw_weight) = query.atw_weight else {
-            return Self::empty();
+        let atw_weight = match query.atw_weight {
+            Some(w) => w,
+            None if query.require_atw => 0.0,
+            None => return Self::empty(),
         };
 
         let working_bells = query

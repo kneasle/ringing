@@ -1,0 +1,10 @@
+# Test which generates a mixture of atw/not-atw composition.  `require-atw.toml` is the same
+# search, but with `require_atw = true`.
+
+length = 120
+num_comps = 200 # 150 are possible
+singles_only = true
+
+methods = ["Plain Bob Minor", "St Clement's College Bob Minor"]
+atw_weight = 0.0
+require_atw = false

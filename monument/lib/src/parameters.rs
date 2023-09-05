@@ -38,6 +38,7 @@ pub struct Parameters {
     pub maybe_unused_calls: Vec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub atw_weight: Option<f32>,
+    pub require_atw: bool, // `true` to make Monument only output atw comps
 
     // COURSES
     //

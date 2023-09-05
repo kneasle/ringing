@@ -93,6 +93,10 @@ pub struct TomlFile {
     /// Setting this to any value will display atw values.  If you just want to display atw, set
     /// `atw_weight = 0.0`.
     atw_weight: Option<f32>,
+    /// If set to `require_atw = true`, Monument will only generate `atw` compositions (filtering)
+    /// all others.
+    #[serde(default)]
+    require_atw: bool,
 
     /* CALLS */
     /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
@@ -236,6 +240,7 @@ impl TomlFile {
             maybe_unused_calls: self.calls(stage)?,
             call_display_style,
             atw_weight: self.atw_weight,
+            require_atw: self.require_atw,
             start_row: parse_row("start row", &self.start_row, stage)?,
             end_row: parse_row("end row", &self.end_row, stage)?,
             part_head_group: PartHeadGroup::new(&part_head),
@@ -248,11 +253,11 @@ impl TomlFile {
         Ok((params, music_displays))
     }
 
-    pub fn atw_specified(&self) -> bool {
-        self.atw_weight.is_some()
+    pub fn print_atw(&self) -> bool {
+        self.atw_weight.is_some() && !self.require_atw
     }
 
-    pub fn duffers_specified(&self) -> bool {
+    pub fn print_duffers(&self) -> bool {
         self.non_duffer_courses.is_some()
     }
 
