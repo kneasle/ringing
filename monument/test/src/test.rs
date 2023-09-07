@@ -125,7 +125,10 @@ fn run_test(case: UnrunTestCase<CaseData>) -> RunTestCase<CaseData> {
         CaseBehaviour::Ignored => false, // Exact value doesn't matter
     };
 
-    let mut args = vec!["-q"];
+    let mut args = vec![
+        "-q",                // Info messages might change often
+        "--no-comp-numbers", // We only want to test *which* comps are outputted, not their order
+    ];
     if no_search {
         args.extend(["-D", "no-search"]);
     }

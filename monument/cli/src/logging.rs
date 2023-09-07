@@ -48,7 +48,7 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let (Some(printer), Some(c)) = (&mut self.comp_printer, &comp) {
-            update_string.push_str(&printer.comp_string_with_headers(c));
+            update_string.push_str(&printer.comp_string_with_possible_headers(c));
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);
@@ -131,6 +131,9 @@ pub struct CompositionPrinter {
     comps_printed: usize,
 
     /* COLUMN WIDTH INFORMATION */
+    /// The maximum width of a composition's number (i.e. the width of the total number of
+    /// compositions).  If `None`, no composition numbers are printed.
+    comp_count_width: Option<usize>,
     /// The maximum width of a composition's (total) length
     length_width: usize,
     /// For each method in the composition:
@@ -157,9 +160,12 @@ impl CompositionPrinter {
         search: Arc<Search>,
         print_atw: bool,
         print_duffers: bool,
+        print_comp_widths: bool,
     ) -> Self {
         Self {
-            length_width: search.length_range().end().to_string().len().max(3),
+            comp_count_width: print_comp_widths
+                .then_some(search.parameters().num_comps.to_string().len()),
+            length_width: search.parameters().max_length().to_string().len().max(3),
             method_counts: search
                 .methods()
                 .map(|(method, shorthand)| {
@@ -187,7 +193,7 @@ impl CompositionPrinter {
 
     /// Create some lines which summarise the given [`Composition`].  This may include additional
     /// lines for headers or ruleoffs, depending on how many compositions have been printed so far.
-    pub fn comp_string_with_headers(&mut self, comp: &Composition) -> String {
+    pub fn comp_string_with_possible_headers(&mut self, comp: &Composition) -> String {
         let mut update_string = String::new();
 
         // Add a header every 50 lines
@@ -235,6 +241,11 @@ impl CompositionPrinter {
 
     fn header(&self) -> String {
         let mut s = String::new();
+        // Comp index
+        if let Some(c) = self.comp_count_width {
+            write_centered_text(&mut s, "#", c);
+            s.push_str(" | ");
+        }
         // Length
         write_centered_text(&mut s, "len", self.length_width);
         s.push(' ');
@@ -277,8 +288,13 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition) -> String {
+        let mut s = String::new();
+        // Comp index
+        if let Some(c) = self.comp_count_width {
+            write!(s, "{:>width$} | ", comp.generation_number() + 1, width = c).unwrap();
+        }
         // Length
-        let mut s = format!("{:>width$} ", comp.length(), width = self.length_width);
+        write!(s, "{:>width$} ", comp.length(), width = self.length_width).unwrap();
         // Method counts (for spliced)
         if self.method_counts.len() > 1 {
             s.push_str(": ");

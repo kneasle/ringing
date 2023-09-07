@@ -26,7 +26,7 @@ pub struct CliArgs {
 }
 
 // Parameters passed directly into `monument_cli::run`, used to generated the [`monument::Config`]
-// for the search.  This isn't a doc-comment because doc comments overrides
+// for the search.  This isn't a doc-comment because doc comments override
 // `#[structopt(about = "...")]`.
 #[derive(Default, Debug, Clone, StructOpt)]
 pub struct Options {
@@ -47,10 +47,15 @@ pub struct Options {
     /// structures.  `no-search` will run as normal but stop just before starting the full search.
     #[structopt(short = "D", long)]
     pub debug_option: Option<DebugOption>,
-    /// If `true` Monument will only display the update line, outputting no compositions until
+    /// If set, Monument will only display the update line, outputting no compositions until
     /// the search is complete.
+    // note: this is used by the benchmark harness
     #[structopt(long = "only-update-line")]
     pub only_display_update_line: bool,
+    /// If set, disables printing the composition numbers.
+    // note: this is used by the test harness
+    #[structopt(long = "no-comp-numbers")]
+    pub dont_display_comp_numbers: bool,
 }
 
 impl CliArgs {

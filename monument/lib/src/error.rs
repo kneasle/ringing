@@ -7,9 +7,9 @@ use std::{
 
 use bellframe::{Mask, PlaceNot, RowBuf, Stage};
 
-use crate::parameters::OptionalRangeInclusive;
 #[allow(unused_imports)] // Only used for doc comments
 use crate::parameters::{Call, Method, MusicType};
+use crate::{parameters::OptionalRangeInclusive, utils::TotalLength};
 
 /// Alias for `Result<T, monument::Error>`.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -80,7 +80,7 @@ pub enum Error {
     /* LENGTH PROVING ERRORS */
     /// The requested length range isn't achievable
     UnachievableLength {
-        requested_range: RangeInclusive<usize>,
+        requested_range: RangeInclusive<TotalLength>,
         next_shorter_len: Option<usize>,
         next_longer_len: Option<usize>,
     },

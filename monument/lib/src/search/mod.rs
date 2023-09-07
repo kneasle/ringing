@@ -86,10 +86,6 @@ impl Search {
 }
 
 impl Search {
-    pub fn length_range(&self) -> RangeInclusive<usize> {
-        self.query.length_range_usize()
-    }
-
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
         let idx = self.query.get_method_by_id(id);
@@ -110,6 +106,10 @@ impl Search {
             .get_music_type_by_id(id)
             .max_count()
             .unwrap_or(usize::MAX)
+    }
+
+    pub fn parameters(&self) -> &Parameters {
+        &self.query.parameters
     }
 
     pub fn max_consecutive_duffer(&self) -> Option<usize> {

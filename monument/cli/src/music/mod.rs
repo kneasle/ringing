@@ -188,14 +188,11 @@ impl BaseMusic {
             }
             BaseMusic::Complib => {
                 let toml = complib_music_toml(stage);
-                match toml {
-                    Some(_) => log::info!(
-                        r#"Using complib music.  If you want no music, set `base_usic = "none"`"#
-                    ),
-                    None => log::warn!(
+                if toml.is_none() {
+                    log::warn!(
                         "No complib music profile for {}.  No music will be scored.",
                         stage
-                    ),
+                    );
                 }
                 toml
             }

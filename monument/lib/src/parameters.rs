@@ -38,6 +38,7 @@ pub struct Parameters {
     pub maybe_unused_calls: Vec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub atw_weight: Option<f32>,
+    pub require_atw: bool, // `true` to make Monument only output atw comps
 
     // COURSES
     //
@@ -84,13 +85,6 @@ impl Parameters {
 
     pub fn max_length(&self) -> TotalLength {
         *self.length.end()
-    }
-
-    // TODO: Remove this, now that the field is public anyway
-    pub fn length_range_usize(&self) -> RangeInclusive<usize> {
-        let start = self.length.start().as_usize();
-        let end = self.length.end().as_usize();
-        start..=end
     }
 
     pub fn is_spliced(&self) -> bool {
