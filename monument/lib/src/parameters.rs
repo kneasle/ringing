@@ -87,13 +87,6 @@ impl Parameters {
         *self.length.end()
     }
 
-    // TODO: Remove this, now that the field is public anyway
-    pub fn length_range_usize(&self) -> RangeInclusive<usize> {
-        let start = self.length.start().as_usize();
-        let end = self.length.end().as_usize();
-        start..=end
-    }
-
     pub fn is_spliced(&self) -> bool {
         self.methods_used() > 1
     }

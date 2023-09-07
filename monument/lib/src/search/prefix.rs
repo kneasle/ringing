@@ -166,11 +166,12 @@ impl CompPrefix {
         search: &Search,
         paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
+        num_comps_so_far: usize,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
-            LinkSide::StartOrEnd => return self.check_comp(search, paths),
+            LinkSide::StartOrEnd => return self.check_comp(search, paths, num_comps_so_far),
         };
         let chunk = &search.graph.chunks[chunk_idx];
 
@@ -293,7 +294,12 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, search: &Search, paths: &Paths) -> Option<Composition> {
+    fn check_comp(
+        &self,
+        search: &Search,
+        paths: &Paths,
+        num_comps_so_far: usize,
+    ) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !search.refined_ranges.length.contains(&self.length) {
@@ -355,6 +361,7 @@ impl CompPrefix {
 
         // Now we know the composition is valid, construct it and return
         let comp = Composition {
+            generation_number: num_comps_so_far,
             path,
 
             part_head: self.part_head,
