@@ -6,9 +6,9 @@
 
 
 
-## 2nd September 2023
+## 9th September 2023
 
-### Monument v0.14.0
+### Monument v0.14.2
 
 #### Headline Features
 - (#284) Allow scoring of all-the-work compositions, using the `atw_weight` parameter.
@@ -21,6 +21,10 @@
     (e.g. 23-spliced Surprise Major).
 - (#221) In the guide, always use valid values for `{start,end}_rows`.
 - (#309) Align columns correctly when the maximum composition length is 2-digits long.
+- (#314) Don't display "default music" warning if user explicitly asks for Complib music.
+- (#314) Add `require_atw` option, which filters out any non-atw compositions in Monument's output.
+- (#314) Display which order the compositions in the final output were emitted, even in the sorted
+    summary output.
 
 #### Internal Improvements
 - (#203) Automate the release workflow.  Now, `cargo cut-release` is enough to trigger the
