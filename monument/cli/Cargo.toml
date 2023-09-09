@@ -1,6 +1,6 @@
 [package]
 name = "monument_cli"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
@@ -11,7 +11,7 @@ repository = "https://github.com/kneasle/ringing-monorepo"
 
 [dependencies]
 anyhow = "1.0"
-bellframe = { version = "0.11.0", path = "../../bellframe/", features = ["serde"] }
+bellframe = { version = "0.12.0", path = "../../bellframe/", features = ["serde"] }
 colored = "2.0"
 ctrlc = "3.4"
 difference = "2.0"
