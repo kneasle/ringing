@@ -22,7 +22,6 @@ use crate::{
     parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     query::Query,
-    utils::lengths::{PerPartLength, TotalLength},
     Composition,
 };
 
@@ -110,16 +109,6 @@ impl Search {
 
     pub fn parameters(&self) -> &Parameters {
         &self.query.parameters
-    }
-
-    pub fn max_consecutive_duffer(&self) -> Option<usize> {
-        self.query
-            .max_contiguous_duffer
-            .map(PerPartLength::as_usize)
-    }
-
-    pub fn max_total_duffer(&self) -> Option<usize> {
-        self.query.max_total_duffer.map(TotalLength::as_usize)
     }
 
     pub fn num_parts(&self) -> usize {

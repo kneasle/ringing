@@ -11,10 +11,7 @@ use std::{
 use crate::{
     prove_length::RefinedRanges,
     query::Query,
-    utils::{
-        lengths::{PerPartLength, TotalLength},
-        FrontierItem,
-    },
+    utils::{lengths::TotalLength, FrontierItem},
 };
 
 use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide};
@@ -81,9 +78,8 @@ impl Graph {
 
     fn size_summary(&self) -> String {
         format!(
-            "{} chunks ({} non-duffer, {} required); {} links, {} starts, {} ends",
+            "{} chunks ({} required); {} links, {} starts, {} ends",
             self.chunks.len(),
-            self.chunks.values().filter(|chunk| !chunk.duffer).count(),
             self.chunks.values().filter(|chunk| chunk.required).count(),
             self.links.len(),
             self.starts.len(),
@@ -177,6 +173,7 @@ impl<'graph> DirectionalView<'graph> {
         Self { graph, direction }
     }
 
+    #[allow(dead_code)]
     fn chunks(&'graph self) -> impl Iterator<Item = (&'graph ChunkId, ChunkView<'graph>)> + 'graph {
         self.graph
             .chunks
@@ -277,14 +274,6 @@ impl<'graph> ChunkViewMut<'graph> {
             Backward => &mut self.chunk.lb_distance_to_rounds,
         }
     }
-
-    /// Mutable reference to the distance from rounds **to** the start of this chunk
-    fn distance_to_non_duffer_mut(&mut self) -> &mut PerPartLength {
-        match self.direction {
-            Forward => &mut self.chunk.lb_distance_from_non_duffer,
-            Backward => &mut self.chunk.lb_distance_to_non_duffer,
-        }
-    }
 }
 
 /// A view of a [`Link`], facing in a given [`Direction`]
@@ -325,7 +314,7 @@ mod passes {
     use itertools::Itertools;
 
     use crate::{
-        graph::{ChunkId, Graph, LinkSide},
+        graph::{ChunkId, Graph},
         prove_length::RefinedRanges,
         query::Query,
     };
@@ -350,9 +339,6 @@ mod passes {
             remove_links_between_false_chunks(),
             remove_chunks_with_long_method_counts(),
             remove_links_with_long_method_counts(),
-            // Non-duffers
-            compute_duffer_distances(),
-            strip_long_duffers(),
         ]
         .into_iter()
         .map(Mutex::new)
@@ -474,68 +460,6 @@ mod passes {
                 .chunks
                 .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
         }))
-    }
-
-    /* Non-duffer optimisations */
-
-    fn compute_duffer_distances() -> Pass {
-        Pass::BothDirections(Box::new(
-            |mut graph_view: DirectionalView, query: &Query, _ranges: &RefinedRanges| {
-                // Find which chunks follow directly from non-duffer chunks
-                let mut successors_of_non_duffers = HashSet::<ChunkId>::new();
-                for (_id, chunk_view) in graph_view.chunks().filter(|(_, v)| !v.chunk.duffer) {
-                    for succ_link in chunk_view.successors() {
-                        if let LinkSide::Chunk(succ_id) = succ_link.to() {
-                            successors_of_non_duffers.insert(succ_id.clone());
-                        }
-                    }
-                }
-                // Starts are also considered a non-duffer for the purposes of distance calculations
-                successors_of_non_duffers.extend(
-                    graph_view
-                        .starts()
-                        .iter()
-                        .map(|(_link, chunk_id)| chunk_id.clone()),
-                );
-                // Compute distances of every chunk, starting at those which follow directly from a
-                // non-duffer chunk (i.e. are zero distance away from non-duffers)
-                let distances_from_non_duffer = super::compute_distances(
-                    successors_of_non_duffers.iter(),
-                    &graph_view,
-                    query
-                        .max_contiguous_duffer
-                        .map(|l| l.as_total(&query.part_head_group)),
-                );
-                // Set the distances (stripping any chunks which are too far from a duffer)
-                graph_view.retain_chunks(|id, mut chunk_view| {
-                    match distances_from_non_duffer.get(id) {
-                        // keep reachable chunks and update their distance lower bounds
-                        Some(&new_distance) => {
-                            *chunk_view.distance_to_non_duffer_mut() =
-                                new_distance.as_per_part(&query.part_head_group);
-                            true
-                        }
-                        None => false, // Remove unreachable chunks
-                    }
-                });
-            },
-        ))
-    }
-
-    fn strip_long_duffers() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, query: &Query, _ranges: &RefinedRanges| {
-                if let Some(duffer_limit) = query.max_contiguous_duffer {
-                    graph.chunks.retain(|_id, chunk| {
-                        // The length of the shortest chunk of duffer containing this chunk
-                        let min_duffer_length = chunk.lb_distance_from_non_duffer
-                            + chunk.per_part_length
-                            + chunk.lb_distance_to_non_duffer;
-                        !chunk.duffer || min_duffer_length <= duffer_limit
-                    });
-                }
-            },
-        ))
     }
 }
 

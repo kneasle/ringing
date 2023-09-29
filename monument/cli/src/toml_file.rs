@@ -19,7 +19,6 @@ use monument::{
         BaseCallType, CallDisplayStyle, CallId, IdGenerator, MethodId, MusicType,
         OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
     },
-    utils::{PerPartLength, TotalLength},
     Config, PartHeadGroup,
 };
 use serde::Deserialize;
@@ -162,17 +161,6 @@ pub struct TomlFile {
     /// Weight given to every row in a course, for every handbell pair that's coursing
     #[serde(default)]
     handbell_coursing_weight: f32,
-
-    /* NO-DUFFERS */
-    /// Courses which should not be considered a 'duffer'.  If nothing is specified, all courses
-    /// are 'non-duffers'.
-    non_duffer_courses: Option<Vec<self::CourseSet>>,
-    /// The most contiguous [`Row`]s of duffer courses that are allowed between two non-duffer
-    /// courses.
-    max_contiguous_duffer: Option<usize>,
-    /// The most total [`Row`]s of duffer courses that can exist in the composition *in its
-    /// entirety*.
-    max_total_duffer: Option<usize>,
 }
 
 impl TomlFile {
@@ -245,20 +233,14 @@ impl TomlFile {
             end_row: parse_row("end row", &self.end_row, stage)?,
             part_head_group: PartHeadGroup::new(&part_head),
             course_weights: self.course_weights(stage)?,
-            max_contiguous_duffer: self.max_contiguous_duffer.map(PerPartLength::new),
-            max_total_duffer: self.max_total_duffer.map(TotalLength::new),
             maybe_unused_music_types: music_types,
             start_stroke: self.start_stroke,
         };
         Ok((params, music_displays))
     }
 
-    pub fn print_atw(&self) -> bool {
+    pub fn should_print_atw(&self) -> bool {
         self.atw_weight.is_some() && !self.require_atw
-    }
-
-    pub fn print_duffers(&self) -> bool {
-        self.non_duffer_courses.is_some()
     }
 
     pub fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
@@ -443,16 +425,6 @@ impl TomlFile {
                 )]
             }
         };
-        let default_non_duffer_coures = match &self.non_duffer_courses {
-            Some(non_duffer_courses) => {
-                let mut course_sets = Vec::new();
-                for non_duffer in non_duffer_courses {
-                    course_sets.push(non_duffer.as_monument_course_set("non duffer mask", stage)?);
-                }
-                course_sets
-            }
-            None => vec![monument::parameters::CourseSet::from(Mask::any(stage))],
-        };
 
         /* BUILD METHODS */
 
@@ -513,7 +485,6 @@ impl TomlFile {
                 start_indices,
                 end_indices,
                 allowed_courses: vec![monument::parameters::CourseSet::from(allowed_courses)],
-                non_duffer_courses: default_non_duffer_coures.clone(),
             });
         }
         Ok(methods)
@@ -671,6 +642,7 @@ impl TomlMethod {
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
+#[allow(dead_code)] // TODO: Remove this once this is used for course masks
 enum CourseSet {
     OneMask(String),
     WithOptions {
@@ -683,6 +655,7 @@ enum CourseSet {
 }
 
 impl CourseSet {
+    #[allow(dead_code)] // TODO: Remove this once this is used for course masks
     fn as_monument_course_set(
         &self,
         mask_kind: &str,
@@ -690,7 +663,7 @@ impl CourseSet {
     ) -> anyhow::Result<monument::parameters::CourseSet> {
         Ok(match self {
             CourseSet::OneMask(mask_str) => {
-                monument::parameters::CourseSet::from(parse_mask("non-duffer", mask_str, stage)?)
+                monument::parameters::CourseSet::from(parse_mask(mask_kind, mask_str, stage)?)
             }
             CourseSet::WithOptions {
                 courses: masks,

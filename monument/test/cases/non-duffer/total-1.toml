@@ -1,4 +1,0 @@
-length = { min = 0, max = 500 }
-method = "Double Oxford Bob Major"
-non_duffer_courses = ["12345*", "15432*", "13254*", "14523*"]
-max_total_duffer = 32

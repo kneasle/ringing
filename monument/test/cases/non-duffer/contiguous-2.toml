@@ -1,9 +1,0 @@
-length = "practice"
-method = "Double Oxford Bob Major"
-non_duffer_courses = [
-    "*5678", "15678*", "*8765", "18765*",
-    "*4567", "14567*", "*7654", "17654*",
-    "*3456", "13456*", "*6543", "16543*",
-    "*2345", "12345*", "*5432", "15432*",
-]
-max_contiguous_duffer = 16

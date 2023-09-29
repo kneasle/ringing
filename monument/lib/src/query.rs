@@ -42,7 +42,7 @@ pub(crate) struct Query {
     // TODO: Compute lengths
 }
 
-// TODO: Rename to `Method`
+// TODO: Remove this and calculate the values manually
 #[derive(Debug)]
 pub(crate) struct Method {
     pub inner: crate::parameters::Method,
@@ -58,9 +58,6 @@ pub(crate) struct Method {
     /// The [`Mask`]s which lead heads must satisfy in order to be a lead head within
     /// [`crate::SearchBuilder::courses`].
     pub allowed_lead_masks: Vec<Mask>,
-    /// List of lead heads which are part of
-    /// [`non_duffer_courses`](crate::SearchBuilder::non_duffer_courses).
-    pub non_duffer_lead_masks: Vec<Mask>,
 }
 
 impl Query {
@@ -144,13 +141,6 @@ impl Method {
     /// Checks if `row` is a valid lead head in this method (according to the CH masks provided).
     pub(crate) fn is_lead_head_allowed(&self, lead_head: &Row) -> bool {
         self.allowed_lead_masks.iter().any(|m| m.matches(lead_head))
-    }
-
-    pub(crate) fn is_lead_head_duffer(&self, lead_head: &Row) -> bool {
-        !self
-            .non_duffer_lead_masks
-            .iter()
-            .any(|mask| mask.matches(lead_head))
     }
 
     pub(crate) fn start_or_end_indices(&self, boundary: Boundary) -> &[usize] {
@@ -260,11 +250,6 @@ impl Method {
             ),
             allowed_lead_masks: CourseSet::to_lead_masks(
                 &method.allowed_courses,
-                &method,
-                fixed_bells,
-            ),
-            non_duffer_lead_masks: CourseSet::to_lead_masks(
-                &method.non_duffer_courses,
                 &method,
                 fixed_bells,
             ),
