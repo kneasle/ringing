@@ -309,7 +309,7 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score(self.search.parameters())).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -327,7 +327,7 @@ impl CompositionPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string()
+            comp.call_string(self.search.parameters())
         )
         .unwrap();
 

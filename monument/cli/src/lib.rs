@@ -70,7 +70,7 @@ pub fn run(
     debug_print!(Params, params);
     // Build the search
     let search = Arc::new(Search::new(
-        params,
+        params.clone(),
         toml_file.config(options, leak_search_memory),
     )?);
     debug_print!(Search, search);
@@ -119,9 +119,9 @@ pub fn run(
     }
     comps.sort_by_key(|comp| {
         (
-            rounded_float(comp.music_score()),
+            rounded_float(comp.music_score(&params)),
             rounded_float(comp.average_score()),
-            comp.call_string(),
+            comp.call_string(&params),
         )
     });
     Ok(Some(SearchResult {

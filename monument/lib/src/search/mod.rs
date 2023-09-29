@@ -82,6 +82,10 @@ impl Search {
 }
 
 impl Search {
+    // TODO: Most of these functions just call the corresponding function in `parameters`, and at
+    // that point, we may as well just force the consumer of the API to call `Self::parameters()`
+    // first.
+
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
         let idx = self.params.method_id_to_idx(id);

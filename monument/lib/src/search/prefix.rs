@@ -252,6 +252,7 @@ impl CompPrefix {
         paths: &Paths,
         num_comps_so_far: usize,
     ) -> Option<Composition> {
+        let params = &search.params;
         assert!(self.next_link_side.is_start_or_end());
 
         if !search.refined_ranges.length.contains(&self.length) {
@@ -268,10 +269,10 @@ impl CompPrefix {
         {
             return None; // Comp doesn't have the required method balance
         }
-        if !search.params.part_head_group.is_generator(self.part_head) {
+        if !params.part_head_group.is_generator(self.part_head) {
             return None; // The part head reached wouldn't generate all the parts
         }
-        if search.params.require_atw && search.atw_table.atw_factor(&self.atw_bitmap) < 0.99999 {
+        if params.require_atw && search.atw_table.atw_factor(&self.atw_bitmap) < 0.99999 {
             return None; // The composition is not atw, but we were required to make it atw
         }
 
@@ -284,18 +285,22 @@ impl CompPrefix {
 
         // Handle splices over the part head
         let mut score = self.score;
-        let is_splice = first_elem.method != last_elem.method
-            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(&search.params);
-        let splice_over_part_head = search.params.is_multipart() && is_splice;
+        let is_splice = first_elem.method_id != last_elem.method_id
+            || first_elem.start_sub_lead_idx != last_elem.end_sub_lead_idx(params);
+        let splice_over_part_head = params.is_multipart() && is_splice;
         if splice_over_part_head {
             // Check if this splice is actually allowed under the composition (i.e. there must be a
             // common label between the start and end of the composition for a splice to be
             // allowed)
-            let start_labels = search.params.methods[first_elem.method]
+            let start_labels = search
+                .params
+                .get_method_by_id(first_elem.method_id)
                 .first_lead()
                 .get_annot(first_elem.start_sub_lead_idx)
                 .unwrap();
-            let end_labels = search.params.methods[last_elem.method]
+            let end_labels = search
+                .params
+                .get_method_by_id(last_elem.method_id)
                 .first_lead()
                 .get_annot(last_elem.end_sub_lead_idx(&search.params))
                 .unwrap();
@@ -304,11 +309,11 @@ impl CompPrefix {
                 return None;
             }
             // Don't generate comp if it would violate the splice style over the part head
-            if search.params.splice_style == SpliceStyle::Calls && last_elem.ends_with_plain() {
+            if params.splice_style == SpliceStyle::Calls && last_elem.ends_with_plain() {
                 return None;
             }
             // Add/subtract weights from the splices over the part head
-            score += search.params.splice_weight * (search.params.num_parts() - 1) as f32;
+            score += params.splice_weight * (params.num_parts() - 1) as f32;
         }
 
         // Now we know the composition is valid, construct it and return
@@ -316,7 +321,7 @@ impl CompPrefix {
             generation_number: num_comps_so_far,
             path,
 
-            part_head: self.part_head,
+            part_head: params.part_head_group.get_row(self.part_head).to_owned(),
             length: self.length,
             method_counts: self.method_counts.clone(),
             atw_bitmap: self.atw_bitmap.clone(),
@@ -329,15 +334,14 @@ impl CompPrefix {
                 .collect(),
             total_score: score,
 
-            params: search.params.clone(),
             atw_table: search.atw_table.clone(),
         };
         // Sanity check that the composition is true
-        if search.params.require_truth {
+        if params.require_truth {
             let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
-            for row in comp.rows().rows() {
+            for row in comp.rows(params).rows() {
                 if !rows_so_far.insert(row) {
-                    panic!("Generated false composition ({})", comp.call_string());
+                    panic!("Generated false composition ({})", comp.call_string(params));
                 }
             }
         }
@@ -348,6 +352,8 @@ impl CompPrefix {
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
     fn flattened_path(&self, search: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
+        let params = &search.params;
+
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
@@ -370,14 +376,15 @@ impl CompPrefix {
             // Convert this chunk into a `PathElem`
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
+            let method = &search.params.methods[method_idx];
             path.push(PathElem {
-                start_row: search.params.part_head_group.get_row(part_head_elem)
+                start_row: params.part_head_group.get_row(part_head_elem)
                     * chunk.id.lead_head.as_ref()
-                    * search.params.methods[method_idx].row_in_plain_lead(sub_lead_idx),
-                method: method_idx,
+                    * method.row_in_plain_lead(sub_lead_idx),
+                method_id: method.id,
                 start_sub_lead_idx: sub_lead_idx,
                 length: chunk.per_part_length,
-                call_to_end: succ_link.call,
+                call_to_end: succ_link.call.map(|idx| search.params.calls[idx].id),
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
