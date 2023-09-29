@@ -204,9 +204,9 @@ take you to more in-depth docs about it.
 - [`course_weights = []`](#course_weights) _(renamed from `ch_weights` in v0.13.0)_
 - [`handbell_coursing_weight = 0`](#handbell_coursing_weight)
 - ~~[`leadwise`](#leadwise) (default set by Monument)~~ _(removed in v0.10.0)_
-- [`non_duffer_courses`](#non_duffer_courses) _(added in v0.12.0)_
-- [`max_total_duffer`](#max_total_duffer-and-max_contiguous_duffer) _(added in v0.12.0)_
-- [`max_contiguous_duffer`](#max_total_duffer-and-max_contiguous_duffer) _(added in v0.12.0)_
+- ~~[`non_duffer_courses`](#non_duffer_courses)~~ _(added in v0.12.0, removed in v0.15.0)_
+- ~~[`max_total_duffer`](#max_total_duffer-and-max_contiguous_duffer)~~ _(added in v0.12.0, removed in v0.15.0)_
+- ~~[`max_contiguous_duffer`](#max_total_duffer-and-max_contiguous_duffer)~~ _(added in v0.12.0, removed in v0.15.0)_
 
 **Starts/Ends:**
 - [`start_row = ""`](#start_row-and-end_row) _(since v0.10.0.  "" is equivalent to rounds)_
@@ -621,6 +621,8 @@ this is for weird cases like differential methods, which don't have a well-defin
 
 #### `non_duffer_courses`
 
+**_(removed in v0.15.0)_**
+
 Specifies which courses are 'non-duffer'.  Courses which don't satisfy anything in
 `non_duffer_courses` are considered 'duffers' and `max_{total,contiguous}_duffer` can be used to
 restrict how much 'duffer' is allowed in a given composition.
@@ -674,6 +676,8 @@ non_duffer_courses = [
 ```
 
 #### `max_total_duffer` and `max_contiguous_duffer`
+
+**_(removed in v0.15.0)_**
 
 `max_total_duffer` and `max_contiguous_duffer` specify limits (in number of rows) on how much
 'duffer' can be rung.  For example, the following produces QPs of Bristol with at most two leads of

@@ -51,10 +51,6 @@ pub struct Parameters {
     /// corresponding [`Mask`].
     pub course_weights: Vec<(Mask, f32)>,
 
-    // NON-DUFFERS
-    pub max_contiguous_duffer: Option<PerPartLength>,
-    pub max_total_duffer: Option<TotalLength>,
-
     // MUSIC
     pub maybe_unused_music_types: Vec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
@@ -135,8 +131,6 @@ pub struct Method {
 
     /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
     pub allowed_courses: Vec<CourseSet>,
-    /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
-    pub non_duffer_courses: Vec<CourseSet>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

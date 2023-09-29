@@ -16,11 +16,7 @@ use crate::{
     graph::LinkSide,
     group::PartHead,
     parameters::SpliceStyle,
-    utils::{
-        counts::Counts,
-        div_rounding_up,
-        lengths::{PerPartLength, TotalLength},
-    },
+    utils::{counts::Counts, div_rounding_up, lengths::TotalLength},
 };
 
 use super::{
@@ -62,11 +58,6 @@ pub(super) struct PrefixInner {
     // TODO: Compute this after search
     part_head: PartHead,
 
-    /// Length of contiguous run of duffers up to the end of the prefix
-    contiguous_duffer: PerPartLength,
-    /// Total count of duffers used so far in the composition
-    total_duffer: TotalLength,
-
     /// Method counts refers to the **end** of the current chunk
     method_counts: Counts,
     /// Bitmap storing the parts of methods rung by each bell so far in the composition
@@ -94,8 +85,6 @@ impl CompPrefix {
                         next_link_side: LinkSide::Chunk(chunk_idx),
                         unringable_chunks: all_chunks_ringable.clone(),
                         part_head,
-                        contiguous_duffer: PerPartLength::ZERO, // Start is considered a non-duffer
-                        total_duffer: TotalLength::ZERO,
                         method_counts: Counts::zeros(chunk.method_counts.len()),
                         atw_bitmap: search.atw_table.empty_bitmap(),
                     }),
@@ -188,19 +177,11 @@ impl CompPrefix {
             mut unringable_chunks,
             mut method_counts,
             part_head, // Don't make this `mut` because it would get updated in every loop iteration
-            mut contiguous_duffer,
-            mut total_duffer,
             mut atw_bitmap,
         } = *inner;
 
         // Compute the values for after `chunk`
         length += chunk.total_length;
-        if chunk.duffer {
-            contiguous_duffer += chunk.per_part_length;
-            total_duffer += chunk.total_length;
-        } else {
-            contiguous_duffer = PerPartLength::ZERO;
-        }
         score += chunk.score;
         method_counts += &chunk.method_counts;
         unringable_chunks.or(&chunk.falseness);
@@ -226,33 +207,6 @@ impl CompPrefix {
                 let length_after_succ = length + succ_chunk.total_length;
                 let method_counts_after_chunk = &method_counts + &succ_chunk.method_counts;
 
-                // Contiguous run of duffers would be too long
-                if let Some(duffer_limit) = search.query.max_contiguous_duffer {
-                    if succ_chunk.duffer {
-                        let min_contiguous_duffer = contiguous_duffer
-                            + succ_chunk.per_part_length
-                            + succ_chunk.min_dist_to_non_duffer;
-                        if min_contiguous_duffer > duffer_limit {
-                            continue; // Chunk would force there to be too much duffer
-                        }
-                    }
-                }
-                // Total duffers would be too much
-                if let Some(max_total_duffer) = search.query.max_total_duffer {
-                    let succ_duffer_len = match succ_chunk.duffer {
-                        false => TotalLength::ZERO,
-                        true => succ_chunk.total_length,
-                    };
-                    let total_duffer_including_succ = total_duffer
-                        + succ_duffer_len
-                        + succ_chunk
-                            .min_dist_to_non_duffer
-                            .as_total(&search.query.part_head_group);
-                    if total_duffer_including_succ > max_total_duffer {
-                        continue; // Chunk would force us to ring too much duffer
-                    }
-                }
-
                 if length_after_succ + succ_chunk.min_len_to_rounds > max_length {
                     continue; // Chunk would make comp too long
                 }
@@ -273,8 +227,6 @@ impl CompPrefix {
                     next_link_side: link.next,
                     unringable_chunks: unringable_chunks.clone(),
                     part_head,
-                    contiguous_duffer,
-                    total_duffer,
                     method_counts: method_counts.clone(),
                     atw_bitmap: atw_bitmap.clone(),
                 }),
@@ -326,7 +278,7 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's query */
 
-        let (path, music_counts, contiguous_duffer_lengths) = self.flattened_path(search, paths);
+        let (path, music_counts) = self.flattened_path(search, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
@@ -377,9 +329,6 @@ impl CompPrefix {
                 .collect(),
             total_score: score,
 
-            contiguous_duffer_lengths,
-            total_duffer: self.total_duffer,
-
             query: search.query.clone(),
             atw_table: search.atw_table.clone(),
         };
@@ -398,24 +347,17 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(
-        &self,
-        search: &Search,
-        paths: &Paths,
-    ) -> (Vec<PathElem>, Counts, Vec<PerPartLength>) {
+    fn flattened_path(&self, search: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
         let mut path = Vec::<PathElem>::new();
         let mut music_counts = Counts::zeros(search.query.music_types.len());
-        let mut duffer_lengths = Vec::<PerPartLength>::new();
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
         let (start_chunk_idx, _start_link, mut part_head_elem) = search.graph.starts[start_idx];
         let mut next_link_side = LinkSide::Chunk(start_chunk_idx);
-        let mut was_last_chunk_duffer = false; // No last chunk, but the start is non-duffer
-        let mut consecutive_duffer = PerPartLength::ZERO;
         for succ_idx in succ_idxs {
             let next_chunk_idx = match next_link_side {
                 LinkSide::Chunk(idx) => idx,
@@ -425,18 +367,6 @@ impl CompPrefix {
             let chunk = &search.graph.chunks[next_chunk_idx];
             let succ_link = &chunk.succs[succ_idx];
             music_counts += &chunk.music_counts;
-            // Check for duffer lengths
-            match (was_last_chunk_duffer, chunk.duffer) {
-                (false, true) => consecutive_duffer = chunk.per_part_length, // Starting duffers
-                (true, true) => consecutive_duffer += chunk.per_part_length, // Continuing duffers
-                (true, false) => duffer_lengths.push(consecutive_duffer),    // Finishing duffers
-                (false, false) => {
-                    // Calls which join two different non-duffer courses is a transition of zero
-                    if succ_link.call.is_some() {
-                        duffer_lengths.push(PerPartLength::ZERO);
-                    }
-                }
-            }
             // Convert this chunk into a `PathElem`
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
@@ -451,10 +381,9 @@ impl CompPrefix {
             });
             // Follow the link to the next chunk in the path
             next_link_side = succ_link.next;
-            was_last_chunk_duffer = chunk.duffer;
             part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
         assert!(next_link_side.is_start_or_end());
-        (path, music_counts, duffer_lengths)
+        (path, music_counts)
     }
 }

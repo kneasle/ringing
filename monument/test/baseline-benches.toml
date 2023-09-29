@@ -66,10 +66,6 @@ nanos = 882002505
 secs = 0
 nanos = 865699305
 
-["bench/non-duffer/bristol-s8.toml"]
-secs = 1789
-nanos = 834684425
-
 ["bench/use-cases/BohemianRhapsody4SplicedMinor720.toml"]
 secs = 2
 nanos = 176794993

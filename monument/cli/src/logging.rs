@@ -146,8 +146,6 @@ pub struct CompositionPrinter {
     method_counts: Vec<(usize, String)>,
     /// `true` if the user gave some weight to atw
     print_atw: bool,
-    /// `true` if the user specified anything about duffer courses, otherwise 'false'
-    print_duffers: bool,
     /// If a part head should be displayed, then what's its width
     part_head_width: Option<usize>,
     /// The column widths of every `MusicDisplay` in the output
@@ -159,7 +157,6 @@ impl CompositionPrinter {
         music_displays: Vec<MusicDisplay>,
         search: Arc<Search>,
         print_atw: bool,
-        print_duffers: bool,
         print_comp_widths: bool,
     ) -> Self {
         Self {
@@ -178,7 +175,6 @@ impl CompositionPrinter {
             comps_printed: 0,
 
             print_atw,
-            print_duffers,
             part_head_width: (search.num_parts() > 2)
                 .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
@@ -262,10 +258,6 @@ impl CompositionPrinter {
         if self.print_atw {
             s.push_str(" atw |");
         }
-        // Duffers
-        if self.print_duffers {
-            s.push_str(" avg/max/sum dufr |");
-        }
         // Part head
         if let Some(w) = self.part_head_width {
             // Add 2 to the width to get one char of extra padding on either side
@@ -311,18 +303,6 @@ impl CompositionPrinter {
             } else {
                 write!(s, " {:>2}% |", (factor * 100.0).floor() as usize).unwrap();
             }
-        }
-        // Duffers
-        if self.print_duffers {
-            write!(
-                s,
-                " {:>6.2} {:>4} {:>4} |",
-                comp.contiguous_duffer_lengths().sum::<usize>() as f32
-                    / comp.contiguous_duffer_lengths().count() as f32,
-                comp.contiguous_duffer_lengths().max().unwrap_or(0),
-                comp.total_duffer()
-            )
-            .unwrap();
         }
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
         if self.part_head_width.is_some() {
