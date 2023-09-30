@@ -33,7 +33,7 @@ impl SingleLineProgressLogger {
         }
     }
 
-    pub fn log(&mut self, update: Update) -> Option<Composition> {
+    pub fn log(&mut self, update: Update, comps_generated_so_far: usize) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
@@ -48,7 +48,8 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let (Some(printer), Some(c)) = (&mut self.comp_printer, &comp) {
-            update_string.push_str(&printer.comp_string_with_possible_headers(c));
+            update_string
+                .push_str(&printer.comp_string_with_possible_headers(c, comps_generated_so_far));
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);
@@ -189,7 +190,11 @@ impl CompositionPrinter {
 
     /// Create some lines which summarise the given [`Composition`].  This may include additional
     /// lines for headers or ruleoffs, depending on how many compositions have been printed so far.
-    pub fn comp_string_with_possible_headers(&mut self, comp: &Composition) -> String {
+    pub fn comp_string_with_possible_headers(
+        &mut self,
+        comp: &Composition,
+        generation_index: usize,
+    ) -> String {
         let mut update_string = String::new();
 
         // Add a header every 50 lines
@@ -204,7 +209,7 @@ impl CompositionPrinter {
             update_string.push('\n');
         }
         // Add the composition
-        update_string.push_str(&self.comp_string(comp));
+        update_string.push_str(&self.comp_string(comp, generation_index));
         self.comps_printed += 1;
 
         update_string
@@ -279,11 +284,11 @@ impl CompositionPrinter {
         s
     }
 
-    fn comp_string(&self, comp: &Composition) -> String {
+    fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
         let mut s = String::new();
         // Comp index
         if let Some(c) = self.comp_count_width {
-            write!(s, "{:>width$} | ", comp.generation_number() + 1, width = c).unwrap();
+            write!(s, "{:>width$} | ", generation_index + 1, width = c).unwrap();
         }
         // Length
         write!(s, "{:>width$} ", comp.length(), width = self.length_width).unwrap();
