@@ -10,13 +10,13 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{PlaceNot, Row, RowBuf, Stroke};
+use bellframe::{method::RowAnnot, Block, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, StrokeSet},
+    parameters::{Call, MethodVec, StrokeSet},
     query::Query,
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
@@ -86,8 +86,9 @@ impl Graph {
             return Err(crate::Error::InconsistentStroke);
         }
         // Now we know the starting strokes, count the music on each chunk
+        let plain_courses: MethodVec<_> = query.methods.iter().map(|m| m.plain_course()).collect();
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &start_strokes, query);
+            count_scores(id, chunk, &plain_courses, &start_strokes, query);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -212,6 +213,7 @@ fn get_start_strokes(
 fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
+    plain_courses: &MethodVec<Block<RowAnnot>>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
     query: &Query,
 ) {
@@ -234,7 +236,7 @@ fn count_scores(
         // start stroke
         None => Stroke::Back,
     };
-    let plain_course = &query.methods[id.method].plain_course;
+    let plain_course = &plain_courses[id.method];
     let lead_heads = query.methods[id.method].inner.lead_head().closure();
 
     for part_head in query.part_head_group.rows() {

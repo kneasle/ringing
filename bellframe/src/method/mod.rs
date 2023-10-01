@@ -120,6 +120,11 @@ impl Method {
         self.first_lead.len()
     }
 
+    /// How many [`Row`]s are in one course of this `Method`?
+    pub fn course_len(&self) -> usize {
+        self.lead_len() * self.lead_head().order()
+    }
+
     /// Gets the [`Stage`] of this `Method`
     #[inline]
     pub fn stage(&self) -> Stage {

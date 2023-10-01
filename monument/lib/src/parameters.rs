@@ -37,7 +37,7 @@ pub struct Parameters {
     // METHODS & CALLING
     pub maybe_unused_methods: Vec<Method>,
     pub splice_style: SpliceStyle,
-    pub splice_weight: f32, // TODO: Do we need so many instances of 'Score'
+    pub splice_weight: f32,
     pub maybe_unused_calls: Vec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub atw_weight: Option<f32>,
@@ -202,6 +202,18 @@ pub struct Method {
 }
 
 impl Method {
+    pub fn shorthand(&self) -> String {
+        if self.custom_shorthand.is_empty() {
+            default_shorthand(&self.title())
+        } else {
+            self.custom_shorthand.clone()
+        }
+    }
+
+    pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
+        (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
+
     /////////////////////////
     // START/END LOCATIONS //
     /////////////////////////
@@ -282,6 +294,14 @@ impl Method {
     }
 }
 
+impl std::ops::Deref for Method {
+    type Target = bellframe::Method;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MethodId(pub u16);
 
@@ -310,28 +330,6 @@ pub enum SpliceStyle {
 impl Default for SpliceStyle {
     fn default() -> Self {
         Self::LeadLabels
-    }
-}
-
-impl Method {
-    pub fn shorthand(&self) -> String {
-        if self.custom_shorthand.is_empty() {
-            default_shorthand(&self.title())
-        } else {
-            self.custom_shorthand.clone()
-        }
-    }
-
-    pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
-        (sub_lead_idx + len.as_usize()) % self.lead_len()
-    }
-}
-
-impl std::ops::Deref for Method {
-    type Target = bellframe::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
     }
 }
 

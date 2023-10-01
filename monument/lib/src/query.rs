@@ -1,6 +1,6 @@
 use std::ops::{Deref, Range};
 
-use bellframe::{Block, RowBuf};
+use bellframe::RowBuf;
 use itertools::Itertools;
 
 use crate::{
@@ -12,21 +12,12 @@ use crate::{
     utils::PerPartLength,
 };
 
-/// Extra data precomputed from a set of [`Parameters`], to be used while generating the graph.
-///
-/// This is required because using the [`Parameters`] directly in a search is not useful for two
-/// major reasons:
-///
-/// 1. To allow the GUI to edit the [`Parameters`] directly, it is highly useful to be able to
-///    include methods/calls/music types in a set of [`Parameters`] but then mark them as 'unused'.
-///    However, the graph build and search algorithms only care about which methods are used, so
-///    in a [`Query`] we can do that filtering and provide cheap access to only used
-///    methods/calls/music types.
-///
-/// 2. We want to pre-compute and cache useful data which is used often in the core algorithms.  We
-///    don't want to add this 'derived' data directly into [`Parameters`] directly, since the
-///    consumer of the API would have to keep internal data up-to-date.  By putting it in `Query`,
-///    we can precompute them and provide them to the rest of the code.
+/// To allow the GUI to edit the [`Parameters`] directly, it is highly useful to be able to
+/// include methods/calls/music types in a set of [`Parameters`] but then mark them as 'unused'.
+/// However, the graph build and search algorithms only care about which methods are used, so
+/// in a [`Query`] we can do that filtering and provide cheap access to only used
+/// methods/calls/music types.
+// TODO: Fully remove this
 #[derive(Debug)]
 pub(crate) struct Query {
     pub parameters: Parameters,
@@ -39,9 +30,6 @@ pub(crate) struct Query {
 #[derive(Debug)]
 pub(crate) struct Method {
     pub inner: crate::parameters::Method,
-    /// A [`Block`] containing the entire plain course of `inner`.  Each row is annotated with the
-    /// labels assigned to that row.
-    pub plain_course: Block<Vec<String>>,
 }
 
 impl Query {
@@ -175,10 +163,6 @@ impl Query {
 
 impl Method {
     fn new(method: crate::parameters::Method) -> Self {
-        let plain_course = method.plain_course().map_annots(|a| a.labels.to_vec());
-        Self {
-            plain_course,
-            inner: method,
-        }
+        Self { inner: method }
     }
 }

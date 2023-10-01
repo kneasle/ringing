@@ -140,10 +140,7 @@ impl ChunkFactory {
         PerPartLength,
         Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
     ) {
-        let method_idx = chunk_id.method;
-        let method = &query.methods[method_idx];
-        let course_len = method.plain_course.len();
-
+        let course_len = query.methods[chunk_id.method].course_len();
         // Determine the length of the `Chunk` by continually attempting to shorten it with calls
         // or ends
         let mut shortest_len = PerPartLength::new(course_len);
@@ -246,7 +243,7 @@ impl EndLookupTable {
     ) {
         let method_idx = chunk_id.method;
         let method = &query.methods[method_idx];
-        let course_len = method.plain_course.len();
+        let course_len = method.course_len();
         // Attempt to shorten the chunk by ending the composition
         for (end_length_from_lead_head, end_id) in self
             .end_lookup
@@ -326,31 +323,28 @@ impl LinkLookupTable {
         let mut link_lookup = MethodVec::new();
         for (method_idx, method) in query.methods.iter_enumerated() {
             let lead_len = method.lead_len();
+            let plain_course = method.plain_course();
 
             // `link_positions[pos]` is exactly the links which can be placed `pos` rows after a
             // lead head (for every `pos` within the plain course).
             let mut link_positions = HashMap::<Mask, HashMap<usize, Vec<LinkLookupEntry>>>::new();
 
             // for every labelled row in the plain course ...
-            for (mut dist_from_lead_head, (annot, _)) in
-                method.plain_course.annot_rows().enumerate()
-            {
+            for (mut dist_from_lead_head, annot) in plain_course.annots().enumerate() {
                 // There's no sense in having a link at the 0th row (which would potentially
                 // produce a 0-length chunk), so we move those rows to the end of the course
                 if dist_from_lead_head == 0 {
-                    dist_from_lead_head = method.plain_course.len();
+                    dist_from_lead_head = plain_course.len();
                 }
 
-                for label in annot {
+                for label in annot.labels {
                     // Add links for calls
                     //
                     // ... for every call that can be placed there ...
                     for (call_idx, call) in query.calls.iter_enumerated() {
                         if &call.label_from == label {
-                            let row_before_call = method
-                                .plain_course
-                                .get_row(dist_from_lead_head - 1)
-                                .unwrap();
+                            let row_before_call =
+                                plain_course.get_row(dist_from_lead_head - 1).unwrap();
                             let row_after_call =
                                 row_before_call * call.place_notation.transposition();
 
@@ -370,8 +364,7 @@ impl LinkLookupTable {
 
                     // Add links for plain splices (at every possible position)
                     if splice_style == SpliceStyle::LeadLabels {
-                        let row_after_plain =
-                            method.plain_course.get_row(dist_from_lead_head).unwrap();
+                        let row_after_plain = plain_course.get_row(dist_from_lead_head).unwrap();
                         // Add plain links from every instance of a label to every other instance
                         // of that label
                         create_links(
@@ -472,7 +465,7 @@ impl LinkLookupTable {
                 {
                     let mut len = *len_from_lead_head - chunk_id.sub_lead_idx;
                     if len == 0 {
-                        len = query.methods[chunk_id.method].plain_course.len();
+                        len = query.methods[chunk_id.method].course_len();
                     }
                     for link_entry in link_entries {
                         let next_chunk_id = ChunkIdInFirstPart {
