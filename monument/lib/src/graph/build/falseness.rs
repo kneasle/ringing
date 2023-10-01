@@ -10,7 +10,7 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{Mask, Row, RowBuf, Truth};
+use bellframe::{Mask, Row, RowBuf, SameStageVec, Truth};
 use itertools::Itertools;
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
@@ -91,7 +91,7 @@ impl FalsenessTable {
         // generating false links.
         let mut masks_used = HashSet::<(ChunkRange, Mask)>::new();
         for (method_idx, method_data) in query.methods.iter_enumerated() {
-            for lead_head_mask in &method_data.allowed_lead_masks {
+            for lead_head_mask in method_data.allowed_lead_masks(&query.parameters) {
                 for (id, len) in chunks {
                     if id.method == method_idx && lead_head_mask.matches(&id.lead_head) {
                         masks_used
@@ -216,7 +216,7 @@ fn generate_falseness_entries(
 // HELPER FUNCTIONS FOR TABLE BUILD //
 //////////////////////////////////////
 
-type RowGroups<'m_datas> = HashMap<Mask, Vec<&'m_datas Row>>;
+type RowGroups = HashMap<Mask, SameStageVec>;
 type FalseTranspositions<'masks, 'groups> =
     HashMap<&'masks (ChunkRange, Mask), HashMap<&'groups (ChunkRange, Mask), HashSet<RowBuf>>>;
 
@@ -240,7 +240,7 @@ fn reduce_masks(
     query: &Query,
 ) {
     let mut fixed_bell_mask = Mask::any(query.stage);
-    for &(bell, place) in &query.fixed_bells {
+    for (bell, place) in query.fixed_bells() {
         fixed_bell_mask
             .set_bell(bell, place)
             .expect("Fixed bells shouldn't repeat");
@@ -321,14 +321,11 @@ fn reduce_masks(
 fn group_rows(
     masks_used_in_all_parts: HashSet<(ChunkRange, Mask)>,
     query: &Query,
-) -> (
-    HashSet<ChunkRange>,
-    HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&Row>>>,
-) {
+) -> (HashSet<ChunkRange>, HashMap<(ChunkRange, Mask), RowGroups>) {
     let mut self_false_ranges = HashSet::<ChunkRange>::new();
     let mut row_groups = HashMap::<(ChunkRange, Mask), RowGroups>::new();
     'range_mask_loop: for (range, mask) in &masks_used_in_all_parts {
-        let plain_course = &query.methods[range.start.method].plain_course;
+        let plain_course = query.methods[range.start.method].plain_course();
 
         // The chunks with the same `range` are either all self-false or all self-true
         if self_false_ranges.contains(range) {
@@ -352,8 +349,9 @@ fn group_rows(
             let transposed_mask = mask * row;
             row_groups_for_this_range
                 .entry(transposed_mask)
-                .or_default()
-                .push(row);
+                .or_insert_with(|| SameStageVec::new(query.stage))
+                .push(row)
+                .unwrap();
         }
 
         row_groups.insert((*range, mask.clone()), row_groups_for_this_range);
@@ -375,7 +373,7 @@ fn group_rows(
 /// `cartesian_product`s).
 fn generate_false_chunk_transpositions<'masks, 'groups>(
     masks_used: &'masks HashSet<(ChunkRange, Mask)>,
-    row_groups: &'groups HashMap<(ChunkRange, Mask), HashMap<Mask, Vec<&Row>>>,
+    row_groups: &'groups HashMap<(ChunkRange, Mask), RowGroups>,
 ) -> FalseTranspositions<'masks, 'groups> {
     let mut false_chunk_transpositions: FalseTranspositions = HashMap::new();
     // For every pair of `(range, mask)`s ...

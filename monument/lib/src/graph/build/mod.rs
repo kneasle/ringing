@@ -10,13 +10,13 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{PlaceNot, Row, RowBuf, Stroke};
+use bellframe::{method::RowAnnot, Block, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, StrokeSet},
+    parameters::{Call, MethodVec, StrokeSet},
     query::Query,
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
@@ -86,8 +86,9 @@ impl Graph {
             return Err(crate::Error::InconsistentStroke);
         }
         // Now we know the starting strokes, count the music on each chunk
+        let plain_courses: MethodVec<_> = query.methods.iter().map(|m| m.plain_course()).collect();
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &start_strokes, query);
+            count_scores(id, chunk, &plain_courses, &start_strokes, query);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -212,6 +213,7 @@ fn get_start_strokes(
 fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
+    plain_courses: &MethodVec<Block<RowAnnot>>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
     query: &Query,
 ) {
@@ -234,7 +236,7 @@ fn count_scores(
         // start stroke
         None => Stroke::Back,
     };
-    let plain_course = &query.methods[id.method].plain_course;
+    let plain_course = &plain_courses[id.method];
     let lead_heads = query.methods[id.method].inner.lead_head().closure();
 
     for part_head in query.part_head_group.rows() {
@@ -329,13 +331,13 @@ fn check_query(query: &Query) -> crate::Result<()> {
     //
     // For every CH mask ...
     for method in &query.methods {
-        for mask_in_first_part in &method.specified_course_head_masks {
+        for mask_in_first_part in &method.specified_course_masks(&query.parameters) {
             // ... for every part ...
             for part_head in query.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some lead mask
                 let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
-                    .allowed_lead_masks
+                    .allowed_lead_masks(&query.parameters)
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
