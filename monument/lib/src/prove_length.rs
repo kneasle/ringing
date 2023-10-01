@@ -230,9 +230,14 @@ type SimpleChunk = (RowIdx, Mask);
 /// if it weren't cyclic, there'd be only 7 'chunks' per method (one for each position of the
 /// tenor).  Otherwise, we'd have 720 or 5040 chunks to process.
 fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
+    let allowed_lead_masks: MethodVec<_> = query
+        .methods
+        .iter()
+        .map(|m| m.allowed_lead_masks(&query.parameters))
+        .collect();
     let get_simple_chunks = |chunk_id: &ChunkId| -> Vec<SimpleChunk> {
         let mut simple_chunks = Vec::new();
-        for mask in &query.methods[chunk_id.row_idx.method].allowed_lead_masks {
+        for mask in &allowed_lead_masks[chunk_id.row_idx.method] {
             if mask.matches(&chunk_id.lead_head) {
                 simple_chunks.push((chunk_id.row_idx, mask.clone()));
             }

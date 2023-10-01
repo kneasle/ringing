@@ -10,7 +10,7 @@ use itertools::Itertools;
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    parameters::{CallIdx, MethodIdx, MethodVec, SpliceStyle},
+    parameters::{CallIdx, MethodId, MethodIdx, MethodVec, SpliceStyle},
     query::Query,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -316,6 +316,12 @@ impl LinkLookupTable {
             }
         }
 
+        // Create lookup for allowed lead heads
+        let allowed_lead_heads: HashMap<MethodId, Vec<Mask>> = query
+            .used_methods()
+            .map(|m| (m.id, m.allowed_lead_masks(&query.parameters)))
+            .collect();
+
         // Create lookup table for links
         let mut link_lookup = MethodVec::new();
         for (method_idx, method) in query.methods.iter_enumerated() {
@@ -354,6 +360,7 @@ impl LinkLookupTable {
                                 &row_after_call,
                                 &call.label_to,
                                 method,
+                                &allowed_lead_heads,
                                 &link_ends_by_label,
                                 query,
                                 &mut link_positions,
@@ -373,6 +380,7 @@ impl LinkLookupTable {
                             row_after_plain,
                             label,
                             method,
+                            &allowed_lead_heads,
                             &link_ends_by_label,
                             query,
                             &mut link_positions,
@@ -493,6 +501,7 @@ fn create_links(
     label_to: &str,
     method_from: &crate::query::Method,
 
+    allowed_lead_masks: &HashMap<MethodId, Vec<Mask>>,
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
     query: &Query,
     link_lookup_for_method: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
@@ -508,17 +517,17 @@ fn create_links(
         let lead_head_transposition = row_after_link * transposition_to_lead_head;
 
         // ... for every lead head mask of the method we're going to ...
-        for lead_head_mask_to in &query.methods[row_idx_to.method].allowed_lead_masks {
+        let method_to = &query.methods[row_idx_to.method];
+        for lead_head_mask_to in &allowed_lead_masks[&method_to.id] {
             //     `lh_from * lh_transposition` satisfies `lh_mask_to`
-            // iff `lh_from` satisfies `lh_mask_to * lh_transposition.inv()`
+            // iff `lh_from`                    satisfies `lh_mask_to * lh_transposition.inv()`
             let lead_head_mask_from = lead_head_mask_to * lead_head_transposition.inv();
             // Check if `lead_head_mask_from` can actually be reached (i.e. is there some LH mask
             // which is compatible with it?).  This doesn't change the results, but has a massive
             // performance benefit since chunk expansion is linear in the size of
             // `link_lookup_for_method`.  This simple pruning often causes a ~4x speedup for
             // tenors-together comps.
-            let is_mask_reachable = method_from
-                .allowed_lead_masks
+            let is_mask_reachable = allowed_lead_masks[&method_from.id]
                 .iter()
                 .any(|lh_mask| lh_mask.is_compatible_with(&lead_head_mask_from));
             if !is_mask_reachable {

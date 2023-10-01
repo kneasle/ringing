@@ -220,7 +220,7 @@ impl Method {
             let lead_head =
                 Row::solve_xa_equals_b(self.row_in_plain_lead(sub_lead_idx), row).unwrap();
             // This start is valid if it matches at least one of this method's lead head masks
-            if self.is_lead_head_allowed(&lead_head, &params.fixed_bells()) {
+            if self.is_lead_head_allowed(&lead_head, params) {
                 locations.push((lead_head, sub_lead_idx));
             }
         }
@@ -267,14 +267,18 @@ impl Method {
     // ALLOWED LEADS //
     ///////////////////
 
-    pub fn is_lead_head_allowed(&self, row: &Row, fixed_bells: &[(Bell, usize)]) -> bool {
-        self.allowed_lead_masks(fixed_bells)
+    pub fn is_lead_head_allowed(&self, row: &Row, params: &Parameters) -> bool {
+        self.allowed_lead_masks(params)
             .into_iter()
             .any(|m| m.matches(row))
     }
 
-    pub fn allowed_lead_masks(&self, fixed_bells: &[(Bell, usize)]) -> Vec<Mask> {
-        CourseSet::to_lead_masks(&self.allowed_courses, &self.inner, fixed_bells)
+    pub fn allowed_lead_masks(&self, params: &Parameters) -> Vec<Mask> {
+        CourseSet::to_lead_masks(&self.allowed_courses, &self.inner, &params.fixed_bells())
+    }
+
+    pub fn specified_course_masks(&self, params: &Parameters) -> Vec<Mask> {
+        CourseSet::to_course_masks(&self.allowed_courses, &self.inner, &params.fixed_bells())
     }
 }
 
@@ -631,7 +635,7 @@ impl CourseSet {
     /// Convert many `CourseSet`s into the corresponding course head [`Mask`]s.
     pub(crate) fn to_course_masks(
         allowed_courses: &[CourseSet],
-        method: &Method,
+        method: &bellframe::Method,
         fixed_bells: &[(Bell, usize)],
     ) -> Vec<Mask> {
         allowed_courses

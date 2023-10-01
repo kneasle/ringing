@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    parameters::{MethodIdx, MethodVec},
+    parameters::{MethodIdx, MethodVec, Parameters},
     query::Query,
     utils::{div_rounding_up, lengths::PerPartLength},
 };
@@ -82,6 +82,7 @@ impl AtwTable {
             &working_bells,
             &part_head_cycles,
             &query.methods,
+            &query.parameters,
             place_bell_range_boundaries,
         );
 
@@ -347,11 +348,12 @@ fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
     methods: &MethodVec<crate::query::Method>,
+    params: &Parameters,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
     for (method_idx, method) in methods.iter_enumerated() {
-        let bell_place_sets = bell_place_sets(working_bells, part_head_cycles, method);
+        let bell_place_sets = bell_place_sets(working_bells, part_head_cycles, method, params);
         // Add one flag for every chunk and every (bell, place bell) pair
         for bell_place_set in &bell_place_sets {
             // It is possible for different (bell, place bell) pairs to have different lead
@@ -395,6 +397,7 @@ fn bell_place_sets(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
     method: &crate::query::Method,
+    params: &Parameters,
 ) -> Vec<Vec<(Bell, u8)>> {
     let mut bells_left_to_track = working_bells.iter().copied().collect::<HashSet<_>>();
     let mut bell_place_sets = Vec::<Vec<(Bell, u8)>>::new();
@@ -416,10 +419,11 @@ fn bell_place_sets(
     }
     // If only one course mask is specified (e.g. `1*7890...`), then all those bells can
     // tracked together.
-    if method.specified_course_head_masks.len() == 1 {
+    if method.specified_course_masks(params).len() == 1 {
+        let allowed_lead_masks = method.allowed_lead_masks(params);
         // The lead head masks specify exactly which sets of place bells are visited by
         // these fixed tenors
-        for lead_mask in &method.allowed_lead_masks {
+        for lead_mask in &allowed_lead_masks {
             let mut bell_place_pairs = Vec::new();
             for (place, bell) in lead_mask.bells().enumerate() {
                 if let Some(bell) = bell {
@@ -431,7 +435,7 @@ fn bell_place_sets(
             bell_place_sets.push(bell_place_pairs);
         }
         // Mark these bells as covered
-        for bell in method.allowed_lead_masks[0].bells().flatten() {
+        for bell in allowed_lead_masks[0].bells().flatten() {
             bells_left_to_track.remove(&bell);
         }
     }

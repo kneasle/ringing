@@ -329,13 +329,13 @@ fn check_query(query: &Query) -> crate::Result<()> {
     //
     // For every CH mask ...
     for method in &query.methods {
-        for mask_in_first_part in &method.specified_course_head_masks {
+        for mask_in_first_part in &method.specified_course_masks(&query.parameters) {
             // ... for every part ...
             for part_head in query.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some lead mask
                 let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
-                    .allowed_lead_masks
+                    .allowed_lead_masks(&query.parameters)
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
