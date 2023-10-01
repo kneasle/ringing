@@ -60,7 +60,7 @@ impl AtwTable {
         let working_bells = query
             .stage
             .bells()
-            .filter(|b| !query.fixed_bells.iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
+            .filter(|b| !query.fixed_bells().iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
             .collect_vec();
         // Which bells do we have to track, according to the part-head.  For example, for a
         // composition with part head `13425678`, 3 and 4 will not have their place bells

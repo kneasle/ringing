@@ -8,13 +8,16 @@ use std::{
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
 use crate::{
     group::PartHeadGroup,
-    utils::lengths::{PerPartLength, TotalLength},
+    utils::{
+        lengths::{PerPartLength, TotalLength},
+        Boundary,
+    },
     Composition, Config, Search, Update,
 };
 
@@ -79,12 +82,24 @@ impl Parameters {
         Ok(comps)
     }
 
+    pub fn used_methods(&self) -> impl Iterator<Item = &Method> {
+        self.maybe_unused_methods.iter().filter(|m| m.used)
+    }
+
+    pub fn used_calls(&self) -> impl Iterator<Item = &Call> {
+        self.maybe_unused_calls.iter().filter(|c| c.used)
+    }
+
+    pub fn used_music_types(&self) -> impl Iterator<Item = &MusicType> {
+        self.maybe_unused_music_types.iter().filter(|mt| mt.used)
+    }
+
     pub fn max_length(&self) -> TotalLength {
         *self.length.end()
     }
 
     pub fn is_spliced(&self) -> bool {
-        self.methods_used() > 1
+        self.used_methods().count() > 1
     }
 
     pub fn num_parts(&self) -> usize {
@@ -95,12 +110,65 @@ impl Parameters {
         self.num_parts() > 1
     }
 
-    pub fn methods_used(&self) -> usize {
-        self.maybe_unused_methods.iter().filter(|m| m.used).count()
+    pub fn fixed_bells(&self) -> Vec<(Bell, usize)> {
+        let mut fixed_bells = self.stage.bells().collect_vec();
+        for m in self.used_methods() {
+            let f = self.fixed_bells_of_method(m);
+            fixed_bells.retain(|b| f.contains(b));
+        }
+        // Currently, these `fixed_bells` assume that the start_row is rounds
+        fixed_bells
+            .iter()
+            .map(|b| (self.start_row[b.index()], b.index()))
+            .collect_vec()
     }
 
-    pub fn calls_used(&self) -> usize {
-        self.maybe_unused_calls.iter().filter(|c| c.used).count()
+    /// Returns the place bells which are always preserved by plain leads and all calls of a single
+    /// method (e.g. hunt bells in non-variable-hunt compositions).
+    fn fixed_bells_of_method(&self, method: &bellframe::Method) -> HashSet<Bell> {
+        // Start the set with the bells which are fixed by the plain lead of every method
+        let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
+        for call in self.used_calls() {
+            // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
+            // Grandsire is unaffected by a plain lead, but affected by calls)
+            Self::filter_bells_fixed_by_call(method, call, &mut fixed_bells);
+        }
+        fixed_bells
+    }
+
+    // For every position that this call could be placed, remove any bells which **aren't** preserved
+    // by placing the call at this location.
+    fn filter_bells_fixed_by_call(
+        method: &bellframe::Method,
+        call: &Call,
+        set: &mut HashSet<Bell>,
+    ) {
+        // Note that all calls are required to only substitute one piece of place notation.
+        for sub_lead_idx_after_call in method.label_indices(&call.label_from) {
+            // TODO: Handle different from/to locations
+            let idx_before_call =
+                (sub_lead_idx_after_call + method.lead_len() - 1) % method.lead_len();
+            let idx_after_call = idx_before_call + 1; // in range `1..=method.lead_len()`
+
+            // The row before a call in this location in the _first lead_
+            let row_before_call = method.first_lead().get_row(idx_before_call).unwrap();
+            // The row after a plain call in this location in the _first lead_
+            let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
+            // The row after a call in this location in the _first lead_
+            let mut row_after_call = row_before_call.to_owned();
+            call.place_notation.permute(&mut row_after_call).unwrap();
+
+            // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
+            // `row_after_no_call`.  These should be removed from the set, because they are no longer
+            // fixed.
+            for (bell_after_no_call, bell_after_call) in
+                row_after_no_call.bell_iter().zip(&row_after_call)
+            {
+                if bell_after_call != bell_after_no_call {
+                    set.remove(&bell_after_call);
+                }
+            }
+        }
     }
 }
 
@@ -131,6 +199,83 @@ pub struct Method {
 
     /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
     pub allowed_courses: Vec<CourseSet>,
+}
+
+impl Method {
+    /////////////////////////
+    // START/END LOCATIONS //
+    /////////////////////////
+
+    /// Return `(lead head, sub lead index)` of every position that the given [`Row`] can be rung at
+    /// the given [`Boundary`].
+    // TODO: Return both starts and ends?
+    pub fn start_end_locations(
+        &self,
+        row: &Row,
+        boundary: Boundary,
+        params: &Parameters,
+    ) -> Vec<(RowBuf, usize)> {
+        let mut locations = Vec::new();
+        for sub_lead_idx in self.wrapped_indices(boundary, params) {
+            let lead_head =
+                Row::solve_xa_equals_b(self.row_in_plain_lead(sub_lead_idx), row).unwrap();
+            // This start is valid if it matches at least one of this method's lead head masks
+            if self.is_lead_head_allowed(&lead_head, &params.fixed_bells()) {
+                locations.push((lead_head, sub_lead_idx));
+            }
+        }
+        locations
+    }
+
+    pub fn wrapped_indices(&self, boundary: Boundary, params: &Parameters) -> Vec<usize> {
+        let (start_indices, end_indices) = self.wrapped_start_end_indices(params);
+        match boundary {
+            Boundary::Start => start_indices,
+            Boundary::End => end_indices,
+        }
+    }
+
+    pub fn wrapped_start_end_indices(&self, params: &Parameters) -> (Vec<usize>, Vec<usize>) {
+        // Wrap indices
+        let mut start_indices = self.wrap_sub_lead_indices(&self.start_indices);
+        let mut end_indices = self.wrap_sub_lead_indices(&self.end_indices);
+        // If ringing a multi-part, the `{start,end}_indices` have to match.   Therefore, it makes
+        // no sense to generate any starts/ends which don't have a matching end/start.  To achieve
+        // this, we set both `{start,end}_indices` to the union between `start_indices` and
+        // `end_indices`.
+        if params.part_head_group.is_multi_part() {
+            let r#union = start_indices
+                .iter()
+                .filter(|idx| end_indices.contains(idx))
+                .copied()
+                .collect_vec();
+            start_indices = r#union.clone();
+            end_indices = r#union;
+        }
+        (start_indices, end_indices)
+    }
+
+    fn wrap_sub_lead_indices(&self, indices: &[isize]) -> Vec<usize> {
+        let wrap_index = |idx: &isize| -> usize {
+            let lead_len_i = self.inner.lead_len() as isize;
+            (*idx % lead_len_i + lead_len_i) as usize % self.inner.lead_len()
+        };
+        indices.iter().map(wrap_index).collect_vec()
+    }
+
+    ///////////////////
+    // ALLOWED LEADS //
+    ///////////////////
+
+    pub fn is_lead_head_allowed(&self, row: &Row, fixed_bells: &[(Bell, usize)]) -> bool {
+        self.allowed_lead_masks(fixed_bells)
+            .into_iter()
+            .any(|m| m.matches(row))
+    }
+
+    pub fn allowed_lead_masks(&self, fixed_bells: &[(Bell, usize)]) -> Vec<Mask> {
+        CourseSet::to_lead_masks(&self.allowed_courses, &self.inner, fixed_bells)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -216,7 +361,7 @@ pub struct Call {
     pub weight: f32,
 }
 
-#[derive(Debug, Clone, Copy, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CallId(pub u16);
 
 impl From<u16> for CallId {

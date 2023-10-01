@@ -49,7 +49,7 @@ impl<Item, Dist: Ord> Ord for FrontierItem<Item, Dist> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum Boundary {
+pub enum Boundary {
     Start,
     End,
 }

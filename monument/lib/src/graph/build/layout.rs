@@ -41,7 +41,7 @@ pub(super) fn chunk_lengths<'q>(
     let chunk_factory = ChunkFactory::new(query);
 
     // Populate the frontier with start chunks, and add start links to `links`
-    for start_id in find_locations_of_row(&query.start_row, Boundary::Start, query) {
+    for start_id in start_chunk_ids(&query.start_row, Boundary::Start, query) {
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             from: LinkSide::StartOrEnd,
@@ -204,7 +204,7 @@ impl EndLookupTable {
         let mut end_lookup = HashMap::new();
         for part_head in query.part_head_group.rows() {
             let end_row = part_head * &query.end_row;
-            for end_location in find_locations_of_row(&end_row, Boundary::End, query) {
+            for end_location in start_chunk_ids(&end_row, Boundary::End, query) {
                 let method_idx = end_location.method;
                 let method = &query.methods[method_idx];
                 // For each end location, any other lead in the same course can also contain an end
@@ -541,20 +541,17 @@ fn create_links(
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
-fn find_locations_of_row(row: &Row, boundary: Boundary, query: &Query) -> Vec<ChunkIdInFirstPart> {
+fn start_chunk_ids(row: &Row, boundary: Boundary, query: &Query) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut locations = Vec::new();
     for (method_idx, method) in query.methods.iter_enumerated() {
-        for &sub_lead_idx in method.start_or_end_indices(boundary) {
-            let lead_head =
-                Row::solve_xa_equals_b(method.row_in_plain_lead(sub_lead_idx), row).unwrap();
-            // This start is valid if it matches at least one of this method's lead head masks
-            if method.is_lead_head_allowed(&lead_head) {
-                locations.push(ChunkIdInFirstPart {
-                    lead_head,
-                    row_idx: RowIdx::new(method_idx, sub_lead_idx),
-                });
-            }
+        for (lead_head, sub_lead_idx) in
+            method.start_end_locations(row, boundary, &query.parameters)
+        {
+            locations.push(ChunkIdInFirstPart {
+                lead_head,
+                row_idx: RowIdx::new(method_idx, sub_lead_idx),
+            });
         }
     }
     locations

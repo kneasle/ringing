@@ -240,7 +240,7 @@ fn reduce_masks(
     query: &Query,
 ) {
     let mut fixed_bell_mask = Mask::any(query.stage);
-    for &(bell, place) in &query.fixed_bells {
+    for (bell, place) in query.fixed_bells() {
         fixed_bell_mask
             .set_bell(bell, place)
             .expect("Fixed bells shouldn't repeat");
