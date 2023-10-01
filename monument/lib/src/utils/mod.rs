@@ -89,7 +89,7 @@ impl MusicBreakdown {
         let mut occurences = vec![0; music_types.len()];
         // For every (transposed) row ...
         for (idx, r) in rows.into_iter().enumerate() {
-            pre_transposition.mul_into(r, &mut temp_row).unwrap();
+            pre_transposition.mul_into(r, &mut temp_row);
             // ... for every music type ...
             for (num_instances, ty) in occurences.iter_mut().zip_eq(music_types) {
                 if ty.strokes.contains(start_stroke.offset(idx)) {
@@ -97,7 +97,7 @@ impl MusicBreakdown {
                     for pattern in &ty.patterns {
                         // Unwrap is safe because `pattern` must have the same `Stage` as the rest
                         // of the rows
-                        if pattern.matches(&temp_row).unwrap() {
+                        if pattern.matches(&temp_row) {
                             *num_instances += 1;
                         }
                     }

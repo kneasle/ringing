@@ -350,8 +350,7 @@ fn group_rows(
             row_groups_for_this_range
                 .entry(transposed_mask)
                 .or_insert_with(|| SameStageVec::new(query.stage))
-                .push(row)
-                .unwrap();
+                .push(row);
         }
 
         row_groups.insert((*range, mask.clone()), row_groups_for_this_range);
@@ -399,7 +398,7 @@ fn generate_false_chunk_transpositions<'masks, 'groups>(
                 // ... then falseness is possible and every pair of rows in `rows1 x rows2`
                 // will generate a false course head between `i1` and `i2`
                 for (row1, row2) in rows1.iter().cartesian_product(rows2) {
-                    let false_course_head = Row::solve_xa_equals_b(row2, row1).unwrap();
+                    let false_course_head = Row::solve_xa_equals_b(row2, row1);
                     fch_entry.insert(false_course_head);
                 }
             }

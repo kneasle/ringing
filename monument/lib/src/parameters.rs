@@ -156,7 +156,7 @@ impl Parameters {
             let row_after_no_call = method.first_lead().get_row(idx_after_call).unwrap();
             // The row after a call in this location in the _first lead_
             let mut row_after_call = row_before_call.to_owned();
-            call.place_notation.permute(&mut row_after_call).unwrap();
+            call.place_notation.permute(&mut row_after_call);
 
             // A bell is _affected_ by the call iff it's in a different place in `row_after_call` than
             // `row_after_no_call`.  These should be removed from the set, because they are no longer
@@ -229,8 +229,7 @@ impl Method {
     ) -> Vec<(RowBuf, usize)> {
         let mut locations = Vec::new();
         for sub_lead_idx in self.wrapped_indices(boundary, params) {
-            let lead_head =
-                Row::solve_xa_equals_b(self.row_in_plain_lead(sub_lead_idx), row).unwrap();
+            let lead_head = Row::solve_xa_equals_b(self.row_in_plain_lead(sub_lead_idx), row);
             // This start is valid if it matches at least one of this method's lead head masks
             if self.is_lead_head_allowed(&lead_head, params) {
                 locations.push((lead_head, sub_lead_idx));

@@ -12,7 +12,7 @@ use itertools::Itertools;
 
 use crate::{
     row::{same_stage_vec, DbgRow},
-    utils, Bell, IncompatibleStages, Row, RowBuf, SameStageVec, Stage,
+    utils, Bell, Row, RowBuf, SameStageVec, Stage,
 };
 
 /// A block of [`Row`], each of which can be given an annotation of any type.  Blocks can start
@@ -259,7 +259,7 @@ impl<A> Block<A> {
     /// [`RepeatIter`] is an [`Iterator`] which yields [`RowBuf`]s, causing an allocation for each
     /// call to `next`.  If those allocations are not desired, then use [`RepeatIter::next_into`]
     /// instead to re-use an existing allocation.
-    pub fn repeat_iter(&self, start_row: RowBuf) -> Result<RepeatIter<A>, IncompatibleStages> {
+    pub fn repeat_iter(&self, start_row: RowBuf) -> RepeatIter<A> {
         RepeatIter::new(start_row, self)
     }
 
@@ -269,20 +269,13 @@ impl<A> Block<A> {
 
     /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
     /// the annotations.
-    #[deprecated(note = "Name is ambiguous; please use `Block::pre_multiply` instead")]
-    pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
-        self.pre_multiply(lhs_row)
-    }
-
-    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`], whilst preserving
-    /// the annotations.
-    pub fn pre_multiply(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
+    pub fn pre_multiply(&mut self, lhs_row: &Row) {
         self.rows.pre_multiply(lhs_row) // Delegate to `SameStageVec`
     }
 
     /// Extends `self` with the contents of another [`Block`], **pre-multiplying** its [`Row`]s so
     /// that it starts with `self`'s [`leftover_row`](Self::leftover_row).
-    pub fn extend(&mut self, other: &Self) -> Result<(), IncompatibleStages>
+    pub fn extend(&mut self, other: &Self)
     where
         A: Clone,
     {
@@ -295,11 +288,7 @@ impl<A> Block<A> {
     /// # Panics
     ///
     /// Panics if `range` explicitly states a bound outside `other.len()`
-    pub fn extend_range(
-        &mut self,
-        other: &Self,
-        range: impl RangeBounds<usize>,
-    ) -> Result<(), IncompatibleStages>
+    pub fn extend_range(&mut self, other: &Self, range: impl RangeBounds<usize>)
     where
         A: Clone,
     {
@@ -307,19 +296,15 @@ impl<A> Block<A> {
 
         // `transposition` pre-multiplies `other`'s first row to `self`'s leftover row
         let transposition =
-            Row::solve_xa_equals_b(other.get_row(range.start).unwrap(), self.leftover_row())?;
+            Row::solve_xa_equals_b(other.get_row(range.start).unwrap(), self.leftover_row());
 
         // Add the transposed rows to `self`
         self.rows.pop(); // If we don't remove the leftover row, then it will get added twice
         self.rows
-            .extend_range_transposed(&transposition, &other.rows, range.start..range.end + 1)
-            .unwrap(); // If the stages don't match between `self` and `other`, then the `?` in the
-                       // first statement would prevent this code from being executed
+            .extend_range_transposed(&transposition, &other.rows, range.start..range.end + 1);
 
         // Add the annotations to `self`
         self.annots.extend_from_slice(&other.annots[range]);
-
-        Ok(())
     }
 
     /// Extends `self` with a chunk of itself, transposed to start with `self.leftover_row()`.
@@ -334,16 +319,13 @@ impl<A> Block<A> {
         let first_row_of_chunk = self.get_row(range.start).unwrap();
         // This unwrap is fine because stages must match because both rows were taken from the same
         // `SameStageVec`
-        let transposition =
-            Row::solve_xa_equals_b(first_row_of_chunk, self.leftover_row()).unwrap();
+        let transposition = Row::solve_xa_equals_b(first_row_of_chunk, self.leftover_row());
 
         // Extend the rows
         self.rows
             // The range is offset by 1 to exclude the current `leftover_row` of `self`, but
             // include the new leftover row
-            .extend_transposed_from_within(range.start + 1..range.end + 1, &transposition)
-            .unwrap(); // Stages must match because `transposition` comes from `self.row_buffer`
-                       // Extend the annots
+            .extend_transposed_from_within(range.start + 1..range.end + 1, &transposition);
         self.annots.extend_from_within(range);
     }
 
@@ -411,8 +393,7 @@ impl<A> Block<A> {
         // row of the first block
         let first_row_of_second = second_rows.first().unwrap(); // Unwrap is safe because
                                                                 // `self.row_buffer.len() > index + 1`
-        first_rows.push(first_row_of_second).unwrap(); // Unwrap is safe because both rows came
-                                                       // from `self.row_buffer`
+        first_rows.push(first_row_of_second); // Won't panic because both rows came from `self.row_buffer`
 
         // Construct the new pair of blocks
         let first_block = Self {
@@ -478,22 +459,19 @@ pub struct RepeatIter<'b, A> {
 }
 
 impl<'b, A> RepeatIter<'b, A> {
-    fn new(start_row: RowBuf, block: &'b Block<A>) -> Result<Self, IncompatibleStages> {
-        IncompatibleStages::test_err(start_row.stage(), block.stage())?;
-        Ok(Self {
+    fn new(start_row: RowBuf, block: &'b Block<A>) -> Self {
+        Self {
             current_block_head: start_row,
             iter: Self::get_iter(block),
             block,
-        })
+        }
     }
 
     /// Same as `self.next` but re-uses an existing allocation.
     #[must_use]
     pub fn next_into(&mut self, out: &mut RowBuf) -> Option<(usize, &'b A)> {
         let (source_idx, (untransposed_row, annot)) = self.next_untransposed_row()?;
-        self.current_block_head
-            .mul_into(untransposed_row, out)
-            .unwrap();
+        self.current_block_head.mul_into(untransposed_row, out);
         Some((source_idx, annot))
     }
 

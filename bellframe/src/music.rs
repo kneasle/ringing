@@ -6,7 +6,7 @@ use std::{
 use factorial::Factorial;
 use itertools::Itertools;
 
-use crate::{utils, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+use crate::{utils, Bell, InvalidRowError, Row, RowBuf, Stage};
 
 /// A regex-like `Pattern` over [`Row`]s.
 ///
@@ -376,7 +376,7 @@ impl Pattern {
     /// Returns `true` if a given [`Row`] satisfies this `Pattern`, and `false` otherwise.  If the
     /// normalised `Pattern` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
     /// runtime is `O(n + m)`.
-    pub fn matches(&self, r: &Row) -> Result<bool, IncompatibleStages> {
+    pub fn matches(&self, r: &Row) -> bool {
         // Run a match, ignoring the indices which are a match
         self.run_match(r, |_i| ())
     }
@@ -384,16 +384,16 @@ impl Pattern {
     /// Returns the **0-indexed** places of the [`Bell`]s which match this `Pattern` (or `None` if
     /// the [`Row`] doesn't match).  The places will always be sorted in ascending order.  If the
     /// [`Row`] isn't matched, `None` is returned.
-    pub fn match_pattern(&self, r: &Row) -> Result<Option<Vec<usize>>, IncompatibleStages> {
+    pub fn match_pattern(&self, r: &Row) -> Option<Vec<usize>> {
         // Run the matching algorithm, storing where the bells match
         let mut matches = Vec::<usize>::new();
-        let is_match = self.run_match(r, |i| matches.push(i))?;
+        let is_match = self.run_match(r, |i| matches.push(i));
 
-        Ok(if is_match {
+        if is_match {
             Some(matches) // If the row did match, then return the places
         } else {
             None // If the row turns out not to match the row, return an empty match
-        })
+        }
     }
 
     /// Helper function to test a match between a [`Row`] and this `Pattern`, calling some function
@@ -401,12 +401,16 @@ impl Pattern {
     ///
     /// If the normalised `Pattern` contains `n` elements and the [`Row`] contains `m` [`Bell`]s, the
     /// runtime is `O(n + m)`.
-    fn run_match(
-        &self,
-        r: &Row,
-        mut match_fn: impl FnMut(usize),
-    ) -> Result<bool, IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage(), r.stage())?;
+    #[track_caller]
+    fn run_match(&self, r: &Row, mut match_fn: impl FnMut(usize)) -> bool {
+        // Check stage
+        assert_eq!(
+            self.stage,
+            r.stage(),
+            "Stage mismatch: pattern has stage {:?} but row has {:?}",
+            self.stage,
+            r.stage()
+        );
 
         /* Note: This algorithm relies on the uniqueness of bells within rows, so cannot be used
          * on arbitrary iterators of bells */
@@ -429,18 +433,18 @@ impl Pattern {
                             } else {
                                 // If the bell didn't match what we expected, the entire row
                                 // doesn't match
-                                return Ok(false);
+                                return false;
                             }
                         }
                         // If the pattern expected a bell but the row finished, then the row doesn't
                         // match
-                        None => return Ok(false),
+                        None => return false,
                     }
                 }
                 // If the pattern is 'Any', then the row matches if it has more bells left
                 Some(Elem::X) => {
                     if bells.next().is_none() {
-                        return Ok(false);
+                        return false;
                     }
                 }
                 // If the next element is a star, then we need to look ahead at the next expected
@@ -463,12 +467,12 @@ impl Pattern {
                                 }
                                 // If we consume the entire row without finding the wanted bell,
                                 // the pattern doesn't match
-                                None => return Ok(false),
+                                None => return false,
                             }
                         }
                     }
                     // If the pattern ends with a star, then any extension of the row matches
-                    None => return Ok(true),
+                    None => return true,
                     // Because of normalisation, a star cannot be followed by anything other than a
                     // bell (or the end of the pattern).  This branch should only be reachable with
                     // incorrect use of `unsafe`
@@ -476,7 +480,7 @@ impl Pattern {
                 },
                 // If we've run out of pattern elements, then the row matches iff we also run out of
                 // bells at the same time
-                None => return Ok(bells.next().is_none()),
+                None => return bells.next().is_none(),
             }
         }
     }
@@ -686,7 +690,7 @@ mod tests {
         fn check(pattern_str: &str, row_str: &str, expected_match: bool) {
             let row = &RowBuf::parse(row_str).unwrap();
             let pattern = Pattern::parse(pattern_str, row.stage()).unwrap();
-            let is_match = pattern.matches(&row).unwrap();
+            let is_match = pattern.matches(&row);
 
             match (expected_match, is_match) {
                 (true, false) => {
@@ -729,7 +733,7 @@ mod tests {
         fn check(pattern_str: &str, row_str: &str, expected_pattern: Option<Vec<usize>>) {
             let row = &RowBuf::parse(row_str).unwrap();
             let pattern = Pattern::parse(pattern_str, row.stage()).unwrap();
-            assert_eq!(pattern.match_pattern(&row).unwrap(), expected_pattern);
+            assert_eq!(pattern.match_pattern(&row), expected_pattern);
         }
 
         // Patterns with only 'x's

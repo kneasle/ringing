@@ -161,27 +161,18 @@ impl Composition {
             let end_idx = start_idx + elem.length.as_usize();
             if end_idx > plain_course.len() {
                 // `elem` wraps over the course head, so copy it in two pieces
-                first_part
-                    .extend_range(plain_course, start_idx..)
-                    .expect("All path elems should have the same stage");
-                first_part
-                    .extend_range(plain_course, ..end_idx - plain_course.len())
-                    .expect("All path elems should have the same stage");
+                first_part.extend_range(plain_course, start_idx..);
+                first_part.extend_range(plain_course, ..end_idx - plain_course.len());
             } else {
                 // `elem` doesn't wrap over the course head, so copy it in one piece
-                first_part
-                    .extend_range(plain_course, start_idx..end_idx)
-                    .expect("All path elems should have the same stage");
+                first_part.extend_range(plain_course, start_idx..end_idx);
             }
             // If this PathElem ends in a call, then change the `leftover_row` to suit
             if let Some(call_idx) = elem.call_to_end {
                 let last_non_leftover_row = first_part.rows().next_back().unwrap();
                 let new_leftover_row = last_non_leftover_row
                     * self.query.calls[call_idx].place_notation.transposition();
-                first_part
-                    .leftover_row_mut()
-                    .copy_from(&new_leftover_row)
-                    .unwrap();
+                first_part.leftover_row_mut().copy_from(&new_leftover_row);
             }
         }
 
