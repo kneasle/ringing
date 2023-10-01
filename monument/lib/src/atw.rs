@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::ChunkId,
-    parameters::{MethodIdx, MethodVec, Parameters},
+    parameters::{Method, MethodIdx, MethodVec, Parameters},
     query::Query,
     utils::{div_rounding_up, lengths::PerPartLength},
 };
@@ -297,7 +297,7 @@ fn make_bell_place_to_bitmap_index(
 // accounted for
 fn total_unique_row_positions(
     working_bells: &[Bell],
-    methods: &MethodVec<crate::query::Method>,
+    methods: &MethodVec<Method>,
     flags: &[AtwFlag],
 ) -> usize {
     let total_unique_row_positions = working_bells.len() // Working bells
@@ -347,7 +347,7 @@ fn place_bell_range_boundaries(
 fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    methods: &MethodVec<crate::query::Method>,
+    methods: &MethodVec<Method>,
     params: &Parameters,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
@@ -391,12 +391,12 @@ fn range_boundaries_to_flags(
     flags
 }
 
-/// Given a [`crate::query::Method`], determine which sets of `(bell, place bell)` pairs can be
+/// Given a [`Method`], determine which sets of `(bell, place bell)` pairs can be
 /// combined and tracked with one flag.
 fn bell_place_sets(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    method: &crate::query::Method,
+    method: &Method,
     params: &Parameters,
 ) -> Vec<Vec<(Bell, u8)>> {
     let mut bells_left_to_track = working_bells.iter().copied().collect::<HashSet<_>>();

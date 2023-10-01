@@ -93,7 +93,7 @@ impl Search {
     }
 
     pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
-        self.query.methods.iter().map(|m| (&m.inner, m.shorthand()))
+        self.query.methods.iter().map(|m| (m, m.shorthand()))
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {

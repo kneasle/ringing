@@ -10,7 +10,7 @@ use itertools::Itertools;
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    parameters::{CallIdx, MethodId, MethodIdx, MethodVec, SpliceStyle},
+    parameters::{CallIdx, Method, MethodId, MethodIdx, MethodVec, SpliceStyle},
     query::Query,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -492,7 +492,7 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &crate::query::Method,
+    method_from: &Method,
 
     allowed_lead_masks: &HashMap<MethodId, Vec<Mask>>,
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,

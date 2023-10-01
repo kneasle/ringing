@@ -6,8 +6,8 @@ use itertools::Itertools;
 use crate::{
     graph::ChunkId,
     parameters::{
-        Call, CallVec, MethodId, MethodIdx, MethodVec, MusicType, MusicTypeId, MusicTypeVec,
-        Parameters,
+        Call, CallVec, Method, MethodId, MethodIdx, MethodVec, MusicType, MusicTypeId,
+        MusicTypeVec, Parameters,
     },
     utils::PerPartLength,
 };
@@ -24,12 +24,6 @@ pub(crate) struct Query {
     pub methods: MethodVec<Method>,
     pub calls: CallVec<Call>,
     pub music_types: MusicTypeVec<MusicType>,
-}
-
-// TODO: Remove this and calculate the values manually
-#[derive(Debug)]
-pub(crate) struct Method {
-    pub inner: crate::parameters::Method,
 }
 
 impl Query {
@@ -117,14 +111,6 @@ impl Deref for Query {
     }
 }
 
-impl Deref for Method {
-    type Target = crate::parameters::Method;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
 /////////////////////////
 // BUILDING EXTRA DATA //
 /////////////////////////
@@ -137,7 +123,7 @@ impl Query {
             .iter()
             .filter(|m| m.used)
             .cloned()
-            .collect_vec();
+            .collect();
         let used_calls: CallVec<_> = parameters
             .maybe_unused_calls
             .iter()
@@ -152,17 +138,11 @@ impl Query {
             .collect();
 
         Self {
-            methods: used_methods.into_iter().map(Method::new).collect(),
+            methods: used_methods,
             calls: used_calls,
             music_types: used_music_types,
 
             parameters,
         }
-    }
-}
-
-impl Method {
-    fn new(method: crate::parameters::Method) -> Self {
-        Self { inner: method }
     }
 }
