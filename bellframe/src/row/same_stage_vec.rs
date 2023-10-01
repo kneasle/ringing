@@ -5,7 +5,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{utils, Bell, IncompatibleStages, InvalidRowError, Row, RowBuf, Stage};
+use crate::{utils, Bell, InvalidRowError, Row, RowBuf, Stage};
 
 use super::DbgRow;
 
@@ -113,23 +113,21 @@ impl SameStageVec {
         let first_row =
             RowBuf::parse(first_line).map_err(|err| ParseError::InvalidRow { line_num: 1, err })?;
         // Create a `SameStageVec`, which starts out containing the first row
-        let mut new_vec = SameStageVec::from_row_buf(first_row);
+        let mut new_vec = SameStageVec::from_row_buf(first_row.clone());
 
         // Now parse the rest of the lines into the new `SameStageVec`
         for (line_num, line) in line_iter {
             // Parse the line into a Row, and fail if its either invalid or doesn't match the stage
             let parsed_row =
                 RowBuf::parse(line).map_err(|err| ParseError::InvalidRow { line_num, err })?;
-            new_vec.push(&parsed_row).map_err(
-                |IncompatibleStages {
-                     lhs_stage,
-                     rhs_stage,
-                 }| ParseError::IncompatibleStages {
+            if parsed_row.stage() != first_row.stage() {
+                return Err(ParseError::IncompatibleStages {
                     line_num,
-                    first_stage: lhs_stage,
-                    different_stage: rhs_stage,
-                },
-            )?;
+                    first_stage: first_row.stage(),
+                    different_stage: parsed_row.stage(),
+                });
+            }
+            new_vec.push(&parsed_row);
         }
 
         Ok(new_vec)
@@ -241,10 +239,10 @@ impl SameStageVec {
 
     /// Adds a new [`Row`] to the end of the buffer, checking that its [`Stage`] is as expected.
     #[inline]
-    pub fn push(&mut self, row: &Row) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage, row.stage())?;
+    #[track_caller]
+    pub fn push(&mut self, row: &Row) -> () {
+        self.check_stage("row", row.stage());
         self.bells.extend(row.bell_iter());
-        Ok(())
     }
 
     /// Removes the last [`Row`] from `self` and returning if it.  Returns `None` if `self`
@@ -264,20 +262,10 @@ impl SameStageVec {
 
     /// Extends this buffer with the [`Row`]s yielded by an [`Iterator`].  If any of the [`Row`]s
     /// cause a [`Stage`] mismatch, an error is returned and the buffer is left unchanged.
-    pub fn extend<T: AsRef<Row>>(
-        &mut self,
-        row_iter: impl IntoIterator<Item = T>,
-    ) -> Result<(), IncompatibleStages> {
-        let num_bells_before_extend = self.bells.len(); // Used to revert the `Bell` slice
+    pub fn extend<T: AsRef<Row>>(&mut self, row_iter: impl IntoIterator<Item = T>) {
         for r in row_iter.into_iter() {
-            let row = r.as_ref();
-            if let Err(e) = IncompatibleStages::test_err(self.stage, row.stage()) {
-                self.bells.drain(num_bells_before_extend..); // Remove the extra bells
-                return Err(e); // End the iteration
-            }
-            self.bells.extend(row.bell_iter());
+            self.bells.extend(r.as_ref().bell_iter());
         }
-        Ok(())
     }
 
     /// Extend `self` with the [`Row`]s from `other`, returning an error if the [`Stage`]s don't
@@ -285,68 +273,60 @@ impl SameStageVec {
     /// `&SameStageVec` implements [`IntoIterator`]) but `extend_from_buf` is faster since the
     /// [`Stage`] comparison is only performed once.
     #[inline]
-    pub fn extend_from_buf(&mut self, other: &Self) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage, other.stage)?;
+    #[track_caller]
+    pub fn extend_from_buf(&mut self, other: &Self) {
+        self.check_stage("other block", other.stage());
         self.bells.extend(other.bells.iter().copied()); // Copy bells across in one go
-        Ok(())
     }
 
     /// Extend `self` with the [`Row`]s from another [`SameStageVec`], pre-multiplying them all by
     /// a given [`Row`].
     #[inline]
-    pub fn extend_transposed(
-        &mut self,
-        transposition: &Row,
-        other: &Self,
-    ) -> Result<(), IncompatibleStages> {
+    #[track_caller]
+    pub fn extend_transposed(&mut self, transposition: &Row, other: &Self) {
         self.extend_range_transposed(transposition, other, ..)
     }
 
     /// Extend `self` with the [`Row`]s from a region of another [`SameStageVec`], pre-multiplying
     /// them all by a given [`Row`].
     #[inline]
+    #[track_caller]
     pub fn extend_range_transposed(
         &mut self,
         transposition: &Row,
         other: &Self,
         range: impl RangeBounds<usize>,
-    ) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage, transposition.stage())?;
+    ) {
+        self.check_stage("transposition", transposition.stage());
         // TODO: Write a vectorised routine for this
         self.bells.extend(
             other.bells[other.to_bell_range(range)]
                 .iter()
                 .map(|b| transposition[b.index()]),
         );
-        Ok(())
     }
 
     /// Take a range of `self`, pre-multiply all the `Row`s and extend `self` with them.
     #[inline]
+    #[track_caller]
     pub fn extend_transposed_from_within(
         &mut self,
         range: impl RangeBounds<usize>,
         transposition: &Row,
-    ) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage, transposition.stage())?;
+    ) {
+        self.check_stage("transposition", transposition.stage());
         // Copy the bells one-by-one, because otherwise we'd have to borrow `self.bells` twice and
         // the borrow checker doesn't like that.
         for i in self.to_bell_range(range) {
             let transposed_bell = transposition[self.bells[i].index()];
             self.bells.push(transposed_bell);
         }
-        Ok(())
     }
 
     /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`].
-    #[deprecated(note = "Name is ambiguous; please use `pre_multiply` instead")]
-    pub fn permute(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
-        self.pre_multiply(lhs_row)
-    }
-
-    /// Pre-multiplies every [`Row`] in this `Block` in-place by another [`Row`].
-    pub fn pre_multiply(&mut self, lhs_row: &Row) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(lhs_row.stage(), self.stage())?;
+    #[track_caller]
+    pub fn pre_multiply(&mut self, lhs_row: &Row) {
+        self.check_stage("LHS row", lhs_row.stage());
         // TODO: Write vectorised routine for this
         for b in &mut self.bells {
             // SAFETY:
@@ -356,14 +336,13 @@ impl SameStageVec {
             // => `b.index() < lhs_row.stage()` for every `b`
             *b = unsafe { lhs_row.get_bell_unchecked(b.index()) };
         }
-        Ok(())
     }
 
     /// Creates a copy of `self`, where every [`Row`] has been pre-multiplied by another [`Row`].
-    pub fn pre_multiplied(&self, lhs_row: &Row) -> Result<Self, IncompatibleStages> {
+    pub fn pre_multiplied(&self, lhs_row: &Row) -> Self {
         let mut new_vec = Self::new(self.stage);
-        new_vec.extend_transposed(lhs_row, self)?;
-        Ok(new_vec)
+        new_vec.extend_transposed(lhs_row, self);
+        new_vec
     }
 
     /// Splits `self` into two `SameStageVec`s (`a` and `b`) where:
@@ -400,6 +379,15 @@ impl SameStageVec {
     fn get_range_of_row(&self, index: usize) -> Range<usize> {
         let s = self.stage.num_bells();
         index * s..(index + 1) * s
+    }
+
+    #[track_caller]
+    fn check_stage(&self, name: &str, rhs_stage: Stage) {
+        assert_eq!(
+            self.stage, rhs_stage,
+            "Stage mismatch: `Block` has stage {:?} but {:?} has stage {:?}",
+            self.stage, name, rhs_stage,
+        );
     }
 }
 

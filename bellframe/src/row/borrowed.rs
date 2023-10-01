@@ -248,10 +248,10 @@ impl Row {
 
     /// Overwrite `self` in-place with the contents of another [`Row`].  Returns an
     /// [`IncompatibleStages`] error if `other` has a different stage.
-    pub fn copy_from(&mut self, other: &Row) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage(), other.stage())?;
+    #[track_caller]
+    pub fn copy_from(&mut self, other: &Row) {
+        self.check_stage(other);
         self.bell_slice.copy_from_slice(&other.bell_slice);
-        Ok(())
     }
 
     /* PERMUTATION ARITHMETIC */
@@ -308,7 +308,6 @@ impl Row {
     ///     RowBuf::parse("24317568")?
     /// );
     /// // Multiplying two Rows of different Stages is not OK, and creates an invalid Row.
-    /// // Note how both sides of the `assert_eq` have to use unsafe to create an invalid Row.
     /// let bad_row = unsafe {
     ///     RowBuf::parse("13475628")?.mul_unchecked(&RowBuf::parse("4321")?)
     /// };
@@ -324,12 +323,11 @@ impl Row {
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), storing the result in an
     /// existing [`RowBuf`].  This will change the [`Stage`] of the output [`RowBuf`] if needed.
-    pub fn mul_into(&self, rhs: &Row, out: &mut RowBuf) -> Result<(), IncompatibleStages> {
-        // Test that the stages match
-        IncompatibleStages::test_err(self.stage(), rhs.stage())?;
+    #[track_caller]
+    pub fn mul_into(&self, rhs: &Row, out: &mut RowBuf) {
+        self.check_stage(rhs);
         // This unsafety is OK because we've just checked that the stages match
         unsafe { self.mul_into_unchecked(rhs, out) }
-        Ok(())
     }
 
     /// Multiply two `Row`s (i.e. use the RHS to permute the LHS), storing the result in an
@@ -409,31 +407,31 @@ impl Row {
     ///
     /// // The inverse of Queens is Tittums
     /// let mut row_buf = RowBuf::rounds(Stage::MINOR);
-    /// RowBuf::parse("135246")?.inv_into(&mut row_buf).unwrap();
+    /// RowBuf::parse("135246")?.inv_into(&mut row_buf);
     /// assert_eq!(row_buf, RowBuf::parse("142536")?);
     ///
     /// // Backrounds is self-inverse
     /// let mut row_buf = RowBuf::rounds(Stage::MAJOR);
-    /// RowBuf::backrounds(Stage::MAJOR).inv_into(&mut row_buf).unwrap();
+    /// RowBuf::backrounds(Stage::MAJOR).inv_into(&mut row_buf);
     /// assert_eq!(row_buf, RowBuf::backrounds(Stage::MAJOR));
     ///
     /// // `1324` inverts to `1423`
     /// let mut row_buf = RowBuf::rounds(Stage::MINIMUS);
-    /// RowBuf::parse("1342")?.inv_into(&mut row_buf).unwrap();
+    /// RowBuf::parse("1342")?.inv_into(&mut row_buf);
     /// assert_eq!(row_buf, RowBuf::parse("1423")?);
     /// #
     /// # Ok::<(), bellframe::InvalidRowError>(())
     /// ```
     // TODO: Rename this `inv_into_row`
-    pub fn inv_into(&self, out: &mut Row) -> Result<(), IncompatibleStages> {
-        IncompatibleStages::test_err(self.stage(), out.stage())?;
+    #[track_caller]
+    pub fn inv_into(&self, out: &mut Row) {
+        self.check_stage(out);
         // Now perform the inversion
         for (i, b) in self.bell_iter().enumerate() {
             // PERF: If this ever becomes a bottleneck, this is a good place to remove the bounds
             // checks
             out.bell_slice[b.index()] = Bell::from_index(i as u8);
         }
-        Ok(())
     }
 
     /// Calculate the inverse of this `Row`, storing the result in an existing `RowBuf` (thus
@@ -495,7 +493,7 @@ impl Row {
         let mut accumulator = RowAccumulator::rounds(self.stage());
         for _ in 0..exponent {
             // Unwrap is safe because the accumulator has the same stage as `self`
-            accumulator.post_accumulate(self).unwrap();
+            accumulator.post_accumulate(self);
         }
         accumulator.into_total()
     }
@@ -503,15 +501,15 @@ impl Row {
     /// Computes the value of `x` which satisfies `a * x = b` - i.e. the `Row` which
     /// post-transposes `a` to `b`.
     #[inline]
-    pub fn solve_ax_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
-        a.inv().try_mul(b)
+    pub fn solve_ax_equals_b(a: &Self, b: &Self) -> RowBuf {
+        !a * b
     }
 
     /// Computes the value of `x` which satisfies `x * a = b` - i.e. the `Row` which
     /// pre-multiplies `a` to `b`.  This is equivalent to `a.transposition_to(b)`.
     #[inline]
-    pub fn solve_xa_equals_b(a: &Self, b: &Self) -> Result<RowBuf, IncompatibleStages> {
-        b.try_mul(&a.inv())
+    pub fn solve_xa_equals_b(a: &Self, b: &Self) -> RowBuf {
+        b * !a
     }
 
     /* MISC FUNCTIONS */
@@ -651,7 +649,7 @@ impl Row {
     pub fn multi_cartesian_product(
         row_sets: impl IntoIterator<Item = impl IntoIterator<Item = impl AsRef<Self>>>,
         stage: Stage,
-    ) -> Result<SameStageVec, IncompatibleStages> {
+    ) -> SameStageVec {
         let mut set_iter = row_sets.into_iter();
         // We will always be transposing the contents of `transpose_from` with the new values,
         // putting the results into `transpose_to`.  At the end of every loop iteration these are
@@ -662,14 +660,13 @@ impl Row {
         // Consume the first set as a special case:
         match set_iter.next() {
             // If it doesn't exist, no things are being CPed together so we return the empty Vec
-            None => return Ok(SameStageVec::new(stage)),
+            None => return SameStageVec::new(stage),
             // If it does exist, then populate the `transpose_from` buffer with it and initialise
             // the stage
             Some(set) => {
                 for r in set.into_iter() {
                     let r = r.as_ref();
-                    IncompatibleStages::test_err(stage, r.stage())?;
-                    transpose_from.push(r).unwrap();
+                    transpose_from.push(r);
                 }
             }
         }
@@ -677,7 +674,7 @@ impl Row {
         for set in set_iter {
             // First up, check if `transpose_from` is empty, in which case the output will be empty
             if transpose_from.is_empty() {
-                return Ok(SameStageVec::new(stage));
+                return SameStageVec::new(stage);
             }
             // Unwrap the stage once, since it has either been set by now or `transpose_from` is
             // empty
@@ -686,10 +683,9 @@ impl Row {
             transpose_to.clear();
             for r2 in set {
                 let r2 = r2.as_ref();
-                IncompatibleStages::test_err(stage, r2.stage())?;
                 for r1 in &transpose_from {
                     // SAFETY: We checked that `r2` and all of `transpose_from` have stage `s`
-                    transpose_to.push(&unsafe { r1.mul_unchecked(r2) }).unwrap();
+                    transpose_to.push(&(r1 * r2));
                 }
             }
             // Finally, swap the buffers so that we read from the newly transposed rows
@@ -697,7 +693,7 @@ impl Row {
         }
         // Note: we return `transpose_from` here (rather than `transpose_to`) because the two
         // buffers have just been swapped at the end of the loop iteration
-        Ok(transpose_from)
+        transpose_from
     }
 
     /// Generates the least group containing a given set of `Row`s, returning the result in a
@@ -705,20 +701,22 @@ impl Row {
     /// anyone knows of a better one, then please let me know...
     pub fn least_group_containing<'a>(
         rows: impl IntoIterator<Item = &'a Self> + Clone,
-    ) -> Result<HashSet<RowBuf>, IncompatibleStages>
+    ) -> HashSet<RowBuf>
     where
         Self: 'a,
     {
+        // Check that stages match
+        for (r1, r2) in rows.clone().into_iter().tuple_windows() {
+            assert_eq!(r1.stage(), r2.stage());
+        }
         // The algorithm used here is to expand every possible way of expanding the input elements,
         // in depth first order.
         let mut set = HashSet::<RowBuf>::new();
-        let mut stage: Option<Stage> = None;
         let mut frontier = VecDeque::<RowBuf>::new();
         // We seed the frontier and `set` manually the first time round to avoid checking the
         // stages all the time (if the input rows are all compatible, then so will any finite
         // product of them).
         for r in rows.clone().into_iter() {
-            IncompatibleStages::test_err_opt(&mut stage, r.stage())?;
             if set.insert(r.to_owned()) {
                 frontier.push_back(r.to_owned());
             }
@@ -738,34 +736,28 @@ impl Row {
                 }
             }
         }
-        Ok(set)
+        set
     }
 
     /// Determines if the given set of [`Row`]s forms a group.  This performs `n^2` transpositions
     /// and `n` inversions where `n` is the number of unique elements yeilded by `rows`.  See [this
     /// Wikipedia page](https://en.wikipedia.org/wiki/Subgroup_test) for the algorithm used.
-    pub fn is_group<'a>(
-        rows: impl IntoIterator<Item = &'a Self>,
-    ) -> Result<bool, IncompatibleStages>
+    pub fn is_group<'a>(rows: impl IntoIterator<Item = &'a Row>) -> bool
     where
         Self: 'a,
     {
         // Build a hash set with the contents of `rows`
-        let row_set: HashSet<&Self> = rows.into_iter().collect();
+        let row_set: HashSet<&Row> = rows.into_iter().collect();
+        // Check that stages match
+        for (r1, r2) in row_set.iter().tuple_windows() {
+            assert_eq!(r1.stage(), r2.stage());
+        }
         // We early return here because if the set is empty then this cannot be a group but all the
         // checks will be vacuously satisfied
         if row_set.is_empty() {
-            return Ok(false);
+            return false;
         }
         // Check that stages match
-        let mut first_stage: Option<Stage> = None;
-        for r in &row_set {
-            if let Some(fs) = first_stage {
-                IncompatibleStages::test_err(fs, r.stage())?;
-            } else {
-                first_stage = Some(r.stage());
-            }
-        }
         // Now perform the group check by verifying that `a * !b` is in the set for all a, b in
         // `row_set`.
         // PERF: We're multiplying every row by its inverse, which always gives rounds and
@@ -782,12 +774,12 @@ impl Row {
                 unsafe { a.mul_into_unchecked(&b_inv, &mut a_mul_b_inv) }
                 // If `a * !b` is not in `row_set`, then this can't be a group so we return false
                 if !row_set.contains(&*a_mul_b_inv) {
-                    return Ok(false);
+                    return false;
                 }
             }
         }
         // If all of the checks passed, then the set is a group
-        Ok(true)
+        true
     }
 
     /// A very collision-resistant hash function.  It is guaranteed to be perfectly
@@ -838,6 +830,17 @@ impl Row {
         // slices of `Bell`s and the pointer cast doesn't change the lifetime of the underlying
         // data.
         &mut *(slice as *mut [Bell] as *mut Row)
+    }
+
+    #[track_caller]
+    fn check_stage(&self, row: &Row) {
+        assert_eq!(
+            self.stage(),
+            row.stage(),
+            "Stage mismatch: LHS has stage {:?} but RHS has stage {:?}",
+            self.stage(),
+            row.stage(),
+        );
     }
 }
 
@@ -1043,7 +1046,7 @@ mod tests {
         fn check(rows: &[&str]) {
             let rows: Vec<RowBuf> = rows.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
             println!("Is {:?} a group?", rows);
-            assert!(Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
+            assert!(Row::is_group(rows.iter().map(|r| r.deref())));
         }
 
         check(&["1234", "1342", "1423"]);
@@ -1071,7 +1074,7 @@ mod tests {
         fn check(groups: &[&str]) {
             let rows: Vec<RowBuf> = groups.iter().map(|s| RowBuf::parse(s).unwrap()).collect();
             println!("Is {:?} not a group?", groups);
-            assert!(!Row::is_group(rows.iter().map(|r| r.deref())).unwrap());
+            assert!(!Row::is_group(rows.iter().map(|r| r.deref())));
         }
 
         check(&["21"]);
