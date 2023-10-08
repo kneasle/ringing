@@ -10,8 +10,7 @@ use itertools::Itertools;
 use crate::{
     graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
-    parameters::{CallIdx, Method, MethodId, MethodIdx, MethodVec, SpliceStyle},
-    query::Query,
+    parameters::{CallIdx, MethodIdx, MethodVec, Parameters, SpliceStyle},
     utils::{
         lengths::{PerPartLength, TotalLength},
         Boundary, FrontierItem,
@@ -21,12 +20,12 @@ use crate::{
 
 use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 
-/// Compute the layout (ids, lengths and connections) of the graph representing a [`Query`].
+/// Compute the layout (ids, lengths and connections) of the graph representing a [`Parameters`].
 ///
 /// This is the only item exported by this module; all the other code should be considered
 /// implementation detail of this function
 pub(super) fn chunk_lengths<'q>(
-    query: &'q Query,
+    params: &'q Parameters,
     config: &Config,
 ) -> crate::Result<(
     ChunkEquivalenceMap<'q>,
@@ -37,11 +36,11 @@ pub(super) fn chunk_lengths<'q>(
     let mut links = LinkSet::new();
 
     let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId, TotalLength>>>::new();
-    let mut chunk_equiv_map = ChunkEquivalenceMap::new(&query.part_head_group);
-    let chunk_factory = ChunkFactory::new(query);
+    let mut chunk_equiv_map = ChunkEquivalenceMap::new(&params.part_head_group);
+    let chunk_factory = ChunkFactory::new(params);
 
     // Populate the frontier with start chunks, and add start links to `links`
-    for start_id in start_chunk_ids(&query.start_row, Boundary::Start, query) {
+    for start_id in boundary_locations(&params.start_row, Boundary::Start, params) {
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             from: LinkSide::StartOrEnd,
@@ -70,13 +69,13 @@ pub(super) fn chunk_lengths<'q>(
         }
 
         // Compute long this chunk is, and what its successors are
-        let (per_part_length, successors) = chunk_factory.build_chunk(chunk_id.clone(), query);
+        let (per_part_length, successors) = chunk_factory.build_chunk(chunk_id.clone(), params);
         let min_distance_after_chunk =
-            min_distance_from_start + per_part_length.as_total(&query.part_head_group);
+            min_distance_from_start + per_part_length.as_total(&params.part_head_group);
 
         // Stop expanding if the shortest path from rounds to the end of the chunk takes longer
         // than the max comp length
-        if min_distance_after_chunk > query.max_length() {
+        if min_distance_after_chunk > params.max_length() {
             continue;
         }
 
@@ -122,10 +121,10 @@ struct ChunkFactory {
 }
 
 impl ChunkFactory {
-    fn new(query: &Query) -> Self {
+    fn new(params: &Parameters) -> Self {
         Self {
-            end_lookup_table: EndLookupTable::new(query),
-            link_lookup_table: LinkLookupTable::new(query),
+            end_lookup_table: EndLookupTable::new(params),
+            link_lookup_table: LinkLookupTable::new(params),
         }
     }
 
@@ -135,12 +134,12 @@ impl ChunkFactory {
     fn build_chunk(
         &self,
         chunk_id: ChunkId,
-        query: &Query,
+        params: &Parameters,
     ) -> (
         PerPartLength,
         Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
     ) {
-        let course_len = query.methods[chunk_id.method].course_len();
+        let course_len = params.methods[chunk_id.method].course_len();
         // Determine the length of the `Chunk` by continually attempting to shorten it with calls
         // or ends
         let mut shortest_len = PerPartLength::new(course_len);
@@ -166,9 +165,9 @@ impl ChunkFactory {
 
         // Add links for ends and calls
         self.end_lookup_table
-            .add_links(&chunk_id, query, &mut add_link);
+            .add_links(&chunk_id, params, &mut add_link);
         self.link_lookup_table
-            .add_links(&chunk_id, query, &mut add_link);
+            .add_links(&chunk_id, params, &mut add_link);
         // Take the final length/links as those that will be used for the chunk
         assert!(shortest_len > PerPartLength::ZERO);
         let chunk_length = shortest_len;
@@ -188,22 +187,22 @@ impl ChunkFactory {
 // LOOKUPS //
 /////////////
 
-/// Lookup table for determining if a [`ChunkId`] contains `query.end_row`.
+/// Lookup table for determining if a [`ChunkId`] contains `params.end_row`.
 struct EndLookupTable {
     /// For each lead head in each [`Method`], how many rows away is the nearest instance of
-    /// `query.end_row` (and the [`ChunkId`] referring to that end's location).
+    /// `params.end_row` (and the [`ChunkId`] referring to that end's location).
     end_lookup: HashMap<(RowBuf, MethodIdx), Vec<(PerPartLength, ChunkIdInFirstPart)>>,
 }
 
 impl EndLookupTable {
-    fn new(query: &Query) -> Self {
+    fn new(params: &Parameters) -> Self {
         // Create lookup table for ends
         let mut end_lookup = HashMap::new();
-        for part_head in query.part_head_group.rows() {
-            let end_row = part_head * &query.end_row;
-            for end_location in start_chunk_ids(&end_row, Boundary::End, query) {
+        for part_head in params.part_head_group.rows() {
+            let end_row = part_head * &params.end_row;
+            for end_location in boundary_locations(&end_row, Boundary::End, params) {
                 let method_idx = end_location.method;
-                let method = &query.methods[method_idx];
+                let method = &params.methods[method_idx];
                 // For each end location, any other lead in the same course can also contain an end
                 // at this location.  In each iteration `leads_to_ring` stores the number of leads
                 // required to go from `start_row` to the lead containing the current `end_loc`.
@@ -238,11 +237,11 @@ impl EndLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Query,
+        params: &Parameters,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
-        let method = &query.methods[method_idx];
+        let method = &params.methods[method_idx];
         let course_len = method.course_len();
         // Attempt to shorten the chunk by ending the composition
         for (end_length_from_lead_head, end_id) in self
@@ -286,10 +285,10 @@ struct LinkLookupEntry {
 }
 
 impl LinkLookupTable {
-    fn new(query: &Query) -> Self {
+    fn new(params: &Parameters) -> Self {
         // Treat non-spliced comps as having `SpliceStyle::Calls`
-        let splice_style = if query.is_spliced() {
-            query.splice_style
+        let splice_style = if params.is_spliced() {
+            params.splice_style
         } else {
             SpliceStyle::Calls
         };
@@ -302,7 +301,7 @@ impl LinkLookupTable {
         // )
         // ```
         let mut link_ends_by_label = HashMap::<&str, Vec<(RowIdx, RowBuf)>>::new();
-        for (method_idx, method_data) in query.methods.iter_enumerated() {
+        for (method_idx, method_data) in params.methods.iter_enumerated() {
             for (sub_lead_idx, (annot, row)) in method_data.first_lead().annot_rows().enumerate() {
                 for label in annot {
                     link_ends_by_label
@@ -314,14 +313,15 @@ impl LinkLookupTable {
         }
 
         // Create lookup for allowed lead heads
-        let allowed_lead_heads: HashMap<MethodId, Vec<Mask>> = query
-            .used_methods()
-            .map(|m| (m.id, m.allowed_lead_masks(&query.parameters)))
+        let allowed_lead_heads: MethodVec<Vec<Mask>> = params
+            .methods
+            .iter()
+            .map(|m| m.allowed_lead_masks(params))
             .collect();
 
         // Create lookup table for links
         let mut link_lookup = MethodVec::new();
-        for (method_idx, method) in query.methods.iter_enumerated() {
+        for (method_idx, method) in params.methods.iter_enumerated() {
             let lead_len = method.lead_len();
             let plain_course = method.plain_course();
 
@@ -341,7 +341,7 @@ impl LinkLookupTable {
                     // Add links for calls
                     //
                     // ... for every call that can be placed there ...
-                    for (call_idx, call) in query.calls.iter_enumerated() {
+                    for (call_idx, call) in params.calls.iter_enumerated() {
                         if &call.label_from == label {
                             let row_before_call =
                                 plain_course.get_row(dist_from_lead_head - 1).unwrap();
@@ -353,10 +353,9 @@ impl LinkLookupTable {
                                 Some(call_idx),
                                 &row_after_call,
                                 &call.label_to,
-                                method,
+                                method_idx,
                                 &allowed_lead_heads,
                                 &link_ends_by_label,
-                                query,
                                 &mut link_positions,
                             );
                         }
@@ -372,10 +371,9 @@ impl LinkLookupTable {
                             None,
                             row_after_plain,
                             label,
-                            method,
+                            method_idx,
                             &allowed_lead_heads,
                             &link_ends_by_label,
-                            query,
                             &mut link_positions,
                         );
                     }
@@ -446,7 +444,7 @@ impl LinkLookupTable {
     fn add_links(
         &self,
         chunk_id: &ChunkId,
-        query: &Query,
+        params: &Parameters,
         add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
@@ -465,7 +463,7 @@ impl LinkLookupTable {
                 {
                     let mut len = *len_from_lead_head - chunk_id.sub_lead_idx;
                     if len == 0 {
-                        len = query.methods[chunk_id.method].course_len();
+                        len = params.methods[chunk_id.method].course_len();
                     }
                     for link_entry in link_entries {
                         let next_chunk_id = ChunkIdInFirstPart {
@@ -492,11 +490,10 @@ fn create_links(
     call: Option<CallIdx>,
     row_after_link: &Row,
     label_to: &str,
-    method_from: &Method,
+    method_idx_from: MethodIdx,
 
-    allowed_lead_masks: &HashMap<MethodId, Vec<Mask>>,
+    allowed_lead_masks: &MethodVec<Vec<Mask>>,
     link_ends_by_label: &HashMap<&str, Vec<(RowIdx, RowBuf)>>,
-    query: &Query,
     link_lookup_for_method: &mut HashMap<Mask, HashMap<usize, Vec<LinkLookupEntry>>>,
 ) {
     let link_ends = link_ends_by_label
@@ -510,8 +507,7 @@ fn create_links(
         let lead_head_transposition = row_after_link * transposition_to_lead_head;
 
         // ... for every lead head mask of the method we're going to ...
-        let method_to = &query.methods[row_idx_to.method];
-        for lead_head_mask_to in &allowed_lead_masks[&method_to.id] {
+        for lead_head_mask_to in &allowed_lead_masks[row_idx_to.method] {
             //     `lh_from * lh_transposition` satisfies `lh_mask_to`
             // iff `lh_from`                    satisfies `lh_mask_to * lh_transposition.inv()`
             let lead_head_mask_from = lead_head_mask_to * lead_head_transposition.inv();
@@ -520,7 +516,7 @@ fn create_links(
             // performance benefit since chunk expansion is linear in the size of
             // `link_lookup_for_method`.  This simple pruning often causes a ~4x speedup for
             // tenors-together comps.
-            let is_mask_reachable = allowed_lead_masks[&method_from.id]
+            let is_mask_reachable = allowed_lead_masks[method_idx_from]
                 .iter()
                 .any(|lh_mask| lh_mask.is_compatible_with(&lead_head_mask_from));
             if !is_mask_reachable {
@@ -543,13 +539,15 @@ fn create_links(
 
 /// Finds all the possible locations of a given [`Row`] within the course head masks for each
 /// [`Method`].
-fn start_chunk_ids(row: &Row, boundary: Boundary, query: &Query) -> Vec<ChunkIdInFirstPart> {
+fn boundary_locations(
+    row: &Row,
+    boundary: Boundary,
+    params: &Parameters,
+) -> Vec<ChunkIdInFirstPart> {
     // Generate the method starts
     let mut locations = Vec::new();
-    for (method_idx, method) in query.methods.iter_enumerated() {
-        for (lead_head, sub_lead_idx) in
-            method.start_end_locations(row, boundary, &query.parameters)
-        {
+    for (method_idx, method) in params.methods.iter_enumerated() {
+        for (lead_head, sub_lead_idx) in method.boundary_locations(row, boundary, params) {
             locations.push(ChunkIdInFirstPart {
                 lead_head,
                 row_idx: RowIdx::new(method_idx, sub_lead_idx),

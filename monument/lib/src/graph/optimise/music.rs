@@ -4,19 +4,19 @@ use itertools::Itertools;
 
 use crate::{
     graph::{Chunk, ChunkId, Graph},
+    parameters::Parameters,
     prove_length::RefinedRanges,
-    query::Query,
     utils::MusicBreakdown,
 };
 
 /// How many chunks will be searched to determine which chunk patterns generate the required music
 const ITERATION_LIMIT: usize = 10_000;
 
-pub(super) fn required_music_min(graph: &mut Graph, query: &Query, _ranges: &RefinedRanges) {
+pub(super) fn required_music_min(graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges) {
     // log::debug!("\n\n\n");
 
     // For each `MusicType`, maps its index to minimum count
-    let min_music_counts = query
+    let min_music_counts = params
         .music_types
         .iter()
         .enumerate()
@@ -41,7 +41,7 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query, _ranges: &Ref
         .partition::<Vec<_>, _>(|(_id, chunk)| chunk.required);
 
     // Determine how much music is contributed by required chunks.
-    let mut required_music_counts = vec![0; query.music_types.len()];
+    let mut required_music_counts = vec![0; params.music_types.len()];
     for (idx, min) in &min_music_counts {
         required_music_counts[*idx] = *min;
     }
@@ -94,10 +94,10 @@ pub(super) fn required_music_min(graph: &mut Graph, query: &Query, _ranges: &Ref
 /// 0 (i.e. any chunks with that music should be removed).
 pub(crate) fn remove_chunks_exceeding_max_count(
     graph: &mut Graph,
-    query: &Query,
+    params: &Parameters,
     _ranges: &RefinedRanges,
 ) {
-    let mut counts_from_required_chunks = MusicBreakdown::zero(query.music_types.len());
+    let mut counts_from_required_chunks = MusicBreakdown::zero(params.music_types.len());
     for chunk in graph.chunks.values() {
         if chunk.required {
             counts_from_required_chunks += &chunk.music;
@@ -110,7 +110,7 @@ pub(crate) fn remove_chunks_exceeding_max_count(
         .copied()
         .enumerate()
     {
-        let music_type = &query.music_types[music_ty_idx];
+        let music_type = &params.music_types[music_ty_idx];
         if let Some(count_limit) = music_type.count_range.max {
             let max_count_left_per_chunk = count_limit.checked_sub(count_from_required).expect(
                 "Search can't be completed because the required chunks exceed a maximum music count.",

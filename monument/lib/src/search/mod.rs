@@ -21,7 +21,6 @@ use crate::{
     atw::AtwTable,
     parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
-    query::Query,
     Composition,
 };
 
@@ -36,7 +35,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    query: Arc<Query>,
+    params: Arc<Parameters>,
     config: Config,
     graph: self::graph::Graph,
     atw_table: Arc<AtwTable>,
@@ -44,28 +43,26 @@ pub struct Search {
 }
 
 impl Search {
-    /// Create a new `Search` which generates [`Composition`]s according to the given [`Query`].
-    /// This also verifies that the [`Query`] makes sense; if not, an [`Error`](crate::Error)
+    /// Create a new `Search` which generates [`Composition`]s according to the given [`Parameters`].
+    /// This also verifies that the [`Parameters`] makes sense; if not, an [`Error`](crate::Error)
     /// describing the problem is returned.
     ///
     /// **The returned `Search` won't start until you explicitly call
     /// [`search.run(...)`](Self::run)**.
     pub fn new(params: Parameters, config: Config) -> crate::Result<Self> {
-        let query = Query::new(params);
-
         // Build and optimise the graph
-        let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&query, &config)?;
+        let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&params, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count
         // ranges
-        let refined_ranges = prove_lengths(&source_graph, &query)?;
+        let refined_ranges = prove_lengths(&source_graph, &params)?;
         // Reduce the size of the graph to improve the search speed
-        source_graph.optimise(&query, &refined_ranges);
+        source_graph.optimise(&params, &refined_ranges);
         // Create a fast-to-traverse copy of the graph
-        let graph = self::graph::Graph::new(&source_graph, &query);
+        let graph = self::graph::Graph::new(&source_graph, &params);
         drop(source_graph);
 
         Ok(Search {
-            query: Arc::new(query),
+            params: Arc::new(params),
             atw_table: Arc::new(atw_table),
             config,
             refined_ranges,
@@ -87,43 +84,43 @@ impl Search {
 impl Search {
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
-        let idx = self.query.get_method_by_id(id);
+        let idx = self.params.method_id_to_idx(id);
         let range = &self.refined_ranges.method_counts[idx];
         range.start().as_usize()..=range.end().as_usize()
     }
 
     pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
-        self.query.methods.iter().map(|m| (m, m.shorthand()))
+        self.params.methods.iter().map(|m| (m, m.shorthand()))
     }
 
     pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
-        self.query.music_types.iter().map(|ty| ty.id)
+        self.params.music_types.iter().map(|ty| ty.id)
     }
 
     pub fn max_music_count(&self, id: MusicTypeId) -> usize {
-        self.query
+        self.params
             .get_music_type_by_id(id)
             .max_count()
             .unwrap_or(usize::MAX)
     }
 
     pub fn parameters(&self) -> &Parameters {
-        &self.query.parameters
+        &self.params
     }
 
     pub fn num_parts(&self) -> usize {
-        self.query.num_parts()
+        self.params.num_parts()
     }
 
-    /// Does this `Query` generate [`Composition`](crate::Composition)s with more than one part?
+    /// Does this `Parameters` generate [`Composition`](crate::Composition)s with more than one part?
     pub fn is_multipart(&self) -> bool {
-        self.query.is_multipart()
+        self.params.is_multipart()
     }
 
     /// Gets the [`effective_stage`](bellframe::Row::effective_stage) of the part heads used in
-    /// this `Query`.  The short form of every possible part head will be exactly this length.
+    /// this `Parameters`.  The short form of every possible part head will be exactly this length.
     pub fn effective_part_head_stage(&self) -> Stage {
-        self.query.part_head_group.effective_stage()
+        self.params.part_head_group.effective_stage()
     }
 }
 
@@ -188,7 +185,7 @@ pub struct Config {
     /* Graph Generation */
     /// The maximum number of chunks in the composition graph.  If a search would produce a graph
     /// bigger than this, it is aborted.  If there was no limit, it would be very easy to cause an
-    /// out-of-memory crash by requesting a hugely open query such as split-tenors Maximus.
+    /// out-of-memory crash by requesting a hugely open search such as split-tenors Maximus.
     pub graph_size_limit: usize,
 
     /* Search */

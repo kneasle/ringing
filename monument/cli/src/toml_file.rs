@@ -7,17 +7,19 @@ use std::{
 use anyhow::anyhow;
 use bellframe::{
     method::LABEL_LEAD_END,
-    method_lib::QueryError,
+    method_lib::SearchError,
     music::{Elem, Pattern},
     place_not::PnBlockParseError,
     Bell, Mask, MethodLib, RowBuf, Stage, Stroke,
 };
 use colored::Colorize;
+use index_vec::index_vec;
 use itertools::Itertools;
 use monument::{
     parameters::{
-        BaseCallType, CallDisplayStyle, CallId, IdGenerator, MethodId, MusicType,
-        OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT, DEFAULT_SINGLE_WEIGHT,
+        BaseCallType, CallDisplayStyle, CallId, CallVec, IdGenerator, MethodId, MethodVec,
+        MusicType, MusicTypeVec, OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT,
+        DEFAULT_SINGLE_WEIGHT,
     },
     Config, PartHeadGroup,
 };
@@ -172,7 +174,7 @@ impl TomlFile {
 
     /// Build a [`Search`] which corresponds to this `TomlFile`
     pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<(Parameters, Vec<MusicDisplay>)> {
-        log::debug!("Generating query");
+        log::debug!("Generating params");
 
         // Error on deprecated paramaters
         if self.allow_false.is_some() {
@@ -222,10 +224,10 @@ impl TomlFile {
             stage,
             num_comps: self.num_comps,
             require_truth: self.require_truth,
-            maybe_unused_methods: self.build_methods(parsed_methods, &part_head, stage)?,
+            methods: self.build_methods(parsed_methods, &part_head, stage)?,
             splice_style: self.splice_style.into(),
             splice_weight: self.splice_weight,
-            maybe_unused_calls: self.calls(stage)?,
+            calls: self.calls(stage)?,
             call_display_style,
             atw_weight: self.atw_weight,
             require_atw: self.require_atw,
@@ -233,7 +235,7 @@ impl TomlFile {
             end_row: parse_row("end row", &self.end_row, stage)?,
             part_head_group: PartHeadGroup::new(&part_head),
             course_weights: self.course_weights(stage)?,
-            maybe_unused_music_types: music_types,
+            music_types,
             start_stroke: self.start_stroke,
         };
         Ok((params, music_displays))
@@ -259,7 +261,7 @@ impl TomlFile {
     }
 
     /// Also check that `bobs_only` and `singles_only` aren't set at the same time.
-    fn calls(&self, stage: Stage) -> anyhow::Result<Vec<monument::parameters::Call>> {
+    fn calls(&self, stage: Stage) -> anyhow::Result<CallVec<monument::parameters::Call>> {
         let mut call_id_generator = IdGenerator::<CallId>::starting_at_zero();
         // Convert base calls
         let mut calls = self.base_calls(&mut call_id_generator, stage)?;
@@ -274,11 +276,11 @@ impl TomlFile {
         &self,
         id_gen: &mut IdGenerator<CallId>,
         stage: Stage,
-    ) -> anyhow::Result<Vec<monument::parameters::Call>> {
+    ) -> anyhow::Result<CallVec<monument::parameters::Call>> {
         let base_call_type = match self.base_calls {
             BaseCalls::Near => BaseCallType::Near,
             BaseCalls::Far => BaseCallType::Far,
-            BaseCalls::None => return Ok(vec![]), // No base calls to generate
+            BaseCalls::None => return Ok(index_vec![]), // No base calls to generate
         };
 
         // Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight
@@ -313,7 +315,7 @@ impl TomlFile {
         &self,
         toml_path: &Path,
         stage: Stage,
-    ) -> anyhow::Result<(Vec<MusicDisplay>, Vec<MusicType>)> {
+    ) -> anyhow::Result<(Vec<MusicDisplay>, MusicTypeVec<MusicType>)> {
         // Load TOML for the music file
         let music_file_str = match &self.music_file {
             Some(relative_music_path) => {
@@ -383,7 +385,7 @@ impl TomlFile {
         parsed_methods: Vec<(bellframe::Method, MethodCommon)>,
         part_head: &Row,
         stage: Stage,
-    ) -> anyhow::Result<Vec<monument::parameters::Method>> {
+    ) -> anyhow::Result<MethodVec<monument::parameters::Method>> {
         // Warn when using plain bob calls in Stedman or Grandsire
         for (method, _) in &parsed_methods {
             if self.base_calls != BaseCalls::None {
@@ -429,7 +431,7 @@ impl TomlFile {
         /* BUILD METHODS */
 
         let mut id_gen = IdGenerator::<MethodId>::starting_at_zero();
-        let mut methods = Vec::new();
+        let mut methods = MethodVec::new();
         // TODO: Add dummy unused method, to make sure that Monument handles them correctly
         for (mut method, common) in parsed_methods {
             let lead_len_isize = method.lead_len() as isize;
@@ -476,7 +478,6 @@ impl TomlFile {
                 });
             methods.push(monument::parameters::Method {
                 id: id_gen.next(),
-                used: true,
                 inner: method,
 
                 custom_shorthand: common.shorthand.unwrap_or_default(),
@@ -610,10 +611,10 @@ impl TomlMethod {
             TomlMethod::JustTitle(title) | TomlMethod::FromCcLib { title, .. } => cc_lib
                 .get_by_title_with_suggestions(title, NUM_METHOD_SUGGESTIONS)
                 .map_err(|error| match error {
-                    QueryError::PnParseErr { pn, error } => {
+                    SearchError::PnParseErr { pn, error } => {
                         panic!("Error parsing {pn} in CCCBR library: {error}")
                     }
-                    QueryError::NotFound(suggestions) => {
+                    SearchError::NotFound(suggestions) => {
                         anyhow::Error::msg(method_suggestion_message(title, suggestions))
                     }
                 }),

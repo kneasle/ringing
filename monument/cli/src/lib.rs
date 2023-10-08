@@ -44,7 +44,7 @@ pub fn run(
     toml_path: &Path,
     options: &args::Options,
     env: Environment,
-) -> anyhow::Result<Option<QueryResult>> {
+) -> anyhow::Result<Option<SearchResult>> {
     /// If the user specifies a [`DebugPrint`] flag with e.g. `-D layout`, then debug print the
     /// corresponding value and exit.
     macro_rules! debug_print {
@@ -124,7 +124,7 @@ pub fn run(
             comp.call_string(),
         )
     });
-    Ok(Some(QueryResult {
+    Ok(Some(SearchResult {
         comps,
         comp_printer,
         duration: start_time.elapsed(),
@@ -144,7 +144,7 @@ pub enum Environment {
 }
 
 #[derive(Debug, Clone)]
-pub struct QueryResult {
+pub struct SearchResult {
     pub comps: Vec<Composition>,
     pub search: Arc<Search>,
     pub duration: Duration,
@@ -153,7 +153,7 @@ pub struct QueryResult {
     comp_printer: self::logging::CompositionPrinter,
 }
 
-impl QueryResult {
+impl SearchResult {
     pub fn print(&mut self) {
         eprintln!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
         for c in &self.comps {

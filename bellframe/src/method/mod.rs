@@ -211,6 +211,47 @@ impl Method {
             .annots()
             .positions(move |labels| labels.iter().any(|l| l == label))
     }
+
+    /// An [`Iterator`] over the sub-lead indices of a particular lead label.
+    pub fn all_label_indices(&self) -> Vec<(&str, usize)> {
+        let mut label_indices = Vec::new();
+        for (sub_lead_idx, labels) in self.first_lead.annots().enumerate() {
+            for label in labels {
+                label_indices.push((label.as_str(), sub_lead_idx));
+            }
+        }
+        label_indices
+    }
+
+    /// Gets the closest labels **after** `sub_lead_idx`, along with their distance from that index.
+    ///
+    /// This will wrap around the end of the lead if needed.  Note that labels at `sub_lead_idx`
+    /// are treated as a whole lead away (so the returned distance can never be 0).
+    pub fn next_labels(&self, sub_lead_idx: usize) -> (&[String], usize) {
+        for distance in 1..=self.lead_len() {
+            let labels = self.get_labels((sub_lead_idx + distance) % self.lead_len());
+            if !labels.is_empty() {
+                return (labels, distance);
+            }
+        }
+        panic!("`next_labels` called on a method with no labels")
+    }
+
+    /// Gets the closest labels **before** `sub_lead_idx`, along with their distance from that
+    /// index.
+    ///
+    /// Note that, unlike `next_labels`, a distance of `0` is possible if there are labels exactly
+    /// on the given `sub_lead_idx`.
+    pub fn prev_labels(&self, sub_lead_idx: usize) -> (&[String], usize) {
+        for distance in 0..self.lead_len() {
+            let labels =
+                self.get_labels((sub_lead_idx + self.lead_len() - distance) % self.lead_len());
+            if !labels.is_empty() {
+                return (labels, distance);
+            }
+        }
+        panic!("`prev_labels` called on a method with no labels")
+    }
 }
 
 /// Generate the (standard) title of a [`Method`] from its parts, according to the Framework's

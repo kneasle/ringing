@@ -7,7 +7,6 @@ use itertools::Itertools;
 use crate::{
     graph::ChunkId,
     parameters::{Method, MethodIdx, MethodVec, Parameters},
-    query::Query,
     utils::{div_rounding_up, lengths::PerPartLength},
 };
 
@@ -50,23 +49,23 @@ impl AtwFlag {
 }
 
 impl AtwTable {
-    pub fn new(query: &Query, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
-        let atw_weight = match query.atw_weight {
+    pub fn new(params: &Parameters, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
+        let atw_weight = match params.atw_weight {
             Some(w) => w,
-            None if query.require_atw => 0.0,
+            None if params.require_atw => 0.0,
             None => return Self::empty(),
         };
 
-        let working_bells = query
+        let working_bells = params
             .stage
             .bells()
-            .filter(|b| !query.fixed_bells().iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
+            .filter(|b| !params.fixed_bells().iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
             .collect_vec();
         // Which bells do we have to track, according to the part-head.  For example, for a
         // composition with part head `13425678`, 3 and 4 will not have their place bells
         // tracked because their positions are implied by that of the 2.  In this case, we
         // just track the 2 and multiply its score by 3.
-        let part_head_cycles = query
+        let part_head_cycles = params
             .part_head_group
             .bell_cycles()
             .into_iter()
@@ -75,19 +74,18 @@ impl AtwTable {
 
         // Work out which sub-lead ranges are possible for each (bell, place bell, method)
         let place_bell_range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>> =
-            place_bell_range_boundaries(query, chunk_lengths);
+            place_bell_range_boundaries(params, chunk_lengths);
         // Combine these sub-lead ranges into [`AtwFlag`]s, each of which corresponds to one bit
         // in the [`AtwBitmap`].
         let flags: Vec<AtwFlag> = range_boundaries_to_flags(
             &working_bells,
             &part_head_cycles,
-            &query.methods,
-            &query.parameters,
+            params,
             place_bell_range_boundaries,
         );
 
         let total_unique_row_positions =
-            total_unique_row_positions(&working_bells, &query.methods, &flags);
+            total_unique_row_positions(&working_bells, &params.methods, &flags);
         let (bitmap_chunk_multipliers, flag_per_bit) = split_flags_into_bitmap_chunks(flags);
 
         Self {
@@ -113,12 +111,12 @@ impl AtwTable {
     /// stores all of that chunk's ATW information.
     pub fn bitmap_for_chunk(
         &self,
-        query: &Query,
+        params: &Parameters,
         id: &ChunkId,
         chunk_len: PerPartLength,
     ) -> AtwBitmap {
         let mut bitmap = self.empty_bitmap();
-        for (lead_head, sub_lead_range) in query.chunk_lead_regions(id, chunk_len) {
+        for (lead_head, sub_lead_range) in params.chunk_lead_regions(id, chunk_len) {
             for (place, bell) in lead_head.bell_iter().enumerate() {
                 if let Some(bit_starts) =
                     self.bell_place_to_bitmap_index
@@ -316,7 +314,7 @@ fn total_unique_row_positions(
 /// Determine how the (bell, place bell, method, sub-lead idx) tuples can be combined into
 /// individual bitflags.
 fn place_bell_range_boundaries(
-    query: &Query,
+    params: &Parameters,
     chunk_lengths: &HashMap<ChunkId, PerPartLength>,
 ) -> HashMap<(Bell, u8, MethodIdx), Vec<usize>> {
     // For each (bell, place bell, method) triple, determine at which sub-lead indices the chunks
@@ -325,7 +323,7 @@ fn place_bell_range_boundaries(
     for (chunk_id, length) in chunk_lengths {
         // Process each lead region separately, since a single chunk will often cover multiple
         // leads.  When a chunk does so, each bell could cover multiple place bells.
-        for (lead_head, sub_lead_range) in query.chunk_lead_regions(chunk_id, *length) {
+        for (lead_head, sub_lead_range) in params.chunk_lead_regions(chunk_id, *length) {
             for (place, bell) in lead_head.bell_iter().enumerate() {
                 // Add both the start and end of chunks as possible boundaries
                 range_boundaries
@@ -347,12 +345,11 @@ fn place_bell_range_boundaries(
 fn range_boundaries_to_flags(
     working_bells: &[Bell],
     part_head_cycles: &[Vec<Bell>],
-    methods: &MethodVec<Method>,
     params: &Parameters,
     range_boundaries: HashMap<(Bell, u8, MethodIdx), Vec<usize>>,
 ) -> Vec<AtwFlag> {
     let mut flags = Vec::new();
-    for (method_idx, method) in methods.iter_enumerated() {
+    for (method_idx, method) in params.methods.iter_enumerated() {
         let bell_place_sets = bell_place_sets(working_bells, part_head_cycles, method, params);
         // Add one flag for every chunk and every (bell, place bell) pair
         for bell_place_set in &bell_place_sets {

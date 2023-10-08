@@ -48,7 +48,6 @@ mod graph;
 mod group;
 pub mod parameters;
 mod prove_length;
-mod query;
 mod search;
 pub mod utils;
 

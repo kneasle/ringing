@@ -63,8 +63,7 @@ pub(crate) fn div_rounding_up(lhs: usize, rhs: usize) -> usize {
 #[derive(Debug, Clone)]
 pub(crate) struct MusicBreakdown {
     pub score: f32,
-    /// The number of occurrences of each [`MusicType`] specified in the current
-    /// [`Query`](crate::Query)
+    /// The number of occurrences of each [`MusicType`] specified in the current params
     pub counts: Counts,
 }
 

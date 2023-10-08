@@ -94,7 +94,7 @@ pub(crate) struct Chunk {
 pub(crate) struct Link {
     pub from: LinkSide<ChunkId>,
     pub to: LinkSide<ChunkId>,
-    /// Indexes into [`crate::Query::calls`]
+    /// Indexes into [`crate::Parameters::calls`]
     pub call: Option<CallIdx>,
     pub ph_rotation: PhRotation,
     // TODO: Remove this and compute it on the fly for `LinkView`?

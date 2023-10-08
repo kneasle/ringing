@@ -90,7 +90,6 @@ impl CustomCall {
 
         Ok(monument::parameters::Call {
             id,
-            used: true,
             symbol: self.symbol.to_owned(),
             calling_positions,
             label_from,
