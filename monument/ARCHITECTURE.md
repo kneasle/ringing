@@ -45,13 +45,8 @@ section below:
 ### Stage 1: Parsing and Validation
 
 The first step for Monument is to read and validate the information stored in the TOML file.  This
-begins with a TOML file on disk, and finishes with an instance of `monument::query::Query` (which
-contains the same data, but in a strongly typed and validated form).
-
-This currently requires multiple steps, as shown below.  The structures of of these data types
-(`monument_cli::toml_file::TomlFile`, `monument::SearchBuilder` and `monument::query::Query`)
-is largely recognisable as the same format as the TOML file.  However, each step performs
-additional validation and, where needed, converts the data into Monument's internal data types.
+begins with a TOML file on disk, and finishes with an instance of
+`monument::parameters::Parameters` (which contains the same data, but in a strongly typed form).
 
 ```text
             +-----------+
@@ -67,20 +62,12 @@ additional validation and, where needed, converts the data into Monument's inter
         +-------------------+
                   |
                   |
-             validation      (handled by `TomlFile::to_search`)
+              validation     (handled by `SearchBuilder::build`)
                   |
                   V
-      +------------------------+
-      | `SearchBuilder` struct |  (found in `lib/src/builder/mod.rs`)
-      +------------------------+
-                  |
-                  |
-          more validation    (handled by `SearchBuilder::build`)
-                  |
-                  V
-         +----------------+
-         | `Query` struct |       (found in `lib/src/query.rs`)
-         +----------------+
+       +---------------------+
+       | `Parameters` struct |       (found in `lib/src/parameters.rs`)
+       +---------------------+
 ```
 
 ### Stage 2: Graph Building
@@ -101,9 +88,9 @@ There are actually two graph types in Monument:
 The overall graph building flow is as follows:
 
 ```text
-         +----------------+
-         | `Query` struct |              (found in `lib/src/query.rs`)
-         +----------------+
+       +---------------------+
+       | `Parameters` struct |              (found in `lib/src/parameters.rs`)
+       +---------------------+
                   |
                   |
           layout generation      (found mainly in `lib/src/graph/build/layout.rs`)
@@ -229,7 +216,6 @@ lib/src
 ├── builder              ('builder' API for constructing search queries)
 │  ├── mod.rs
 │  └── methods.rs
-├── query.rs             (fully validated description of a search query)
 ├── composition.rs       (a generated composition)
 │
 ├── graph

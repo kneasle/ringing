@@ -10,7 +10,6 @@ use crate::{
     parameters::{
         CallDisplayStyle, CallIdx, MethodId, MethodIdx, MethodVec, MusicTypeId, Parameters,
     },
-    query::Query,
     utils::{
         counts::Counts,
         lengths::{PerPartLength, TotalLength},
@@ -43,9 +42,9 @@ pub struct Composition {
     /// The number of counts generated of each [`MusicType`]
     pub(crate) music_counts: HashMap<MusicTypeId, usize>,
 
-    /// The [`Query`] which generated this [`Composition`]
+    /// The [`Parameters`] which generated this [`Composition`]
     // TODO: Remove this dependency, and make everything else calculated on the fly
-    pub(crate) query: Arc<Query>,
+    pub(crate) params: Arc<Parameters>,
     // TODO: Store expanded atw data, independently of the [`AtwTable`]?
     pub(crate) atw_table: Arc<AtwTable>,
 }
@@ -60,28 +59,28 @@ impl Composition {
     /// example, [this composition](https://complib.org/composition/87419) would have a
     /// `call_string` of `D[B]BL[W]N[M]SE[sH]NCYW[sH]`.
     pub fn call_string(&self) -> String {
-        let needs_brackets = self.query.is_spliced()
-            || self.query.call_display_style == CallDisplayStyle::Positional;
+        let needs_brackets = self.params.is_spliced()
+            || self.params.call_display_style == CallDisplayStyle::Positional;
         let is_snap_start = self.path[0].start_sub_lead_idx > 0;
-        let is_snap_finish = self.path.last().unwrap().end_sub_lead_idx(&self.query) > 0;
+        let is_snap_finish = self.path.last().unwrap().end_sub_lead_idx(&self.params) > 0;
         let part_head = self.part_head();
 
         let mut path_iter = self.path.iter().peekable();
 
         let mut s = String::new();
-        if self.query.call_display_style == CallDisplayStyle::Positional {
+        if self.params.call_display_style == CallDisplayStyle::Positional {
             s.push('#');
         }
         s.push_str(if is_snap_start { "<" } else { "" });
         while let Some(path_elem) = path_iter.next() {
             // Method text
-            if self.query.is_spliced()
-                || self.query.call_display_style == CallDisplayStyle::Positional
+            if self.params.is_spliced()
+                || self.params.call_display_style == CallDisplayStyle::Positional
             {
                 // Add one shorthand for every lead *covered* (not number of lead heads reached)
                 //
                 // TODO: Deal with half-lead spliced
-                let method = &self.query.methods[path_elem.method];
+                let method = &self.params.methods[path_elem.method];
                 let num_leads_covered = num_leads_covered(
                     method.lead_len(),
                     path_elem.start_sub_lead_idx,
@@ -93,11 +92,11 @@ impl Composition {
             }
             // Call text
             if let Some(call_idx) = path_elem.call_to_end {
-                let call = &self.query.calls[call_idx];
+                let call = &self.params.calls[call_idx];
 
                 s.push_str(if needs_brackets { "[" } else { "" });
                 // Call position
-                match self.query.call_display_style {
+                match self.params.call_display_style {
                     CallDisplayStyle::CallingPositions(calling_bell) => {
                         let row_after_call = path_iter
                             .peek()
@@ -121,7 +120,7 @@ impl Composition {
     /// The [`Row`] reached at the end of the first part.  If this is a 1-part, then this will be
     /// [`rounds`](Row::is_rounds).
     pub fn part_head(&self) -> &Row {
-        self.query.part_head_group.get_row(self.part_head)
+        self.params.part_head_group.get_row(self.part_head)
     }
 
     /// Return a [`Block`] containing the [`Row`]s in this composition.  Each [`Row`] is annotated
@@ -145,14 +144,14 @@ impl Composition {
     pub fn rows(&self) -> Block<(MethodId, usize)> {
         // Generate plain courses for each method
         let plain_courses = self
-            .query
+            .params
             .methods
             .iter()
             .map(|m| m.plain_course().map_annots(|a| (m.id, a.sub_lead_idx)))
             .collect::<MethodVec<_>>();
 
         // Generate the first part
-        let mut first_part = Block::with_leftover_row(self.query.start_row.clone());
+        let mut first_part = Block::with_leftover_row(self.params.start_row.clone());
         for elem in &self.path {
             assert_eq!(first_part.leftover_row(), elem.start_row.as_row());
             let plain_course = &plain_courses[elem.method];
@@ -171,7 +170,7 @@ impl Composition {
             if let Some(call_idx) = elem.call_to_end {
                 let last_non_leftover_row = first_part.rows().next_back().unwrap();
                 let new_leftover_row = last_non_leftover_row
-                    * self.query.calls[call_idx].place_notation.transposition();
+                    * self.params.calls[call_idx].place_notation.transposition();
                 first_part.leftover_row_mut().copy_from(&new_leftover_row);
             }
         }
@@ -179,11 +178,11 @@ impl Composition {
         // Generate the other parts from the first
         let part_len = first_part.len();
         let mut comp = first_part;
-        for _ in 0..self.query.num_parts() - 1 {
+        for _ in 0..self.params.num_parts() - 1 {
             comp.extend_from_within(..part_len);
         }
         assert_eq!(comp.len(), self.length());
-        assert_eq!(comp.leftover_row(), self.query.end_row.as_row());
+        assert_eq!(comp.leftover_row(), self.params.end_row.as_row());
         comp
     }
 
@@ -214,7 +213,7 @@ impl Composition {
     pub fn music_score(&self) -> f32 {
         self.music_counts
             .iter()
-            .map(|(id, count)| self.query.get_music_type_by_id(*id).weight * *count as f32)
+            .map(|(id, count)| self.params.get_music_type_by_id(*id).weight * *count as f32)
             .sum::<f32>()
     }
 
@@ -249,27 +248,27 @@ impl PathElem {
         self.call_to_end.is_none()
     }
 
-    pub(crate) fn end_sub_lead_idx(&self, query: &Query) -> usize {
-        query.methods[self.method].add_sub_lead_idx(self.start_sub_lead_idx, self.length)
+    pub(crate) fn end_sub_lead_idx(&self, params: &Parameters) -> usize {
+        params.methods[self.method].add_sub_lead_idx(self.start_sub_lead_idx, self.length)
     }
 }
 
-/// A way to display a [`Composition`] by pairing it with a [`Query`]
+/// A way to display a [`Composition`] by pairing it with a [`Parameters`]
 #[derive(Debug, Clone, Copy)]
 struct DisplayComposition<'a>(pub &'a Composition, pub &'a Parameters);
 
 impl std::fmt::Display for DisplayComposition<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let DisplayComposition(comp, query) = self;
+        let DisplayComposition(comp, params) = self;
 
         write!(f, "len: {}, ", comp.length)?;
         // Method counts for spliced
-        if query.is_spliced() {
+        if params.is_spliced() {
             write!(f, "ms: {:>3?}, ", comp.method_counts.as_slice())?;
         }
         // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
         // head)
-        if query.num_parts() > 2 {
+        if params.num_parts() > 2 {
             write!(f, "PH: {}, ", comp.part_head())?;
         }
         write!(

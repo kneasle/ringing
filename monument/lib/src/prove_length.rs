@@ -10,8 +10,7 @@ use itertools::Itertools;
 
 use crate::{
     graph::{ChunkId, Graph, LinkSide, RowIdx},
-    parameters::{MethodIdx, MethodVec, OptionalRangeInclusive},
-    query::Query,
+    parameters::{MethodIdx, MethodVec, OptionalRangeInclusive, Parameters},
     utils::lengths::TotalLength,
 };
 
@@ -25,17 +24,17 @@ pub(crate) struct RefinedRanges {
 
 /// Attempt to prove which composition lengths and method counts are possible.  This result can
 /// then be used to either refine the bounds provided by the user (e.g. a peal of Royal can often
-/// only be exactly 5040 changes) or generate an error explaining why the query is impossible.
-pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<RefinedRanges> {
+/// only be exactly 5040 changes) or generate an error explaining why the search is impossible.
+pub(crate) fn prove_lengths(graph: &Graph, params: &Parameters) -> crate::Result<RefinedRanges> {
     log::debug!("Proving lengths");
 
     /* TOTAL LENGTH */
 
     // Work out which lengths are possible
-    let possible_lengths = possible_lengths(graph, query);
+    let possible_lengths = possible_lengths(graph, params);
     // Refine the length bound to what's actually possible, or error if no lengths fall into the
     // requested bound
-    let refined_len_range = match matching_lengths(&possible_lengths, &query.length) {
+    let refined_len_range = match matching_lengths(&possible_lengths, &params.length) {
         LengthMatches {
             range: Some(range), ..
         } => range,
@@ -47,7 +46,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
             next_larger,
         } => {
             return Err(crate::Error::UnachievableLength {
-                requested_range: query.length.clone(),
+                requested_range: params.length.clone(),
                 next_shorter_len: next_smaller.map(TotalLength::as_usize),
                 next_longer_len: next_larger.map(TotalLength::as_usize),
             });
@@ -64,28 +63,28 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
 
     let start = Instant::now();
     // Determine which method lengths are actually possible
-    let possible_lengths_by_method = query
+    let possible_lengths_by_method = params
         .methods
         .iter_enumerated()
-        .map(|(idx, method)| possible_method_counts(idx, method, graph, query))
+        .map(|(idx, method)| possible_method_counts(idx, method, graph, params))
         .collect::<MethodVec<_>>();
     // Compute min/max preferred/explicit bounds for every method
-    let method_bounds_min = method_bounds(query, &refined_len_range, Bound::Min);
-    let method_bounds_max = method_bounds(query, &refined_len_range, Bound::Max);
+    let method_bounds_min = method_bounds(params, &refined_len_range, Bound::Min);
+    let method_bounds_max = method_bounds(params, &refined_len_range, Bound::Max);
     // Combine all the information to compute the true method bounds
     let mut refined_method_counts = MethodVec::new();
     for (method_idx, possible_lengths) in possible_lengths_by_method.into_iter_enumerated() {
         let min_bound = method_bounds_min[method_idx];
         let max_bound = method_bounds_max[method_idx];
-        let method = &query.methods[method_idx];
+        let method = &params.methods[method_idx];
         let refined_counts = refine_method_counts(min_bound, max_bound, &possible_lengths, method)?;
         refined_method_counts.push(refined_counts);
     }
     log::debug!("  Method count ranges computed in {:.2?}", start.elapsed());
 
     // Print method counts to the user
-    if query.is_spliced() {
-        print_method_counts(&refined_method_counts, query);
+    if params.is_spliced() {
+        print_method_counts(&refined_method_counts, params);
     }
 
     // Check for clearly impossible method bounds
@@ -103,7 +102,7 @@ pub(crate) fn prove_lengths(graph: &Graph, query: &Query) -> crate::Result<Refin
 
 /// Compute an ascending [`Vec`] of every possible [`TotalLength`] of the composition, up to *and
 /// including* the first length after the highest range.
-fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
+fn possible_lengths(graph: &Graph, params: &Parameters) -> Vec<TotalLength> {
     // To compute a list of possible lengths, we run a Dijkstra's-style algorithm where we keep a
     // frontier of `(distance, chunk)` where each entry means that `chunk` can be reached at a
     // given `distance`.  When `(distance, <end>)` is reached, it means that it is theoretically
@@ -119,7 +118,7 @@ fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
     // is generated).
 
     let start = Instant::now();
-    let simple_graph = compute_simplified_graph(query, graph);
+    let simple_graph = compute_simplified_graph(params, graph);
     log::debug!("  Simplified graph generated in {:.2?}", start.elapsed());
 
     /* Run Dijkstra's across the graph, while only computing lengths. */
@@ -155,7 +154,7 @@ fn possible_lengths(graph: &Graph, query: &Query) -> Vec<TotalLength> {
                 }
                 // If this is the first end-length to be too long, then there's no point
                 // continuing the search (which otherwise would never finish)
-                if length > query.max_length() {
+                if length > params.max_length() {
                     break;
                 }
             }
@@ -229,11 +228,11 @@ type SimpleChunk = (RowIdx, Mask);
 /// performance cliff), this results in exactly one 'chunk' per method (for `1xxxxxxx`).  Even
 /// if it weren't cyclic, there'd be only 7 'chunks' per method (one for each position of the
 /// tenor).  Otherwise, we'd have 720 or 5040 chunks to process.
-fn compute_simplified_graph(query: &Query, graph: &Graph) -> SimpleGraph {
-    let allowed_lead_masks: MethodVec<_> = query
+fn compute_simplified_graph(params: &Parameters, graph: &Graph) -> SimpleGraph {
+    let allowed_lead_masks: MethodVec<_> = params
         .methods
         .iter()
-        .map(|m| m.allowed_lead_masks(&query.parameters))
+        .map(|m| m.allowed_lead_masks(params))
         .collect();
     let get_simple_chunks = |chunk_id: &ChunkId| -> Vec<SimpleChunk> {
         let mut simple_chunks = Vec::new();
@@ -289,7 +288,7 @@ fn possible_method_counts(
     method_idx: MethodIdx,
     method: &crate::parameters::Method,
     graph: &Graph,
-    query: &Query,
+    params: &Parameters,
 ) -> Vec<TotalLength> {
     // In order to compute possible count ranges efficiently, we approximate the graph into the
     // following shape:
@@ -388,7 +387,7 @@ fn possible_method_counts(
             continue; // Don't bother adding to a length we've seen before
         }
         counts.push(count);
-        if count > query.max_length() {
+        if count > params.max_length() {
             break; // Stop searching as soon as we find one length that's above our limit
         }
         // Add every possible interior length to this
@@ -414,7 +413,7 @@ fn possible_method_counts(
 }
 
 fn method_bounds(
-    query: &Query,
+    params: &Parameters,
     total_len_range: &RangeInclusive<TotalLength>,
     bound: Bound,
 ) -> MethodVec<(BoundType, TotalLength)> {
@@ -429,13 +428,13 @@ fn method_bounds(
         Bound::Max => total_len_range.end().as_usize() as f32,
     };
 
-    let total_method_weight = query
+    let total_method_weight = params
         .methods
         .iter()
         .filter(|m| get_bound(m.count_range).is_none())
         .map(|m| (m.lead_len() as f32).sqrt())
         .sum::<f32>();
-    let method_bounds = query
+    let method_bounds = params
         .methods
         .iter()
         .map(|m| match get_bound(m.count_range) {
@@ -566,7 +565,7 @@ fn refine_method_counts(
 /// Print the refined method counts to the user in a pleasant and easily-digestible way
 fn print_method_counts(
     refined_method_counts: &MethodVec<RangeInclusive<TotalLength>>,
-    query: &Query,
+    params: &Parameters,
 ) {
     let mut methods_by_count_ranges = BTreeMap::<(TotalLength, TotalLength), Vec<MethodIdx>>::new();
     for (idx, range) in refined_method_counts.iter_enumerated() {
@@ -581,10 +580,10 @@ fn print_method_counts(
         } else {
             format!("{min} to {max}")
         };
-        let methods_string = if methods.len() == query.methods.len() {
+        let methods_string = if methods.len() == params.methods.len() {
             "all methods".to_owned()
         } else {
-            let shorthand = |idx: &MethodIdx| -> String { query.methods[*idx].shorthand() };
+            let shorthand = |idx: &MethodIdx| -> String { params.methods[*idx].shorthand() };
 
             match methods.as_slice() {
                 [] => unreachable!(),

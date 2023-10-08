@@ -240,7 +240,7 @@ impl SameStageVec {
     /// Adds a new [`Row`] to the end of the buffer, checking that its [`Stage`] is as expected.
     #[inline]
     #[track_caller]
-    pub fn push(&mut self, row: &Row) -> () {
+    pub fn push(&mut self, row: &Row) {
         self.check_stage("row", row.stage());
         self.bells.extend(row.bell_iter());
     }

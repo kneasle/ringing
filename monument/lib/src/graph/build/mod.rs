@@ -3,12 +3,7 @@
 mod falseness;
 mod layout;
 
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::HashMap, ops::Deref, sync::Arc, time::Instant};
 
 use bellframe::{method::RowAnnot, Block, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
@@ -16,8 +11,7 @@ use itertools::Itertools;
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, MethodVec, StrokeSet},
-    query::Query,
+    parameters::{Call, MethodVec, Parameters, StrokeSet},
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
 };
@@ -26,19 +20,22 @@ use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, Tot
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub(crate) fn unoptimised(query: &Query, config: &Config) -> crate::Result<(Self, AtwTable)> {
+    pub(crate) fn unoptimised(
+        params: &Parameters,
+        config: &Config,
+    ) -> crate::Result<(Self, AtwTable)> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 
-        check_query(query)?;
+        check_params(params)?;
 
         // Generate chunk layout
         let start = Instant::now();
         let (mut chunk_equiv_map, chunk_lengths, links) =
-            self::layout::chunk_lengths(query, config)?;
+            self::layout::chunk_lengths(params, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
-        let atw_table = AtwTable::new(query, &chunk_lengths);
+        let atw_table = AtwTable::new(params, &chunk_lengths);
 
         // TODO: Combine overlapping chunks
 
@@ -46,7 +43,7 @@ impl Graph {
         let mut chunks = chunk_lengths
             .into_iter()
             .map(|(id, per_part_length): (ChunkId, PerPartLength)| {
-                let chunk = expand_chunk(&id, per_part_length, query, &atw_table);
+                let chunk = expand_chunk(&id, per_part_length, params, &atw_table);
                 (id, chunk)
             })
             .collect::<HashMap<_, _>>();
@@ -71,24 +68,24 @@ impl Graph {
         );
 
         // Assign falseness links
-        if query.require_truth {
-            falseness::set_links(&mut chunks, &mut chunk_equiv_map, query);
+        if params.require_truth {
+            falseness::set_links(&mut chunks, &mut chunk_equiv_map, params);
         }
 
         // Count music
         let start = Instant::now();
-        let relies_on_stroke = query
+        let relies_on_stroke = params
             .music_types
             .iter()
             .any(|ty| ty.strokes != StrokeSet::Both);
-        let start_strokes = get_start_strokes(&chunks, &links, query);
+        let start_strokes = get_start_strokes(&chunks, &links, params);
         if start_strokes.is_none() && relies_on_stroke {
             return Err(crate::Error::InconsistentStroke);
         }
         // Now we know the starting strokes, count the music on each chunk
-        let plain_courses: MethodVec<_> = query.methods.iter().map(|m| m.plain_course()).collect();
+        let plain_courses: MethodVec<_> = params.methods.iter().map(|m| m.plain_course()).collect();
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &plain_courses, &start_strokes, query);
+            count_scores(id, chunk, &plain_courses, &start_strokes, params);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -126,10 +123,10 @@ impl Graph {
 fn expand_chunk(
     id: &ChunkId,
     per_part_length: PerPartLength,
-    query: &Query,
+    params: &Parameters,
     atw_table: &AtwTable,
 ) -> Chunk {
-    let total_length = per_part_length.as_total(&query.part_head_group);
+    let total_length = per_part_length.as_total(&params.part_head_group);
 
     Chunk {
         per_part_length,
@@ -139,9 +136,9 @@ fn expand_chunk(
         method_counts: Counts::single_count(
             total_length.as_usize(),
             id.method.index(),
-            query.methods.len(),
+            params.methods.len(),
         ),
-        atw_bitmap: atw_table.bitmap_for_chunk(query, id, per_part_length),
+        atw_bitmap: atw_table.bitmap_for_chunk(params, id, per_part_length),
 
         // Filled in separate graph build passes
         predecessors: Vec::new(),
@@ -164,17 +161,17 @@ fn expand_chunk(
 fn get_start_strokes(
     chunks: &HashMap<ChunkId, Chunk>,
     links: &LinkSet,
-    query: &Query,
+    params: &Parameters,
 ) -> Option<HashMap<ChunkId, Stroke>> {
     let mut start_strokes = HashMap::<ChunkId, Stroke>::with_capacity(chunks.len());
     let mut frontier = Vec::<(ChunkId, Stroke)>::new();
     // Populate the frontier by setting each starting chunk with its respective start stroke
     //
-    // `query.start_row` refers to the first **non-start** row of the composition, consistent with
+    // `params.start_row` refers to the first **non-start** row of the composition, consistent with
     // how ringers view ringing as starting at the first non-rounds row.  However, Monument
     // considers the `start_row` to be part of the composition (so that leads go from lead head to
-    // end, inclusive), so we need to invert `query.start_row` to convert.
-    let stroke_of_start_row = !query.start_stroke;
+    // end, inclusive), so we need to invert `params.start_row` to convert.
+    let stroke_of_start_row = !params.start_stroke;
     for link in links.values() {
         if let (LinkSide::StartOrEnd, LinkSide::Chunk(id)) = (&link.from, &link.to) {
             frontier.push((id.clone(), stroke_of_start_row));
@@ -215,12 +212,12 @@ fn count_scores(
     chunk: &mut Chunk,
     plain_courses: &MethodVec<Block<RowAnnot>>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
-    query: &Query,
+    params: &Parameters,
 ) {
     // Always set music to `0`s, even if the chunk is unreachable.  If we don't, then an
     // optimisation pass could see this chunk and run `zip_eq` on the `MusicType`s, thus causing a
     // panic.
-    chunk.music = MusicBreakdown::zero(query.music_types.len());
+    chunk.music = MusicBreakdown::zero(params.music_types.len());
 
     let start_stroke = match start_strokes {
         Some(map) => match map.get(id) {
@@ -237,9 +234,9 @@ fn count_scores(
         None => Stroke::Back,
     };
     let plain_course = &plain_courses[id.method];
-    let lead_heads = query.methods[id.method].inner.lead_head().closure();
+    let lead_heads = params.methods[id.method].inner.lead_head().closure();
 
-    for part_head in query.part_head_group.rows() {
+    for part_head in params.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
         let row_iter = (0..chunk.per_part_length.as_usize()).map(|offset| {
             let index = (id.sub_lead_idx + offset) % plain_course.len();
@@ -249,7 +246,7 @@ fn count_scores(
         chunk.music += &MusicBreakdown::from_rows(
             row_iter,
             &lead_head_in_part,
-            query.music_types.as_raw_slice(),
+            params.music_types.as_raw_slice(),
             start_stroke,
         );
         // Count weight from `course_weights`.  `course_weights` apply to every row of every course
@@ -258,7 +255,7 @@ fn count_scores(
         // methods, `xxxxxx78` will expand into masks
         // `[xxxxxx78, xxxxx8x7, xxx8x7xx, x8x7xxxx, x78xxxxx, xx7x8xxx, xxxx7x8x]` (every one of
         // those leads is included in the course for `xxxxxx78`)
-        for (mask, weight) in &query.course_weights {
+        for (mask, weight) in &params.course_weights {
             for lead_head in &lead_heads {
                 if (mask * lead_head).matches(&lead_head_in_part) {
                     // Weight applies to each row
@@ -270,19 +267,19 @@ fn count_scores(
 }
 
 ////////////////////
-// QUERY CHECKING //
+// params CHECKING //
 ////////////////////
 
-/// Check a [`Query`] for obvious errors before starting to build the [`Graph`]
-fn check_query(query: &Query) -> crate::Result<()> {
+/// Check a [`Parameters`] for obvious errors before starting to build the [`Graph`]
+fn check_params(params: &Parameters) -> crate::Result<()> {
     // Different start/end rows aren't well defined for multi-parts
-    if query.is_multipart() && query.start_row != query.end_row {
+    if params.is_multipart() && params.start_row != params.end_row {
         return Err(crate::Error::DifferentStartEndRowInMultipart);
     }
 
     // Two methods using the same shorthand
-    for (i1, m1) in query.methods.iter_enumerated() {
-        for m2 in &query.methods[..i1] {
+    for (i1, m1) in params.methods.iter_enumerated() {
+        for m2 in &params.methods[..i1] {
             if m1.shorthand() == m2.shorthand() {
                 return Err(crate::Error::DuplicateShorthand {
                     shorthand: m1.shorthand(),
@@ -294,24 +291,19 @@ fn check_query(query: &Query) -> crate::Result<()> {
     }
 
     // Too short calling positions
-    for call in &query.calls {
-        if call.calling_positions.len() != query.stage.num_bells() {
+    for call in &params.calls {
+        if call.calling_positions.len() != params.stage.num_bells() {
             return Err(crate::Error::WrongCallingPositionsLength {
                 call_name: call.symbol.clone(),
                 calling_position_len: call.calling_positions.len(),
-                stage: query.stage,
+                stage: params.stage,
             });
         }
     }
 
     // Calls referring to non-existent labels
-    let mut defined_labels = HashSet::<&String>::new();
-    for m in &query.methods {
-        for labels in m.first_lead().annots() {
-            defined_labels.extend(labels);
-        }
-    }
-    for call in &query.calls {
+    let defined_labels = params.lead_labels_used();
+    for call in &params.calls {
         for lead_label in [&call.label_from, &call.label_to] {
             if !defined_labels.contains(lead_label) {
                 return Err(crate::Error::UndefinedLabel {
@@ -323,21 +315,21 @@ fn check_query(query: &Query) -> crate::Result<()> {
     }
 
     // Two calls with the same name at the same lead location
-    check_for_duplicate_call_names(query)?;
+    check_for_duplicate_call_names(params)?;
 
     // Course head masks which don't exist in other parts
     //
     // TODO: Make this actually output a mask specified by the user
     //
     // For every CH mask ...
-    for method in &query.methods {
-        for mask_in_first_part in &method.specified_course_masks(&query.parameters) {
+    for method in &params.methods {
+        for mask_in_first_part in &method.specified_course_masks(params) {
             // ... for every part ...
-            for part_head in query.part_head_group.rows() {
+            for part_head in params.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some lead mask
                 let mask_in_other_part = part_head * mask_in_first_part;
                 let is_covered = method
-                    .allowed_lead_masks(&query.parameters)
+                    .allowed_lead_masks(params)
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
                 if !is_covered {
@@ -355,8 +347,8 @@ fn check_query(query: &Query) -> crate::Result<()> {
 }
 
 /// Check for two [`Call`]s which assign the same `symbol` at the same `label`.
-fn check_for_duplicate_call_names(query: &Query) -> crate::Result<()> {
-    let sorted_calls = query
+fn check_for_duplicate_call_names(params: &Parameters) -> crate::Result<()> {
+    let sorted_calls = params
         .calls
         .iter()
         .map(|call: &Call| -> (&str, &str, &PlaceNot) {
@@ -398,15 +390,15 @@ impl Deref for ChunkIdInFirstPart {
 }
 
 #[derive(Debug)]
-struct ChunkEquivalenceMap<'query> {
-    part_head_group: &'query PartHeadGroup,
+struct ChunkEquivalenceMap<'params> {
+    part_head_group: &'params PartHeadGroup,
     // NOTE: The `PhRotation` represents what's required to go from the concrete part head to the
     // `Arc<Row>` representing its equivalence class.
     normalisation: HashMap<RowBuf, (Arc<Row>, PhRotation)>,
 }
 
-impl<'query> ChunkEquivalenceMap<'query> {
-    fn new(part_head_group: &'query PartHeadGroup) -> Self {
+impl<'params> ChunkEquivalenceMap<'params> {
+    fn new(part_head_group: &'params PartHeadGroup) -> Self {
         Self {
             part_head_group,
             normalisation: HashMap::new(),

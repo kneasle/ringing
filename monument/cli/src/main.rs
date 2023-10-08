@@ -12,9 +12,9 @@ fn main() {
 
     // Handle the results, either by doing a debug print or printing an error message
     match result {
-        Ok(Some(mut query_result)) => {
+        Ok(Some(mut search)) => {
             if !args.options.only_display_update_line {
-                query_result.print();
+                search.print();
             }
         }
         Ok(None) => assert!(args.options.debug_option.is_some()),

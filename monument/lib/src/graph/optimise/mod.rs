@@ -9,8 +9,8 @@ use std::{
 };
 
 use crate::{
+    parameters::Parameters,
     prove_length::RefinedRanges,
-    query::Query,
     utils::{lengths::TotalLength, FrontierItem},
 };
 
@@ -21,7 +21,7 @@ use Direction::{Backward, Forward};
 impl Graph {
     /// Repeatedly optimise the graph until the graph stops getting smaller, or 20 iterations are
     /// made.
-    pub(crate) fn optimise(&mut self, query: &Query, ranges: &RefinedRanges) {
+    pub(crate) fn optimise(&mut self, params: &Parameters, ranges: &RefinedRanges) {
         const ITERATION_LIMIT: usize = 20;
 
         let passes = self::passes::default();
@@ -38,7 +38,7 @@ impl Graph {
                 // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
                 // is unnecessary.  I think that this system can deadlock if multiple threads are
                 // optimising graphs in parallel using the same set of passes.
-                p.lock().unwrap().run(self, query, ranges);
+                p.lock().unwrap().run(self, params, ranges);
 
                 // Check if this optimisation pass has made the graph smaller
                 let new_size = self.size();
@@ -106,11 +106,11 @@ impl Graph {
     }
 }
 
-type SinglePass = Box<dyn FnMut(&mut Graph, &Query, &RefinedRanges)>;
+type SinglePass = Box<dyn FnMut(&mut Graph, &Parameters, &RefinedRanges)>;
 /// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  Very useful
 /// when some graph operation is agnostic to the directionality of the graph, e.g.  computing
 /// distances to/from rounds.
-type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Query, &RefinedRanges)>;
+type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Parameters, &RefinedRanges)>;
 
 /// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
 /// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
@@ -124,12 +124,12 @@ enum Pass {
 
 impl Pass {
     /// Apply the effect of this [`Pass`] to a [`Graph`]
-    fn run(&mut self, graph: &mut Graph, query: &Query, ranges: &RefinedRanges) {
+    fn run(&mut self, graph: &mut Graph, params: &Parameters, ranges: &RefinedRanges) {
         match self {
-            Pass::Single(pass) => pass(graph, query, ranges),
+            Pass::Single(pass) => pass(graph, params, ranges),
             Pass::BothDirections(pass) => {
-                pass(DirectionalView::new(graph, Forward), query, ranges);
-                pass(DirectionalView::new(graph, Backward), query, ranges);
+                pass(DirectionalView::new(graph, Forward), params, ranges);
+                pass(DirectionalView::new(graph, Backward), params, ranges);
             }
         }
     }
@@ -315,8 +315,8 @@ mod passes {
 
     use crate::{
         graph::{ChunkId, Graph},
+        parameters::Parameters,
         prove_length::RefinedRanges,
-        query::Query,
     };
 
     use super::{DirectionalView, Pass};
@@ -350,7 +350,7 @@ mod passes {
     /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
     fn remove_links_between_false_chunks() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Query, _ranges: &RefinedRanges| {
+            |graph: &mut Graph, _params: &Parameters, _ranges: &RefinedRanges| {
                 graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
                     !chunk_from.false_chunks.contains(id_to)
                 })
@@ -360,7 +360,7 @@ mod passes {
 
     fn remove_chunks_with_long_method_counts() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
+            |graph: &mut Graph, _params: &Parameters, ranges: &RefinedRanges| {
                 graph.chunks.retain(|id, chunk| {
                     chunk.total_length <= *ranges.method_counts[id.method].end()
                 })
@@ -370,7 +370,7 @@ mod passes {
 
     fn remove_links_with_long_method_counts() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, _query: &Query, ranges: &RefinedRanges| {
+            |graph: &mut Graph, _params: &Parameters, ranges: &RefinedRanges| {
                 graph.retain_internal_links(|_link, id_from, chunk_from, id_to, chunk_to| {
                     if id_from.method == id_to.method {
                         let max_method_count = *ranges.method_counts[id_from.method].end();
@@ -389,11 +389,11 @@ mod passes {
     /// removing any which can't reach rounds in either direction.
     fn compute_distances() -> Pass {
         Pass::BothDirections(Box::new(
-            |mut view: DirectionalView, query: &Query, _ranges: &RefinedRanges| {
+            |mut view: DirectionalView, params: &Parameters, _ranges: &RefinedRanges| {
                 let expanded_chunk_distances = super::compute_distances(
                     view.starts().iter().map(|(_, chunk_id)| chunk_id),
                     &view,
-                    Some(query.max_length()),
+                    Some(params.max_length()),
                 );
                 // Set the chunk distances and strip out unreachable chunks
                 view.retain_chunks(
@@ -413,12 +413,12 @@ mod passes {
     /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
     fn strip_long_chunks() -> Pass {
         Pass::Single(Box::new(
-            |graph: &mut Graph, query: &Query, _ranges: &RefinedRanges| {
+            |graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges| {
                 graph.chunks.retain(|_id, chunk| {
                     let min_comp_length_with_chunk = chunk.lb_distance_from_rounds
                         + chunk.total_length
                         + chunk.lb_distance_to_rounds;
-                    min_comp_length_with_chunk <= query.max_length()
+                    min_comp_length_with_chunk <= params.max_length()
                 });
             },
         ))

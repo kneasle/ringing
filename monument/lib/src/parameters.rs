@@ -3,7 +3,7 @@
 use std::{
     collections::HashSet,
     marker::PhantomData,
-    ops::{Range, RangeInclusive},
+    ops::{Deref, Range, RangeInclusive},
     sync::atomic::AtomicBool,
 };
 
@@ -13,6 +13,7 @@ use bellframe::{
 use itertools::Itertools;
 
 use crate::{
+    graph::ChunkId,
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -35,10 +36,10 @@ pub struct Parameters {
     pub require_truth: bool,
 
     // METHODS & CALLING
-    pub maybe_unused_methods: Vec<Method>,
+    pub methods: MethodVec<Method>,
     pub splice_style: SpliceStyle,
     pub splice_weight: f32,
-    pub maybe_unused_calls: Vec<Call>,
+    pub calls: CallVec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
     pub atw_weight: Option<f32>,
     pub require_atw: bool, // `true` to make Monument only output atw comps
@@ -55,7 +56,7 @@ pub struct Parameters {
     pub course_weights: Vec<(Mask, f32)>,
 
     // MUSIC
-    pub maybe_unused_music_types: Vec<MusicType>,
+    pub music_types: MusicTypeVec<MusicType>,
     /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
     /// `self.start_row`
     // TODO: Compute this automatically from sub-lead index
@@ -82,24 +83,12 @@ impl Parameters {
         Ok(comps)
     }
 
-    pub fn used_methods(&self) -> impl Iterator<Item = &Method> {
-        self.maybe_unused_methods.iter().filter(|m| m.used)
-    }
-
-    pub fn used_calls(&self) -> impl Iterator<Item = &Call> {
-        self.maybe_unused_calls.iter().filter(|c| c.used)
-    }
-
-    pub fn used_music_types(&self) -> impl Iterator<Item = &MusicType> {
-        self.maybe_unused_music_types.iter().filter(|mt| mt.used)
-    }
-
     pub fn max_length(&self) -> TotalLength {
         *self.length.end()
     }
 
     pub fn is_spliced(&self) -> bool {
-        self.used_methods().count() > 1
+        self.methods.len() > 1
     }
 
     pub fn num_parts(&self) -> usize {
@@ -110,9 +99,17 @@ impl Parameters {
         self.num_parts() > 1
     }
 
+    /// Returns `start_row` or `end_row`, based on the given [`Boundary`]
+    pub fn boundary_row(&self, boundary: Boundary) -> &Row {
+        match boundary {
+            Boundary::Start => &self.start_row,
+            Boundary::End => &self.end_row,
+        }
+    }
+
     pub fn fixed_bells(&self) -> Vec<(Bell, usize)> {
         let mut fixed_bells = self.stage.bells().collect_vec();
-        for m in self.used_methods() {
+        for m in &self.methods {
             let f = self.fixed_bells_of_method(m);
             fixed_bells.retain(|b| f.contains(b));
         }
@@ -123,12 +120,111 @@ impl Parameters {
             .collect_vec()
     }
 
+    pub fn lead_labels_used(&self) -> HashSet<String> {
+        let mut defined_labels = HashSet::<String>::new();
+        for m in &self.methods {
+            for labels in m.first_lead().annots() {
+                defined_labels.extend(labels.iter().cloned());
+            }
+        }
+        defined_labels
+    }
+
+    pub fn method_id_to_idx(&self, id: MethodId) -> MethodIdx {
+        self.methods.position(|m| m.id == id).unwrap()
+    }
+
+    pub fn call_id_to_idx(&self, id: CallId) -> CallIdx {
+        self.calls.position(|c| c.id == id).unwrap()
+    }
+
+    pub fn music_type_id_to_idx(&self, id: MusicTypeId) -> MusicTypeIdx {
+        self.music_types.position(|mt| mt.id == id).unwrap()
+    }
+
+    pub fn get_method_by_id(&self, id: MethodId) -> &Method {
+        &self.methods[self.method_id_to_idx(id)]
+    }
+
+    pub fn get_call_by_id(&self, id: CallId) -> &Call {
+        &self.calls[self.call_id_to_idx(id)]
+    }
+
+    pub fn get_music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
+        &self.music_types[self.music_type_id_to_idx(id)]
+    }
+
+    //////////////////////
+    // HELPER FUNCTIONS //
+    //////////////////////
+
+    /// For a given chunk, split that chunk's range into segments where each one falls within a
+    /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`
+    /// and length 18 would return the following regions:
+    /// ```text
+    ///                           12345678
+    ///                            1
+    ///                  +     +    1
+    ///                  |     |     1
+    ///                  |     |     1
+    ///                  |     |    1
+    ///                  |     |   1
+    ///                  |     +  1
+    ///                  |     +  16482735
+    ///                  |     |   1
+    ///                  |     |    1
+    ///   Original range |     |     1
+    ///                  |     |     1
+    ///                  |     |    1
+    ///                  |     |   1
+    ///                  |     +  1
+    ///                  |     +  17856342
+    ///                  |     |   1
+    ///                  |     |    1
+    ///                  +     +     1
+    ///                      /       1
+    ///                     /       1
+    ///    Output ranges --/       1
+    ///                           1
+    /// ```
+    pub(crate) fn chunk_lead_regions(
+        &self,
+        id: &ChunkId,
+        length: PerPartLength,
+    ) -> Vec<(RowBuf, Range<usize>)> {
+        let method = &self.methods[id.method];
+
+        let mut lead_head: RowBuf = id.lead_head.deref().to_owned();
+        let mut length_left = length.as_usize();
+        let mut sub_lead_idx = id.sub_lead_idx;
+
+        let mut lead_regions = Vec::new();
+        while length_left > 0 {
+            // Add a region for as much of this lead as we can
+            let length_left_in_lead = method.lead_len() - sub_lead_idx;
+            let chunk_len = usize::min(length_left_in_lead, length_left);
+            let chunk_end = sub_lead_idx + chunk_len;
+            lead_regions.push((lead_head.clone(), sub_lead_idx..chunk_end));
+            // Move to after this region, moving forward a lead if necessary
+            assert!(chunk_len <= method.lead_len());
+            length_left -= chunk_len;
+            sub_lead_idx += chunk_len;
+            assert!(sub_lead_idx <= method.lead_len());
+            if sub_lead_idx == method.lead_len() {
+                // Next chunk starts in a new lead, so update the lead head accordingly
+                sub_lead_idx = 0;
+                lead_head *= method.lead_head();
+            }
+        }
+        lead_regions
+    }
+
     /// Returns the place bells which are always preserved by plain leads and all calls of a single
     /// method (e.g. hunt bells in non-variable-hunt compositions).
     fn fixed_bells_of_method(&self, method: &bellframe::Method) -> HashSet<Bell> {
         // Start the set with the bells which are fixed by the plain lead of every method
         let mut fixed_bells: HashSet<Bell> = method.lead_head().fixed_bells().collect();
-        for call in self.used_calls() {
+        for call in &self.calls {
             // For each call, remove the bells which aren't fixed by that call (e.g. the 2 in
             // Grandsire is unaffected by a plain lead, but affected by calls)
             Self::filter_bells_fixed_by_call(method, call, &mut fixed_bells);
@@ -176,11 +272,10 @@ impl Parameters {
 // METHODS //
 /////////////
 
-/// A `Method` used in a [`Query`].
+/// A `Method` used in a [`Search`].
 #[derive(Debug, Clone)]
 pub struct Method {
     pub id: MethodId,
-    pub used: bool,
     pub inner: bellframe::Method,
 
     /// Short [`String`] used to identify this method in spliced.  If empty, a default value will
@@ -218,10 +313,19 @@ impl Method {
     // START/END LOCATIONS //
     /////////////////////////
 
+    #[allow(clippy::type_complexity)]
+    pub fn start_and_end_locations(
+        &self,
+        params: &Parameters,
+    ) -> (Vec<(RowBuf, usize)>, Vec<(RowBuf, usize)>) {
+        let start_locations = self.boundary_locations(&params.start_row, Boundary::Start, params);
+        let end_locations = self.boundary_locations(&params.end_row, Boundary::End, params);
+        (start_locations, end_locations)
+    }
+
     /// Return `(lead head, sub lead index)` of every position that the given [`Row`] can be rung at
     /// the given [`Boundary`].
-    // TODO: Return both starts and ends?
-    pub fn start_end_locations(
+    pub fn boundary_locations(
         &self,
         row: &Row,
         boundary: Boundary,
@@ -349,7 +453,6 @@ pub fn default_shorthand(title: &str) -> String {
 #[derive(Debug, Clone)]
 pub struct Call {
     pub id: CallId,
-    pub used: bool,
 
     pub symbol: String,
     pub calling_positions: Vec<String>,
@@ -401,7 +504,6 @@ impl Call {
     pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
         Self {
             id,
-            used: true,
 
             symbol: symbol.to_owned(),
             calling_positions: default_calling_positions(&place_not),
@@ -435,10 +537,10 @@ pub fn base_calls(
     bob_weight: Option<f32>,
     single_weight: Option<f32>,
     stage: Stage,
-) -> Vec<Call> {
+) -> CallVec<Call> {
     let n = stage.num_bells_u8();
 
-    let mut calls = Vec::new();
+    let mut calls = CallVec::new();
     // Add bob
     if let Some(bob_weight) = bob_weight {
         let bob_pn = match type_ {
@@ -545,7 +647,6 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 #[derive(Debug, Clone)]
 pub struct MusicType {
     pub id: MusicTypeId,
-    pub used: bool,
 
     pub patterns: Vec<Pattern>,
     pub strokes: StrokeSet,
@@ -802,12 +903,12 @@ impl<Id: From<u16> + Into<u16>> IdGenerator<Id> {
     }
 }
 
-index_vec::define_index_type! { pub(crate) struct MethodIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct CallIdx = usize; }
-index_vec::define_index_type! { pub(crate) struct MusicTypeIdx = usize; }
-pub(crate) type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
-pub(crate) type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
-pub(crate) type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
+index_vec::define_index_type! { pub struct MethodIdx = usize; }
+index_vec::define_index_type! { pub struct CallIdx = usize; }
+index_vec::define_index_type! { pub struct MusicTypeIdx = usize; }
+pub type MethodVec<T> = index_vec::IndexVec<MethodIdx, T>;
+pub type CallVec<T> = index_vec::IndexVec<CallIdx, T>;
+pub type MusicTypeVec<T> = index_vec::IndexVec<MusicTypeIdx, T>;
 
 #[cfg(test)]
 mod tests {

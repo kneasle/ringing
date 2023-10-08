@@ -61,7 +61,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
             update_fn(Update::Comp(comp));
             num_comps += 1;
 
-            if num_comps == search.query.num_comps {
+            if num_comps == search.params.num_comps {
                 break; // Stop the search once we've got enough comps
             }
         }

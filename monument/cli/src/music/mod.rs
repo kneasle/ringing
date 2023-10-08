@@ -6,7 +6,7 @@ use bellframe::{
 };
 use itertools::Itertools;
 use monument::{
-    parameters::{IdGenerator, MusicType, MusicTypeId, OptionalRangeInclusive},
+    parameters::{IdGenerator, MusicType, MusicTypeId, MusicTypeVec, OptionalRangeInclusive},
     Search,
 };
 use serde::Deserialize;
@@ -113,7 +113,7 @@ pub fn generate_music(
     base_music: BaseMusic,
     music_file_str: Option<&str>,
     stage: Stage,
-) -> anyhow::Result<(Vec<MusicDisplay>, Vec<MusicType>)> {
+) -> anyhow::Result<(Vec<MusicDisplay>, MusicTypeVec<MusicType>)> {
     let mut music_builder = MusicTypeFactory::new();
 
     // Base music
@@ -135,14 +135,14 @@ pub fn generate_music(
 
 /// Struct to build a single set of `MusicType`s
 struct MusicTypeFactory {
-    music_types_with_displays: Vec<(MusicType, Option<MusicTypeDisplay>)>,
+    music_types_with_displays: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
     id_gen: IdGenerator<MusicTypeId>,
 }
 
 impl MusicTypeFactory {
     fn new() -> Self {
         Self {
-            music_types_with_displays: Vec::new(),
+            music_types_with_displays: MusicTypeVec::new(),
             id_gen: IdGenerator::starting_at_zero(),
         }
     }
@@ -164,7 +164,7 @@ impl MusicTypeFactory {
         Ok(())
     }
 
-    fn finish(self) -> (Vec<MusicDisplay>, Vec<MusicType>) {
+    fn finish(self) -> (Vec<MusicDisplay>, MusicTypeVec<MusicType>) {
         compute_music_displays(self.music_types_with_displays)
     }
 }
@@ -866,12 +866,12 @@ impl MusicTypeDisplay {
 /// This generates a more compact output by combining the same pattern in different locations (e.g.
 /// 4-bell runs/5678s/6578s can be either front/internal/back).
 fn compute_music_displays(
-    annot_music_types: Vec<(MusicType, Option<MusicTypeDisplay>)>,
-) -> (Vec<MusicDisplay>, Vec<MusicType>) {
+    annot_music_types: MusicTypeVec<(MusicType, Option<MusicTypeDisplay>)>,
+) -> (Vec<MusicDisplay>, MusicTypeVec<MusicType>) {
     // Create an initial set of `MusicDisplay`s by grouping equivalent patterns into the same
     // `MusicDisplay`
     let mut music_displays = Vec::<MusicDisplay>::new();
-    let mut music_types = Vec::<MusicType>::new();
+    let mut music_types = MusicTypeVec::<MusicType>::new();
     for (music_type, music_type_display) in annot_music_types {
         // Compute the display if it exists
         if let Some(MusicTypeDisplay { full_name, pattern }) = music_type_display {
@@ -965,7 +965,6 @@ fn new_music_type(
 ) -> MusicType {
     MusicType {
         id: id_gen.next(),
-        used: true,
 
         patterns,
         strokes: strokes.into(),

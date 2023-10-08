@@ -27,11 +27,11 @@ impl MethodLib {
     /// and `None` otherwise.  The failure state for this function is not very useful - if you want
     /// to provide useful suggestions for your user, then consider using
     /// [`MethodLib::get_by_title_with_suggestions`].
-    pub fn get_by_title(&self, title: &str) -> Result<Method, QueryError<()>> {
+    pub fn get_by_title(&self, title: &str) -> Result<Method, SearchError<()>> {
         match self.get_by_title_option(&title.to_lowercase()) {
             Some(Ok(method)) => Ok(method),
-            Some(Err((pn, error))) => Err(QueryError::PnParseErr { pn, error }),
-            None => Err(QueryError::NotFound(())),
+            Some(Err((pn, error))) => Err(SearchError::PnParseErr { pn, error }),
+            None => Err(SearchError::NotFound(())),
         }
     }
 
@@ -69,7 +69,7 @@ impl MethodLib {
         &self,
         title: &str,
         num_suggestions: usize,
-    ) -> Result<Method, QueryError<Vec<(String, usize)>>> {
+    ) -> Result<Method, SearchError<Vec<(String, usize)>>> {
         let lower_case_title = title.to_lowercase();
         self.get_by_title(&lower_case_title).map_err(|e| {
             e.map_not_found(|()| self.generate_suggestions(&lower_case_title, num_suggestions))
@@ -253,7 +253,7 @@ impl CompactMethod {
 }
 
 #[derive(Debug, Clone)]
-pub enum QueryError<T> {
+pub enum SearchError<T> {
     // TODO: Validate PN while parsing the library
     PnParseErr {
         pn: String,
@@ -262,7 +262,7 @@ pub enum QueryError<T> {
     NotFound(T),
 }
 
-impl<T> QueryError<T> {
+impl<T> SearchError<T> {
     /// Unwraps the `PnParseErr` part of a `QueryError`, expecting the Method's place notation to
     /// have parsed correctly and panicking if it didn't
     pub fn unwrap_parse_err(self) -> Result<Method, T> {
@@ -273,10 +273,10 @@ impl<T> QueryError<T> {
     }
 
     /// Passes the value contained in the `NotFound` part of `self` through an arbitrary function.
-    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> QueryError<U> {
+    pub fn map_not_found<U>(self, f: impl FnOnce(T) -> U) -> SearchError<U> {
         match self {
-            QueryError::PnParseErr { pn, error } => QueryError::PnParseErr { pn, error },
-            QueryError::NotFound(v) => QueryError::NotFound(f(v)),
+            SearchError::PnParseErr { pn, error } => SearchError::PnParseErr { pn, error },
+            SearchError::NotFound(v) => SearchError::NotFound(f(v)),
         }
     }
 }
