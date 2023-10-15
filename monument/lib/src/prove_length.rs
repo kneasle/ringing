@@ -232,7 +232,7 @@ fn compute_simplified_graph(params: &Parameters, graph: &Graph) -> SimpleGraph {
     let allowed_lead_masks: MethodVec<_> = params
         .methods
         .iter()
-        .map(|m| m.allowed_lead_masks(params))
+        .map(|m| m.allowed_lead_head_masks(params))
         .collect();
     let get_simple_chunks = |chunk_id: &ChunkId| -> Vec<SimpleChunk> {
         let mut simple_chunks = Vec::new();

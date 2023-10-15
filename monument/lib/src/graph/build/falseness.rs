@@ -91,7 +91,7 @@ impl FalsenessTable {
         // generating false links.
         let mut masks_used = HashSet::<(ChunkRange, Mask)>::new();
         for (method_idx, method_data) in params.methods.iter_enumerated() {
-            for lead_head_mask in method_data.allowed_lead_masks(params) {
+            for lead_head_mask in method_data.allowed_lead_head_masks(params) {
                 for (id, len) in chunks {
                     if id.method == method_idx && lead_head_mask.matches(&id.lead_head) {
                         masks_used

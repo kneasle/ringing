@@ -31,6 +31,16 @@ len |  music     *87 | avg score | calling
 ----|----------------|-----------|-----------
 len |  music     *87 | avg score | calling
 '''
+"test/cases/add-courses-in-other-parts-1.toml" = '''
+ len |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+-----|--------|----------------------------------------------------------------|-----------|-----------
+5184 | 134265 |  166.00 :   84 ( 52f  32b)    0f 24b    0f  0b    0f 24b     0 | -0.001196 | sHMsWWsWHHsMMsMBsWWsW
+5184 | 142365 |  171.00 :   84 ( 52f  32b)    0f 24b    0f  0b    0f 24b     0 | -0.000231 | MsWWsWHHsMMsMBsWWsWsH
+5184 | 142365 |  176.00 :   92 ( 52f  40b)    0f 24b    0f  0b    0f 24b     0 |  0.000733 | sHsMMsMBsWWsWHHsMMsMW
+5184 | 134265 |  179.00 :   92 ( 52f  40b)    0f 24b    0f  0b    0f 24b     0 |  0.001312 | sMMsMBsWWsWHHsMMsMWsH
+-----|--------|----------------------------------------------------------------|-----------|-----------
+ len |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+'''
 "test/cases/atw/5-part.toml" = '''
  len     C    Y    S    P  | atw |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
@@ -1430,10 +1440,6 @@ Error: Call "x" only specifies 9 calling positions, but the stage has 8 bells
 '''
 "test/cases/error-messages/calling-positions-too-short.toml" = '''
 Error: Call "x" only specifies 7 calling positions, but the stage has 8 bells
-'''
-"test/cases/error-messages/chs-not-in-other-parts.toml" = '''
-Error: course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.
-   help: consider adding `1xxx7865` to `course_heads`
 '''
 "test/cases/error-messages/course-weights/bell-out-of-stage.toml" = '''
 Error: Can't parse course head weight "x9*": bell 9 is out of stage Major

@@ -317,28 +317,21 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
     // Two calls with the same name at the same lead location
     check_for_duplicate_call_names(params)?;
 
-    // Course head masks which don't exist in other parts
-    //
-    // TODO: Make this actually output a mask specified by the user
+    // Panic on course head masks which don't exist in other parts.  This should be guaranteed
+    // by the implementation of `Method::allowed_lead_head_masks`, but we check it nonetheless.
     //
     // For every CH mask ...
     for method in &params.methods {
-        for mask_in_first_part in &method.specified_course_masks(params) {
+        let allowed_lead_head_masks = method.allowed_lead_head_masks(params);
+        for mask_in_first_part in &allowed_lead_head_masks {
             // ... for every part ...
             for part_head in params.part_head_group.rows() {
                 // ... check that the CH mask in that part is covered by some lead mask
                 let mask_in_other_part = part_head * mask_in_first_part;
-                let is_covered = method
-                    .allowed_lead_masks(params)
+                let is_covered = allowed_lead_head_masks
                     .iter()
                     .any(|mask| mask_in_other_part.is_subset_of(mask));
-                if !is_covered {
-                    return Err(crate::Error::NoCourseHeadInPart {
-                        mask_in_first_part: mask_in_first_part.clone(),
-                        part_head: part_head.to_owned(),
-                        mask_in_other_part,
-                    });
-                }
+                assert!(is_covered);
             }
         }
     }

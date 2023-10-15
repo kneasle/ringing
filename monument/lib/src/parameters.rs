@@ -383,17 +383,13 @@ impl Method {
     ///////////////////
 
     pub fn is_lead_head_allowed(&self, row: &Row, params: &Parameters) -> bool {
-        self.allowed_lead_masks(params)
+        self.allowed_lead_head_masks(params)
             .into_iter()
             .any(|m| m.matches(row))
     }
 
-    pub fn allowed_lead_masks(&self, params: &Parameters) -> Vec<Mask> {
-        CourseSet::to_lead_masks(&self.allowed_courses, &self.inner, &params.fixed_bells())
-    }
-
-    pub fn specified_course_masks(&self, params: &Parameters) -> Vec<Mask> {
-        CourseSet::to_course_masks(&self.allowed_courses, &self.inner, &params.fixed_bells())
+    pub fn allowed_lead_head_masks(&self, params: &Parameters) -> Vec<Mask> {
+        CourseSet::to_lead_masks(&self.allowed_courses, &self.inner, params)
     }
 }
 
@@ -496,7 +492,7 @@ impl Call {
     pub(crate) fn short_symbol(&self) -> &str {
         match self.symbol.as_str() {
             "-" | "–" => "", // Convert `-` to ``
-            s => s,          // All other calls use their explicit symbol
+            s => s,            // All other calls use their explicit symbol
         }
     }
 
@@ -722,42 +718,14 @@ impl CourseSet {
     pub(crate) fn to_lead_masks(
         allowed_courses: &[CourseSet],
         method: &bellframe::Method,
-        fixed_bells: &[(Bell, usize)],
+        params: &Parameters,
     ) -> Vec<Mask> {
-        allowed_courses
+        let fixed_bells = params.fixed_bells();
+        let lead_head_masks: HashSet<Mask> = allowed_courses
             .iter()
-            .flat_map(|c| c.as_lead_masks(method, fixed_bells))
-            .collect_vec()
-    }
+            .flat_map(|c| c.as_lead_masks(method, &fixed_bells, &params.part_head_group))
+            .collect();
 
-    /// Convert many `CourseSet`s into the corresponding course head [`Mask`]s.
-    pub(crate) fn to_course_masks(
-        allowed_courses: &[CourseSet],
-        method: &bellframe::Method,
-        fixed_bells: &[(Bell, usize)],
-    ) -> Vec<Mask> {
-        allowed_courses
-            .iter()
-            .flat_map(|c| c.as_course_masks(method, fixed_bells))
-            .collect_vec()
-    }
-
-    /// Returns a list of [`Mask`]s which match any lead head of the courses represented by `self`.
-    fn as_lead_masks(
-        &self,
-        method: &bellframe::Method,
-        fixed_bells: &[(Bell, usize)],
-    ) -> Vec<Mask> {
-        let course_masks = self.as_course_masks(method, fixed_bells);
-        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
-        // user, but Monument is internally based completely on lead heads - courses are only used to
-        // interact with the user).
-        let mut lead_head_masks = HashSet::new();
-        for course_mask in course_masks {
-            for lead_head in method.lead_head().closure() {
-                lead_head_masks.insert(&course_mask * &lead_head);
-            }
-        }
         // Remove any lh masks which are a subset of others (for example, if `xx3456` and `xxxx56`
         // are present, then `xx3456` can be removed because it is implied by `xxxx56`).  This is
         // useful to speed up the falseness table generation.  Making `lead_head_masks` a `HashSet`
@@ -773,6 +741,28 @@ impl CourseSet {
             }
         }
         filtered_lead_head_masks
+    }
+
+    /// Returns a list of [`Mask`]s which match any lead head of the courses represented by `self`.
+    fn as_lead_masks(
+        &self,
+        method: &bellframe::Method,
+        fixed_bells: &[(Bell, usize)],
+        part_heads: &PartHeadGroup,
+    ) -> Vec<Mask> {
+        let course_masks = self.as_course_masks(method, fixed_bells);
+        // Convert *course* head masks into *lead* head masks (course heads are convenient for the
+        // user, but Monument is internally based completely on lead heads - courses are only used
+        // to interact with the user).
+        let mut lead_head_masks = Vec::new();
+        for course_mask in course_masks {
+            for lead_head in method.lead_head().closure() {
+                for part_head in part_heads.rows() {
+                    lead_head_masks.push(part_head * &course_mask * &lead_head);
+                }
+            }
+        }
+        lead_head_masks
     }
 
     /// Expand `self` into a single set of [`Mask`]s
