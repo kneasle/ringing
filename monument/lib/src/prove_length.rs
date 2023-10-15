@@ -580,29 +580,7 @@ fn print_method_counts(
         } else {
             format!("{min} to {max}")
         };
-        let methods_string = if methods.len() == params.methods.len() {
-            "all methods".to_owned()
-        } else {
-            let shorthand = |idx: &MethodIdx| -> String { params.methods[*idx].shorthand() };
-
-            match methods.as_slice() {
-                [] => unreachable!(),
-                [idx] => shorthand(idx).to_owned(),
-                // Write 'idxs[0], idxs[1], ... idxs[n], idx2 and idx3'
-                [idxs @ .., idx2, idx3] => {
-                    let mut s = String::new();
-                    for idx in idxs {
-                        s.push_str(&shorthand(idx));
-                        s.push_str(", ");
-                    }
-                    s.push_str(&shorthand(idx2));
-                    s.push_str(" and ");
-                    s.push_str(&shorthand(idx3));
-                    s
-                }
-            }
-        };
-
+        let methods_string = params.method_list_string(&methods);
         log::info!("Requiring {row_string} rows of {methods_string}");
     }
 }

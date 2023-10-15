@@ -3,15 +3,20 @@
 mod falseness;
 mod layout;
 
-use std::{collections::HashMap, ops::Deref, sync::Arc, time::Instant};
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::Deref,
+    sync::Arc,
+    time::Instant,
+};
 
-use bellframe::{method::RowAnnot, Block, PlaceNot, Row, RowBuf, Stroke};
+use bellframe::{method::RowAnnot, Block, Mask, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
     atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, MethodVec, Parameters, StrokeSet},
+    parameters::{Call, MethodIdx, MethodVec, Parameters, StrokeSet},
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
 };
@@ -317,22 +322,28 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
     // Two calls with the same name at the same lead location
     check_for_duplicate_call_names(params)?;
 
-    // Panic on course head masks which don't exist in other parts.  This should be guaranteed
-    // by the implementation of `Method::allowed_lead_head_masks`, but we check it nonetheless.
-    //
-    // For every CH mask ...
-    for method in &params.methods {
-        let allowed_lead_head_masks = method.allowed_lead_head_masks(params);
-        for mask_in_first_part in &allowed_lead_head_masks {
-            // ... for every part ...
-            for part_head in params.part_head_group.rows() {
-                // ... check that the CH mask in that part is covered by some lead mask
-                let mask_in_other_part = part_head * mask_in_first_part;
-                let is_covered = allowed_lead_head_masks
-                    .iter()
-                    .any(|mask| mask_in_other_part.is_subset_of(mask));
-                assert!(is_covered);
+    // Check which extra course head masks where added while expanding different part heads
+    let mut extra_masks = BTreeMap::<Mask, BTreeMap<RowBuf, Vec<MethodIdx>>>::new();
+    for (method_idx, method) in params.methods.iter_enumerated() {
+        let (_lhms, extra_masks_for_method) = method.allowed_lead_head_masks_with_extras(params);
+        for (specified_ch_mask, part_head) in extra_masks_for_method {
+            extra_masks
+                .entry(specified_ch_mask)
+                .or_default()
+                .entry(part_head)
+                .or_default()
+                .push(method_idx);
+        }
+    }
+    // Print these masks in a human-readable form
+    for (specified_mask, methods_per_part) in extra_masks {
+        println!("Note: For course mask {specified_mask}, adding extra masks for other parts:");
+        for (part_head, methods) in methods_per_part {
+            print!("  {} (in part {part_head}", &part_head * &specified_mask);
+            if params.is_spliced() {
+                print!(" for {}", params.method_list_string(&methods));
             }
+            println!(")");
         }
     }
 
