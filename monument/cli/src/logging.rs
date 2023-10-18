@@ -328,7 +328,7 @@ impl CompositionPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.search, comp.music_counts()),
+                &music_display.display_counts(&self.search, &comp.music_counts(params)),
                 *col_width,
             );
             s.push(' ');

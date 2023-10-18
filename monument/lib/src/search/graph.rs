@@ -25,7 +25,6 @@ pub(super) struct Chunk {
     pub id: crate::graph::ChunkId,
 
     pub score: f32,
-    pub music_counts: Counts, // PERF: Not used in search
 
     pub per_part_length: PerPartLength, // PERF: Not used in search
     pub total_length: TotalLength,
@@ -105,7 +104,6 @@ impl Graph {
                     id: from_id,
 
                     score: source_chunk.music.score,
-                    music_counts: source_chunk.music.counts.clone(),
 
                     per_part_length: source_chunk.per_part_length,
                     total_length: source_chunk.total_length,

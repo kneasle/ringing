@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, fmt::Write};
+use std::{cmp::Ordering, fmt::Write};
 
 use bellframe::{
     music::{Elem, Pattern},
@@ -651,10 +651,7 @@ impl MusicDisplay {
     /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
     /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
     pub fn col_width(&self, search: &Search) -> usize {
-        let all_zeros = search
-            .music_type_ids()
-            .map(|id| (id, 0))
-            .collect::<HashMap<_, _>>();
+        let all_zeros = index_vec::index_vec![0; search.parameters().music_types.len()];
         // We always pad the counts as much as required, so displaying a set of 0s results in a
         // maximum-width string (i.e. all output strings are the same length)
         let max_count_width = self.display_counts(search, &all_zeros).len();
@@ -662,7 +659,7 @@ impl MusicDisplay {
     }
 
     /// Generate a compact string representing a given set of music counts
-    pub fn display_counts(&self, search: &Search, counts: &HashMap<MusicTypeId, usize>) -> String {
+    pub fn display_counts(&self, search: &Search, counts: &MusicTypeVec<usize>) -> String {
         let mut s = String::new();
 
         // Add total count
@@ -711,13 +708,14 @@ impl MusicDisplay {
 fn write_music_count(
     s: &mut String,
     search: &Search,
-    counts: &HashMap<MusicTypeId, usize>,
+    counts: &MusicTypeVec<usize>,
     id: MusicTypeId,
 ) {
     // `min(4)` because we don't expect more than 9999 instances of a music type, even
     // if more are theoretically possible
     let max_count_width = search.max_music_count(id).to_string().len().min(4);
-    write!(s, "{:>width$}", counts[&id], width = max_count_width).unwrap();
+    let idx = search.parameters().music_type_id_to_idx(id);
+    write!(s, "{:>width$}", counts[idx], width = max_count_width).unwrap();
 }
 
 /// The way a [`MusicType`] should be displayed

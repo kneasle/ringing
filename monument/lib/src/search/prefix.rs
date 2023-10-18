@@ -7,7 +7,6 @@ use std::{
 use bellframe::Row;
 use bit_vec::BitVec;
 use datasize::DataSize;
-use itertools::Itertools;
 use ordered_float::OrderedFloat;
 
 use crate::{
@@ -273,7 +272,7 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's parameters */
 
-        let (path, music_counts) = self.flattened_path(search, paths);
+        let path = self.flattened_path(search, paths);
         let first_elem = path.first().expect("Must have at least one chunk");
         let last_elem = path.last().expect("Must have at least one chunk");
 
@@ -312,18 +311,13 @@ impl CompPrefix {
 
         // Now we know the composition is valid, construct it and return
         let comp = Composition {
+            stage: params.stage,
+            start_stroke: params.start_stroke,
             path,
             part_head: params.part_head_group.get_row(self.part_head).to_owned(),
             length: self.length,
 
             atw_bitmap: self.atw_bitmap.clone(),
-            music_counts: search
-                .params
-                .music_types
-                .iter()
-                .zip_eq(music_counts.iter())
-                .map(|(music_type, count)| (music_type.id, *count))
-                .collect(),
             total_score: score,
 
             atw_table: search.atw_table.clone(),
@@ -343,14 +337,12 @@ impl CompPrefix {
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the
     /// reversed-linked-list path.  Whilst traversing, this also totals up the music counts.
-    fn flattened_path(&self, search: &Search, paths: &Paths) -> (Vec<PathElem>, Counts) {
+    fn flattened_path(&self, search: &Search, paths: &Paths) -> Vec<PathElem> {
         let params = &search.params;
-
         // Flatten the reversed-linked-list path into a flat `Vec` that we can iterate over
         let (start_idx, succ_idxs) = paths.flatten(self.path);
 
         let mut path = Vec::<PathElem>::new();
-        let mut music_counts = Counts::zeros(search.params.music_types.len());
 
         // Traverse graph, following the flattened path, to enumerate the `ChunkId`/`LinkId`s.
         // Also compute music counts as we go.
@@ -364,7 +356,6 @@ impl CompPrefix {
             // Load the chunk at the end of the previous link
             let chunk = &search.graph.chunks[next_chunk_idx];
             let succ_link = &chunk.succs[succ_idx];
-            music_counts += &chunk.music_counts;
             // Convert this chunk into a `PathElem`
             let method_idx = chunk.id.row_idx.method;
             let sub_lead_idx = chunk.id.row_idx.sub_lead_idx;
@@ -383,6 +374,6 @@ impl CompPrefix {
             part_head_elem = part_head_elem * succ_link.ph_rotation;
         }
         assert!(next_link_side.is_start_or_end());
-        (path, music_counts)
+        path
     }
 }
