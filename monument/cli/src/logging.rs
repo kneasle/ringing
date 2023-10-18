@@ -33,7 +33,7 @@ impl SingleLineProgressLogger {
         }
     }
 
-    pub fn log(&mut self, update: Update) -> Option<Composition> {
+    pub fn log(&mut self, update: Update, comps_generated_so_far: usize) -> Option<Composition> {
         // Early return if we can't log anything, making sure to still keep the composition
         if !log_enabled!(log::Level::Info) {
             return match update {
@@ -48,7 +48,8 @@ impl SingleLineProgressLogger {
         // generated).
         let mut update_string = String::new();
         if let (Some(printer), Some(c)) = (&mut self.comp_printer, &comp) {
-            update_string.push_str(&printer.comp_string_with_possible_headers(c));
+            update_string
+                .push_str(&printer.comp_string_with_possible_headers(c, comps_generated_so_far));
             update_string.push('\n');
         }
         self.append_progress_string(&mut update_string);
@@ -143,7 +144,7 @@ pub struct CompositionPrinter {
     ///     shorthand
     /// )
     /// ```
-    method_counts: Vec<(usize, String)>,
+    method_count_widths: Vec<(usize, String)>,
     /// `true` if the user gave some weight to atw
     print_atw: bool,
     /// If a part head should be displayed, then what's its width
@@ -163,7 +164,7 @@ impl CompositionPrinter {
             comp_count_width: print_comp_widths
                 .then_some(search.parameters().num_comps.to_string().len()),
             length_width: search.parameters().max_length().to_string().len().max(3),
-            method_counts: search
+            method_count_widths: search
                 .methods()
                 .map(|(method, shorthand)| {
                     let max_count_width =
@@ -189,7 +190,11 @@ impl CompositionPrinter {
 
     /// Create some lines which summarise the given [`Composition`].  This may include additional
     /// lines for headers or ruleoffs, depending on how many compositions have been printed so far.
-    pub fn comp_string_with_possible_headers(&mut self, comp: &Composition) -> String {
+    pub fn comp_string_with_possible_headers(
+        &mut self,
+        comp: &Composition,
+        generation_index: usize,
+    ) -> String {
         let mut update_string = String::new();
 
         // Add a header every 50 lines
@@ -204,7 +209,7 @@ impl CompositionPrinter {
             update_string.push('\n');
         }
         // Add the composition
-        update_string.push_str(&self.comp_string(comp));
+        update_string.push_str(&self.comp_string(comp, generation_index));
         self.comps_printed += 1;
 
         update_string
@@ -246,9 +251,9 @@ impl CompositionPrinter {
         write_centered_text(&mut s, "len", self.length_width);
         s.push(' ');
         // Method shorthands (for counts)
-        if self.method_counts.len() > 1 {
+        if self.method_count_widths.len() > 1 {
             s.push_str("  ");
-            for (width, shorthand) in &self.method_counts {
+            for (width, shorthand) in &self.method_count_widths {
                 write_centered_text(&mut s, shorthand, *width);
                 s.push(' ');
             }
@@ -279,25 +284,31 @@ impl CompositionPrinter {
         s
     }
 
-    fn comp_string(&self, comp: &Composition) -> String {
+    fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
+        let params = self.search.parameters();
+
         let mut s = String::new();
         // Comp index
         if let Some(c) = self.comp_count_width {
-            write!(s, "{:>width$} | ", comp.generation_number() + 1, width = c).unwrap();
+            write!(s, "{:>width$} | ", generation_index + 1, width = c).unwrap();
         }
         // Length
         write!(s, "{:>width$} ", comp.length(), width = self.length_width).unwrap();
         // Method counts (for spliced)
-        if self.method_counts.len() > 1 {
+        if self.method_count_widths.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self.method_counts.iter().zip_eq(comp.method_counts()) {
+            for ((width, _), count) in self
+                .method_count_widths
+                .iter()
+                .zip_eq(comp.method_counts(params))
+            {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
         }
         s.push('|');
         // Atw
         if self.print_atw {
-            let factor = comp.atw_factor();
+            let factor = comp.atw_factor(params);
             if factor > 0.999999 {
                 s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {
@@ -309,7 +320,7 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score(params)).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -317,7 +328,7 @@ impl CompositionPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.search, comp.music_counts()),
+                &music_display.display_counts(&self.search, &comp.music_counts(params)),
                 *col_width,
             );
             s.push(' ');
@@ -327,7 +338,7 @@ impl CompositionPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string()
+            comp.call_string(params)
         )
         .unwrap();
 

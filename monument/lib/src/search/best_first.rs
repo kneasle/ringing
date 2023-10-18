@@ -54,7 +54,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
     while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier, num_comps);
+        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier);
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {

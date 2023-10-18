@@ -1,5 +1,6 @@
 //! Monument's search routines, along with the code for interacting with in-progress [`Search`]es.
 
+mod atw;
 mod best_first;
 mod graph;
 mod path;
@@ -15,14 +16,16 @@ use std::{
 };
 
 use bellframe::Stage;
+use itertools::Itertools;
 use sysinfo::SystemExt;
 
 use crate::{
-    atw::AtwTable,
     parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     Composition,
 };
+
+use self::atw::AtwTable;
 
 /// Handle to a search being run by Monument.
 ///
@@ -51,14 +54,20 @@ impl Search {
     /// [`search.run(...)`](Self::run)**.
     pub fn new(params: Parameters, config: Config) -> crate::Result<Self> {
         // Build and optimise the graph
-        let (mut source_graph, atw_table) = crate::graph::Graph::unoptimised(&params, &config)?;
+        let mut source_graph = crate::graph::Graph::unoptimised(&params, &config)?;
         // Prove which lengths are impossible, and use that to refine the length and method count
         // ranges
         let refined_ranges = prove_lengths(&source_graph, &params)?;
-        // Reduce the size of the graph to improve the search speed
         source_graph.optimise(&params, &refined_ranges);
+        // Create a lookup table for fast atw calculation
+        let chunk_lengths = source_graph
+            .chunks
+            .iter()
+            .map(|(id, chunk)| (id.clone(), chunk.per_part_length))
+            .collect_vec();
+        let atw_table = AtwTable::new(&params, &chunk_lengths);
         // Create a fast-to-traverse copy of the graph
-        let graph = self::graph::Graph::new(&source_graph, &params);
+        let graph = self::graph::Graph::new(&source_graph, &params, &atw_table);
         drop(source_graph);
 
         Ok(Search {
@@ -82,6 +91,10 @@ impl Search {
 }
 
 impl Search {
+    // TODO: Most of these functions just call the corresponding function in `parameters`, and at
+    // that point, we may as well just force the consumer of the API to call `Self::parameters()`
+    // first.
+
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
         let idx = self.params.method_id_to_idx(id);

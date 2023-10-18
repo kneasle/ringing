@@ -41,7 +41,6 @@
 #![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 #![allow(clippy::result_large_err)]
 
-mod atw;
 mod composition;
 mod error;
 mod graph;
