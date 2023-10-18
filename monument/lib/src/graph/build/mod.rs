@@ -14,7 +14,6 @@ use bellframe::{method::RowAnnot, Block, Mask, PlaceNot, Row, RowBuf, Stroke};
 use itertools::Itertools;
 
 use crate::{
-    atw::AtwTable,
     group::{PartHeadGroup, PhRotation},
     parameters::{Call, MethodIdx, MethodVec, Parameters, StrokeSet},
     search::Config,
@@ -25,10 +24,7 @@ use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, Tot
 
 impl Graph {
     /// Generate a graph of all chunks which are reachable within a given length constraint.
-    pub(crate) fn unoptimised(
-        params: &Parameters,
-        config: &Config,
-    ) -> crate::Result<(Self, AtwTable)> {
+    pub(crate) fn unoptimised(params: &Parameters, config: &Config) -> crate::Result<Self> {
         log::debug!("Building unoptimised graph:");
         let graph_build_start = Instant::now();
 
@@ -40,15 +36,13 @@ impl Graph {
             self::layout::chunk_lengths(params, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
-        let atw_table = AtwTable::new(params, &chunk_lengths);
-
         // TODO: Combine overlapping chunks
 
         // Build actual chunks
         let mut chunks = chunk_lengths
             .into_iter()
             .map(|(id, per_part_length): (ChunkId, PerPartLength)| {
-                let chunk = expand_chunk(&id, per_part_length, params, &atw_table);
+                let chunk = expand_chunk(&id, per_part_length, params);
                 (id, chunk)
             })
             .collect::<HashMap<_, _>>();
@@ -120,17 +114,12 @@ impl Graph {
             starts,
             ends,
         };
-        Ok((graph, atw_table))
+        Ok(graph)
     }
 }
 
 /// Creates a blank [`Chunk`] from a [`ChunkId`] and corresponding [`PerPartLength`].
-fn expand_chunk(
-    id: &ChunkId,
-    per_part_length: PerPartLength,
-    params: &Parameters,
-    atw_table: &AtwTable,
-) -> Chunk {
+fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, params: &Parameters) -> Chunk {
     let total_length = per_part_length.as_total(&params.part_head_group);
 
     Chunk {
@@ -143,7 +132,6 @@ fn expand_chunk(
             id.method.index(),
             params.methods.len(),
         ),
-        atw_bitmap: atw_table.bitmap_for_chunk(params, id, per_part_length),
 
         // Filled in separate graph build passes
         predecessors: Vec::new(),

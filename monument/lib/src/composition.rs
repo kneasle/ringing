@@ -271,34 +271,6 @@ impl PathElem {
     }
 }
 
-/// A way to display a [`Composition`] by pairing it with a [`Parameters`]
-#[derive(Debug, Clone, Copy)]
-struct DisplayComposition<'a>(pub &'a Composition, pub &'a Parameters);
-
-impl std::fmt::Display for DisplayComposition<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let DisplayComposition(comp, params) = self;
-
-        write!(f, "len: {}, ", comp.length)?;
-        // Method counts for spliced
-        if params.is_spliced() {
-            write!(f, "ms: {:>3?}, ", comp.method_counts.as_slice())?;
-        }
-        // Part heads if multi-part with >2 parts (2-part compositions only have one possible part
-        // head)
-        if params.num_parts() > 2 {
-            write!(f, "PH: {}, ", comp.part_head)?;
-        }
-        write!(
-            f,
-            "music: {:>6.2?}, avg score: {:.6}, str: {}",
-            comp.music_score(params),
-            comp.average_score(),
-            comp.call_string(params)
-        )
-    }
-}
-
 ///////////
 // UTILS //
 ///////////

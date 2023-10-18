@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::{
-    atw::AtwBitmap,
     graph::LinkSide,
     group::{PartHead, PhRotation},
     parameters::{CallIdx, Parameters},
@@ -11,6 +10,8 @@ use crate::{
     },
 };
 use bit_vec::BitVec;
+
+use super::atw::{AtwBitmap, AtwTable};
 
 /// An immutable version of [`monument_graph::Graph`] which can be traversed without hash table
 /// lookups.
@@ -55,7 +56,11 @@ pub(super) struct SuccLink {
 ///////////////////////////////////////////
 
 impl Graph {
-    pub fn new(source_graph: &crate::graph::Graph, params: &Parameters) -> Self {
+    pub fn new(
+        source_graph: &crate::graph::Graph,
+        params: &Parameters,
+        atw_table: &AtwTable,
+    ) -> Self {
         let num_chunks = source_graph.chunks.len();
 
         // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
@@ -73,7 +78,7 @@ impl Graph {
             .map(|index| {
                 // Get the source chunk and its ChunkId
                 let index = ChunkIdx::new(index);
-                let (from_id, source_chunk) = index_to_id[index].clone();
+                let (id, source_chunk) = index_to_id[index].clone();
 
                 // Generate a BitVec with a 1 for every chunk which is false against this chunk
                 let mut falseness = BitVec::from_elem(num_chunks, false);
@@ -81,7 +86,10 @@ impl Graph {
                     let false_chunk_idx = id_to_index[false_id];
                     falseness.set(false_chunk_idx.index(), true);
                 }
-
+                // Compute the bitmap form of this chunk's atw statistics
+                let atw_bitmap =
+                    atw_table.bitmap_for_chunk(params, &id, source_chunk.per_part_length);
+                // Compute successors
                 let succs = source_chunk
                     .successors
                     .iter()
@@ -101,18 +109,17 @@ impl Graph {
                     .collect();
 
                 Chunk {
-                    id: from_id,
-
-                    score: source_chunk.music.score,
-
                     per_part_length: source_chunk.per_part_length,
                     total_length: source_chunk.total_length,
                     method_counts: source_chunk.method_counts.clone(),
                     min_len_to_rounds: source_chunk.lb_distance_to_rounds,
+                    score: source_chunk.music.score,
 
                     succs,
                     falseness,
-                    atw_bitmap: source_chunk.atw_bitmap.clone(),
+                    atw_bitmap,
+
+                    id,
                 }
             })
             .collect();

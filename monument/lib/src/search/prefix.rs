@@ -10,7 +10,6 @@ use datasize::DataSize;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    atw::AtwBitmap,
     composition::{Composition, PathElem},
     graph::LinkSide,
     group::PartHead,
@@ -19,6 +18,7 @@ use crate::{
 };
 
 use super::{
+    atw::AtwBitmap,
     graph::ChunkIdx,
     path::{PathId, Paths},
     Search,
