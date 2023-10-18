@@ -416,11 +416,11 @@ fn bell_place_sets(
     }
     // If only one course mask is specified (e.g. `1*7890...`), then all those bells can
     // tracked together.
-    if method.specified_course_masks(params).len() == 1 {
-        let allowed_lead_masks = method.allowed_lead_masks(params);
+    let lh_masks = method.allowed_lead_head_masks(params);
+    if lh_masks.len() == method.lead_head().order() {
         // The lead head masks specify exactly which sets of place bells are visited by
         // these fixed tenors
-        for lead_mask in &allowed_lead_masks {
+        for lead_mask in &lh_masks {
             let mut bell_place_pairs = Vec::new();
             for (place, bell) in lead_mask.bells().enumerate() {
                 if let Some(bell) = bell {
@@ -432,7 +432,7 @@ fn bell_place_sets(
             bell_place_sets.push(bell_place_pairs);
         }
         // Mark these bells as covered
-        for bell in allowed_lead_masks[0].bells().flatten() {
+        for bell in lh_masks[0].bells().flatten() {
             bells_left_to_track.remove(&bell);
         }
     }

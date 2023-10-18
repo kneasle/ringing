@@ -31,6 +31,43 @@ len |  music     *87 | avg score | calling
 ----|----------------|-----------|-----------
 len |  music     *87 | avg score | calling
 '''
+"test/cases/add-courses-in-other-parts-cyclic.toml" = '''
+Note: For course mask 1234567890ET, adding extra masks for other parts:
+  134567890ET2 (in part 134567890ET2 for all methods)
+  14567890ET23 (in part 14567890ET23 for all methods)
+  1567890ET234 (in part 1567890ET234 for all methods)
+  167890ET2345 (in part 167890ET2345 for all methods)
+  17890ET23456 (in part 17890ET23456 for all methods)
+  1890ET234567 (in part 1890ET234567 for all methods)
+  190ET2345678 (in part 190ET2345678 for all methods)
+  10ET23456789 (in part 10ET23456789 for all methods)
+  1ET234567890 (in part 1ET234567890 for all methods)
+  1T234567890E (in part 1T234567890E for all methods)
+ len    S   M    P    Z    A   D  |      PH      |  music         4-bell runs      lb5s   56s   65s | avg score | calling
+----------------------------------|--------------|--------------------------------------------------|-----------|-----------
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1038.00 :   295 (  99f  196b)     45     6     0 |  0.206938 | #SPAZMDDMZAP
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1278.00 :   389 ( 132f  257b)     59     5     0 |  0.254785 | #SDDMPZAZPMA
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1301.00 :   393 ( 131f  262b)     64     6     0 |  0.259370 | #SAMPZAZPMDD
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1345.00 :   397 ( 155f  242b)     65     7     0 |  0.268142 | #SAPZPAZMDDM
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1358.00 :   397 ( 155f  242b)     70     4     0 |  0.270734 | #SMDDMZAPZPA
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 2725.00 :   848 ( 373f  475b)    132     9     0 |  0.543262 | #SDPMAZZAMPD
+----------------------------------|--------------|--------------------------------------------------|-----------|-----------
+ len    S   M    P    Z    A   D  |      PH      |  music         4-bell runs      lb5s   56s   65s | avg score | calling
+'''
+"test/cases/add-courses-in-other-parts-non-spliced.toml" = '''
+Note: For course mask 1xxx7856, adding extra masks for other parts:
+  1xxx7865 (in part 12346578)
+  1xxx7865 (in part 13426578)
+  1xxx7865 (in part 14236578)
+ len |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+-----|--------|----------------------------------------------------------------|-----------|-----------
+5184 | 134265 |  166.00 :   84 ( 52f  32b)    0f 24b    0f  0b    0f 24b     0 | -0.001196 | sHMsWWsWHHsMMsMBsWWsW
+5184 | 142365 |  171.00 :   84 ( 52f  32b)    0f 24b    0f  0b    0f 24b     0 | -0.000231 | MsWWsWHHsMMsMBsWWsWsH
+5184 | 142365 |  176.00 :   92 ( 52f  40b)    0f 24b    0f  0b    0f 24b     0 |  0.000733 | sHsMMsMBsWWsWHHsMMsMW
+5184 | 134265 |  179.00 :   92 ( 52f  40b)    0f 24b    0f  0b    0f 24b     0 |  0.001312 | sMMsMBsWWsWHHsMMsMWsH
+-----|--------|----------------------------------------------------------------|-----------|-----------
+ len |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+'''
 "test/cases/atw/5-part.toml" = '''
  len     C    Y    S    P  | atw |   PH   |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 ---------------------------|-----|--------|----------------------------------------------------------------|-----------|-----------
@@ -1430,10 +1467,6 @@ Error: Call "x" only specifies 9 calling positions, but the stage has 8 bells
 '''
 "test/cases/error-messages/calling-positions-too-short.toml" = '''
 Error: Call "x" only specifies 7 calling positions, but the stage has 8 bells
-'''
-"test/cases/error-messages/chs-not-in-other-parts.toml" = '''
-Error: course head `1xxx7856` becomes `1xxx7865` in the part starting `13426578`, which isn't in `course_heads`.
-   help: consider adding `1xxx7865` to `course_heads`
 '''
 "test/cases/error-messages/course-weights/bell-out-of-stage.toml" = '''
 Error: Can't parse course head weight "x9*": bell 9 is out of stage Major

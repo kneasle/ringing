@@ -316,7 +316,7 @@ impl LinkLookupTable {
         let allowed_lead_heads: MethodVec<Vec<Mask>> = params
             .methods
             .iter()
-            .map(|m| m.allowed_lead_masks(params))
+            .map(|m| m.allowed_lead_head_masks(params))
             .collect();
 
         // Create lookup table for links

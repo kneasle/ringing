@@ -5,7 +5,7 @@ use std::{
     ops::RangeInclusive,
 };
 
-use bellframe::{Mask, PlaceNot, RowBuf, Stage};
+use bellframe::{PlaceNot, Stage};
 
 #[allow(unused_imports)] // Only used for doc comments
 use crate::parameters::{Call, Method, MusicType};
@@ -50,11 +50,6 @@ pub enum Error {
         shorthand: String,
         title1: String,
         title2: String,
-    },
-    NoCourseHeadInPart {
-        mask_in_first_part: Mask,
-        part_head: RowBuf,
-        mask_in_other_part: Mask,
     },
     /// Some [`Call`] doesn't have enough calling positions to cover the [`Stage`]
     WrongCallingPositionsLength {
@@ -156,22 +151,6 @@ impl Display for Error {
                 "Call {:?} refers to a label {:?}, which doesn't exist",
                 call_name, label
             ), // TODO: Suggest one that does exist
-            Error::NoCourseHeadInPart {
-                mask_in_first_part,
-                part_head,
-                mask_in_other_part,
-            } => {
-                writeln!(
-                    f,
-                    "course head `{}` becomes `{}` in the part starting `{}`, which isn't in `course_heads`.",
-                    mask_in_first_part, mask_in_other_part, part_head
-                )?;
-                write!(
-                    f,
-                    "   help: consider adding `{}` to `course_heads`",
-                    mask_in_other_part
-                )
-            }
             Error::DuplicateCall {
                 symbol,
                 label,
