@@ -120,6 +120,18 @@ impl Parameters {
             .collect_vec()
     }
 
+    /// The [`Bell`]s which **aren't** in [`Self::fixed_bells`]
+    pub fn working_bells(&self) -> Vec<Bell> {
+        self.stage
+            .bells()
+            .filter(|b| !self.is_fixed_bell(*b))
+            .collect_vec()
+    }
+
+    pub fn is_fixed_bell(&self, bell: Bell) -> bool {
+        self.fixed_bells().iter().any(|(b, _place)| *b == bell)
+    }
+
     pub fn lead_labels_used(&self) -> HashSet<String> {
         let mut defined_labels = HashSet::<String>::new();
         for m in &self.methods {

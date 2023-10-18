@@ -56,11 +56,7 @@ impl AtwTable {
             None => return Self::empty(),
         };
 
-        let working_bells = params
-            .stage
-            .bells()
-            .filter(|b| !params.fixed_bells().iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
-            .collect_vec();
+        let working_bells = params.working_bells();
         // Which bells do we have to track, according to the part-head.  For example, for a
         // composition with part head `13425678`, 3 and 4 will not have their place bells
         // tracked because their positions are implied by that of the 2.  In this case, we
@@ -200,10 +196,11 @@ impl AtwTable {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PlaceBellRange {
     pub bell: Bell,
-    pub(crate) method_idx: MethodIdx, // TODO: Make pub
     pub place_bell: u8,
+
+    pub method_idx: MethodIdx,
     pub sub_lead_idx_start: usize,
-    pub(crate) length: PerPartLength, // TODO: Make pub
+    pub length: PerPartLength,
 }
 
 /// An opaque bitmap representing a some set of `(method, sub-lead-range, bell, place-bell)`

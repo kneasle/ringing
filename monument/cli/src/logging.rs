@@ -285,7 +285,7 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
-        let params = &self.search.parameters();
+        let params = self.search.parameters();
 
         let mut s = String::new();
         // Comp index
@@ -308,7 +308,7 @@ impl CompositionPrinter {
         s.push('|');
         // Atw
         if self.print_atw {
-            let factor = comp.atw_factor();
+            let factor = comp.atw_factor(params);
             if factor > 0.999999 {
                 s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {

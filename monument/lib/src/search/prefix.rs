@@ -317,10 +317,7 @@ impl CompPrefix {
             part_head: params.part_head_group.get_row(self.part_head).to_owned(),
             length: self.length,
 
-            atw_bitmap: self.atw_bitmap.clone(),
             total_score: score,
-
-            atw_table: search.atw_table.clone(),
         };
         // Sanity check that the composition is true
         if params.require_truth {
