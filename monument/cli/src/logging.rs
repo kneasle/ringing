@@ -144,7 +144,7 @@ pub struct CompositionPrinter {
     ///     shorthand
     /// )
     /// ```
-    method_counts: Vec<(usize, String)>,
+    method_count_widths: Vec<(usize, String)>,
     /// `true` if the user gave some weight to atw
     print_atw: bool,
     /// If a part head should be displayed, then what's its width
@@ -164,7 +164,7 @@ impl CompositionPrinter {
             comp_count_width: print_comp_widths
                 .then_some(search.parameters().num_comps.to_string().len()),
             length_width: search.parameters().max_length().to_string().len().max(3),
-            method_counts: search
+            method_count_widths: search
                 .methods()
                 .map(|(method, shorthand)| {
                     let max_count_width =
@@ -251,9 +251,9 @@ impl CompositionPrinter {
         write_centered_text(&mut s, "len", self.length_width);
         s.push(' ');
         // Method shorthands (for counts)
-        if self.method_counts.len() > 1 {
+        if self.method_count_widths.len() > 1 {
             s.push_str("  ");
-            for (width, shorthand) in &self.method_counts {
+            for (width, shorthand) in &self.method_count_widths {
                 write_centered_text(&mut s, shorthand, *width);
                 s.push(' ');
             }
@@ -285,6 +285,8 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
+        let params = &self.search.parameters();
+
         let mut s = String::new();
         // Comp index
         if let Some(c) = self.comp_count_width {
@@ -293,9 +295,13 @@ impl CompositionPrinter {
         // Length
         write!(s, "{:>width$} ", comp.length(), width = self.length_width).unwrap();
         // Method counts (for spliced)
-        if self.method_counts.len() > 1 {
+        if self.method_count_widths.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self.method_counts.iter().zip_eq(comp.method_counts()) {
+            for ((width, _), count) in self
+                .method_count_widths
+                .iter()
+                .zip_eq(comp.method_counts(params))
+            {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
         }
@@ -314,7 +320,7 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score(self.search.parameters())).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score(params)).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -332,7 +338,7 @@ impl CompositionPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string(self.search.parameters())
+            comp.call_string(params)
         )
         .unwrap();
 

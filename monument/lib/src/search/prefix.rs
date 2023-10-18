@@ -316,7 +316,6 @@ impl CompPrefix {
             part_head: params.part_head_group.get_row(self.part_head).to_owned(),
             length: self.length,
 
-            method_counts: self.method_counts.clone(),
             atw_bitmap: self.atw_bitmap.clone(),
             music_counts: search
                 .params
