@@ -86,19 +86,25 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
+        # NOTE: We intentionally use the oldest available OS version for cutting releases.  This is
+        # because OSes are almost always backwards compatible, but **not** forward compatible
+        # (E.g. I can run a release cut on ubuntu-20.04 on ubuntu-22.04 but not vice versa).
+        #
+        # The list of available runners can be found here:
+        # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
         build: [linux, macos, windows-64, windows-32]
         include:
         - build: linux
-          os: ubuntu-latest
+          os: ubuntu-20.04
           target: x86_64-unknown-linux-musl
         - build: macos
-          os: macos-latest
+          os: macos-11
           target: x86_64-apple-darwin
         - build: windows-64
-          os: windows-latest
+          os: windows-2019
           target: x86_64-pc-windows-msvc
         - build: windows-32
-          os: windows-latest
+          os: windows-2019
           target: i686-pc-windows-msvc
 
     steps:
