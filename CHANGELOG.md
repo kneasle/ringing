@@ -6,14 +6,20 @@
 
 
 
-## 9th September 2023
+## 19th October 2023
 
-### Monument v0.14.2
+### Monument v0.14.3
 
-#### Headline Features
+#### Headline Changes
 - (#284) Allow scoring of all-the-work compositions, using the `atw_weight` parameter.
 - (#306) Add new option `base_music = "complib"`, which adds base music which exactly matches that
     of CompLib (except that Monument can't count wraps).  Thanks, @samuelsenior!
+- (#319) Remove non-duffer pruning.  The non-duffer implementation was fiddly and complex and
+    difficult to both use and to maintain.  It was useful, but just didn't justify its complexity.
+- (#323) Automatically expand courses which don't exist in other parts.  This is particularly
+    relevant to link-method cyclic compositions, where previously one would have to provide every
+    cyclic course (`"1234567890", "1023456789", "19023456789", etc.`).  Now, only one is required
+    and the rest are inferred.
 
 #### Smaller Changes
 - (#205) Remove chunks and links which contribute too much method counts.  This should have a small
@@ -34,12 +40,19 @@
 - (#296) Add `ARCHITECTURE.md` to help new contributors getting an idea of the code
 - (#303) Completely rewrite the interface of Monument's internal library to make it more amenable
     to a graphical interface.
+- (#320) Remove the cached data stored in `Query` (and generate it from scratch).  This leads to...
+- (#322) Fully remove `Query`.  Now, all the composition-parameter data is calculated directly from 
+    `Parameters`.
+- (#324) Remove a lot of cached data from `Composition`, which was dependent on the specific set of
+    `Parameters` used to generate that composition.
 
 ### Bellframe v0.12.0
 - (#221) Add `Bell::MAX`, which returns the largest `Bell` possible (i.e. the 254th)
 - (#221) Stop bell-path methods (e.g. `Block::path_of`) from returning `Option`.  Instead, passing
     a `Bell` out of the `Block`'s `Stage` will cause a panic.
 - (#221) Add `Mask::contains`, returning `true` if the `Mask` constrains that `Bell`.
+- (#321) Almost all operations will panic on `Stage` mismatch, rather than returning a
+    `Result<_, IncompatibleStages>`.
 
 ---
 
