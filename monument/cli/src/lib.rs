@@ -118,7 +118,7 @@ pub fn run(
         let rounded = (f / FACTOR).round() * FACTOR;
         OrderedFloat(rounded)
     }
-    comps.sort_by_key(|(comp, _generation_index)| {
+    comps.sort_by_cached_key(|(comp, _generation_index)| {
         (
             rounded_float(comp.music_score(&params)),
             rounded_float(comp.average_score()),
