@@ -320,7 +320,8 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        write!(s, " {:>7.2} ", comp.music_score(params)).unwrap();
+        let (music_counts, music_score) = comp.music_counts_and_score(params); // Only call `music_counts` once!
+        write!(s, " {:>7.2} ", music_score).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
         }
@@ -328,7 +329,7 @@ impl CompositionPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.search, &comp.music_counts(params)),
+                &music_display.display_counts(&self.search, &music_counts),
                 *col_width,
             );
             s.push(' ');
