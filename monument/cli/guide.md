@@ -19,26 +19,117 @@ intended for my own use and I won't recommend it for users once the GUI exists.
 
 ## Installation
 
-If you already have Rust installed, you can get the latest version of Monument with `cargo install
-monument_cli`.  If you don't already have Rust ~what are you doing with your life~ you can download
-a pre-built copy of the latest version from
+To install Monument, download and extract a zipped archive of the latest release of Monument from 
 [here](https://github.com/kneasle/ringing/releases/latest).
 
-### Library `libssl.so.1.1` not found
-
-If you're installing on some Ubuntu systems, you may get an error when running Monument that the
-library `libssl.so.1.1` can't be found.  libSSL is a system library for handling web connections,
-which Monument uses to download the Central Council's method library.
-
-It can be installed on Ubuntu by running the following commands at a terminal:
-```bash
-wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
-sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+This will create a folder structure like this (but likely with a different folder name):
+```text
+monument-v0.14.3-linux/
+├── examples/
+│  ├── 3-wiches.toml
+│  ├── basic.toml
+│  │   ... other examples ...
+│  └── spliced.toml
+├── guide.md
+├── LICENSE
+├── monument
+├── README.md
+└── to-complib.py
 ```
+
+> ### Possible Error: Library `libssl.so.1.1` not found
+> 
+> If you're installing on some Ubuntu systems, you may get an error when running Monument that the
+> library `libssl.so.1.1` can't be found.  libSSL is a system library for handling web connections,
+> which Monument uses to download the Central Council's method library.
+> 
+> It can be installed on Ubuntu by running the following commands at a terminal:
+> ```bash
+> wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+> sudo dpkg -i libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+> ```
+
+To run Monument, first open a command line in the directory created by the extraction
+(`monument-v0.14.3-linux/` in the example above).
+
+Once in this directory, we can run the file as follows:
+- On Windows: `monument.exe example/basic.toml`
+- On Linux or Mac: `./monument example/basic.toml`
+
+This will print compositions generated according to `example/basic.toml`, which in this case will
+be quarter peals of Yorkshire Major.
+
 
 ---
 
 ## Example
+
+Before running Monument to generate compositions, we must first create a file describing what
+compositions we are after.  For this example, let's suppose we are interested in peals of Bristol
+Royal.  A minimal input file looks like this:
+
+```toml
+length = "peal"
+method = "Bristol Surprise Royal"
+```
+
+The length `"peal"` is a shorthand for 5000 to 5200 (inclusive), so this file could equivalently
+be written as follows:
+
+```toml
+length = { min = 5000, max = 5200 }
+method = "Bristol Surprise Royal"
+```
+
+So, let's run Monument to generate some of these compositions.  First, let's save this file as
+`bristol-royal.toml` and call Monument on it:
+- On Windows: `monument.exe bristol-royal.toml`
+- On Linux or Mac: `./monument bristol-royal.toml`
+
+This will very quickly print a lot of output, something like:
+
+```text
+INFO  [monument_cli::music] Using default music.  If you want no music, set `base_music = "none"`.
+INFO  [monument::search::best_first] Limiting memory usage to 10.07GB
+ #  |  len |  music         4-bell runs      lb5s   56s   65s | avg score | calling
+----|------|--------------------------------------------------|-----------|-----------
+  1 | 5082 |  397.00 :   528 ( 272f  256b)     60    16     6 |  0.071055 | MHsWsMsHsMWMHWWHHsHsMsMWW>
+  2 | 5122 |  398.00 :   550 ( 279f  271b)     62    14     2 |  0.071046 | MHsWsMMsMsWMHsWsMMHWWsWW>
+  3 | 5122 |  390.00 :   542 ( 282f  260b)     60    14     6 |  0.069680 | MHsWsMHMWMHsWsMMHWWsWW>
+                                       ... snip ...
+100 | 5042 |  363.00 :   531 ( 279f  252b)     62    10     6 |  0.064716 | MHsWsMHMWMHHMWMMHWsMsMsW>
+    841.17k iters, 100 comps :: 999.71k items in queue, avg/max len 3322/5120
+
+
+
+SEARCH COMPLETE!
+
+
+
+ #  |  len |  music         4-bell runs      lb5s   56s   65s | avg score | calling
+----|------|--------------------------------------------------|-----------|-----------
+ 82 | 5000 |  353.00 :   508 ( 268f  240b)     56    14     8 |  0.063360 | WHHWWMMsWsHHMWsWsMHWMWH
+ 99 | 5000 |  354.00 :   504 ( 270f  234b)     65    13     6 |  0.063160 | HHsMsWMHMWsWsMHWWHHsMsWsWsH
+ 77 | 5080 |  354.00 :   515 ( 265f  250b)     56    18     4 |  0.063465 | HWWHWMMsWsHMHWWHHMH
+                                       ... snip ...
+ 34 | 5082 |  388.00 :   543 ( 277f  266b)     62    13     2 |  0.069087 | MHsWsMMHWsMsWsHsMsMWsWHWHsW>
+ 24 | 5082 |  388.00 :   534 ( 278f  256b)     60    14     6 |  0.069284 | MHsWsMHMWsMWsWHHsWsMMHWsW>
+  3 | 5122 |  390.00 :   542 ( 282f  260b)     60    14     6 |  0.069680 | MHsWsMHMWMHsWsMMHWWsWW>
+ 18 | 5122 |  393.00 :   543 ( 279f  264b)     67    11     6 |  0.070266 | MHWMWHsWMsMMHsWsMMHWsW>
+ 16 | 5082 |  396.00 :   542 ( 275f  267b)     62    14     2 |  0.070661 | MHsWsMMsMsWsMWsWHHsWsMMHWsW>
+  1 | 5082 |  397.00 :   528 ( 272f  256b)     60    16     6 |  0.071055 | MHsWsMsHsMWMHWWHHsHsMsMWW>
+  2 | 5122 |  398.00 :   550 ( 279f  271b)     62    14     2 |  0.071046 | MHsWsMMsMsWMHsWsMMHWWsWW>
+----|------|--------------------------------------------------|-----------|-----------
+ #  |  len |  music         4-bell runs      lb5s   56s   65s | avg score | calling
+100 compositions generated in 857.25ms
+```
+
+
+
+
+
+
+
 
 More examples can be found in [the `examples/` directory](examples/).  This exact example can also
 be found there (as [`examples/guide.toml`](example/guide.toml) and
