@@ -9,6 +9,7 @@ use std::{
 
 use bellframe::{
     method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+    StrokeSet,
 };
 use itertools::Itertools;
 
@@ -721,24 +722,6 @@ impl MusicType {
             sum += r.num_matching_rows()?;
         }
         Some(sum)
-    }
-}
-
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StrokeSet {
-    Hand,
-    Back,
-    Both,
-}
-
-impl StrokeSet {
-    pub fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
-        }
     }
 }
 

@@ -84,6 +84,24 @@ impl Not for Stroke {
     }
 }
 
+/// A set of at least one [`Stroke`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum StrokeSet {
+    Hand,
+    Back,
+    Both,
+}
+
+impl StrokeSet {
+    pub fn contains(self, stroke: Stroke) -> bool {
+        match self {
+            Self::Both => true,
+            Self::Hand => stroke == Stroke::Hand,
+            Self::Back => stroke == Stroke::Back,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

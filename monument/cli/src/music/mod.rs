@@ -255,7 +255,7 @@ enum StrokeSet {
     Both,
 }
 
-impl From<StrokeSet> for monument::parameters::StrokeSet {
+impl From<StrokeSet> for bellframe::StrokeSet {
     fn from(value: StrokeSet) -> Self {
         match value {
             StrokeSet::Hand => Self::Hand,

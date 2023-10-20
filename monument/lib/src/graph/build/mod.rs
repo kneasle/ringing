@@ -10,12 +10,12 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{method::RowAnnot, Block, Mask, PlaceNot, Row, RowBuf, Stroke};
+use bellframe::{method::RowAnnot, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet};
 use itertools::Itertools;
 
 use crate::{
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, MethodIdx, MethodVec, Parameters, StrokeSet},
+    parameters::{Call, MethodIdx, MethodVec, Parameters},
     search::Config,
     utils::{counts::Counts, MusicBreakdown},
 };
