@@ -1,6 +1,6 @@
 [package]
 name = "monument_cli"
-version = "0.14.3"
+version = "0.14.4"
 edition = "2021"
 
 authors = ["Ben White-Horne <kneasle@gmail.com>"]
