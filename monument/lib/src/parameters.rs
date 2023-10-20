@@ -120,18 +120,6 @@ impl Parameters {
             .collect_vec()
     }
 
-    /// The [`Bell`]s which **aren't** in [`Self::fixed_bells`]
-    pub fn working_bells(&self) -> Vec<Bell> {
-        self.stage
-            .bells()
-            .filter(|b| !self.is_fixed_bell(*b))
-            .collect_vec()
-    }
-
-    pub fn is_fixed_bell(&self, bell: Bell) -> bool {
-        self.fixed_bells().iter().any(|(b, _place)| *b == bell)
-    }
-
     pub fn lead_labels_used(&self) -> HashSet<String> {
         let mut defined_labels = HashSet::<String>::new();
         for m in &self.methods {
@@ -308,18 +296,6 @@ impl Parameters {
                 }
             }
         }
-    }
-
-    pub fn get_method(&self, id: MethodId) -> &Method {
-        self.methods.iter().find(|mt| mt.id == id).unwrap()
-    }
-
-    pub fn get_call(&self, id: CallId) -> &Call {
-        self.calls.iter().find(|mt| mt.id == id).unwrap()
-    }
-
-    pub fn get_music_type(&self, id: MusicTypeId) -> &MusicType {
-        self.music_types.iter().find(|mt| mt.id == id).unwrap()
     }
 }
 
@@ -539,7 +515,7 @@ impl From<CallId> for u16 {
 }
 
 /// How the calls in a given composition should be displayed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CallDisplayStyle {
     /// Calls should be displayed as a count since the last course head.
     Positional,

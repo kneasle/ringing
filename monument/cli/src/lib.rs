@@ -70,7 +70,7 @@ pub fn run(
     debug_print!(Params, params);
     // Build the search
     let search = Arc::new(Search::new(
-        params.clone(),
+        params,
         toml_file.config(options, leak_search_memory),
     )?);
     debug_print!(Search, search);
@@ -101,12 +101,11 @@ pub fn run(
     }
 
     // Run the search, collecting the compositions as the search runs
-    let mut comps = Vec::<(Composition, usize)>::new();
+    let mut comps = Vec::<Composition>::new();
     search.run(
         |update| {
-            let next_comp_number = comps.len();
-            if let Some(comp) = update_logger.log(update, next_comp_number) {
-                comps.push((comp, next_comp_number));
+            if let Some(comp) = update_logger.log(update) {
+                comps.push(comp);
             }
         },
         &abort_flag,
@@ -118,11 +117,11 @@ pub fn run(
         let rounded = (f / FACTOR).round() * FACTOR;
         OrderedFloat(rounded)
     }
-    comps.sort_by_key(|(comp, _generation_index)| {
+    comps.sort_by_key(|comp| {
         (
-            rounded_float(comp.music_score(&params)),
+            rounded_float(comp.music_score()),
             rounded_float(comp.average_score()),
-            comp.call_string(&params),
+            comp.call_string(),
         )
     });
     Ok(Some(SearchResult {
@@ -146,7 +145,7 @@ pub enum Environment {
 
 #[derive(Debug, Clone)]
 pub struct SearchResult {
-    pub comps: Vec<(Composition, usize)>,
+    pub comps: Vec<Composition>,
     pub search: Arc<Search>,
     pub duration: Duration,
     pub aborted: bool,
@@ -157,12 +156,8 @@ pub struct SearchResult {
 impl SearchResult {
     pub fn print(&mut self) {
         eprintln!("\n\n\n\nSEARCH COMPLETE!\n\n\n");
-        for (c, generation_index) in &self.comps {
-            println!(
-                "{}",
-                self.comp_printer
-                    .comp_string_with_possible_headers(c, *generation_index)
-            );
+        for c in &self.comps {
+            println!("{}", self.comp_printer.comp_string_with_possible_headers(c));
         }
         println!("{}", self.comp_printer.footer_lines());
         eprintln!(

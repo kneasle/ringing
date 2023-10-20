@@ -1,5 +1,3 @@
-//! Implementation of atw calculations accelerated using bitmaps
-
 use std::collections::{HashMap, HashSet};
 
 use bellframe::Bell;
@@ -21,12 +19,13 @@ type Chunk = u16;
 const FLAGS_PER_CHUNK: usize = Chunk::BITS as usize;
 
 #[derive(Debug, Clone)]
-pub(super) struct AtwTable {
+pub(crate) struct AtwTable {
     atw_weight: f32,
     total_unique_row_positions: UniqueRowCount,
 
     /// One for every [`Chunk`] in the bitmaps representing the inclusion of [`AtwFlag`]s
     bitmap_chunk_multipliers: Vec<UniqueRowCount>,
+    flag_per_bit: Vec<Option<AtwFlag>>,
 
     /// Maps `(bell, place bell, method)` triples onto a [`Vec`] of `(sub lead index, bit index)`.
     /// This [`Vec`] is always sorted in increasing order of sub-lead index.
@@ -50,14 +49,18 @@ impl AtwFlag {
 }
 
 impl AtwTable {
-    pub fn new(params: &Parameters, chunk_lengths: &[(ChunkId, PerPartLength)]) -> Self {
+    pub fn new(params: &Parameters, chunk_lengths: &HashMap<ChunkId, PerPartLength>) -> Self {
         let atw_weight = match params.atw_weight {
             Some(w) => w,
             None if params.require_atw => 0.0,
             None => return Self::empty(),
         };
 
-        let working_bells = params.working_bells();
+        let working_bells = params
+            .stage
+            .bells()
+            .filter(|b| !params.fixed_bells().iter().any(|(b1, _)| b1 == b)) // not in fixed_bells
+            .collect_vec();
         // Which bells do we have to track, according to the part-head.  For example, for a
         // composition with part head `13425678`, 3 and 4 will not have their place bells
         // tracked because their positions are implied by that of the 2.  In this case, we
@@ -89,6 +92,7 @@ impl AtwTable {
             atw_weight,
             bell_place_to_bitmap_index: make_bell_place_to_bitmap_index(&flag_per_bit),
             total_unique_row_positions,
+            flag_per_bit,
             bitmap_chunk_multipliers,
         }
     }
@@ -98,6 +102,7 @@ impl AtwTable {
             atw_weight: 0.0,
             total_unique_row_positions: 1, // Should really be `0`, set to `1` to avoid div by 0
             bitmap_chunk_multipliers: Vec::new(),
+            flag_per_bit: Vec::new(),
             bell_place_to_bitmap_index: HashMap::new(),
         }
     }
@@ -139,6 +144,33 @@ impl AtwTable {
         bitmap
     }
 
+    /// Given an [`AtwBitmap`], recovers the `(method, sub-lead-range, bell, place bell)`
+    /// quadruples which are marked as rung
+    pub fn place_bells_rung(&self, bitmap: &AtwBitmap) -> Vec<PlaceBellRange> {
+        let mut place_bell_ranges = Vec::new();
+        for (bit_index, flag) in self.flag_per_bit.iter().enumerate() {
+            if !bitmap.get_bit(BitIndex(bit_index)) {
+                continue; // Skip any unset bits
+            }
+
+            // Get the [`PlaceBellRange`]s from the flag represented by this bit
+            let flag = flag
+                .as_ref()
+                .expect("Every 1 in a bitmap should correspond to a flag");
+            for &(bell, place_bell) in &flag.bell_place_bell_pairs {
+                place_bell_ranges.push(PlaceBellRange {
+                    method_idx: flag.method_idx,
+                    sub_lead_idx_start: flag.sub_lead_chunk_start,
+                    length: flag.sub_lead_chunk_len,
+                    bell,
+                    place_bell,
+                })
+            }
+        }
+        place_bell_ranges.sort();
+        place_bell_ranges
+    }
+
     pub fn atw_score(&self, bitmap: &AtwBitmap) -> f32 {
         let factor = self.atw_factor(bitmap);
         self.atw_weight * factor
@@ -168,11 +200,10 @@ impl AtwTable {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PlaceBellRange {
     pub bell: Bell,
+    pub(crate) method_idx: MethodIdx, // TODO: Make pub
     pub place_bell: u8,
-
-    pub method_idx: MethodIdx,
     pub sub_lead_idx_start: usize,
-    pub length: PerPartLength,
+    pub(crate) length: PerPartLength, // TODO: Make pub
 }
 
 /// An opaque bitmap representing a some set of `(method, sub-lead-range, bell, place-bell)`
@@ -187,6 +218,11 @@ impl AtwBitmap {
         for (chunk, other_chunk) in self.chunks.iter_mut().zip_eq(&other.chunks) {
             *chunk |= *other_chunk;
         }
+    }
+
+    fn get_bit(&self, idx: BitIndex) -> bool {
+        let (chunk_idx, mask) = Self::split_idx(idx);
+        self.chunks[chunk_idx] & mask != 0
     }
 
     fn add_bit(&mut self, idx: BitIndex) {
@@ -279,7 +315,7 @@ fn total_unique_row_positions(
 /// individual bitflags.
 fn place_bell_range_boundaries(
     params: &Parameters,
-    chunk_lengths: &[(ChunkId, PerPartLength)],
+    chunk_lengths: &HashMap<ChunkId, PerPartLength>,
 ) -> HashMap<(Bell, u8, MethodIdx), Vec<usize>> {
     // For each (bell, place bell, method) triple, determine at which sub-lead indices the chunks
     // change.  Each region between these indices will be given a unique flag.
