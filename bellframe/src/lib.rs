@@ -25,6 +25,7 @@ pub use call::Call;
 pub use mask::Mask;
 pub use method::Method;
 pub use method_lib::MethodLib;
+pub use music::MusicType;
 pub use parity::Parity;
 pub use place_not::{PlaceNot, PnBlock};
 pub use row::{same_stage_vec::SameStageVec, InvalidRowError, Row, RowBuf};
