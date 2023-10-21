@@ -5,10 +5,12 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{row::same_stage_vec::RowSlice, stroke::StrokeSet, Bell, Row, RowBuf, Stage, Stroke};
+use crate::{
+    row::same_stage_vec::RowSlice, stroke::StrokeSet, Bell, Block, Row, RowBuf, Stage, Stroke,
+};
 
 /// A collection of [`Pattern`]s which, together, form a group of music
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MusicType {
     patterns: Vec<Pattern>,
     stroke_set: StrokeSet,
@@ -164,23 +166,38 @@ impl Pattern {
 //////////////
 
 impl MusicType {
-    pub fn count<'a>(&self, rows: impl Into<RowSlice<'a>>) -> AtPositions<usize> {
+    pub fn count<'a>(&self, rows: impl Into<RowSlice<'a>>) -> AtRowPositions<usize> {
         Self::count_with_stroke(self, rows, Stroke::Back)
+    }
+
+    pub fn count_block<T>(
+        &self,
+        block: &Block<T>,
+        stroke_of_first_row: Stroke,
+    ) -> AtRowPositions<usize> {
+        Self::count_with_stroke(self, block, stroke_of_first_row)
     }
 
     pub fn count_with_stroke<'a>(
         &self,
         rows: impl Into<RowSlice<'a>>,
         stroke_of_first_row: Stroke,
-    ) -> AtPositions<usize> {
+    ) -> AtRowPositions<usize> {
         let rows = rows.into();
 
-        let mut counts = AtPositions::<usize>::ZERO;
+        let mut counts = AtRowPositions::<usize>::ZERO;
         for pattern in &self.patterns {
             counts =
                 counts + pattern.match_one_with_stroke(self.stroke_set, rows, stroke_of_first_row);
         }
         counts
+    }
+
+    /// Returns the maximum possible number of occurrences of this `MusicType` when matching against
+    /// rows of the given [`Stage`].  I.e. this would be the result of music counting the extent on
+    /// this [`Stage`].
+    pub fn max_possible_count(&self, stage: Stage) -> AtRowPositions<usize> {
+        todo!()
     }
 }
 
@@ -190,7 +207,7 @@ impl Pattern {
         at_strokes: StrokeSet,
         rows: impl Into<RowSlice<'a>>,
         stroke: Stroke,
-    ) -> AtPositions<usize> {
+    ) -> AtRowPositions<usize> {
         // Like in Rust's regex crate, we will use an optimized SIMD search routine to search for
         // this substring then verify the rest of the pattern only once per potential match.
 
@@ -217,7 +234,7 @@ impl Pattern {
         let haystack_bytes: &[u8] = bytemuck::cast_slice(&rows.bells);
 
         // Use the fast string searches to find all instances of the long sub-region
-        let mut counts = AtPositions::ZERO;
+        let mut counts = AtRowPositions::ZERO;
         'match_loop: for needle_start in memchr::memmem::find_iter(haystack_bytes, needle_bytes) {
             // Check that the entire pattern falls within the haystack.  If not, reject this match
             let Some(pattern_start) = needle_start.checked_sub(bell_range.start) else {
@@ -246,13 +263,13 @@ impl Pattern {
             }
             // Classify the match
             let position = if start_row_idx != end_row_idx {
-                MusicPosition::Wrap
+                RowPosition::Wrap
             } else if starts_on_row_boundary {
-                MusicPosition::Front
+                RowPosition::Front
             } else if ends_on_row_boundary {
-                MusicPosition::Back
+                RowPosition::Back
             } else {
-                MusicPosition::Internal
+                RowPosition::Internal
             };
             // Add the match
             *counts.get_mut(position) += 1;
@@ -284,31 +301,29 @@ impl Pattern {
         }
         best_substring
     }
-
-    // TODO: Replace
-    pub fn num_matching_rows(&self) -> Option<usize> {
-        todo!()
-    }
 }
 
+/// A position in a row where music can be counted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MusicPosition {
+pub enum RowPosition {
     Front,
     Internal,
     Back,
     Wrap,
 }
 
+/// A collection of data (usually counts) for each position in a [`Row`] that music can occur
+/// (front, internal, back, wrap)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct AtPositions<T> {
-    front: T,
-    internal: T,
-    back: T,
-    wrap: T,
+pub struct AtRowPositions<T> {
+    pub front: T,
+    pub internal: T,
+    pub back: T,
+    pub wrap: T,
 }
 
-impl AtPositions<usize> {
-    const ZERO: AtPositions<usize> = AtPositions {
+impl AtRowPositions<usize> {
+    pub const ZERO: AtRowPositions<usize> = AtRowPositions {
         front: 0,
         internal: 0,
         back: 0,
@@ -316,31 +331,52 @@ impl AtPositions<usize> {
     };
 }
 
-impl<T> AtPositions<T> {
-    pub fn get(&self, position: MusicPosition) -> &T {
+impl AtRowPositions<f32> {
+    pub const ZERO_F32: AtRowPositions<f32> = AtRowPositions {
+        front: 0.0,
+        internal: 0.0,
+        back: 0.0,
+        wrap: 0.0,
+    };
+}
+
+impl<T> AtRowPositions<T> {
+    pub fn get(&self, position: RowPosition) -> &T {
         match position {
-            MusicPosition::Front => &self.front,
-            MusicPosition::Internal => &self.internal,
-            MusicPosition::Back => &self.back,
-            MusicPosition::Wrap => &self.wrap,
+            RowPosition::Front => &self.front,
+            RowPosition::Internal => &self.internal,
+            RowPosition::Back => &self.back,
+            RowPosition::Wrap => &self.wrap,
         }
     }
 
-    pub fn get_mut(&mut self, position: MusicPosition) -> &mut T {
+    pub fn get_mut(&mut self, position: RowPosition) -> &mut T {
         match position {
-            MusicPosition::Front => &mut self.front,
-            MusicPosition::Internal => &mut self.internal,
-            MusicPosition::Back => &mut self.back,
-            MusicPosition::Wrap => &mut self.wrap,
+            RowPosition::Front => &mut self.front,
+            RowPosition::Internal => &mut self.internal,
+            RowPosition::Back => &mut self.back,
+            RowPosition::Wrap => &mut self.wrap,
+        }
+    }
+
+    pub fn map<S>(p: AtRowPositions<S>, mut f: impl FnMut(S) -> T) -> Self
+    where
+        T: From<S>,
+    {
+        Self {
+            front: f(p.front),
+            internal: f(p.internal),
+            back: f(p.back),
+            wrap: f(p.wrap),
         }
     }
 }
 
-impl<T: Add> Add for AtPositions<T> {
-    type Output = AtPositions<T::Output>;
+impl<T: Add> Add for AtRowPositions<T> {
+    type Output = AtRowPositions<T::Output>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        AtPositions {
+        AtRowPositions {
             front: self.front + rhs.front,
             internal: self.internal + rhs.internal,
             back: self.back + rhs.back,
@@ -417,7 +453,7 @@ impl std::error::Error for PatternError {}
 #[cfg(test)]
 mod tests {
     use crate::{
-        music::{AtPositions, MusicType},
+        music::{AtRowPositions, MusicType},
         Bell, RowBuf, Stage,
     };
 
@@ -460,7 +496,7 @@ mod tests {
 
             assert_eq!(
                 mt.count(&plain_course),
-                AtPositions {
+                AtRowPositions {
                     front,
                     internal,
                     back,
