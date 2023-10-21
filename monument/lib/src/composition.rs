@@ -5,15 +5,12 @@ use std::{
     hash::Hash,
 };
 
-use bellframe::{Bell, Block, Row, RowBuf, Stage, Stroke};
+use bellframe::{music::AtRowPositions, Bell, Block, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 
 use crate::{
     parameters::{CallDisplayStyle, CallId, MethodId, MethodVec, MusicTypeVec, Parameters},
-    utils::{
-        lengths::{PerPartLength, TotalLength},
-        MusicBreakdown,
-    },
+    utils::lengths::{PerPartLength, TotalLength},
 };
 
 #[allow(unused_imports)] // Used by doc comments
@@ -59,11 +56,14 @@ impl Composition {
 
     /// Compute [`Self::music_counts`] and use it to calculate [`Self::music_score`].  Calling
     /// them separately would cause the music to be calculated twice.
-    pub fn music_counts_and_score(&self, params: &Parameters) -> (MusicTypeVec<usize>, f32) {
+    pub fn music_counts_and_score(
+        &self,
+        params: &Parameters,
+    ) -> (MusicTypeVec<AtRowPositions<usize>>, f32) {
         let music_counts = self.music_counts(params);
         let mut music_score = 0.0;
         for (count, music_type) in music_counts.iter().zip_eq(&params.music_types) {
-            music_score += *count as f32 * music_type.weight;
+            music_score += music_type.as_overall_score(*count);
         }
         (music_counts, music_score)
     }
@@ -75,14 +75,13 @@ impl Composition {
     }
 
     /// The number of *instances* of each [`MusicType`] in the [`Search`].
-    pub fn music_counts(&self, params: &Parameters) -> MusicTypeVec<usize> {
-        let breakdown = MusicBreakdown::from_rows(
-            self.rows(params).rows(),
-            &RowBuf::rounds(self.stage),
-            params.music_types.as_raw_slice(),
-            !self.start_stroke,
-        );
-        breakdown.counts.as_slice().iter().copied().collect()
+    pub fn music_counts(&self, params: &Parameters) -> MusicTypeVec<AtRowPositions<usize>> {
+        let rows = self.rows(params);
+        params
+            .music_types
+            .iter()
+            .map(|mt| mt.count(&rows))
+            .collect()
     }
 
     pub fn part_head(&self) -> &Row {

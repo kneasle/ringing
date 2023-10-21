@@ -10,14 +10,16 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{method::RowAnnot, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet};
+use bellframe::{
+    method::RowAnnot, music::AtRowPositions, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet,
+};
 use itertools::Itertools;
 
 use crate::{
     group::{PartHeadGroup, PhRotation},
     parameters::{Call, MethodIdx, MethodVec, Parameters},
     search::Config,
-    utils::{counts::Counts, MusicBreakdown},
+    utils::counts::Counts,
 };
 
 use super::{Chunk, ChunkId, Graph, LinkSet, LinkSide, PerPartLength, RowIdx, TotalLength};
@@ -82,9 +84,20 @@ impl Graph {
             return Err(crate::Error::InconsistentStroke);
         }
         // Now we know the starting strokes, count the music on each chunk
-        let plain_courses: MethodVec<_> = params.methods.iter().map(|m| m.plain_course()).collect();
+        let double_plain_courses: MethodVec<_> = params
+            .methods
+            .iter()
+            .map(|m| {
+                let mut double_plain_course = m.plain_course();
+                // Add another plain course.  We use 'double plain courses' so that the range
+                // covered by a chunk is always a contiguous section of these cached plain
+                // courses (otherwise, a chunk could wrap over the end of one plain course).
+                double_plain_course.extend_from_within(..);
+                double_plain_course
+            })
+            .collect();
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &plain_courses, &start_strokes, params);
+            count_scores(id, chunk, &double_plain_courses, &start_strokes, params);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -137,7 +150,8 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, params: &Parameter
         predecessors: Vec::new(),
         successors: Vec::new(),
         false_chunks: Vec::new(),
-        music: MusicBreakdown::zero(0),
+        score: 0.0,
+        music_counts: index_vec::index_vec![AtRowPositions::ZERO; params.music_types.len()],
 
         // Used by optimisation passes
         required: false,
@@ -203,14 +217,15 @@ fn get_start_strokes(
 fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
-    plain_courses: &MethodVec<Block<RowAnnot>>,
+    double_plain_courses: &MethodVec<Block<RowAnnot>>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
     params: &Parameters,
 ) {
     // Always set music to `0`s, even if the chunk is unreachable.  If we don't, then an
     // optimisation pass could see this chunk and run `zip_eq` on the `MusicType`s, thus causing a
     // panic.
-    chunk.music = MusicBreakdown::zero(params.music_types.len());
+    chunk.score = 0.0;
+    chunk.music_counts = index_vec::index_vec![AtRowPositions::ZERO; params.music_types.len()];
 
     let start_stroke = match start_strokes {
         Some(map) => match map.get(id) {
@@ -226,22 +241,22 @@ fn count_scores(
         // start stroke
         None => Stroke::Back,
     };
-    let plain_course = &plain_courses[id.method];
+    let double_plain_course = &double_plain_courses[id.method];
     let lead_heads = params.methods[id.method].inner.lead_head().closure();
 
     for part_head in params.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
-        let row_iter = (0..chunk.per_part_length.as_usize()).map(|offset| {
-            let index = (id.sub_lead_idx + offset) % plain_course.len();
-            plain_course.get_row(index).unwrap()
-        });
-        // Count weight from music
-        chunk.music += &MusicBreakdown::from_rows(
-            row_iter,
-            &lead_head_in_part,
-            params.music_types.as_raw_slice(),
-            start_stroke,
+        // Determine the rows that this chunk contains
+        let mut rows = Block::empty(params.stage);
+        rows.extend_range(
+            double_plain_course,
+            id.sub_lead_idx..(id.sub_lead_idx + chunk.per_part_length.as_usize()),
         );
+        rows.pre_multiply(&lead_head_in_part);
+        // Count weight from music
+        for (count, music_type) in chunk.music_counts.iter_mut().zip_eq(&params.music_types) {
+            *count += music_type.count_block(&rows, start_stroke);
+        }
         // Count weight from `course_weights`.  `course_weights` apply to every row of every course
         // which contains a lead head matching that mask, so we have to transpose the mask by every
         // lead head to check every lead in the course.  For example, for Plain Bob lead-head
@@ -252,7 +267,7 @@ fn count_scores(
             for lead_head in &lead_heads {
                 if (mask * lead_head).matches(&lead_head_in_part) {
                     // Weight applies to each row
-                    chunk.music.score += *weight * chunk.per_part_length.as_usize() as f32;
+                    chunk.score += *weight * chunk.per_part_length.as_usize() as f32;
                 }
             }
         }

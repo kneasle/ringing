@@ -113,7 +113,7 @@ impl Graph {
                     total_length: source_chunk.total_length,
                     method_counts: source_chunk.method_counts.clone(),
                     min_len_to_rounds: source_chunk.lb_distance_to_rounds,
-                    score: source_chunk.music.score,
+                    score: source_chunk.score,
 
                     succs,
                     falseness,

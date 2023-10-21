@@ -8,8 +8,8 @@ use std::{
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
-    StrokeSet,
+    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage,
+    Stroke, StrokeSet,
 };
 use itertools::Itertools;
 
@@ -707,21 +707,26 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 pub struct MusicType {
     pub id: MusicTypeId,
 
-    pub patterns: Vec<Pattern>,
+    pub inner: bellframe::MusicType,
     pub strokes: StrokeSet,
-    pub weight: f32,
+    pub weights: AtRowPositions<f32>,
     pub count_range: OptionalRangeInclusive,
 }
 
 impl MusicType {
-    /// Return the total number of possible instances of this music type, or `None` if the
-    /// computation caused `usize` to overflow.
-    pub(crate) fn max_count(&self) -> Option<usize> {
-        let mut sum = 0;
-        for r in &self.patterns {
-            sum += r.num_matching_rows()?;
-        }
-        Some(sum)
+    pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
+        counts.front as f32 * self.weights.front
+            + counts.internal as f32 * self.weights.internal
+            + counts.back as f32 * self.weights.back
+            + counts.wrap as f32 * self.weights.wrap
+    }
+}
+
+impl Deref for MusicType {
+    type Target = bellframe::MusicType;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 

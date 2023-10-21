@@ -110,13 +110,6 @@ impl Search {
         self.params.music_types.iter().map(|ty| ty.id)
     }
 
-    pub fn max_music_count(&self, id: MusicTypeId) -> usize {
-        self.params
-            .get_music_type_by_id(id)
-            .max_count()
-            .unwrap_or(usize::MAX)
-    }
-
     pub fn parameters(&self) -> &Parameters {
         &self.params
     }

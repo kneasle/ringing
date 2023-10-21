@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter},
-    ops::{Add, Range},
+    ops::{Add, AddAssign, Range},
 };
 
 use itertools::Itertools;
@@ -382,6 +382,15 @@ impl<T: Add> Add for AtRowPositions<T> {
             back: self.back + rhs.back,
             wrap: self.wrap + rhs.wrap,
         }
+    }
+}
+
+impl<T: AddAssign> AddAssign for AtRowPositions<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.front += rhs.front;
+        self.internal += rhs.internal;
+        self.back += rhs.back;
+        self.wrap += rhs.wrap;
     }
 }
 

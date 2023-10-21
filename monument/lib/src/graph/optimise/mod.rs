@@ -305,7 +305,6 @@ impl<'graph> LinkView<'graph> {
 // BUILTIN PASSES //
 ////////////////////
 
-mod music; // Proving chunks as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent chunks
 
 mod passes {
@@ -329,9 +328,6 @@ mod passes {
             compute_distances(),
             strip_long_chunks(),
             Pass::Single(Box::new(super::strip_refs::remove_dangling_refs)),
-            // Music optimisation
-            Pass::Single(Box::new(super::music::required_music_min)),
-            Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count)),
             // Required chunk optimisation
             mark_single_start_or_end_as_required(),
             remove_chunks_false_against_required(),
@@ -339,6 +335,7 @@ mod passes {
             remove_links_between_false_chunks(),
             remove_chunks_with_long_method_counts(),
             remove_links_with_long_method_counts(),
+            // TODO: Remove chunks which contribute too much music (useful for 87s)
         ]
         .into_iter()
         .map(Mutex::new)
