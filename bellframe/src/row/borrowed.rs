@@ -84,6 +84,11 @@ impl Row {
         Stage::new(self.bell_slice.len() as u8)
     }
 
+    /// Returns the underlying slice of [`Bell`]s.
+    pub fn bells(&self) -> &[Bell] {
+        &self.bell_slice
+    }
+
     /// Returns an iterator over the [`Bell`]s in this `Row`.
     #[inline]
     pub fn bell_iter(&self) -> BellIter {

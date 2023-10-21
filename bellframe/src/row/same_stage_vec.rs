@@ -5,7 +5,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{utils, Bell, InvalidRowError, Row, RowBuf, Stage};
+use crate::{utils, Bell, Block, InvalidRowError, Row, RowBuf, Stage};
 
 use super::DbgRow;
 
@@ -44,7 +44,7 @@ pub struct SameStageVec {
     /// A contiguous chunk of [`Bell`]s, containing all the [`Row`]s concatenated together.  For
     /// example, the start of a plain course of Cambridge Surprise Minor would be stored as
     /// `123456214365124635216453261435624153621435...`
-    /// or, with spaces inserted between rows:
+    /// or, with spaces inserted between rows for ease of display:
     /// `123456 214365 124635 216453 261435 624153 621435 ...`
     ///
     /// **Invariant**: Each [`Stage`]-aligned segment of `bells` must form a valid [`Row`]
@@ -188,6 +188,34 @@ impl SameStageVec {
         let bell_slice = self.bells.get_mut(range)?;
         // SAFETY: by invariant, each stage-aligned segment of `self.bells` is a valid `Row`
         Some(unsafe { Row::from_mut_slice_unchecked(bell_slice) })
+    }
+
+    /// Returns a [`RowSlice`] containing all the rows [`Row`] in this [`SameStageVec`].
+    pub fn as_slice(&self) -> RowSlice {
+        RowSlice {
+            bells: &self.bells,
+            stage: self.stage,
+        }
+    }
+
+    /// Returns a [`RowSlice`] containing all the rows [`Row`] in this [`SameStageVec`].
+    pub fn as_slice_range(&self, range: impl RangeBounds<usize>) -> RowSlice {
+        let inclusive_start = match range.start_bound() {
+            std::ops::Bound::Included(&s) => s,
+            std::ops::Bound::Excluded(&s) => s + 1,
+            std::ops::Bound::Unbounded => 0,
+        };
+        let exclusive_end = match range.end_bound() {
+            std::ops::Bound::Included(&s) => s + 1,
+            std::ops::Bound::Excluded(&s) => s,
+            std::ops::Bound::Unbounded => self.len(),
+        };
+        let bell_range =
+            (inclusive_start * self.stage.num_bells())..(exclusive_end * self.stage.num_bells());
+        RowSlice {
+            bells: &self.bells[bell_range],
+            stage: self.stage,
+        }
     }
 
     /// Gets a reference to the first [`Row`], if it exists.
@@ -388,6 +416,46 @@ impl SameStageVec {
             "Stage mismatch: `Block` has stage {:?} but {:?} has stage {:?}",
             self.stage, name, rhs_stage,
         );
+    }
+}
+
+/// A slice of [`Row`]s of the same [`Stage`], stored consecutively in memory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RowSlice<'a> {
+    pub bells: &'a [Bell],
+    pub stage: Stage,
+}
+
+impl<'r> RowSlice<'r> {
+    pub fn from_row(row: &'r Row) -> RowSlice<'r> {
+        Self {
+            bells: row.bells(),
+            stage: row.stage(),
+        }
+    }
+}
+
+impl<'r> From<&'r Row> for RowSlice<'r> {
+    fn from(row: &'r Row) -> Self {
+        Self::from_row(row)
+    }
+}
+
+impl<'r> From<&'r RowBuf> for RowSlice<'r> {
+    fn from(row: &'r RowBuf) -> Self {
+        Self::from_row(row.as_row())
+    }
+}
+
+impl<'r> From<&'r SameStageVec> for RowSlice<'r> {
+    fn from(vec: &'r SameStageVec) -> Self {
+        vec.as_slice()
+    }
+}
+
+impl<'r, T> From<&'r Block<T>> for RowSlice<'r> {
+    fn from(block: &'r Block<T>) -> Self {
+        block.row_vec().as_slice_range(..block.len())
     }
 }
 
