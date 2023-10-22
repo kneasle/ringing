@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter},
-    ops::{Add, AddAssign, Not, Range},
+    ops::{Add, AddAssign, Mul, Not, Range},
 };
 
 use factorial::Factorial;
@@ -243,8 +243,7 @@ impl MusicType {
 
         let mut counts = AtRowPositions::ZERO;
         for pattern in &self.patterns {
-            counts =
-                counts + pattern.match_one_with_stroke(self.strokes, rows, stroke_of_first_row);
+            counts = counts + pattern.count(self.strokes, rows, stroke_of_first_row);
         }
         counts
     }
@@ -271,17 +270,19 @@ impl MusicType {
 }
 
 impl Pattern {
-    fn match_one_with_stroke<'a>(
+    fn count<'a>(
         &self,
         at_strokes: StrokeSet,
         rows: impl Into<RowSlice<'a>>,
         stroke: Stroke,
     ) -> AtRowPositions<usize> {
         // Like in Rust's regex crate, we will use an optimized SIMD search routine to search for
-        // this substring then verify the rest of the pattern only once per potential match.
+        // a substring with no 'x's then verify the rest of the pattern only once per potential
+        // match.  In almost all cases, the music patterns actually contain no 'x's and we can do
+        // the entire search using the aggressively optimised `memmem` crate.
 
         // Get the longest sequence of consecutive bells
-        let Some(bell_range) = self.longest_sequence_of_bells() else {
+        let Some(bell_range) = self.longest_subsequence_without_xs() else {
             todo!() // Music pattern is just `x`s
         };
         // Get the offsets of the other bells in the pattern, relative to `bell_range.start`
@@ -347,7 +348,7 @@ impl Pattern {
         counts
     }
 
-    fn longest_sequence_of_bells(&self) -> Option<Range<usize>> {
+    fn longest_subsequence_without_xs(&self) -> Option<Range<usize>> {
         let mut bell_section_boundaries = vec![0];
         bell_section_boundaries.extend(
             self.bells
@@ -494,6 +495,19 @@ impl<T: Add> Add for AtRowPositions<T> {
     }
 }
 
+impl<T: Mul> Mul for AtRowPositions<T> {
+    type Output = AtRowPositions<T::Output>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        AtRowPositions {
+            front: self.front * rhs.front,
+            internal: self.internal * rhs.internal,
+            back: self.back * rhs.back,
+            wrap: self.wrap * rhs.wrap,
+        }
+    }
+}
+
 impl<T: Not> Not for AtRowPositions<T> {
     type Output = AtRowPositions<T::Output>;
 
@@ -626,7 +640,7 @@ mod tests {
             plain_course.pre_multiply(&start_row);
 
             assert_eq!(
-                mt.count(&plain_course),
+                mt.count(&plain_course, crate::Stroke::Back),
                 AtRowPositions {
                     front,
                     internal,
@@ -665,7 +679,8 @@ mod tests {
             plain_course.pre_multiply(&start_row);
 
             let mt = MusicType::reversed_tenors_at_back(method.stage());
-            assert_eq!(mt.count(&plain_course).back, expected_87s);
+            let counts = mt.count(&plain_course, crate::Stroke::Back);
+            assert_eq!(counts.back, expected_87s);
         };
 
         check("Bristol Surprise Major", "12345678", 0); // Plain course of Bristol has no 87s

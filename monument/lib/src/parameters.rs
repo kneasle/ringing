@@ -714,10 +714,7 @@ pub struct MusicType {
 
 impl MusicType {
     pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
-        counts.front as f32 * self.weights.front
-            + counts.internal as f32 * self.weights.internal
-            + counts.back as f32 * self.weights.back
-            + counts.wrap as f32 * self.weights.wrap
+        (counts.map(|x| x as f32) * self.weights).total()
     }
 }
 

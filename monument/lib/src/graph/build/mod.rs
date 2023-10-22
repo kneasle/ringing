@@ -254,8 +254,11 @@ fn count_scores(
         );
         rows.pre_multiply(&lead_head_in_part);
         // Count weight from music
-        for (count, music_type) in chunk.music_counts.iter_mut().zip_eq(&params.music_types) {
-            *count += music_type.count_block(&rows, start_stroke);
+        for (count_so_far, music_type) in chunk.music_counts.iter_mut().zip_eq(&params.music_types)
+        {
+            let counts = music_type.count_block(&rows, start_stroke);
+            chunk.score += music_type.as_overall_score(counts);
+            *count_so_far += counts;
         }
         // Count weight from `course_weights`.  `course_weights` apply to every row of every course
         // which contains a lead head matching that mask, so we have to transpose the mask by every
