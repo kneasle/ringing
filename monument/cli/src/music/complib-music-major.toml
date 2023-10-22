@@ -6,63 +6,34 @@
 #- Displayed header music -#
 #--------------------------#
 
-# crus
 [[music]]
-name = "CRUs"
-patterns = ["4578*", "*4578", "4678*", "*4678", "5478*", "*5478",
-            "5678*", "*5678", "6478*", "*6478", "6578*", "*6578"]
-weight = 0
+preset = "crus"
 
-# Display 5678s
 [[music]]
-patterns = ["5678*", "*5678"]
-weight = 0
+patterns = ["5678", "6578"]
 
-# Display 6578s
-[[music]]
-patterns = ["6578*", "*6578"]
-weight = 0
-
-# 4-bell runs
 [[music]]
 run_length = 4
-weight = 0
 
-# Display total 5678 combinations
 [[music]]
 preset = "5678 combinations"
-weight = 0
+weight = 0 # Only some 5678 combinations are scored, but the total count is displayed
 
-# Display 8765s
 [[music]]
-patterns = ["8765*", "*8765"]
-weight = 0
+pattern = "8765"
 
-# Display 87s at back
 [[music]]
 pattern = "*87"
 stroke = "back"
-weight = 0
+weight.back = 0 # Display these at backstroke but don't score them
+name = "87s"
 
 #-----------------#
 #- Music scoring -#
 #-----------------#
 
-# 56s & 65s
 [[music]]
-patterns = ["5678*", "*5678", "6578*", "*6578"]  # Boost 5678s and 6578s
-show = false
-
-# crus
-[[music]]
-name = "CRUs"
-patterns = ["4578*", "*4578", "4678*", "*4678", "5478*", "*5478",
-            "5678*", "*5678", "6478*", "*6478", "6578*", "*6578"]  # Boost 5678s, 4678s, 5478s, 5678s, 6478s and 6578s
-show = false
-
-# 4, 5, 6, and 7 Bell Runs
-[[music]]
-run_lengths = [4, 5, 6, 7]
+run_lengths = [5, 6, 7] # 4-bell runs are already scored
 show = false
 
 # Combination Near Misses
@@ -74,16 +45,19 @@ show = false
 
 # 5678 combinations counted towards music score
 [[music]]
-patterns = ["5678*", "*5678", "6578*", "*6578",  # From 5678 and 6578
-            "7568*", "*7568", "7658*", "*7658",  # From 7568, 7658
-            "8765*", "*8765"]                    # From 8765
+patterns = ["5678", "6578", "7568", "7658", "8765"]
 show = false
 
-# Combinations from named rows
 [[music]]
-patterns = ["*1357", "*2468", "*3468", "*3478",  # From Queens, Whittingtons, Hagdyke
-            "*3578", "*5768", "*7468", "*7568",  # From 3578s, Bowbells, Princesses, Burdette
-            "*7658", "*8765", "x5x6x7x8"]        # From Rollercoaster, Esso-Blues, tittums
+patterns = ["1357", "2468", "3468", "3478",  # From Queens, Whittingtons, Hagdyke
+            "3578", "5768", "7468", "7568",  # From 3578s, Bowbells, Princesses, Burdette
+            "7658", "8765"]        # From Rollercoaster, Esso-Blues
+weight.back = 1 # Only score these at the back of the change
+show = false
+
+# Combination from tittums
+[[music]]
+pattern = "x5x6x7x8"
 show = false
 
 # Named Rows
@@ -95,3 +69,5 @@ patterns = [ "12345678", "12563478", "12753468", "13245768",  # Rounds, Hagdyke,
              "65432178", "75312468", "75321468", "87123456",  # Reverse Waterfall, Kings, Princes, Waterfall
              "87654321" ]                                     # Backrounds
 show = false
+
+# TODO: Wraps

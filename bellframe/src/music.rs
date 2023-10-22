@@ -1,8 +1,9 @@
 use std::{
     fmt::{Debug, Display, Formatter},
-    ops::{Add, AddAssign, Range},
+    ops::{Add, AddAssign, Not, Range},
 };
 
+use factorial::Factorial;
 use itertools::Itertools;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MusicType {
     patterns: Vec<Pattern>,
-    stroke_set: StrokeSet,
+    strokes: StrokeSet,
 }
 
 /// A `Pattern` of [`Bell`]s, with possible wildcards.
@@ -36,7 +37,7 @@ impl MusicType {
     pub const fn new(patterns: Vec<Pattern>) -> Self {
         Self {
             patterns,
-            stroke_set: StrokeSet::Both,
+            strokes: StrokeSet::Both,
         }
     }
 
@@ -47,15 +48,19 @@ impl MusicType {
 
     /// Sets the [`StrokeSet`] determining on which strokes this music type will be counted.
     pub fn at_stroke(mut self, stroke_set: StrokeSet) -> Self {
-        self.stroke_set = stroke_set;
+        self.strokes = stroke_set;
         self
+    }
+
+    pub fn strokes(&self) -> StrokeSet {
+        self.strokes
     }
 
     /* Common Musics */
 
     /// Creates a set of `Pattern`s which match runs of a given length.  If the run length is
     /// longer than the stage, no `Pattern`s are returned.
-    pub fn runs(stage: Stage, len: u8) -> Self {
+    pub fn runs(len: u8, stage: Stage) -> Self {
         let num_bells = stage.num_bells_u8();
         if num_bells < len {
             return Self::empty();
@@ -65,12 +70,67 @@ impl MusicType {
         // Iterate over every bell which could start a run
         for i in 0..=num_bells - len {
             // An iterator that yields the bells forming this run in descending order
-            let run_iterator = (i..i + len).map(Bell::from_index).map(Some);
+            let run_iterator = (i..i + len).map(Bell::from_index);
             runs.push(Pattern::from_bells(run_iterator.clone()).unwrap()); // Descending runs (e.g. `1234`)
             runs.push(Pattern::from_bells(run_iterator.rev()).unwrap()); // Ascending runs (e.g. `4321`)
         }
 
         Self::new(runs)
+    }
+
+    pub fn combination_5678s_triples() -> Self {
+        let mut patterns = Vec::new();
+        for singles_row in &Stage::SINGLES.extent() {
+            patterns.push(
+                // Map `123` into `567` by adding 4 to each `Bell`
+                Pattern::from_bells(singles_row.bell_iter().map(|b| b + 4))
+                    .expect("567 combination pattern should always be valid"),
+            );
+        }
+        Self::new(patterns)
+    }
+
+    pub fn combination_5678s_major() -> Self {
+        let mut patterns = Vec::new();
+        for minimus_row in &Stage::MINIMUS.extent() {
+            patterns.push(
+                // Map `1234` to `5678` by adding 4 to each `Bell`
+                Pattern::from_bells(minimus_row.bell_iter().map(|b| b + 4))
+                    .expect("5678 combination pattern should be valid"),
+            );
+        }
+        Self::new(patterns)
+    }
+
+    pub fn near_misses(stage: Stage) -> Self {
+        let patterns = (0..stage.num_bells() - 1)
+            .map(|swap_idx| {
+                let mut pattern_row = RowBuf::rounds(stage);
+                pattern_row.swap(swap_idx, swap_idx + 1);
+                Pattern::from(pattern_row)
+            })
+            .collect_vec();
+        Self::new(patterns)
+    }
+
+    pub fn crus(stage: Stage) -> Self {
+        assert!(stage >= Stage::TRIPLES);
+        // Generate a pattern `*{b1}{b2}7890...` for b1 != b2 in {4,5,6}
+        let pat_456 = [(4, 5), (5, 4), (4, 6), (6, 4), (5, 6), (6, 5)];
+        let patterns = pat_456
+            .into_iter()
+            .map(|(b1, b2)| {
+                // "*{b1}{b2}"
+                let mut cru = vec![
+                    Bell::from_number(b1).unwrap(),
+                    Bell::from_number(b2).unwrap(),
+                ];
+                // "7890..."
+                cru.extend(stage.bells().skip(6));
+                Pattern::from_bells(cru).expect("CRU pattern should be valid")
+            })
+            .collect_vec();
+        Self::new(patterns)
     }
 
     pub fn reversed_tenors_at_back(stage: Stage) -> Self {
@@ -123,8 +183,8 @@ impl Pattern {
     }
 
     /// Creates a normalised `Pattern` from an [`Iterator`] of [`Elem`]s
-    pub fn from_bells(iter: impl IntoIterator<Item = Option<Bell>>) -> Result<Self, PatternError> {
-        Self::from_vec(iter.into_iter().collect_vec())
+    pub fn from_bells(iter: impl IntoIterator<Item = Bell>) -> Result<Self, PatternError> {
+        Self::from_vec(iter.into_iter().map(Some).collect_vec())
     }
 
     /// Creates a `Pattern` from a [`Vec`] of [`Elem`]s, checking the invariants and normalising
@@ -166,29 +226,25 @@ impl Pattern {
 //////////////
 
 impl MusicType {
-    pub fn count<'a>(&self, rows: impl Into<RowSlice<'a>>) -> AtRowPositions<usize> {
-        Self::count_with_stroke(self, rows, Stroke::Back)
-    }
-
     pub fn count_block<T>(
         &self,
         block: &Block<T>,
         stroke_of_first_row: Stroke,
     ) -> AtRowPositions<usize> {
-        Self::count_with_stroke(self, block, stroke_of_first_row)
+        Self::count(self, block, stroke_of_first_row)
     }
 
-    pub fn count_with_stroke<'a>(
+    pub fn count<'a>(
         &self,
         rows: impl Into<RowSlice<'a>>,
         stroke_of_first_row: Stroke,
     ) -> AtRowPositions<usize> {
         let rows = rows.into();
 
-        let mut counts = AtRowPositions::<usize>::ZERO;
+        let mut counts = AtRowPositions::ZERO;
         for pattern in &self.patterns {
             counts =
-                counts + pattern.match_one_with_stroke(self.stroke_set, rows, stroke_of_first_row);
+                counts + pattern.match_one_with_stroke(self.strokes, rows, stroke_of_first_row);
         }
         counts
     }
@@ -197,7 +253,20 @@ impl MusicType {
     /// rows of the given [`Stage`].  I.e. this would be the result of music counting the extent on
     /// this [`Stage`].
     pub fn max_possible_count(&self, stage: Stage) -> AtRowPositions<usize> {
-        todo!()
+        let mut counts = AtRowPositions::ZERO;
+        for p in &self.patterns {
+            // Compute how many ways to re-arrange the unfixed_bells
+            let num_fixed_bells = p.bells.iter().flatten().count();
+            let num_unfixed_bells = stage.num_bells() - num_fixed_bells;
+            let num_perms_of_unfixed_bells = num_unfixed_bells.factorial();
+            // Add these counts
+            let num_internal_places = stage.num_bells().saturating_sub(1 + p.bells.len());
+            counts.front += num_perms_of_unfixed_bells;
+            counts.internal += num_internal_places * num_perms_of_unfixed_bells;
+            counts.back += num_perms_of_unfixed_bells;
+            counts.wrap += num_perms_of_unfixed_bells * (p.bells.len() - 1);
+        }
+        counts
     }
 }
 
@@ -322,21 +391,26 @@ pub struct AtRowPositions<T> {
     pub wrap: T,
 }
 
-impl AtRowPositions<usize> {
+impl AtRowPositions<()> {
     pub const ZERO: AtRowPositions<usize> = AtRowPositions {
         front: 0,
         internal: 0,
         back: 0,
         wrap: 0,
     };
-}
 
-impl AtRowPositions<f32> {
     pub const ZERO_F32: AtRowPositions<f32> = AtRowPositions {
         front: 0.0,
         internal: 0.0,
         back: 0.0,
         wrap: 0.0,
+    };
+
+    pub const FALSE: AtRowPositions<bool> = AtRowPositions {
+        front: false,
+        internal: false,
+        back: false,
+        wrap: false,
     };
 }
 
@@ -350,6 +424,36 @@ impl<T> AtRowPositions<T> {
         }
     }
 
+    pub fn set(&mut self, position: RowPosition, value: T) {
+        *self.get_mut(position) = value;
+    }
+
+    pub fn masked(mut self, mask: AtRowPositions<bool>, value: T) -> Self
+    where
+        T: Clone,
+    {
+        self.set_mask(mask, value);
+        self
+    }
+
+    pub fn set_mask(&mut self, mask: AtRowPositions<bool>, value: T)
+    where
+        T: Clone,
+    {
+        if mask.front {
+            self.front = value.clone();
+        }
+        if mask.internal {
+            self.internal = value.clone();
+        }
+        if mask.back {
+            self.back = value.clone();
+        }
+        if mask.wrap {
+            self.wrap = value;
+        }
+    }
+
     pub fn get_mut(&mut self, position: RowPosition) -> &mut T {
         match position {
             RowPosition::Front => &mut self.front,
@@ -359,15 +463,20 @@ impl<T> AtRowPositions<T> {
         }
     }
 
-    pub fn map<S>(p: AtRowPositions<S>, mut f: impl FnMut(S) -> T) -> Self
+    pub fn total<V>(&self) -> V
     where
-        T: From<S>,
+        V: std::iter::Sum<T>,
+        T: Copy,
     {
-        Self {
-            front: f(p.front),
-            internal: f(p.internal),
-            back: f(p.back),
-            wrap: f(p.wrap),
+        V::sum([self.front, self.internal, self.back, self.wrap].into_iter())
+    }
+
+    pub fn map<S>(self, mut f: impl FnMut(T) -> S) -> AtRowPositions<S> {
+        AtRowPositions {
+            front: f(self.front),
+            internal: f(self.internal),
+            back: f(self.back),
+            wrap: f(self.wrap),
         }
     }
 }
@@ -381,6 +490,19 @@ impl<T: Add> Add for AtRowPositions<T> {
             internal: self.internal + rhs.internal,
             back: self.back + rhs.back,
             wrap: self.wrap + rhs.wrap,
+        }
+    }
+}
+
+impl<T: Not> Not for AtRowPositions<T> {
+    type Output = AtRowPositions<T::Output>;
+
+    fn not(self) -> Self::Output {
+        AtRowPositions {
+            front: !self.front,
+            internal: !self.internal,
+            back: !self.back,
+            wrap: !self.wrap,
         }
     }
 }

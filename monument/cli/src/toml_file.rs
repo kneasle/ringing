@@ -199,7 +199,7 @@ impl TomlFile {
                 anyhow!("No methods specified.  Try something like `method = \"Bristol Surprise Major\"`.")
             })?;
 
-        let (music_displays, music_types) = self.music(toml_path, stage)?;
+        let (music_types, music_displays) = self.music(toml_path, stage)?;
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
         let calling_bell = match self.calling_bell {
@@ -310,7 +310,7 @@ impl TomlFile {
         &self,
         toml_path: &Path,
         stage: Stage,
-    ) -> anyhow::Result<(Vec<MusicDisplay>, MusicTypeVec<MusicType>)> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
         // Load TOML for the music file
         let music_file_str = match &self.music_file {
             Some(relative_music_path) => {
@@ -342,8 +342,8 @@ impl TomlFile {
                 let left_bell = right_bell + 1;
                 // ... add patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
-                    let mask_str = format!("*{b1}{b2}");
-                    let mask = Mask::parse_with_stage(&mask_str, stage).unwrap();
+                    let mask_string = format!("*{b1}{b2}");
+                    let mask = Mask::parse_with_stage(&mask_string, stage).unwrap();
                     course_weights.push((mask, self.handbell_coursing_weight));
                 }
             }

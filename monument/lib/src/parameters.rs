@@ -8,8 +8,7 @@ use std::{
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage,
-    Stroke, StrokeSet,
+    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
@@ -708,9 +707,9 @@ pub struct MusicType {
     pub id: MusicTypeId,
 
     pub inner: bellframe::MusicType,
-    pub strokes: StrokeSet,
     pub weights: AtRowPositions<f32>,
     pub count_range: OptionalRangeInclusive,
+    // TODO: Count ranges for front/internal/back/wrap
 }
 
 impl MusicType {

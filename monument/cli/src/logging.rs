@@ -180,7 +180,7 @@ impl CompositionPrinter {
                 .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(&search))
+                .map(|d| d.col_width(search.parameters()))
                 .collect_vec(),
 
             search,
@@ -329,7 +329,7 @@ impl CompositionPrinter {
             s.push_str("  ");
             write_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.search, &music_counts),
+                &music_display.display_counts(&music_counts, self.search.parameters()),
                 *col_width,
             );
             s.push(' ');

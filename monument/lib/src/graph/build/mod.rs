@@ -78,7 +78,7 @@ impl Graph {
         let relies_on_stroke = params
             .music_types
             .iter()
-            .any(|ty| ty.strokes != StrokeSet::Both);
+            .any(|ty| ty.strokes() != StrokeSet::Both);
         let start_strokes = get_start_strokes(&chunks, &links, params);
         if start_strokes.is_none() && relies_on_stroke {
             return Err(crate::Error::InconsistentStroke);

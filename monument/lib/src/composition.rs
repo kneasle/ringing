@@ -80,7 +80,7 @@ impl Composition {
         params
             .music_types
             .iter()
-            .map(|mt| mt.count(&rows))
+            .map(|mt| mt.count(&rows, !self.start_stroke))
             .collect()
     }
 
