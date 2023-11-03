@@ -16,14 +16,15 @@ use serde::{Deserialize, Serialize};
 pub fn load_cases<D>(
     dirs: &[&str],
     ignore_path: &str,
+    filter: Option<&str>,
     mut data_fn: impl FnMut(&PathFromMonument, bool) -> D,
 ) -> anyhow::Result<Vec<UnrunTestCase<D>>> {
     let ignore_file = load_ignore(ignore_path)?;
+    let filter_regex = get_filter_regex(filter)?;
     // Collect the individual test sources from every suite
     let mut cases: Vec<UnrunTestCase<D>> = Vec::new();
     for path in dirs {
         let path_relative_to_cargo_toml = PathBuf::from(PATH_TO_MONUMENT_DIR).join(path);
-
         // Walk the directory for test cases (i.e. `*.toml` files)
         for entry in walkdir::WalkDir::new(path_relative_to_cargo_toml) {
             // Get the path of the file, relative to the `monument` directory
@@ -34,6 +35,10 @@ pub fn load_cases<D>(
 
             match extension {
                 Some("toml") => {
+                    if !filter_regex.is_match(&entry.path().to_string_lossy()) {
+                        continue; // Skip any files which aren't matched by the filter
+                    }
+
                     let is_ignored = match ignore_file.get(&path_from_monument) {
                         Some(IgnoreReason::MusicFile) => continue, // Skip music files completely
                         Some(IgnoreReason::ExplicitIgnore) => true,
@@ -53,6 +58,11 @@ pub fn load_cases<D>(
         }
     }
     Ok(cases)
+}
+
+pub fn get_filter_regex(filter: Option<&str>) -> Result<Regex, anyhow::Error> {
+    let filter = filter.unwrap_or(".*");
+    Regex::new(&format!("^{filter}$")).context("Error parsing filter")
 }
 
 #[derive(Debug)]
@@ -249,7 +259,7 @@ pub fn write_results<T: Serialize>(results: &ResultsFile<T>, path: &str) -> anyh
 #[serde(transparent)]
 pub struct PathFromMonument {
     /// String representing the path, always using forward slashes
-    path: String,
+    pub path: String,
 }
 
 const PATH_TO_MONUMENT_DIR: &str = "../";

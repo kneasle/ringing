@@ -32,18 +32,18 @@ const TEST_DIRS: &[&str] = &[
 fn main() -> anyhow::Result<()> {
     let args = Args::from_args();
     match args.sub_command {
-        Some(SubCommand::Bless { fails: fail }) => {
+        Some(SubCommand::Bless { fails, filter }) => {
             // `cargo bless ...`
-            let bless_level = if fail {
+            let bless_level = if fails {
                 BlessLevel::Fails
             } else {
                 BlessLevel::OnlyUnspecified
             };
-            bless_tests(bless_level)
+            bless_tests(bless_level, filter.as_deref())
         }
         None => {
             // If no args were given, just run the tests
-            match run()? {
+            match run(args.filter.as_deref())? {
                 Outcome::Fail => Err(anyhow::Error::msg("Tests failed")),
                 Outcome::Pass => Ok(()),
             }
@@ -69,6 +69,9 @@ enum SubCommand {
     Bless {
         #[structopt(long)]
         fails: bool,
+        /// Only tests who's paths match this regex will be run
+        #[structopt(long, short = "F")]
+        filter: Option<String>,
     },
 }
 
@@ -77,13 +80,13 @@ enum SubCommand {
 ///////////////////////////
 
 /// Run the full test suite.
-pub fn run() -> anyhow::Result<Outcome> {
+pub fn run(filter: Option<&str>) -> anyhow::Result<Outcome> {
     monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
 
     let start = Instant::now();
 
     // Collect the test cases
-    let cases = get_cases()?;
+    let cases = get_cases(filter)?;
     // Run the tests.
     println!("running {} tests", cases.len());
     let completed_tests: Vec<RunTestCase<CaseData>> = cases.into_par_iter().map(run_test).collect();
@@ -96,12 +99,13 @@ pub fn run() -> anyhow::Result<Outcome> {
     Ok(outcome)
 }
 
-fn get_cases() -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
+fn get_cases(filter: Option<&str>) -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
     let mut results = common::load_results(EXPECTED_RESULTS_PATH, &mut String::new())?;
 
     common::load_cases(
         TEST_DIRS,
         IGNORE_PATH,
+        filter,
         |path: &PathFromMonument, is_ignored: bool| {
             let is_example = path.to_string().contains("example");
             CaseData {
@@ -188,7 +192,7 @@ pub enum BlessLevel {
 }
 
 /// Bless the test results of a given [`BlessLevel`]
-pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
+pub fn bless_tests(level: BlessLevel, filter: Option<&str>) -> anyhow::Result<()> {
     enum ChangeType {
         New,
         Fail,
@@ -202,12 +206,19 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     test_case_names.extend(expected_results.keys().cloned());
     test_case_names.extend(actual_results.keys().cloned());
 
+    let filter_regex = common::get_filter_regex(filter)?;
     // Merge the results, using the `BlessLevel` to decide, for each test, which result to keep
     let mut changed_case_names = Vec::<(ChangeType, PathFromMonument)>::new();
     let merged_results = test_case_names
         .into_iter()
         .filter_map(|path: PathFromMonument| {
-            let entry = match (expected_results.remove(&path), actual_results.remove(&path)) {
+            let expected_result = expected_results.remove(&path);
+            let actual_result = actual_results.remove(&path);
+            if !filter_regex.is_match(&path.path) {
+                return expected_result.map(|entry| (path, entry));
+            }
+
+            let entry = match (expected_result, actual_result) {
                 (Some(exp_result), Some(act_result)) => {
                     if level == BlessLevel::Fails && exp_result != act_result {
                         // We're blessing this file iff the results are different
