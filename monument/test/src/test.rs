@@ -57,6 +57,9 @@ fn main() -> anyhow::Result<()> {
 
 #[derive(StructOpt)]
 struct Args {
+    /// Only tests who's paths match this regex will be run
+    #[structopt(long, short = "F")]
+    filter: Option<String>,
     #[structopt(subcommand)]
     sub_command: Option<SubCommand>,
 }
