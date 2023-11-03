@@ -248,14 +248,12 @@ impl TomlFile {
     pub fn config(&self, opts: &crate::args::Options, leak_search_memory: bool) -> Config {
         let mut config = Config {
             thread_limit: opts.num_threads,
+            mem_limit: opts.mem_limit,
             leak_search_memory,
             ..Default::default()
         };
         if let Some(limit) = opts.graph_size_limit.or(self.graph_size_limit) {
             config.graph_size_limit = limit;
-        }
-        if let Some(limit) = opts.mem_limit {
-            config.mem_limit = limit;
         }
         config
     }
