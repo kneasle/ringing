@@ -28,7 +28,7 @@ fn run() -> anyhow::Result<()> {
         common::load_results::<'_, Duration>(LAST_DURATIONS_PATH, &mut String::new())?;
     // Load benchmarks
     let mut unrun_cases =
-        common::load_cases(&["bench/"], "test/ignore.toml", |path, _| CaseData {
+        common::load_cases(&["bench/"], "test/ignore.toml", None, |path, _| CaseData {
             pinned_duration: pinned_durations.remove(path),
             last_duration: last_durations.remove(path),
         })?;

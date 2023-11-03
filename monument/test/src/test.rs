@@ -12,6 +12,7 @@ use colored::{Color, ColoredString, Colorize};
 use common::{PathFromMonument, UnrunTestCase};
 use difference::Changeset;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use structopt::StructOpt;
 
 use crate::common::RunTestCase;
 
@@ -29,45 +30,49 @@ const TEST_DIRS: &[&str] = &[
 
 /// Collect and run all the test cases, but no benchmarks (which would take too long)
 fn main() -> anyhow::Result<()> {
-    // Read the args to determine what to do
-    let mut args = std::env::args();
-    args.next(); // Skip the first arg, which always the path to the test's binary
-    if args.next().as_deref() == Some("bless") {
-        match args.next().as_deref() {
-            // `cargo bless`: bless only unspecified
-            None => bless_tests(BlessLevel::OnlyUnspecified),
-            // `cargo bless --fails ...`
-            Some("--fails") => match args.next() {
-                // `cargo bless --fails {something} ...`
-                Some(arg) => {
-                    println!("Unknown additional arg '{}'", arg);
-                    print_bless_usage();
-                    Ok(())
-                }
-                // `cargo bless --fails`: bless everything
-                None => bless_tests(BlessLevel::Fails),
-            },
-            // `cargo bless {something not --fails} ...`
-            Some(arg) => {
-                println!("Unknown arg '{}'", arg);
-                print_bless_usage();
-                Ok(())
-            }
+    let args = Args::from_args();
+    match args.sub_command {
+        Some(SubCommand::Bless { fails, filter }) => {
+            // `cargo bless ...`
+            let bless_level = if fails {
+                BlessLevel::Fails
+            } else {
+                BlessLevel::OnlyUnspecified
+            };
+            bless_tests(bless_level, filter.as_deref())
         }
-    } else {
-        // If no args were given, just run the tests
-        match run()? {
-            Outcome::Fail => Err(anyhow::Error::msg("Tests failed")),
-            Outcome::Pass => Ok(()),
+        None => {
+            // If no args were given, just run the tests
+            match run(args.filter.as_deref())? {
+                Outcome::Fail => Err(anyhow::Error::msg("Tests failed")),
+                Outcome::Pass => Ok(()),
+            }
         }
     }
 }
 
-fn print_bless_usage() {
-    println!();
-    println!("Possible options:");
-    println!("    `cargo bless`        : Bless only unspecified/new test cases");
-    println!("    `cargo bless --fails`: Bless everything, even failed test cases");
+/////////////////
+// ARG PARSING //
+/////////////////
+
+#[derive(StructOpt)]
+struct Args {
+    /// Only tests who's paths match this regex will be run
+    #[structopt(long, short = "F")]
+    filter: Option<String>,
+    #[structopt(subcommand)]
+    sub_command: Option<SubCommand>,
+}
+
+#[derive(StructOpt)]
+enum SubCommand {
+    Bless {
+        #[structopt(long)]
+        fails: bool,
+        /// Only tests who's paths match this regex will be run
+        #[structopt(long, short = "F")]
+        filter: Option<String>,
+    },
 }
 
 ///////////////////////////
@@ -75,13 +80,13 @@ fn print_bless_usage() {
 ///////////////////////////
 
 /// Run the full test suite.
-pub fn run() -> anyhow::Result<Outcome> {
+pub fn run(filter: Option<&str>) -> anyhow::Result<Outcome> {
     monument_cli::init_logging(log::LevelFilter::Warn); // Equivalent to '-q'
 
     let start = Instant::now();
 
     // Collect the test cases
-    let cases = get_cases()?;
+    let cases = get_cases(filter)?;
     // Run the tests.
     println!("running {} tests", cases.len());
     let completed_tests: Vec<RunTestCase<CaseData>> = cases.into_par_iter().map(run_test).collect();
@@ -94,12 +99,13 @@ pub fn run() -> anyhow::Result<Outcome> {
     Ok(outcome)
 }
 
-fn get_cases() -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
+fn get_cases(filter: Option<&str>) -> anyhow::Result<Vec<UnrunTestCase<CaseData>>> {
     let mut results = common::load_results(EXPECTED_RESULTS_PATH, &mut String::new())?;
 
     common::load_cases(
         TEST_DIRS,
         IGNORE_PATH,
+        filter,
         |path: &PathFromMonument, is_ignored: bool| {
             let is_example = path.to_string().contains("example");
             CaseData {
@@ -186,7 +192,7 @@ pub enum BlessLevel {
 }
 
 /// Bless the test results of a given [`BlessLevel`]
-pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
+pub fn bless_tests(level: BlessLevel, filter: Option<&str>) -> anyhow::Result<()> {
     enum ChangeType {
         New,
         Fail,
@@ -200,12 +206,19 @@ pub fn bless_tests(level: BlessLevel) -> anyhow::Result<()> {
     test_case_names.extend(expected_results.keys().cloned());
     test_case_names.extend(actual_results.keys().cloned());
 
+    let filter_regex = common::get_filter_regex(filter)?;
     // Merge the results, using the `BlessLevel` to decide, for each test, which result to keep
     let mut changed_case_names = Vec::<(ChangeType, PathFromMonument)>::new();
     let merged_results = test_case_names
         .into_iter()
         .filter_map(|path: PathFromMonument| {
-            let entry = match (expected_results.remove(&path), actual_results.remove(&path)) {
+            let expected_result = expected_results.remove(&path);
+            let actual_result = actual_results.remove(&path);
+            if !filter_regex.is_match(&path.path) {
+                return expected_result.map(|entry| (path, entry));
+            }
+
+            let entry = match (expected_result, actual_result) {
                 (Some(exp_result), Some(act_result)) => {
                     if level == BlessLevel::Fails && exp_result != act_result {
                         // We're blessing this file iff the results are different
