@@ -105,6 +105,17 @@ pub struct MusicWeight {
     wrap: Option<f32>,
 }
 
+impl MusicWeight {
+    fn get_mut(&mut self, pos: RowPosition) -> &mut Option<f32> {
+        match pos {
+            RowPosition::Front => &mut self.front,
+            RowPosition::Internal => &mut self.internal,
+            RowPosition::Back => &mut self.back,
+            RowPosition::Wrap => &mut self.wrap,
+        }
+    }
+}
+
 impl Default for MusicWeight {
     fn default() -> Self {
         Self {
@@ -398,17 +409,19 @@ fn music_type_preset(
     stage: Stage,
 ) -> anyhow::Result<Vec<(MusicType, Option<MusicDisplay>)>> {
     // Determine the pattern types
-    let (music_type, default_name) = match preset {
+    let (music_type, positions, default_name) = match preset {
         MusicPreset::Combinations5678s => match stage {
             // For Triples, `8` is always at the back, so `5678` combinations are any point where
             // `567` are at the back together
             Stage::TRIPLES => (
                 bellframe::MusicType::combination_5678s_triples(),
+                AtRowPositions::BACK,
                 "5678 combs",
             ),
             // For Major, a 5678 combination can happen at the front or back of a row
             Stage::MAJOR => (
                 bellframe::MusicType::combination_5678s_major(),
+                AtRowPositions::FRONT_AND_BACK,
                 "5678 combs",
             ),
             // 5678 combinations don't make sense for any stage other than Triples and Major
@@ -418,21 +431,38 @@ fn music_type_preset(
                 ));
             }
         },
-        MusicPreset::NearMisses => (bellframe::MusicType::near_misses(stage), "NM"),
+        MusicPreset::NearMisses => (
+            bellframe::MusicType::near_misses(stage),
+            AtRowPositions::FRONT,
+            "NMs",
+        ),
         MusicPreset::Crus => {
             if stage < Stage::TRIPLES {
                 return Err(anyhow::Error::msg("Can't have CRUs on less than 7 bells"));
             }
-            (bellframe::MusicType::crus(stage), "CRU")
+            let positions = if stage.is_even() {
+                AtRowPositions::FRONT_AND_BACK
+            } else {
+                AtRowPositions::BACK
+            };
+            (bellframe::MusicType::crus(stage), positions, "CRUs")
         }
     };
+
+    // Reset weight for positions which this music type can't use
+    let mut common = common.clone();
+    for pos in RowPosition::ALL {
+        if !positions.get(pos) {
+            *common.specified_weight.get_mut(pos) = None;
+        }
+    }
     // Construct a music type
     Ok(vec![new_music_type(
         id_gen.next(),
         default_name.to_owned(),
         music_type,
-        common,
-        true,
+        &common,
+        false,
     )])
 }
 

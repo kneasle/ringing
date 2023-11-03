@@ -395,6 +395,10 @@ pub enum RowPosition {
     Wrap,
 }
 
+impl RowPosition {
+    pub const ALL: [RowPosition; 4] = [Self::Front, Self::Internal, Self::Back, Self::Wrap];
+}
+
 /// A collection of data (usually counts) for each position in a [`Row`] that music can occur
 /// (front, internal, back, wrap)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -424,6 +428,27 @@ impl AtRowPositions<()> {
         front: false,
         internal: false,
         back: false,
+        wrap: false,
+    };
+
+    pub const FRONT: AtRowPositions<bool> = AtRowPositions {
+        front: true,
+        internal: false,
+        back: false,
+        wrap: false,
+    };
+
+    pub const BACK: AtRowPositions<bool> = AtRowPositions {
+        front: false,
+        internal: false,
+        back: true,
+        wrap: false,
+    };
+
+    pub const FRONT_AND_BACK: AtRowPositions<bool> = AtRowPositions {
+        front: true,
+        internal: false,
+        back: true,
         wrap: false,
     };
 }
