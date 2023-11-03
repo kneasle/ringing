@@ -14,12 +14,14 @@ const ITERS_BETWEEN_ABORT_CHECKS: usize = 10_000;
 const ITERS_BETWEEN_PROGRESS_UPDATES: usize = 100_000;
 const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
-/// Searches a [`Graph`](m_gr::Graph) for compositions
+/// Searches a [`Graph`](m_gr::Graph) for compositions.  This function is the core of Monument, and
+/// almost all of Monument's runtime will be spent in the `while` loop in this function.
 pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
-    log::info!(
-        "Limiting memory usage to {}B",
-        BigNumInt(search.config.mem_limit)
-    );
+    let mem_limit = search
+        .config
+        .mem_limit
+        .unwrap_or_else(super::default_mem_limit);
+    log::info!("Limiting memory usage to {}B", BigNumInt(mem_limit));
 
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
@@ -53,6 +55,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
 
     // Repeatedly choose the best prefix and expand it (i.e. add each way of extending it to the
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
+    // This loop is the core of Monument - almost all the runtime will be spent here.
     while let Some(prefix) = frontier.pop() {
         let maybe_comp = prefix.expand(search, &mut paths, &mut frontier);
 
@@ -69,7 +72,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
         // If we end up using too much memory, half the size of the queue and garbage-collect the
         // paths.
         let mem_usage = frontier.len() * prefix_size + paths.estimate_heap_size();
-        if mem_usage >= search.config.mem_limit {
+        if mem_usage >= mem_limit {
             send_progress_update!(truncating_queue = true);
             truncate_queue(frontier.len() / 2, &mut frontier);
             paths.gc(frontier.iter().map(|prefix| prefix.path_head()));
