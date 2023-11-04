@@ -7,6 +7,8 @@ base_calls = "far"
 
 base_music = "none"
 [[music]]
-pattern = "*87"
+pattern = "87"
 stroke = "back"
+weight.back = -1
 count.max = 0 # Demand no 87s
+name = "87s"

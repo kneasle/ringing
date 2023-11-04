@@ -18,7 +18,7 @@
 "examples/spicy-calls.toml" = ''
 "examples/spliced.toml" = ''
 "test/cases/87s-at-back.toml" = '''
-len |  music     *87 | avg score | calling
+len |  music     87s | avg score | calling
 ----|----------------|-----------|-----------
  64 |  -20.00 :    2 | -0.440625 | sHWsMH
  96 |  -20.00 :    2 | -0.331250 | WMsWMHsH
@@ -29,7 +29,7 @@ len |  music     *87 | avg score | calling
  48 |    0.00 :    0 | -0.112500 | WMH
 112 |    0.00 :    0 |  0.000000 | 
 ----|----------------|-----------|-----------
-len |  music     *87 | avg score | calling
+len |  music     87s | avg score | calling
 '''
 "test/cases/add-courses-in-other-parts-cyclic.toml" = '''
 Note: For course mask 1234567890ET, adding extra masks for other parts:
