@@ -728,4 +728,22 @@ mod tests {
 
         check("Let's Ring! Delight Minor", "123456", 4);
     }
+
+    #[test]
+    fn full_length_rows() {
+        let patterns = [
+            "123456", "132546", "135246", "142536", "145236", "154326", "213546", "321456",
+            "341256", "342516", "531246", "532146", "654321",
+        ];
+
+        let cc_lib = crate::MethodLib::cc_lib().unwrap();
+        let method = cc_lib.get_by_title("Norwich Surprise Minor").unwrap();
+        let plain_course = method.plain_course();
+
+        for p in patterns {
+            let mt = MusicType::parse(p).unwrap();
+            let counts = mt.count(&plain_course, crate::Stroke::Back);
+            assert_eq!(counts.back, 0);
+        }
+    }
 }
