@@ -9,31 +9,31 @@ show = false # Only show 4-bell runs
 # unaffected for as long as possible.  So we nerf 7890ETs generally to encourage it to generate more
 # interesting comps
 [[music]]
-patterns = ["TE0987*", "*7890ET"]
-weight = -2
+patterns = ["TE0987", "7890ET"]
+weight.front = -2
+weight.back = -2
 show = false
 
 # Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
 # make Monument prefer LB5 courses over just keeping the 6 at home for ages).
 [[music]]
-patterns = [
-    "*65432", "23456*",
-    "*23456", "65432*",
-    "*76543", "34567*",
-]
-weight = 3
+patterns = ["65432", "23456", "76543", "34567"]
+weight.front = 3
+weight.back = 3
 name = "lb5s"
 
 [[music]]
-pattern = "*567890ET"
+pattern = "567890ET"
+weight.back = 1
 name = "56s"
 
 [[music]]
-pattern = "*657890"
+pattern = "657890"
+weight.back = 1
 name = "65s"
 
 [[music]]
 pattern = "*TE"
 stroke = "back"
-weight = -0.7
+weight.back = -0.7
 show = false

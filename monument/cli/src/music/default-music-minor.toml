@@ -6,11 +6,12 @@ run_lengths = [5, 6]
 show = false # Only show 4-bell runs
 
 [[music]]
-pattern = "*56"
-weight = 0.2
+pattern = "56"
+weight.back = 0.2
+name = "*56" # TODO: Make this "56s"
 
 [[music]]
 # Queens, 'whittingtons', exploded tittums and tittums
 patterns = ["135246", "531246", "342516", "142536"]
-weight = 3
+weight.front = 3
 show = false
