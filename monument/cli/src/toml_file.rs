@@ -6,11 +6,8 @@ use std::{
 
 use anyhow::anyhow;
 use bellframe::{
-    method::LABEL_LEAD_END,
-    method_lib::SearchError,
-    music::{Elem, Pattern},
-    place_not::PnBlockParseError,
-    Bell, Mask, MethodLib, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END, method_lib::SearchError, place_not::PnBlockParseError, Bell, Mask,
+    MethodLib, RowBuf, Stage, Stroke,
 };
 use colored::Colorize;
 use index_vec::index_vec;
@@ -345,11 +342,8 @@ impl TomlFile {
                 let left_bell = right_bell + 1;
                 // ... add patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
-                    let pattern =
-                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage)
-                            .expect("Handbell patterns should always be valid regexes");
-                    let mask = Mask::from_pattern(&pattern)
-                        .expect("Handbell patterns should only have one `*`");
+                    let mask_str = format!("*{b1}{b2}");
+                    let mask = Mask::parse_with_stage(&mask_str, stage).unwrap();
                     course_weights.push((mask, self.handbell_coursing_weight));
                 }
             }

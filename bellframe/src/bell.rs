@@ -105,6 +105,7 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
+    // TODO: Make this panic when constructing bell #0
     pub fn from_number(number: u8) -> Option<Bell> {
         number.checked_sub(1).map(Bell::from_index)
     }

@@ -16,7 +16,7 @@ pub struct Mask {
 }
 
 impl Mask {
-    pub fn parse(s: &str) -> Self {
+    pub fn parse(s: &str) -> Result<Self, ParseError> {
         let bells = s
             .chars()
             .filter_map(|c| match c {
@@ -65,6 +65,13 @@ impl Mask {
                 provided_stage: stage,
             });
         }
+        if num_stars == 0 && min_required_stage < stage {
+            return Err(ParseError::TooShort {
+                mask_str: s.to_owned(),
+                mask_stage: min_required_stage,
+                provided_stage: stage,
+            });
+        }
         if num_stars > 1 {
             return Err(ParseError::MultipleStars);
         }
@@ -78,7 +85,7 @@ impl Mask {
                 StringElement::Star => bells.extend(std::iter::repeat(None).take(star_length)),
             }
         }
-        Ok(Self::from_vec(bells))
+        Self::from_vec(bells)
     }
 
     /// Creates a `Mask` that fully specifies a given [`Row`]
@@ -124,15 +131,29 @@ impl Mask {
 
     /// Directly create a [`Mask`] from a sequence of ([`Option`]al) [`Bell`]s
     #[inline]
-    pub fn from_bells(bells: impl IntoIterator<Item = Option<Bell>>) -> Self {
+    pub fn from_bells(bells: impl IntoIterator<Item = Option<Bell>>) -> Result<Self, ParseError> {
         Self::from_vec(bells.into_iter().collect_vec())
     }
 
     /// Directly create a [`Mask`] from a [`Vec`] of ([`Option`]al) [`Bell`]s.
-    #[inline]
-    // TODO: Verify the sequence here
-    pub fn from_vec(bells: Vec<Option<Bell>>) -> Self {
-        Self { bells }
+    pub fn from_vec(bells: Vec<Option<Bell>>) -> Result<Self, ParseError> {
+        // Check for duplicate bells
+        let mut just_bells = bells.iter().copied().filter_map(|x| x).collect_vec();
+        just_bells.sort();
+        for (b1, b2) in just_bells.iter().tuple_windows() {
+            if b1 == b2 {
+                return Err(ParseError::DuplicateBell(*b1));
+            }
+        }
+        // Check for bells out of stage
+        let stage = Stage::new(bells.len() as u8);
+        for b in just_bells {
+            if !stage.contains(b) {
+                return Err(ParseError::BellOutOfStage(b, stage));
+            }
+        }
+        // If neither check failed, these `bells` must form a valid `Mask`
+        Ok(Self { bells })
     }
 
     pub fn contains(&self, bell: Bell) -> bool {
@@ -367,6 +388,11 @@ pub enum ParseError {
         min_required_stage: Stage,
         provided_stage: Stage,
     },
+    TooShort {
+        mask_str: String,
+        mask_stage: Stage,
+        provided_stage: Stage,
+    },
     MultipleStars,
     DuplicateBell(Bell),
     BellOutOfStage(Bell, Stage),
@@ -384,6 +410,21 @@ impl Display for ParseError {
                 "Mask would be too long for {}; {} would be required",
                 provided_stage, min_required_stage
             ),
+            ParseError::TooShort {
+                mask_str,
+                mask_stage,
+                provided_stage,
+            } => {
+                let extra_bells = provided_stage
+                    .bells()
+                    .skip(mask_stage.num_bells())
+                    .filter_map(Bell::to_char)
+                    .collect::<String>();
+                write!(
+                    f,
+                    "Mask is too short; did you mean `{mask_str}*` or `{mask_str}{extra_bells}`?"
+                )
+            }
             ParseError::DuplicateBell(bell) => write!(f, "Bell {bell} is used twice"),
             ParseError::BellOutOfStage(bell, stage) => {
                 write!(f, "Bell {bell} falls outside of stage {stage}")
@@ -570,14 +611,14 @@ mod tests {
         fn check_ok(pattern: &str, num_bells: u8, mask: &str) {
             assert_eq!(
                 Mask::parse_with_stage(&pattern, Stage::new(num_bells)),
-                Ok(Mask::parse(mask)),
+                Mask::parse(mask),
             );
         }
         #[track_caller]
-        fn check_err(pattern: &str, num_bells: u8) {
+        fn check_err(pattern: &str, num_bells: u8, err: ParseError) {
             assert_eq!(
                 Mask::parse_with_stage(&pattern, Stage::new(num_bells)),
-                Err(ParseError::MultipleStars)
+                Err(err)
             );
         }
 
@@ -590,17 +631,46 @@ mod tests {
         check_ok("3*x4", 6, "3xxxx4");
         check_ok("*78", 8, "xxxxxx78");
 
-        check_err("5*3*8", 8);
-        check_err("*5*", 8);
-        check_err("3**x", 6);
-        check_err("3*xx*", 6);
+        check_err("5*3*8", 8, ParseError::MultipleStars);
+        check_err("*5*", 8, ParseError::MultipleStars);
+        check_err("3**x", 6, ParseError::MultipleStars);
+        check_err("3*xx*", 6, ParseError::MultipleStars);
+
+        check_err(
+            "*9x",
+            8,
+            ParseError::BellOutOfStage(Bell::from_number(9).unwrap(), Stage::MAJOR),
+        );
+        check_err(
+            "23453*",
+            8,
+            ParseError::DuplicateBell(Bell::from_number(3).unwrap()),
+        );
+        check_err(
+            "1234*x5678",
+            8,
+            ParseError::TooLong {
+                min_required_stage: Stage::CATERS,
+                provided_stage: Stage::MAJOR,
+            },
+        );
+        check_err(
+            "1234x5678",
+            8,
+            ParseError::TooLong {
+                min_required_stage: Stage::CATERS,
+                provided_stage: Stage::MAJOR,
+            },
+        );
     }
 
     #[test]
     fn matches() {
         #[track_caller]
         fn check(mask: &str, row: &str, exp_match: bool) {
-            let is_match = Mask::parse(mask).matches(&RowBuf::parse(row).unwrap());
+            let is_match = Mask::parse(mask)
+                .unwrap()
+                .matches(&RowBuf::parse(row).unwrap());
             match (is_match, exp_match) {
                 (true, false) => panic!("'{}' unexpectedly matched '{}'", mask, row),
                 (false, true) => panic!("'{}' unexpectedly didn't match '{}'", row, mask),
@@ -621,9 +691,10 @@ mod tests {
 
     #[test]
     fn row_mul_mask() {
+        #[track_caller]
         fn check_ok(row: &str, mask: &str, exp_mask_str: &str) {
-            let new_mask = RowBuf::parse(row).unwrap().as_row() * &Mask::parse(mask);
-            let exp_mask = Mask::parse(exp_mask_str);
+            let new_mask = RowBuf::parse(row).unwrap().as_row() * &Mask::parse(mask).unwrap();
+            let exp_mask = Mask::parse(exp_mask_str).unwrap();
             assert_eq!(
                 new_mask, exp_mask,
                 "{} * {} gave {} (expected {})",
@@ -638,9 +709,10 @@ mod tests {
 
     #[test]
     fn mask_mul_row() {
+        #[track_caller]
         fn check_ok(mask: &str, row: &str, exp_mask_str: &str) {
-            let new_mask = Mask::parse(mask).mul(&RowBuf::parse(row).unwrap());
-            let exp_mask = Mask::parse(exp_mask_str);
+            let new_mask = Mask::parse(mask).unwrap().mul(&RowBuf::parse(row).unwrap());
+            let exp_mask = Mask::parse(exp_mask_str).unwrap();
             assert_eq!(
                 new_mask, exp_mask,
                 "{} * {} gave {} (expected {})",

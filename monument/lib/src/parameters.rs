@@ -867,10 +867,13 @@ impl CourseSet {
                 let min_offset = -(min_bell.index_u8() as i16);
                 let max_offset = (method.stage().num_bells_u8() - max_bell.number()) as i16;
                 for offset in min_offset..=max_offset {
-                    expanded_masks.push(Mask::from_bells(
-                        mask.bells()
-                            .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
-                    ));
+                    expanded_masks.push(
+                        Mask::from_bells(
+                            mask.bells()
+                                .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
+                        )
+                        .unwrap(), // Substituting bells can't make the mask invalid
+                    );
                 }
             }
             course_masks = expanded_masks;
