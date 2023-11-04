@@ -384,8 +384,9 @@ fn music_type_patterns(
             ));
         }
     }
-    if common.name.is_some() || count_range.is_set() {
-        // If the user gave a custom name, we combine all the patterns into one [`MusicType`]
+    if music_types.is_empty() || count_range.is_set() {
+        // If the user gave a custom name or is not showing this type at all, we combine all the
+        // patterns into one [`MusicType`]
         let (mut music_type, mut music_display) = new_music_type(
             id_gen.next(),
             String::new(),
@@ -398,6 +399,10 @@ fn music_type_patterns(
             music_display = None;
         }
         music_types.push((music_type, music_display));
+    }
+    // Check that a non-empty pattern string always produces a non-empty set of music types
+    if !pattern_strings.is_empty() {
+        assert!(!music_types.is_empty());
     }
     Ok(music_types)
 }
