@@ -9,32 +9,24 @@
 # Display 56s
 [[music]]
 name = "56s"
-pattern = "*567890E"
-weight = 0
+pattern = "567890E"
 
 # Display 65s
 [[music]]
 name = "65s"
-pattern = "*657890E"
-weight = 0
+pattern = "657890E"
 
 # 4-bell Runs
 [[music]]
 run_length = 4
-weight = 0
 
 #-----------------#
 #- Music scoring -#
 #-----------------#
 
-# 56s & 65s
-[[music]]
-patterns = ["*567890E", "*657890E"]  # Boost 56s and 65s
-show = false
-
 # 4, 5, 6, 7, 8, 9, and 10 Bell Runs
 [[music]]
-run_lengths = [4, 5, 6, 7, 8, 9, 10]
+run_lengths = [5, 6, 7, 8, 9, 10]
 show = false
 
 # Near Misses
@@ -45,8 +37,9 @@ show = false
 
 # Combinations from named rows
 [[music]]
-patterns = ["*E09", "*4680", "*24680", "*E9780",  # From Rollercoaster, Queens, Queens, Whittingtons
-            "*9078E", "xxxxx9x0xEx"]              # From Hagdyke, Tittums
+patterns = ["E09", "4680", "24680", "E9780",  # From Rollercoaster, Queens, Queens, Whittingtons
+            "9078E", "9x0xEx"]              # From Hagdyke, Tittums
+weight.back = 1
 show = false
 
 # Named Rows

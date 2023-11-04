@@ -1,5 +1,5 @@
 # Music file for 8-bell complib music compositions
-# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# Music is split into two sections, the first gives what music to display in the header (which has zero
 # weighting) and the second gives the scoring that counts towards the total music score.
 
 #--------------------------#
@@ -17,13 +17,14 @@ run_length = 4
 
 [[music]]
 preset = "5678 combinations"
-weight = 0 # Only some 5678 combinations are scored, but the total count is displayed
+weight.front = 0 # Only some 5678 combinations are scored, but the total count is displayed
+weight.back = 0
 
 [[music]]
 pattern = "8765"
 
 [[music]]
-pattern = "*87"
+pattern = "87"
 stroke = "back"
 weight.back = 0 # Display these at backstroke but don't score them
 name = "87s"

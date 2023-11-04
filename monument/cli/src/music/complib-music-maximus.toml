@@ -1,5 +1,5 @@
 # Music file for 12-bell complib music compositions
-# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# Music is split into two sections, the first gives what music to display in the header (which has zero
 # weighting) and the second gives the scoring that counts towards the total music score.
 
 #--------------------------#
@@ -9,38 +9,30 @@
 # Display 56s
 [[music]]
 name = "65s"
-patterns = ["567890ET*", "*567890ET"]
-weight = 0
+pattern = "567890ET"
 
 # Display 65s
 [[music]]
 name = "65s"
-patterns = ["657890ET*", "*657890ET"]
-weight = 0
+pattern = "657890ET"
 
 # 4-bell Runs
 [[music]]
 run_length = 4
-weight = 0
 
 # Display TEs at back
 [[music]]
-pattern = "*TE"
+pattern = "TE"
 stroke = "back"
-weight = 0
+weight.back = 0
 
 #-----------------#
 #- Music scoring -#
 #-----------------#
 
-# 56s & 65s
+# 5, 6, 7, 8, 9, 10 and 11 Bell Runs
 [[music]]
-patterns = ["567890ET*", "*567890ET", "657890ET*", "*657890ET"]  # Boost 5678s and 6578s
-show = false
-
-# 4, 5, 6, 7, 8, 9, 10 and 11 Bell Runs
-[[music]]
-run_lengths = [4, 5, 6, 7, 8, 9, 10, 11]
+run_lengths = [5, 6, 7, 8, 9, 10, 11]
 show = false
 
 # Near Misses
@@ -51,7 +43,7 @@ show = false
 
 # Combinations from named rows
 [[music]]
-patterns = ["*24680T", "*9078ET", "*E9780T", "xxxxx9x0xExT"]  # From Queens, Hagdyke, Whittingtons and tittums
+patterns = ["24680T", "9078ET", "E9780T", "9x0xExT"]  # From Queens, Hagdyke, Whittingtons and tittums
 show = false
 
 # Named Rows
