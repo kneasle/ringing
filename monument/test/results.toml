@@ -2,6 +2,7 @@
 "examples/basic.toml" = ''
 "examples/big-bob.toml" = ''
 "examples/call-weights.toml" = ''
+"examples/complex.toml" = ''
 "examples/complib-music.toml" = ''
 "examples/custom-course-heads.toml" = ''
 "examples/custom-length.toml" = ''

@@ -1,11 +1,8 @@
-length = { min = 1250, max = 1299 }
-base_calls = "far"
-music_file = "music-8.toml"
+length = "QP"
+method = "Bristol Surprise Major"
 
+# Punish calls more than usual.  This will prevent Monument from jamming consecutive calls together
+# (e.g. HHsHHH) because the score added by the music will not outweigh the score lost from the
+# calls
 bob_weight = -5
 single_weight = -7
-
-[method]
-place_notation = "-34-14-56-1238-12-58-16-78,18"
-name = "Ivy Was The Best Sheep"
-stage = 8

@@ -1,7 +1,3 @@
 length = "peal"
 method = "Bristol Surprise Royal"
-music_file = "music-10.toml"
-part_head = "165432"
-
-bob_weight = -3
-single_weight = -5
+part_head = "165432" # Require a 2-part peal with a part head of 165432(7890)
