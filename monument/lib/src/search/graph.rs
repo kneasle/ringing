@@ -9,6 +9,7 @@ use crate::{
         lengths::{PerPartLength, TotalLength},
     },
 };
+
 use bit_vec::BitVec;
 
 use super::atw::{AtwBitmap, AtwTable};

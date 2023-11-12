@@ -246,13 +246,14 @@ fn count_scores(
 
     for part_head in params.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
+        let start_row = &lead_head_in_part * double_plain_course.get_row(id.sub_lead_idx).unwrap();
         // Determine the rows that this chunk contains
         let mut rows = Block::empty(params.stage);
         rows.extend_range(
             double_plain_course,
             id.sub_lead_idx..(id.sub_lead_idx + chunk.per_part_length.as_usize()),
         );
-        rows.pre_multiply(&lead_head_in_part);
+        rows.pre_multiply(&start_row);
         // Count weight from music
         for (count_so_far, music_type) in chunk.music_counts.iter_mut().zip_eq(&params.music_types)
         {
