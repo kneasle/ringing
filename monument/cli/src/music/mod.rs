@@ -391,7 +391,7 @@ fn music_type_patterns(
             id_gen.next(),
             String::new(),
             bellframe::MusicType::new(patterns),
-            &common,
+            common,
             false,
         );
         if !music_types.is_empty() {

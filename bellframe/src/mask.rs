@@ -138,7 +138,7 @@ impl Mask {
     /// Directly create a [`Mask`] from a [`Vec`] of ([`Option`]al) [`Bell`]s.
     pub fn from_vec(bells: Vec<Option<Bell>>) -> Result<Self, ParseError> {
         // Check for duplicate bells
-        let mut just_bells = bells.iter().copied().filter_map(|x| x).collect_vec();
+        let mut just_bells = bells.iter().copied().flatten().collect_vec();
         just_bells.sort();
         for (b1, b2) in just_bells.iter().tuple_windows() {
             if b1 == b2 {

@@ -525,9 +525,9 @@ fn create_links(
             // Add mapping from `(lead_head_mask_from, dist_from_lead_head)` to `link_lookup`
             link_lookup_for_method
                 .entry(lead_head_mask_from)
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .entry(dist_from_lead_head)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(LinkLookupEntry {
                     call,
                     lead_head_transposition: lead_head_transposition.clone(),

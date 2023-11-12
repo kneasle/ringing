@@ -1,6 +1,5 @@
 //! Idiomatic Rust representations of commonly used primitives for Change Ringing compositions.
 
-#![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
 mod bell;

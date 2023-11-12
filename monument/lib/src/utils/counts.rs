@@ -28,31 +28,6 @@ impl Counts {
         self.0.len()
     }
 
-    /// Returns the underlying count of slices
-    pub fn as_slice(&self) -> &[usize] {
-        &self.0
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<usize> {
-        self.0.iter()
-    }
-
-    pub fn saturating_sub(&self, other: &Self) -> Self {
-        Self(
-            self.0
-                .iter()
-                .zip_eq(&other.0)
-                .map(|(a, b)| a.saturating_sub(*b))
-                .collect_vec(),
-        )
-    }
-
-    pub fn saturating_sub_assign(&mut self, other: &Self) {
-        for (v, dec) in self.0.iter_mut().zip_eq(other.0.iter()) {
-            *v -= *dec;
-        }
-    }
-
     /// Determine the feasibility of getting every count within `target_range`, whilst distributing
     /// at most `max_count_left` counts.  This is used for pruning on method splices.
     pub(crate) fn is_feasible(

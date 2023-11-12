@@ -243,7 +243,7 @@ impl MusicType {
 
         let mut counts = AtRowPositions::ZERO;
         for pattern in &self.patterns {
-            counts = counts + pattern.count(self.strokes, rows, stroke_of_first_row);
+            counts += pattern.count(self.strokes, rows, stroke_of_first_row);
         }
         counts
     }
@@ -301,7 +301,7 @@ impl Pattern {
             .map(|b| b.unwrap())
             .collect_vec();
         let needle_bytes: &[u8] = bytemuck::cast_slice(&bells);
-        let haystack_bytes: &[u8] = bytemuck::cast_slice(&rows.bells);
+        let haystack_bytes: &[u8] = bytemuck::cast_slice(rows.bells);
 
         // Use the fast string searches to find all instances of the long sub-region
         let mut counts = AtRowPositions::ZERO;
