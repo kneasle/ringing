@@ -707,14 +707,28 @@ pub struct MusicType {
     pub id: MusicTypeId,
 
     pub inner: bellframe::MusicType,
-    pub weights: AtRowPositions<f32>,
+    pub optional_weights: AtRowPositions<Option<f32>>,
     pub count_range: OptionalRangeInclusive,
     // TODO: Count ranges for front/internal/back/wrap
 }
 
 impl MusicType {
     pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
-        (counts.map(|x| x as f32) * self.weights).total()
+        (counts.map(|x| x as f32) * self.weights()).total()
+    }
+
+    /// Return the total counts, only from [`RowPosition`]s for which `Self::optional_weights` are
+    /// not [`None`].
+    pub fn masked_total(&self, counts: AtRowPositions<usize>) -> usize {
+        counts.masked(!self.mask(), 0).total()
+    }
+
+    pub fn weights(&self) -> AtRowPositions<f32> {
+        self.optional_weights.map(|v| v.unwrap_or(0.0))
+    }
+
+    pub fn mask(&self) -> AtRowPositions<bool> {
+        self.optional_weights.map(|v| v.is_some())
     }
 }
 

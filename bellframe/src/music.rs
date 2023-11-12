@@ -410,26 +410,11 @@ pub struct AtRowPositions<T> {
 }
 
 impl AtRowPositions<()> {
-    pub const ZERO: AtRowPositions<usize> = AtRowPositions {
-        front: 0,
-        internal: 0,
-        back: 0,
-        wrap: 0,
-    };
+    pub const ZERO: AtRowPositions<usize> = AtRowPositions::splat(0);
+    pub const ZERO_F32: AtRowPositions<f32> = AtRowPositions::splat(0.0);
 
-    pub const ZERO_F32: AtRowPositions<f32> = AtRowPositions {
-        front: 0.0,
-        internal: 0.0,
-        back: 0.0,
-        wrap: 0.0,
-    };
-
-    pub const FALSE: AtRowPositions<bool> = AtRowPositions {
-        front: false,
-        internal: false,
-        back: false,
-        wrap: false,
-    };
+    /* Masks */
+    pub const FALSE: AtRowPositions<bool> = AtRowPositions::splat(false);
 
     pub const FRONT: AtRowPositions<bool> = AtRowPositions {
         front: true,
@@ -454,6 +439,18 @@ impl AtRowPositions<()> {
 }
 
 impl<T> AtRowPositions<T> {
+    pub const fn splat(value: T) -> Self
+    where
+        T: Copy,
+    {
+        Self {
+            front: value,
+            internal: value,
+            back: value,
+            wrap: value,
+        }
+    }
+
     pub fn get(&self, position: RowPosition) -> &T {
         match position {
             RowPosition::Front => &self.front,

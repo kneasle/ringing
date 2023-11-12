@@ -395,7 +395,7 @@ fn music_type_patterns(
             false,
         );
         if !music_types.is_empty() {
-            music_type.weights = AtRowPositions::ZERO_F32;
+            music_type.optional_weights = AtRowPositions::splat(None);
             music_display = None;
         }
         music_types.push((music_type, music_display));
@@ -478,12 +478,12 @@ fn new_music_type(
     common: &MusicCommon,
     show_total: bool,
 ) -> (MusicType, Option<MusicDisplay>) {
-    let weights = AtRowPositions::<Option<f32>>::from(common.specified_weight);
+    let optional_weights = AtRowPositions::<Option<f32>>::from(common.specified_weight);
     // Create music types, etc.
     let music_type = MusicType {
         id,
         inner: music_type.at_stroke(common.strokes.into()),
-        weights: weights.map(|x| x.unwrap_or(0.0)),
+        optional_weights,
         count_range: common.count_range.into(),
     };
     let music_display = common.should_show().then(|| MusicDisplay {
@@ -493,7 +493,7 @@ fn new_music_type(
             None => default_name.to_owned(),
         },
         show_total,
-        show: weights.map(|x| x.is_some()),
+        show: optional_weights.map(|x| x.is_some()),
     });
     (music_type, music_display)
 }

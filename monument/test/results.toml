@@ -2944,12 +2944,12 @@ len |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8
 len |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs    6578s     5678s     8765s  | avg score | calling
 '''
 "test/cases/no-87s-at-back.toml" = '''
-len |  music     *87 | avg score | calling
+len |  music     87s | avg score | calling
 ----|----------------|-----------|-----------
  48 |    0.00 :    0 | -0.112500 | WMH
 112 |    0.00 :    0 |  0.000000 | 
 ----|----------------|-----------|-----------
-len |  music     *87 | avg score | calling
+len |  music     87s | avg score | calling
 '''
 "test/cases/no-calls.toml" = '''
 len    C   Y  |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs    6578s     5678s     8765s  | avg score | calling

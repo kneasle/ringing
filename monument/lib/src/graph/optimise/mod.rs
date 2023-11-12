@@ -335,7 +335,7 @@ mod passes {
             remove_links_between_false_chunks(),
             remove_chunks_with_long_method_counts(),
             remove_links_with_long_method_counts(),
-            // TODO: Remove chunks which contribute too much music (useful for 87s)
+            remove_chunks_which_exceed_music_limits(),
         ]
         .into_iter()
         .map(Mutex::new)
@@ -376,6 +376,26 @@ mod passes {
                         true
                     }
                 })
+            },
+        ))
+    }
+
+    fn remove_chunks_which_exceed_music_limits() -> Pass {
+        Pass::Single(Box::new(
+            |graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges| {
+                graph.chunks.retain(|_id, chunk| {
+                    // Determine whether this chunk's music counts exceed the limit specified in
+                    // the parameters
+                    for (idx, music_type) in params.music_types.iter().enumerate() {
+                        if let Some(limit) = music_type.count_range.max {
+                            let counts = chunk.music_counts.as_slice()[idx];
+                            if music_type.masked_total(counts) > limit {
+                                return false; // Chunk contributes too much of this music
+                            }
+                        }
+                    }
+                    true
+                });
             },
         ))
     }
