@@ -45,12 +45,12 @@ Note: For course mask 1234567890ET, adding extra masks for other parts:
   1T234567890E (in part 1T234567890E for all methods)
  len    S   M    P    Z    A   D  |      PH      |  music         4-bell runs          lb5s      56s   65s    TEs | avg score | calling
 ----------------------------------|--------------|----------------------------------------------------------------|-----------|-----------
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1053.00 :   295 (  99f  196b)     16f   44b     6     0      0 |  0.209928 | #SPAZMDDMZAP
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1314.00 :   393 ( 131f  262b)     26f   56b     6     0      0 |  0.261962 | #SAMPZAZPMDD
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1316.00 :   389 ( 132f  257b)     26f   56b     5     0      0 |  0.262360 | #SDDMPZAZPMA
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1375.00 :   397 ( 155f  242b)     32f   58b     4     0      0 |  0.274123 | #SMDDMZAPZPA
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1385.00 :   397 ( 155f  242b)     32f   58b     7     0      0 |  0.276116 | #SAPZPAZMDDM
-5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 2781.00 :   848 ( 373f  475b)     76f  100b     9     0      0 |  0.554426 | #SDPMAZZAMPD
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1053.00 :   295 (  99f  196b)     16f   44b    6      0      0 |  0.209928 | #SPAZMDDMZAP
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1314.00 :   393 ( 131f  262b)     26f   56b    6      0      0 |  0.261962 | #SAMPZAZPMDD
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1316.00 :   389 ( 132f  257b)     26f   56b    5      0      0 |  0.262360 | #SDDMPZAZPMA
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1375.00 :   397 ( 155f  242b)     32f   58b    4      0      0 |  0.274123 | #SMDDMZAPZPA
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 1385.00 :   397 ( 155f  242b)     32f   58b    7      0      0 |  0.276116 | #SAPZPAZMDDM
+5016 : 176 880 1056 1056 1056 792 | 167890ET2345 | 2781.00 :   848 ( 373f  475b)     76f  100b    9      0      0 |  0.554426 | #SDPMAZZAMPD
 ----------------------------------|--------------|----------------------------------------------------------------|-----------|-----------
  len    S   M    P    Z    A   D  |      PH      |  music         4-bell runs          lb5s      56s   65s    TEs | avg score | calling
 '''
@@ -276,162 +276,162 @@ Note: For course mask 1xxx7856, adding extra masks for other parts:
 "test/cases/atw/don't-require-atw.toml" = '''
 len    P  S | atw |  music      4-bell runs   56s   65s | avg score | calling
 ------------|-----|-------------------------------------|-----------|-----------
-120 : 60 60 | 84% |    6.10 :   3 ( 1f  2b)     8     3 | -0.064167 | S[sT]S[sW]P[sF]PPP[sF]P[sH]S[sT]SS
-120 : 60 60 | 92% |    6.80 :   4 ( 1f  3b)     9     4 | -0.020000 | S[sT]S[sW]P[sF]PPPP[sB]SSS
-120 : 60 60 | 68% |    7.50 :   4 ( 2f  2b)     5     1 | -0.090833 | S[sT]S[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]P[sF]P
-120 : 60 60 | 60% |    7.60 :   4 ( 2f  2b)     3     0 | -0.090000 | S[sT]P[sB]P[sT]P[sB]PS[sB]S[sF]S[sB]S[sF]P
-120 : 60 60 | 92% |    7.60 :   4 ( 2f  2b)     3     0 | -0.013333 | S[sT]SSSS[sB]PPPP[sF]P[sH]
-120 : 60 60 | 92% |    7.90 :   4 ( 1f  3b)     7     3 | -0.010833 | SS[sB]PPPP[sF]P[sH]S[sT]SS
-120 : 60 60 | 92% |    7.90 :   4 ( 1f  3b)     7     3 | -0.010833 | SS[sB]S[sF]P[sH]PPPP[sT]SS
-120 : 60 60 | 92% |    8.00 :   4 ( 1f  3b)     5     0 | -0.010000 | S[sT]PPPP[sW]P[sF]S[sB]SSS
-120 : 60 60 | atw |    8.60 :   5 ( 1f  4b)     8     4 |  0.033333 | SS[sB]PPPPP[sB]SSS
-120 : 60 60 | 52% |    8.80 :   4 ( 2f  2b)     9     0 | -0.080000 | S[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]P[sF]P
-120 : 60 60 | 64% |    9.50 :   5 ( 3f  2b)     5     1 | -0.074167 | S[sT]S[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]P[sF]P
-120 : 60 60 | 68% |    9.80 :   5 ( 3f  2b)     9     0 | -0.071667 | S[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]P[sF]P
-120 : 60 60 | 92% |    9.80 :   3 ( 2f  1b)     4     0 |  0.005000 | S[sT]P[sB]PPPP[sF]SSSS[sH]
-120 : 60 60 | atw |    9.80 :   5 ( 1f  4b)     4     0 |  0.043333 | S[sT]PPPPP[sF]SSSS
-120 : 60 60 | 64% |   10.10 :   6 ( 3f  3b)     8     1 | -0.069167 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]SP[sH]
-120 : 60 60 | 64% |   10.20 :   6 ( 3f  3b)     6     0 | -0.068333 | SP[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
-120 : 60 60 | 76% |   10.20 :   6 ( 3f  3b)     6     0 | -0.068333 | S[sT]SP[sF]P[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
-120 : 60 60 | 64% |   10.40 :   6 ( 3f  3b)     7     0 | -0.066667 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]PS[sF]P[sH]
-120 : 60 60 | 64% |   10.40 :   6 ( 3f  3b)     7     0 | -0.066667 | S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]SP[sH]
-120 : 60 60 | 68% |   10.60 :   7 ( 3f  4b)     3     0 | -0.065000 | S[sT]P[sB]P[sT]P[sB]SP[sB]S[sF]S[sB]S[sF]P
-120 : 60 60 | 64% |   10.60 :   4 ( 2f  2b)     3     0 | -0.065000 | S[sT]P[sB]P[sT]S[sW]PS[sW]P[sF]S[sB]S[sF]P
-120 : 60 60 | 64% |   10.60 :   4 ( 2f  2b)     3     0 | -0.065000 | S[sT]P[sB]P[sT]S[sW]SP[sW]P[sF]S[sB]S[sF]P
-120 : 60 60 | 84% |   10.60 :   4 ( 2f  2b)     3     0 | -0.026667 | S[sT]SSS[sT]S[sW]P[sF]PPP[sF]P[sH]
-120 : 60 60 | atw |   10.60 :   7 ( 2f  5b)     8     4 |  0.050000 | SSS[sF]PPPPP[sT]SS
-120 : 60 60 | 60% |   11.40 :   6 ( 3f  3b)    12     0 | -0.058333 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]SP[sH]
-120 : 60 60 | 64% |   12.10 :   7 ( 4f  3b)     8     1 | -0.052500 | SP[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
-120 : 60 60 | 68% |   12.10 :   5 ( 3f  2b)     8     1 | -0.052500 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]PS[sH]
-120 : 60 60 | 68% |   12.20 :   5 ( 3f  2b)     6     0 | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 64% |   12.20 :   5 ( 3f  2b)     6     0 | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
-120 : 60 60 | 76% |   12.20 :   7 ( 4f  3b)     6     0 | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 68% |   12.20 :   5 ( 3f  2b)     6     0 | -0.051667 | S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]PS[sH]
-120 : 60 60 | 64% |   12.20 :   5 ( 3f  2b)     6     0 | -0.051667 | S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
-120 : 60 60 | 68% |   12.40 :   5 ( 3f  2b)     7     0 | -0.050000 | S[sT]PS[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)     7     0 | -0.050000 | S[sT]PS[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
-120 : 60 60 | 76% |   12.40 :   5 ( 3f  2b)     7     0 | -0.050000 | S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]PS[sH]
-120 : 60 60 | 60% |   12.40 :   5 ( 3f  2b)     7     0 | -0.050000 | S[sT]SP[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)     7     0 | -0.050000 | S[sT]SP[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
-120 : 60 60 | 60% |   12.40 :   5 ( 3f  2b)     7     0 | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 68% |   12.40 :   5 ( 3f  2b)     7     0 | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
-120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)     7     0 | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 68% |   12.40 :   7 ( 4f  3b)    12     0 | -0.050000 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]SP[sH]
-120 : 60 60 | 60% |   12.80 :   5 ( 3f  2b)     9     0 | -0.046667 | S[sT]PS[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
-120 : 60 60 | 52% |   12.80 :   5 ( 3f  2b)     9     0 | -0.046667 | S[sT]SP[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
-120 : 60 60 | 68% |   12.80 :   7 ( 4f  3b)     9     0 | -0.046667 | S[sT]SP[sF]P[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
-120 : 60 60 | 76% |   12.80 :   7 ( 3f  4b)     4     0 | -0.046667 | S[sT]S[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]P[sF]P
-120 : 60 60 | 52% |   12.80 :   5 ( 3f  2b)     9     0 | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 60% |   12.80 :   5 ( 3f  2b)     9     0 | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
-120 : 60 60 | 68% |   12.80 :   7 ( 4f  3b)     9     0 | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 60% |   12.80 :   7 ( 3f  4b)     9     0 | -0.046667 | S[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]P[sF]P
-120 : 60 60 | 92% |   12.80 :   5 ( 2f  3b)     4     0 |  0.030000 | SSSS[sW]PPPP[sH]P[sW]S[sH]
+120 : 60 60 | 84% |    6.10 :   3 ( 1f  2b)    8     3  | -0.064167 | S[sT]S[sW]P[sF]PPP[sF]P[sH]S[sT]SS
+120 : 60 60 | 92% |    6.80 :   4 ( 1f  3b)    9     4  | -0.020000 | S[sT]S[sW]P[sF]PPPP[sB]SSS
+120 : 60 60 | 68% |    7.50 :   4 ( 2f  2b)    5     1  | -0.090833 | S[sT]S[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]P[sF]P
+120 : 60 60 | 60% |    7.60 :   4 ( 2f  2b)    3     0  | -0.090000 | S[sT]P[sB]P[sT]P[sB]PS[sB]S[sF]S[sB]S[sF]P
+120 : 60 60 | 92% |    7.60 :   4 ( 2f  2b)    3     0  | -0.013333 | S[sT]SSSS[sB]PPPP[sF]P[sH]
+120 : 60 60 | 92% |    7.90 :   4 ( 1f  3b)    7     3  | -0.010833 | SS[sB]PPPP[sF]P[sH]S[sT]SS
+120 : 60 60 | 92% |    7.90 :   4 ( 1f  3b)    7     3  | -0.010833 | SS[sB]S[sF]P[sH]PPPP[sT]SS
+120 : 60 60 | 92% |    8.00 :   4 ( 1f  3b)    5     0  | -0.010000 | S[sT]PPPP[sW]P[sF]S[sB]SSS
+120 : 60 60 | atw |    8.60 :   5 ( 1f  4b)    8     4  |  0.033333 | SS[sB]PPPPP[sB]SSS
+120 : 60 60 | 52% |    8.80 :   4 ( 2f  2b)    9     0  | -0.080000 | S[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]P[sF]P
+120 : 60 60 | 64% |    9.50 :   5 ( 3f  2b)    5     1  | -0.074167 | S[sT]S[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]P[sF]P
+120 : 60 60 | 68% |    9.80 :   5 ( 3f  2b)    9     0  | -0.071667 | S[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]P[sF]P
+120 : 60 60 | 92% |    9.80 :   3 ( 2f  1b)    4     0  |  0.005000 | S[sT]P[sB]PPPP[sF]SSSS[sH]
+120 : 60 60 | atw |    9.80 :   5 ( 1f  4b)    4     0  |  0.043333 | S[sT]PPPPP[sF]SSSS
+120 : 60 60 | 64% |   10.10 :   6 ( 3f  3b)    8     1  | -0.069167 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 64% |   10.20 :   6 ( 3f  3b)    6     0  | -0.068333 | SP[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 76% |   10.20 :   6 ( 3f  3b)    6     0  | -0.068333 | S[sT]SP[sF]P[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   10.40 :   6 ( 3f  3b)    7     0  | -0.066667 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   10.40 :   6 ( 3f  3b)    7     0  | -0.066667 | S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 68% |   10.60 :   7 ( 3f  4b)    3     0  | -0.065000 | S[sT]P[sB]P[sT]P[sB]SP[sB]S[sF]S[sB]S[sF]P
+120 : 60 60 | 64% |   10.60 :   4 ( 2f  2b)    3     0  | -0.065000 | S[sT]P[sB]P[sT]S[sW]PS[sW]P[sF]S[sB]S[sF]P
+120 : 60 60 | 64% |   10.60 :   4 ( 2f  2b)    3     0  | -0.065000 | S[sT]P[sB]P[sT]S[sW]SP[sW]P[sF]S[sB]S[sF]P
+120 : 60 60 | 84% |   10.60 :   4 ( 2f  2b)    3     0  | -0.026667 | S[sT]SSS[sT]S[sW]P[sF]PPP[sF]P[sH]
+120 : 60 60 | atw |   10.60 :   7 ( 2f  5b)    8     4  |  0.050000 | SSS[sF]PPPPP[sT]SS
+120 : 60 60 | 60% |   11.40 :   6 ( 3f  3b)   12     0  | -0.058333 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 64% |   12.10 :   7 ( 4f  3b)    8     1  | -0.052500 | SP[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 68% |   12.10 :   5 ( 3f  2b)    8     1  | -0.052500 | S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | 68% |   12.20 :   5 ( 3f  2b)    6     0  | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 64% |   12.20 :   5 ( 3f  2b)    6     0  | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 76% |   12.20 :   7 ( 4f  3b)    6     0  | -0.051667 | S[sT]P[sB]PS[sB]S[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 68% |   12.20 :   5 ( 3f  2b)    6     0  | -0.051667 | S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 64% |   12.20 :   5 ( 3f  2b)    6     0  | -0.051667 | S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 68% |   12.40 :   5 ( 3f  2b)    7     0  | -0.050000 | S[sT]PS[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)    7     0  | -0.050000 | S[sT]PS[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   12.40 :   5 ( 3f  2b)    7     0  | -0.050000 | S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 60% |   12.40 :   5 ( 3f  2b)    7     0  | -0.050000 | S[sT]SP[sF]P[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)    7     0  | -0.050000 | S[sT]SP[sF]P[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   12.40 :   5 ( 3f  2b)    7     0  | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 68% |   12.40 :   5 ( 3f  2b)    7     0  | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 64% |   12.40 :   7 ( 4f  3b)    7     0  | -0.050000 | S[sT]S[sW]PS[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 68% |   12.40 :   7 ( 4f  3b)   12     0  | -0.050000 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]SP[sH]
+120 : 60 60 | 60% |   12.80 :   5 ( 3f  2b)    9     0  | -0.046667 | S[sT]PS[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   12.80 :   5 ( 3f  2b)    9     0  | -0.046667 | S[sT]SP[sF]P[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 68% |   12.80 :   7 ( 4f  3b)    9     0  | -0.046667 | S[sT]SP[sF]P[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   12.80 :   7 ( 3f  4b)    4     0  | -0.046667 | S[sT]S[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]P[sF]P
+120 : 60 60 | 52% |   12.80 :   5 ( 3f  2b)    9     0  | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 60% |   12.80 :   5 ( 3f  2b)    9     0  | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 68% |   12.80 :   7 ( 4f  3b)    9     0  | -0.046667 | S[sT]S[sW]SP[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 60% |   12.80 :   7 ( 3f  4b)    9     0  | -0.046667 | S[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]P[sF]P
+120 : 60 60 | 92% |   12.80 :   5 ( 2f  3b)    4     0  |  0.030000 | SSSS[sW]PPPP[sH]P[sW]S[sH]
 ------------|-----|-------------------------------------|-----------|-----------
 len    P  S | atw |  music      4-bell runs   56s   65s | avg score | calling
 ------------|-----|-------------------------------------|-----------|-----------
-120 : 60 60 | 84% |   13.10 :   8 ( 4f  4b)     8     5 | -0.005833 | PP[sF]P[sH]S[sT]SSS[sT]S[sW]P[sF]P
-120 : 60 60 | 64% |   13.20 :   6 ( 3f  3b)     6     0 | -0.043333 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]SP[sH]
-120 : 60 60 | 52% |   13.40 :   5 ( 3f  2b)    12     0 | -0.041667 | SP[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
-120 : 60 60 | 52% |   13.40 :   5 ( 3f  2b)    12     0 | -0.041667 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]PS[sH]
-120 : 60 60 | 64% |   13.80 :   7 ( 3f  4b)     4     0 | -0.038333 | S[sT]P[sB]S[sF]S[sB]PS[sB]P[sT]P[sB]S[sF]P
-120 : 60 60 | 92% |   14.00 :   6 ( 2f  4b)     5     0 |  0.040000 | SSSS[sW]S[sH]P[sW]PPPP[sH]
-120 : 60 60 | 84% |   14.10 :   9 ( 5f  4b)     8     5 |  0.002500 | P[sW]P[sF]S[sB]SSS[sH]S[sT]P[sB]PP
-120 : 60 60 | 84% |   14.10 :   4 ( 1f  3b)     8     3 |  0.002500 | SS[sB]S[sF]P[sH]PPP[sB]P[sT]S[sW]S
-120 : 60 60 | 64% |   14.20 :   7 ( 3f  4b)     6     0 | -0.035000 | PS[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
-120 : 60 60 | 68% |   14.40 :   8 ( 5f  3b)    12     0 | -0.033333 | SP[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
-120 : 60 60 | 60% |   14.40 :   8 ( 5f  3b)    12     0 | -0.033333 | SP[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
-120 : 60 60 | 60% |   14.40 :   6 ( 4f  2b)    12     0 | -0.033333 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]PS[sH]
-120 : 60 60 | 84% |   14.60 :   7 ( 3f  4b)     3     0 |  0.006667 | P[sW]PPP[sT]P[sB]S[sF]SSS[sW]S[sH]
-120 : 60 60 | 68% |   15.10 :   5 ( 3f  2b)     8     1 | -0.027500 | SP[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)     6     0 | -0.026667 | SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
-120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)     6     0 | -0.026667 | S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
-120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)     6     0 | -0.026667 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]PS[sH]
-120 : 60 60 | 68% |   15.20 :   5 ( 3f  2b)     6     0 | -0.026667 | S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
-120 : 60 60 | 92% |   15.30 :  10 ( 5f  5b)     9     5 |  0.050833 | PP[sF]P[sH]S[sT]SSSS[sB]PP
-120 : 60 60 | 92% |   15.40 :   8 ( 4f  4b)     7     4 |  0.051667 | PPP[sB]SSSS[sT]S[sW]P[sF]P
-120 : 60 60 | atw |   15.60 :   7 ( 2f  5b)     8     0 |  0.091667 | SSSSS[sH]PPPPP[sH]
-120 : 60 60 | atw |   15.80 :   5 ( 1f  4b)     4     0 |  0.093333 | SSSS[sW]PPPPP[sW]S
-120 : 60 60 | 84% |   16.00 :   6 ( 3f  3b)     5     0 |  0.018333 | S[sT]P[sB]PPP[sW]P[sF]S[sB]SSS[sH]
-120 : 60 60 | 68% |   16.10 :   8 ( 4f  4b)     8     1 | -0.019167 | PS[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
-120 : 60 60 | 68% |   16.20 :   6 ( 4f  2b)     6     0 | -0.018333 | SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]
-120 : 60 60 | 92% |   16.30 :  11 ( 5f  6b)     9     5 |  0.059167 | PP[sF]SSSS[sH]S[sT]P[sB]PP
-120 : 60 60 | 84% |   16.60 :   8 ( 4f  4b)     3     0 |  0.023333 | PPP[sB]P[sT]S[sW]SSS[sB]S[sF]P[sH]
-120 : 60 60 | 92% |   16.60 :   8 ( 4f  4b)     3     0 |  0.061667 | PPP[sB]P[sT]S[sW]SSSS[sF]P
-120 : 60 60 | 60% |   16.80 :   6 ( 3f  3b)     9     0 | -0.013333 | P[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]S[sT]S[sW]S
-120 : 60 60 | 68% |   16.80 :   6 ( 3f  3b)     9     0 | -0.013333 | P[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]S[sT]S[sW]S
-120 : 60 60 | 92% |   16.80 :   7 ( 2f  5b)     9     4 |  0.063333 | SSS[sF]PPPP[sB]P[sT]S[sW]S
-120 : 60 60 | 68% |   17.20 :   7 ( 3f  4b)     6     0 | -0.010000 | P[sW]PS[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
-120 : 60 60 | 60% |   17.40 :   6 ( 3f  3b)    12     0 | -0.008333 | PS[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   17.40 :   7 ( 4f  3b)     7     0 | -0.008333 | PS[sH]P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   17.50 :   5 ( 2f  3b)     5     1 | -0.007500 | P[sW]P[sF]S[sB]S[sF]PS[sT]P[sB]P[sT]S[sW]S
-120 : 60 60 | 64% |   17.60 :   5 ( 2f  3b)     3     0 | -0.006667 | P[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]S
-120 : 60 60 | 64% |   17.60 :   5 ( 2f  3b)     3     0 | -0.006667 | P[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]S
-120 : 60 60 | 60% |   17.60 :   5 ( 2f  3b)     3     0 | -0.006667 | P[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]S
-120 : 60 60 | 92% |   17.60 :   7 ( 3f  4b)     3     0 |  0.070000 | P[sW]PPPP[sH]SSSS[sW]S[sH]
-120 : 60 60 | atw |   17.60 :  10 ( 5f  5b)     8     4 |  0.108333 | PPP[sB]SSSSS[sB]PP
-120 : 60 60 | 84% |   18.00 :   7 ( 2f  5b)     5     0 |  0.035000 | SSS[sF]S[sB]P[sT]PPP[sH]P[sW]S[sH]
-120 : 60 60 | 64% |   18.20 :   5 ( 3f  2b)     6     0 | -0.001667 | S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]P[sW]S[sH]
-120 : 60 60 | 76% |   18.40 :  10 ( 4f  6b)     7     0 | -0.000000 | PS[sH]S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]
-120 : 60 60 | 60% |   18.40 :   9 ( 5f  4b)    12     0 | -0.000000 | PS[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
-120 : 60 60 | 52% |   18.40 :   9 ( 5f  4b)    12     0 | -0.000000 | PS[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
-120 : 60 60 | 60% |   18.40 :   7 ( 5f  2b)    12     0 | -0.000000 | SP[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
-120 : 60 60 | 76% |   18.40 :   5 ( 3f  2b)     7     0 | -0.000000 | SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]
-120 : 60 60 | 64% |   18.40 :  10 ( 5f  5b)     7     0 |  0.000000 | SP[sH]S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]
-120 : 60 60 | 92% |   18.40 :  11 ( 6f  5b)     7     4 |  0.076667 | P[sW]P[sF]S[sB]SSSS[sT]PPP
-120 : 60 60 | 84% |   18.60 :   8 ( 3f  5b)     3     0 |  0.040000 | P[sW]S[sH]SSS[sF]S[sB]P[sT]PPP[sH]
+120 : 60 60 | 84% |   13.10 :   8 ( 4f  4b)    8     5  | -0.005833 | PP[sF]P[sH]S[sT]SSS[sT]S[sW]P[sF]P
+120 : 60 60 | 64% |   13.20 :   6 ( 3f  3b)    6     0  | -0.043333 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]SP[sH]
+120 : 60 60 | 52% |   13.40 :   5 ( 3f  2b)   12     0  | -0.041667 | SP[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   13.40 :   5 ( 3f  2b)   12     0  | -0.041667 | S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | 64% |   13.80 :   7 ( 3f  4b)    4     0  | -0.038333 | S[sT]P[sB]S[sF]S[sB]PS[sB]P[sT]P[sB]S[sF]P
+120 : 60 60 | 92% |   14.00 :   6 ( 2f  4b)    5     0  |  0.040000 | SSSS[sW]S[sH]P[sW]PPPP[sH]
+120 : 60 60 | 84% |   14.10 :   9 ( 5f  4b)    8     5  |  0.002500 | P[sW]P[sF]S[sB]SSS[sH]S[sT]P[sB]PP
+120 : 60 60 | 84% |   14.10 :   4 ( 1f  3b)    8     3  |  0.002500 | SS[sB]S[sF]P[sH]PPP[sB]P[sT]S[sW]S
+120 : 60 60 | 64% |   14.20 :   7 ( 3f  4b)    6     0  | -0.035000 | PS[sH]S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 68% |   14.40 :   8 ( 5f  3b)   12     0  | -0.033333 | SP[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   14.40 :   8 ( 5f  3b)   12     0  | -0.033333 | SP[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   14.40 :   6 ( 4f  2b)   12     0  | -0.033333 | S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]PS[sH]
+120 : 60 60 | 84% |   14.60 :   7 ( 3f  4b)    3     0  |  0.006667 | P[sW]PPP[sT]P[sB]S[sF]SSS[sW]S[sH]
+120 : 60 60 | 68% |   15.10 :   5 ( 3f  2b)    8     1  | -0.027500 | SP[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)    6     0  | -0.026667 | SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)    6     0  | -0.026667 | S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   15.20 :   5 ( 3f  2b)    6     0  | -0.026667 | S[sT]P[sB]P[sT]SP[sF]S[sB]S[sF]P[sH]PS[sH]
+120 : 60 60 | 68% |   15.20 :   5 ( 3f  2b)    6     0  | -0.026667 | S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 92% |   15.30 :  10 ( 5f  5b)    9     5  |  0.050833 | PP[sF]P[sH]S[sT]SSSS[sB]PP
+120 : 60 60 | 92% |   15.40 :   8 ( 4f  4b)    7     4  |  0.051667 | PPP[sB]SSSS[sT]S[sW]P[sF]P
+120 : 60 60 | atw |   15.60 :   7 ( 2f  5b)    8     0  |  0.091667 | SSSSS[sH]PPPPP[sH]
+120 : 60 60 | atw |   15.80 :   5 ( 1f  4b)    4     0  |  0.093333 | SSSS[sW]PPPPP[sW]S
+120 : 60 60 | 84% |   16.00 :   6 ( 3f  3b)    5     0  |  0.018333 | S[sT]P[sB]PPP[sW]P[sF]S[sB]SSS[sH]
+120 : 60 60 | 68% |   16.10 :   8 ( 4f  4b)    8     1  | -0.019167 | PS[sH]S[sT]S[sW]P[sF]PS[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 68% |   16.20 :   6 ( 4f  2b)    6     0  | -0.018333 | SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 92% |   16.30 :  11 ( 5f  6b)    9     5  |  0.059167 | PP[sF]SSSS[sH]S[sT]P[sB]PP
+120 : 60 60 | 84% |   16.60 :   8 ( 4f  4b)    3     0  |  0.023333 | PPP[sB]P[sT]S[sW]SSS[sB]S[sF]P[sH]
+120 : 60 60 | 92% |   16.60 :   8 ( 4f  4b)    3     0  |  0.061667 | PPP[sB]P[sT]S[sW]SSSS[sF]P
+120 : 60 60 | 60% |   16.80 :   6 ( 3f  3b)    9     0  | -0.013333 | P[sW]P[sF]P[sH]P[sW]SP[sW]S[sH]S[sT]S[sW]S
+120 : 60 60 | 68% |   16.80 :   6 ( 3f  3b)    9     0  | -0.013333 | P[sW]P[sF]P[sH]S[sT]SP[sF]P[sH]S[sT]S[sW]S
+120 : 60 60 | 92% |   16.80 :   7 ( 2f  5b)    9     4  |  0.063333 | SSS[sF]PPPP[sB]P[sT]S[sW]S
+120 : 60 60 | 68% |   17.20 :   7 ( 3f  4b)    6     0  | -0.010000 | P[sW]PS[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 60% |   17.40 :   6 ( 3f  3b)   12     0  | -0.008333 | PS[sH]P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   17.40 :   7 ( 4f  3b)    7     0  | -0.008333 | PS[sH]P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   17.50 :   5 ( 2f  3b)    5     1  | -0.007500 | P[sW]P[sF]S[sB]S[sF]PS[sT]P[sB]P[sT]S[sW]S
+120 : 60 60 | 64% |   17.60 :   5 ( 2f  3b)    3     0  | -0.006667 | P[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]P[sW]S
+120 : 60 60 | 64% |   17.60 :   5 ( 2f  3b)    3     0  | -0.006667 | P[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]P[sW]S
+120 : 60 60 | 60% |   17.60 :   5 ( 2f  3b)    3     0  | -0.006667 | P[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]P[sW]S
+120 : 60 60 | 92% |   17.60 :   7 ( 3f  4b)    3     0  |  0.070000 | P[sW]PPPP[sH]SSSS[sW]S[sH]
+120 : 60 60 | atw |   17.60 :  10 ( 5f  5b)    8     4  |  0.108333 | PPP[sB]SSSSS[sB]PP
+120 : 60 60 | 84% |   18.00 :   7 ( 2f  5b)    5     0  |  0.035000 | SSS[sF]S[sB]P[sT]PPP[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   18.20 :   5 ( 3f  2b)    6     0  | -0.001667 | S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]P[sW]S[sH]
+120 : 60 60 | 76% |   18.40 :  10 ( 4f  6b)    7     0  | -0.000000 | PS[sH]S[sT]P[sB]S[sF]SP[sT]P[sB]S[sF]P[sH]
+120 : 60 60 | 60% |   18.40 :   9 ( 5f  4b)   12     0  | -0.000000 | PS[sH]S[sT]S[sW]S[sH]PS[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 52% |   18.40 :   9 ( 5f  4b)   12     0  | -0.000000 | PS[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   18.40 :   7 ( 5f  2b)   12     0  | -0.000000 | SP[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 76% |   18.40 :   5 ( 3f  2b)    7     0  | -0.000000 | SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]
+120 : 60 60 | 64% |   18.40 :  10 ( 5f  5b)    7     0  |  0.000000 | SP[sH]S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 92% |   18.40 :  11 ( 6f  5b)    7     4  |  0.076667 | P[sW]P[sF]S[sB]SSSS[sT]PPP
+120 : 60 60 | 84% |   18.60 :   8 ( 3f  5b)    3     0  |  0.040000 | P[sW]S[sH]SSS[sF]S[sB]P[sT]PPP[sH]
 ------------|-----|-------------------------------------|-----------|-----------
 len    P  S | atw |  music      4-bell runs   56s   65s | avg score | calling
 ------------|-----|-------------------------------------|-----------|-----------
-120 : 60 60 | 60% |   18.80 :   8 ( 4f  4b)     9     0 |  0.003333 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
-120 : 60 60 | 52% |   18.80 :   7 ( 4f  3b)     9     0 |  0.003333 | P[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]S[sT]S[sW]S
-120 : 60 60 | 92% |   18.80 :  10 ( 5f  5b)     4     0 |  0.080000 | PPPP[sT]SSSS[sB]S[sF]P[sH]
-120 : 60 60 | 92% |   18.80 :   8 ( 3f  5b)     4     0 |  0.080000 | P[sW]S[sH]SSSS[sW]PPPP[sH]
-120 : 60 60 | atw |   18.80 :  10 ( 5f  5b)     4     0 |  0.118333 | PPPP[sT]SSSSS[sF]P
-120 : 60 60 | 64% |   19.10 :   6 ( 3f  3b)     8     1 |  0.005833 | PS[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   19.20 :   6 ( 3f  3b)     6     0 |  0.006667 | PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
-120 : 60 60 | 68% |   19.20 :  10 ( 4f  6b)     6     0 |  0.006667 | PS[sH]S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]
-120 : 60 60 | 64% |   19.40 :   6 ( 3f  3b)     7     0 |  0.008333 | P[sW]PS[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
-120 : 60 60 | 60% |   19.40 :   8 ( 4f  4b)     7     0 |  0.008333 | P[sW]PS[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
-120 : 60 60 | 52% |   19.40 :   8 ( 4f  4b)    12     0 |  0.008333 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]SP[sH]
-120 : 60 60 | 60% |   19.40 :   8 ( 4f  4b)    12     0 |  0.008333 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]SP[sH]
-120 : 60 60 | 68% |   19.80 :   6 ( 3f  3b)     9     0 |  0.011667 | P[sW]PS[sW]S[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
-120 : 60 60 | 52% |   19.80 :   8 ( 4f  4b)     9     0 |  0.011667 | P[sW]PS[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
-120 : 60 60 | 68% |   20.10 :   7 ( 3f  4b)     8     1 |  0.014167 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]SP[sH]
-120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]SP[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
-120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]SP[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]
-120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]S[sH]PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
-120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
-120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]
-120 : 60 60 | 68% |   20.20 :   7 ( 3f  4b)     6     0 |  0.015000 | P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]
-120 : 60 60 | 68% |   20.40 :   7 ( 3f  4b)     7     0 |  0.016667 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
-120 : 60 60 | 68% |   20.60 :   8 ( 3f  5b)     3     0 |  0.018333 | P[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]S
-120 : 60 60 | atw |   20.60 :  13 ( 6f  7b)     8     4 |  0.133333 | PP[sF]SSSSS[sT]PPP
-120 : 60 60 | 68% |   20.80 :   7 ( 4f  3b)     9     0 |  0.020000 | P[sW]P[sF]PS[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 52% |   20.80 :   9 ( 5f  4b)     9     0 |  0.020000 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 92% |   21.00 :   9 ( 5f  4b)     5     0 |  0.098333 | PPPP[sT]P[sB]S[sF]SSSS[sH]
-120 : 60 60 | 92% |   21.00 :   7 ( 1f  6b)     5     0 |  0.098333 | SSS[sF]S[sB]P[sT]PPPP[sW]S
-120 : 60 60 | 60% |   21.40 :   7 ( 4f  3b)    12     0 |  0.025000 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]PS[sH]
-120 : 60 60 | 68% |   21.40 :   7 ( 4f  3b)    12     0 |  0.025000 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]PS[sH]
-120 : 60 60 | 68% |   21.50 :   8 ( 3f  5b)     5     1 |  0.025833 | P[sW]P[sF]S[sB]S[sF]SP[sT]P[sB]P[sT]S[sW]S
-120 : 60 60 | 92% |   21.60 :  10 ( 5f  5b)     3     0 |  0.103333 | P[sW]SSSS[sF]S[sB]P[sT]PPP
-120 : 60 60 | 64% |   21.80 :   6 ( 3f  3b)     4     0 |  0.028333 | P[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]S
-120 : 60 60 | 64% |   22.10 :   6 ( 3f  3b)     8     1 |  0.030833 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]PS[sH]
-120 : 60 60 | 76% |   22.20 :   6 ( 3f  3b)     6     0 |  0.031667 | P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
-120 : 60 60 | 76% |   22.20 :   6 ( 3f  3b)     6     0 |  0.031667 | P[sW]S[sH]SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 68% |   22.20 :   8 ( 4f  4b)     6     0 |  0.031667 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 64% |   22.20 :   6 ( 3f  3b)     6     0 |  0.031667 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]
-120 : 60 60 | 68% |   22.40 :   8 ( 5f  3b)    12     0 |  0.033333 | PS[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
-120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)     7     0 |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
-120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)     7     0 |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]SP[sW]S[sH]
-120 : 60 60 | 60% |   22.40 :   8 ( 4f  4b)     7     0 |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
-120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)     7     0 |  0.033333 | P[sW]SP[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
-120 : 60 60 | 68% |   22.40 :   8 ( 4f  4b)     7     0 |  0.033333 | P[sW]SP[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
-120 : 60 60 | 60% |   22.80 :   8 ( 4f  4b)     9     0 |  0.036667 | P[sW]SP[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
-120 : 60 60 | 76% |   23.40 :   7 ( 3f  4b)     7     0 |  0.041667 | P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]
-120 : 60 60 | atw |   23.60 :  11 ( 6f  5b)     8     0 |  0.158333 | PPPPP[sH]SSSSS[sH]
-120 : 60 60 | 64% |   24.40 :   8 ( 3f  5b)     7     0 |  0.050000 | P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]PS[sH]
-120 : 60 60 | 76% |   24.80 :  10 ( 3f  7b)     4     0 |  0.053333 | P[sW]P[sF]S[sB]P[sT]PS[sF]S[sB]P[sT]S[sW]S
-120 : 60 60 | atw |   24.80 :  10 ( 5f  5b)     4     0 |  0.168333 | P[sW]SSSSS[sW]PPPP
+120 : 60 60 | 60% |   18.80 :   8 ( 4f  4b)    9     0  |  0.003333 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 52% |   18.80 :   7 ( 4f  3b)    9     0  |  0.003333 | P[sW]P[sF]P[sH]P[sW]PS[sW]S[sH]S[sT]S[sW]S
+120 : 60 60 | 92% |   18.80 :  10 ( 5f  5b)    4     0  |  0.080000 | PPPP[sT]SSSS[sB]S[sF]P[sH]
+120 : 60 60 | 92% |   18.80 :   8 ( 3f  5b)    4     0  |  0.080000 | P[sW]S[sH]SSSS[sW]PPPP[sH]
+120 : 60 60 | atw |   18.80 :  10 ( 5f  5b)    4     0  |  0.118333 | PPPP[sT]SSSSS[sF]P
+120 : 60 60 | 64% |   19.10 :   6 ( 3f  3b)    8     1  |  0.005833 | PS[sH]P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   19.20 :   6 ( 3f  3b)    6     0  |  0.006667 | PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]
+120 : 60 60 | 68% |   19.20 :  10 ( 4f  6b)    6     0  |  0.006667 | PS[sH]S[sT]P[sB]P[sT]PS[sF]S[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   19.40 :   6 ( 3f  3b)    7     0  |  0.008333 | P[sW]PS[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 60% |   19.40 :   8 ( 4f  4b)    7     0  |  0.008333 | P[sW]PS[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 52% |   19.40 :   8 ( 4f  4b)   12     0  |  0.008333 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 60% |   19.40 :   8 ( 4f  4b)   12     0  |  0.008333 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   19.80 :   6 ( 3f  3b)    9     0  |  0.011667 | P[sW]PS[sW]S[sH]P[sW]P[sF]PS[sT]S[sW]S[sH]
+120 : 60 60 | 52% |   19.80 :   8 ( 4f  4b)    9     0  |  0.011667 | P[sW]PS[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 68% |   20.10 :   7 ( 3f  4b)    8     1  |  0.014167 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]SP[sH]
+120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]SP[sW]S[sH]S[sT]P[sB]PS[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]SP[sW]S[sH]S[sT]P[sB]SP[sB]S[sF]P[sH]
+120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]S[sH]PS[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 64% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   20.20 :   7 ( 3f  4b)    6     0  |  0.015000 | P[sW]S[sH]S[sT]SP[sF]P[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | 68% |   20.40 :   7 ( 3f  4b)    7     0  |  0.016667 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]PS[sF]P[sH]
+120 : 60 60 | 68% |   20.60 :   8 ( 3f  5b)    3     0  |  0.018333 | P[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]P[sW]S
+120 : 60 60 | atw |   20.60 :  13 ( 6f  7b)    8     4  |  0.133333 | PP[sF]SSSSS[sT]PPP
+120 : 60 60 | 68% |   20.80 :   7 ( 4f  3b)    9     0  |  0.020000 | P[sW]P[sF]PS[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 52% |   20.80 :   9 ( 5f  4b)    9     0  |  0.020000 | P[sW]P[sF]PS[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 92% |   21.00 :   9 ( 5f  4b)    5     0  |  0.098333 | PPPP[sT]P[sB]S[sF]SSSS[sH]
+120 : 60 60 | 92% |   21.00 :   7 ( 1f  6b)    5     0  |  0.098333 | SSS[sF]S[sB]P[sT]PPPP[sW]S
+120 : 60 60 | 60% |   21.40 :   7 ( 4f  3b)   12     0  |  0.025000 | P[sW]P[sF]P[sH]PS[sH]S[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 68% |   21.40 :   7 ( 4f  3b)   12     0  |  0.025000 | P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 68% |   21.50 :   8 ( 3f  5b)    5     1  |  0.025833 | P[sW]P[sF]S[sB]S[sF]SP[sT]P[sB]P[sT]S[sW]S
+120 : 60 60 | 92% |   21.60 :  10 ( 5f  5b)    3     0  |  0.103333 | P[sW]SSSS[sF]S[sB]P[sT]PPP
+120 : 60 60 | 64% |   21.80 :   6 ( 3f  3b)    4     0  |  0.028333 | P[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]S
+120 : 60 60 | 64% |   22.10 :   6 ( 3f  3b)    8     1  |  0.030833 | P[sW]P[sF]S[sB]SP[sB]P[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 76% |   22.20 :   6 ( 3f  3b)    6     0  |  0.031667 | P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]P[sW]S[sH]
+120 : 60 60 | 76% |   22.20 :   6 ( 3f  3b)    6     0  |  0.031667 | P[sW]S[sH]SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 68% |   22.20 :   8 ( 4f  4b)    6     0  |  0.031667 | P[sW]S[sH]SP[sH]P[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 64% |   22.20 :   6 ( 3f  3b)    6     0  |  0.031667 | P[sW]S[sH]S[sT]PS[sF]P[sH]P[sW]S[sH]PS[sH]
+120 : 60 60 | 68% |   22.40 :   8 ( 5f  3b)   12     0  |  0.033333 | PS[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
+120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)    7     0  |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]PS[sW]S[sH]
+120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)    7     0  |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]P[sW]SP[sW]S[sH]
+120 : 60 60 | 60% |   22.40 :   8 ( 4f  4b)    7     0  |  0.033333 | P[sW]P[sF]SP[sT]S[sW]S[sH]S[sT]SP[sF]P[sH]
+120 : 60 60 | 64% |   22.40 :   6 ( 3f  3b)    7     0  |  0.033333 | P[sW]SP[sW]S[sH]P[sW]P[sF]SP[sT]S[sW]S[sH]
+120 : 60 60 | 68% |   22.40 :   8 ( 4f  4b)    7     0  |  0.033333 | P[sW]SP[sW]S[sH]S[sT]S[sW]PS[sW]P[sF]P[sH]
+120 : 60 60 | 60% |   22.80 :   8 ( 4f  4b)    9     0  |  0.036667 | P[sW]SP[sW]S[sH]S[sT]S[sW]SP[sW]P[sF]P[sH]
+120 : 60 60 | 76% |   23.40 :   7 ( 3f  4b)    7     0  |  0.041667 | P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]SP[sH]
+120 : 60 60 | atw |   23.60 :  11 ( 6f  5b)    8     0  |  0.158333 | PPPPP[sH]SSSSS[sH]
+120 : 60 60 | 64% |   24.40 :   8 ( 3f  5b)    7     0  |  0.050000 | P[sW]P[sF]S[sB]PS[sB]P[sT]S[sW]S[sH]PS[sH]
+120 : 60 60 | 76% |   24.80 :  10 ( 3f  7b)    4     0  |  0.053333 | P[sW]P[sF]S[sB]P[sT]PS[sF]S[sB]P[sT]S[sW]S
+120 : 60 60 | atw |   24.80 :  10 ( 5f  5b)    4     0  |  0.168333 | P[sW]SSSSS[sW]PPPP
 ------------|-----|-------------------------------------|-----------|-----------
 len    P  S | atw |  music      4-bell runs   56s   65s | avg score | calling
 '''
@@ -446,16 +446,16 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 "test/cases/atw/require-atw.toml" = '''
 len    P  S |  music      4-bell runs   56s   65s | avg score | calling
 ------------|-------------------------------------|-----------|-----------
-120 : 60 60 |    8.60 :   5 ( 1f  4b)     8     4 |  0.033333 | SS[sB]PPPPP[sB]SSS
-120 : 60 60 |    9.80 :   5 ( 1f  4b)     4     0 |  0.043333 | S[sT]PPPPP[sF]SSSS
-120 : 60 60 |   10.60 :   7 ( 2f  5b)     8     4 |  0.050000 | SSS[sF]PPPPP[sT]SS
-120 : 60 60 |   15.60 :   7 ( 2f  5b)     8     0 |  0.091667 | SSSSS[sH]PPPPP[sH]
-120 : 60 60 |   15.80 :   5 ( 1f  4b)     4     0 |  0.093333 | SSSS[sW]PPPPP[sW]S
-120 : 60 60 |   17.60 :  10 ( 5f  5b)     8     4 |  0.108333 | PPP[sB]SSSSS[sB]PP
-120 : 60 60 |   18.80 :  10 ( 5f  5b)     4     0 |  0.118333 | PPPP[sT]SSSSS[sF]P
-120 : 60 60 |   20.60 :  13 ( 6f  7b)     8     4 |  0.133333 | PP[sF]SSSSS[sT]PPP
-120 : 60 60 |   23.60 :  11 ( 6f  5b)     8     0 |  0.158333 | PPPPP[sH]SSSSS[sH]
-120 : 60 60 |   24.80 :  10 ( 5f  5b)     4     0 |  0.168333 | P[sW]SSSSS[sW]PPPP
+120 : 60 60 |    8.60 :   5 ( 1f  4b)    8     4  |  0.033333 | SS[sB]PPPPP[sB]SSS
+120 : 60 60 |    9.80 :   5 ( 1f  4b)    4     0  |  0.043333 | S[sT]PPPPP[sF]SSSS
+120 : 60 60 |   10.60 :   7 ( 2f  5b)    8     4  |  0.050000 | SSS[sF]PPPPP[sT]SS
+120 : 60 60 |   15.60 :   7 ( 2f  5b)    8     0  |  0.091667 | SSSSS[sH]PPPPP[sH]
+120 : 60 60 |   15.80 :   5 ( 1f  4b)    4     0  |  0.093333 | SSSS[sW]PPPPP[sW]S
+120 : 60 60 |   17.60 :  10 ( 5f  5b)    8     4  |  0.108333 | PPP[sB]SSSSS[sB]PP
+120 : 60 60 |   18.80 :  10 ( 5f  5b)    4     0  |  0.118333 | PPPP[sT]SSSSS[sF]P
+120 : 60 60 |   20.60 :  13 ( 6f  7b)    8     4  |  0.133333 | PP[sF]SSSSS[sT]PPP
+120 : 60 60 |   23.60 :  11 ( 6f  5b)    8     0  |  0.158333 | PPPPP[sH]SSSSS[sH]
+120 : 60 60 |   24.80 :  10 ( 5f  5b)    4     0  |  0.168333 | P[sW]SSSSS[sW]PPPP
 ------------|-------------------------------------|-----------|-----------
 len    P  S |  music      4-bell runs   56s   65s | avg score | calling
 '''
@@ -698,18 +698,18 @@ len    Y  S  B  D |  music       4-bell runs      5678s     8765s     6578s    8
 "test/cases/complib-music/caters.toml" = '''
 len |  music     56s   65s       4-bell runs    | avg score | calling
 ----|-------------------------------------------|-----------|-----------
-288 |   51.00 :    4     0     22 (  11f   11b) |  0.148611 | WsHsWH
-288 |   51.00 :    4     0     22 (  11f   11b) |  0.152083 | WHWH
-288 |   53.00 :    4     0     24 (  12f   12b) |  0.152083 | sWsHsWsH
-288 |   53.00 :    4     0     24 (  12f   12b) |  0.155556 | sWHWsH
-288 |   80.00 :    4     0     22 (  11f   11b) |  0.261806 | sMsM
-144 |   80.00 :    4     0     22 (  11f   11b) |  0.555556 | 
-288 |   83.00 :    4     0     30 (  15f   15b) |  0.259722 | sMsHMH
-288 |   83.00 :    4     0     30 (  15f   15b) |  0.263194 | MHMH
-288 |   85.00 :    4     0     32 (  16f   16b) |  0.263194 | sMsHsMsH
-288 |   85.00 :    4     0     32 (  16f   16b) |  0.266667 | MHsMsH
-288 |   90.00 :    4     0     32 (  16f   16b) |  0.296528 | sWsW
-288 |  105.00 :    8     0     34 (  17f   17b) |  0.348611 | sHsH
+288 |   51.00 :   4     0      22 (  11f   11b) |  0.148611 | WsHsWH
+288 |   51.00 :   4     0      22 (  11f   11b) |  0.152083 | WHWH
+288 |   53.00 :   4     0      24 (  12f   12b) |  0.152083 | sWsHsWsH
+288 |   53.00 :   4     0      24 (  12f   12b) |  0.155556 | sWHWsH
+288 |   80.00 :   4     0      22 (  11f   11b) |  0.261806 | sMsM
+144 |   80.00 :   4     0      22 (  11f   11b) |  0.555556 | 
+288 |   83.00 :   4     0      30 (  15f   15b) |  0.259722 | sMsHMH
+288 |   83.00 :   4     0      30 (  15f   15b) |  0.263194 | MHMH
+288 |   85.00 :   4     0      32 (  16f   16b) |  0.263194 | sMsHsMsH
+288 |   85.00 :   4     0      32 (  16f   16b) |  0.266667 | MHsMsH
+288 |   90.00 :   4     0      32 (  16f   16b) |  0.296528 | sWsW
+288 |  105.00 :   8     0      34 (  17f   17b) |  0.348611 | sHsH
 ----|-------------------------------------------|-----------|-----------
 len |  music     56s   65s       4-bell runs    | avg score | calling
 '''
@@ -734,18 +734,18 @@ len |  music       56s       65s         4-bell runs    | avg score | calling
 "test/cases/complib-music/major.toml" = '''
 len |  music        CRUs      5678s     6578s      4-bell runs     5678 combs    8765s    87s | avg score | calling
 ----|-----------------------------------------------------------------------------------------|-----------|-----------
-448 |   51.00 :    2f   8b    0f  6b    0f  0b    11 (  1f  10b)      0f  16b    0f  0b     0 |  0.089732 | MWHMWH
-448 |   56.00 :    2f   8b    0f  6b    0f  0b    15 (  5f  10b)     12f  16b    2f  0b     0 |  0.106696 | sMsHMH
-448 |   64.00 :    2f   8b    0f  6b    0f  0b    13 (  3f  10b)     12f  16b    2f  0b     0 |  0.124554 | WsHsWH
-448 |   66.00 :    2f   8b    0f  6b    0f  0b    22 (  8f  14b)     12f  16b    2f  0b     0 |  0.126786 | sMsHsMsH
-448 |   66.00 :    2f   8b    0f  6b    0f  0b    21 (  7f  14b)     12f  16b    2f  0b     0 |  0.131250 | MHMH
-448 |   66.00 :    2f   8b    0f  6b    0f  0b    15 (  3f  12b)     12f  16b    2f  0b     0 |  0.131250 | WHWH
-448 |   75.00 :    2f   8b    0f  6b    0f  0b    22 (  8f  14b)     12f  16b    2f  0b     0 |  0.149107 | sWHWsH
-448 |   76.00 :    2f   8b    0f  6b    0f  0b    28 ( 10f  18b)     12f  16b    2f  0b     0 |  0.151339 | MHsMsH
-448 |   77.00 :    2f   8b    0f  6b    0f  0b    24 (  8f  16b)     12f  16b    2f  0b     0 |  0.151339 | sWsHsWsH
-448 |   84.00 :    1f   7b    0f  6b    0f  0b    21 (  7f  14b)     12f  16b    2f  0b     0 |  0.177232 | sMsM
-448 |   89.00 :    2f   8b    0f  6b    0f  0b    25 (  9f  16b)     12f  16b    2f  0b     0 |  0.188393 | sWsW
-448 |  131.00 :    2f  14b    0f 12b    0f  0b    38 ( 14f  24b)     16f  32b    4f  0b     0 |  0.282143 | sHsH
+448 |   51.00 :    2f   8b    0f  6b    0f  0b    11 (  1f  10b)     0f  16b     0f  0b     0 |  0.089732 | MWHMWH
+448 |   56.00 :    2f   8b    0f  6b    0f  0b    15 (  5f  10b)    12f  16b     2f  0b     0 |  0.106696 | sMsHMH
+448 |   64.00 :    2f   8b    0f  6b    0f  0b    13 (  3f  10b)    12f  16b     2f  0b     0 |  0.124554 | WsHsWH
+448 |   66.00 :    2f   8b    0f  6b    0f  0b    22 (  8f  14b)    12f  16b     2f  0b     0 |  0.126786 | sMsHsMsH
+448 |   66.00 :    2f   8b    0f  6b    0f  0b    21 (  7f  14b)    12f  16b     2f  0b     0 |  0.131250 | MHMH
+448 |   66.00 :    2f   8b    0f  6b    0f  0b    15 (  3f  12b)    12f  16b     2f  0b     0 |  0.131250 | WHWH
+448 |   75.00 :    2f   8b    0f  6b    0f  0b    22 (  8f  14b)    12f  16b     2f  0b     0 |  0.149107 | sWHWsH
+448 |   76.00 :    2f   8b    0f  6b    0f  0b    28 ( 10f  18b)    12f  16b     2f  0b     0 |  0.151339 | MHsMsH
+448 |   77.00 :    2f   8b    0f  6b    0f  0b    24 (  8f  16b)    12f  16b     2f  0b     0 |  0.151339 | sWsHsWsH
+448 |   84.00 :    1f   7b    0f  6b    0f  0b    21 (  7f  14b)    12f  16b     2f  0b     0 |  0.177232 | sMsM
+448 |   89.00 :    2f   8b    0f  6b    0f  0b    25 (  9f  16b)    12f  16b     2f  0b     0 |  0.188393 | sWsW
+448 |  131.00 :    2f  14b    0f 12b    0f  0b    38 ( 14f  24b)    16f  32b     4f  0b     0 |  0.282143 | sHsH
 ----|-----------------------------------------------------------------------------------------|-----------|-----------
 len |  music        CRUs      5678s     6578s      4-bell runs     5678 combs    8765s    87s | avg score | calling
 '''
@@ -770,14 +770,14 @@ len |  music        CRUs      5678s     6578s      4-bell runs     5678 combs   
 "test/cases/complib-music/minor.toml" = '''
 len |  music     65s | avg score | calling
 ----|----------------|-----------|-----------
-144 |   30.00 :    0 |  0.183333 | IW
-120 |   30.00 :    0 |  0.250000 | 
-144 |   43.00 :    0 |  0.273611 | HB
-144 |   44.00 :    0 |  0.280556 | BH
- 72 |   46.00 :    0 |  0.563889 | HHH
-216 |   49.00 :    0 |  0.176852 | IBWWHH
-216 |   51.00 :    0 |  0.186111 | HIBWWH
-216 |   59.00 :    0 |  0.223148 | HHIBWW
+144 |   30.00 :   0  |  0.183333 | IW
+120 |   30.00 :   0  |  0.250000 | 
+144 |   43.00 :   0  |  0.273611 | HB
+144 |   44.00 :   0  |  0.280556 | BH
+ 72 |   46.00 :   0  |  0.563889 | HHH
+216 |   49.00 :   0  |  0.176852 | IBWWHH
+216 |   51.00 :   0  |  0.186111 | HIBWWH
+216 |   59.00 :   0  |  0.223148 | HHIBWW
 ----|----------------|-----------|-----------
 len |  music     65s | avg score | calling
 '''
@@ -799,15 +799,15 @@ len |  music       56s       65s         4-bell runs       09s | avg score | cal
 "test/cases/complib-music/triples.toml" = '''
 len |  music     567s   657s   CRUs    4-bell runs   46s | avg score | calling
 ----|----------------------------------------------------|-----------|-----------
- 56 |   38.00 :    2      2       4    6 ( 3f  3b)     3 |  0.532143 | sWsFMH
- 56 |   38.00 :    2      2       4    6 ( 3f  3b)     3 |  0.550000 | WFMH
- 56 |   40.00 :    2      2       4    6 ( 3f  3b)     3 |  0.567857 | WsFsMH
- 56 |   40.00 :    2      2       4    6 ( 3f  3b)     3 |  0.567857 | sWFsMH
- 56 |   41.00 :    2      2       4    8 ( 4f  4b)     3 |  0.567857 | sWsFsMsH
- 56 |   41.00 :    2      2       4    8 ( 4f  4b)     3 |  0.585714 | WFsMsH
- 56 |   43.00 :    2      2       4    8 ( 4f  4b)     3 |  0.621429 | WsFMsH
- 56 |   43.00 :    2      2       4    8 ( 4f  4b)     3 |  0.621429 | sWFMsH
- 84 |   76.00 :    4      4       8   14 ( 7f  7b)     5 |  0.904762 | 
+ 56 |   38.00 :    2      2      4     6 ( 3f  3b)     3 |  0.532143 | sWsFMH
+ 56 |   38.00 :    2      2      4     6 ( 3f  3b)     3 |  0.550000 | WFMH
+ 56 |   40.00 :    2      2      4     6 ( 3f  3b)     3 |  0.567857 | WsFsMH
+ 56 |   40.00 :    2      2      4     6 ( 3f  3b)     3 |  0.567857 | sWFsMH
+ 56 |   41.00 :    2      2      4     8 ( 4f  4b)     3 |  0.567857 | sWsFsMsH
+ 56 |   41.00 :    2      2      4     8 ( 4f  4b)     3 |  0.585714 | WFsMsH
+ 56 |   43.00 :    2      2      4     8 ( 4f  4b)     3 |  0.621429 | WsFMsH
+ 56 |   43.00 :    2      2      4     8 ( 4f  4b)     3 |  0.621429 | sWFMsH
+ 84 |   76.00 :    4      4      8    14 ( 7f  7b)     5 |  0.904762 | 
 ----|----------------------------------------------------|-----------|-----------
 len |  music     567s   657s   CRUs    4-bell runs   46s | avg score | calling
 '''
@@ -1087,208 +1087,208 @@ len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score
 "test/cases/default-music/maximus.toml" = '''
  len |  music         4-bell runs          lb5s      56s   65s    TEs | avg score | calling
 -----|----------------------------------------------------------------|-----------|-----------
-1584 |  196.00 :    86 (  38f   48b)      4f    6b     6     0      0 |  0.115152 | sMWHHMsWH
-1584 |  198.00 :    88 (  38f   50b)      4f    6b     6     0      0 |  0.115783 | sMWsHMsMsWH
-1584 |  199.00 :    88 (  38f   50b)      5f    6b     6     0      0 |  0.115278 | MsWsMWHsMsWH
-1584 |  204.00 :    92 (  40f   52b)      5f    6b     6     0      0 |  0.117803 | MsWsMsWHsMsWsH
-1584 |  204.00 :    98 (  42f   56b)      4f    6b     6     0      0 |  0.117803 | sMsWHsMsWsMWsH
-1584 |  206.00 :    95 (  41f   54b)      5f    6b     6     0      0 |  0.119697 | sMsWHMsWsMWH
-1584 |  207.00 :   102 (  43f   59b)      4f    6b     6     0      0 |  0.119697 | sMsWsHMsWsMsWH
-1584 |  215.00 :   107 (  46f   61b)      4f    6b     6     0      0 |  0.124116 | sMsWsHsMsWsMsWsH
-1584 |  215.00 :   109 (  45f   64b)      4f    6b     6     0      0 |  0.126515 | sMsWMWsMsWH
-1584 |  215.00 :    97 (  41f   56b)      4f    6b     6     0      0 |  0.127651 | sMsHMsWsWH
-1584 |  216.00 :   109 (  45f   64b)      4f    6b     6     0      0 |  0.125379 | sMsWsMWsHsMsWH
-1584 |  216.00 :    94 (  40f   54b)      5f    6b     6     0      0 |  0.127146 | MsWHsMsWWsH
-1584 |  216.00 :    85 (  35f   50b)      4f    6b     6     0      0 |  0.128283 | WsMsHsMsWH
-1584 |  216.00 :    85 (  35f   50b)      4f    6b     6     0      0 |  0.128283 | sMsMWsHsWH
-1584 |  217.00 :    86 (  36f   50b)      4f    6b     6     0      0 |  0.129545 | WMHsMsWH
-1584 |  218.00 :    87 (  35f   52b)      4f    6b     6     0      0 |  0.129545 | WsHsMsMsWH
-1584 |  222.00 :   114 (  48f   66b)      4f    6b     6     0      0 |  0.128535 | sMsWsMsWsHsMsWsH
-1584 |  222.00 :   115 (  49f   66b)      4f    6b     6     0      0 |  0.132702 | sMsWHWMH
-1584 |  225.00 :    90 (  40f   50b)      5f    6b    12     0      0 |  0.133460 | MsWHsMWHH
-1584 |  226.00 :    94 (  40f   54b)      4f    6b     6     0      0 |  0.133965 | sWsMsHsMsWsH
-1584 |  226.00 :    94 (  40f   54b)      4f    6b     6     0      0 |  0.134596 | sMsMsWHWsH
-1584 |  226.00 :    94 (  40f   54b)      4f    6b     6     0      0 |  0.134596 | sWHsMsMWsH
-1584 |  226.00 :    94 (  40f   54b)      4f    6b     6     0      0 |  0.134596 | sWMHsMsWsH
-1584 |  226.00 :    95 (  39f   56b)      4f    6b     6     0      0 |  0.135227 | sMsMWHWH
-1584 |  227.00 :   119 (  51f   68b)      4f    6b     6     0      0 |  0.135227 | sMsWsWsHMH
-1584 |  230.00 :   123 (  53f   70b)      4f    6b     6     0      0 |  0.137121 | sMsWsHsWMH
-1584 |  231.00 :   122 (  52f   70b)      4f    6b     6     0      0 |  0.137753 | sMsWHWsMsH
-1584 |  232.00 :    96 (  40f   56b)      5f    6b     6     0      0 |  0.139015 | WHsMsMWH
-1584 |  236.00 :   104 (  44f   60b)      4f    6b     6     0      0 |  0.140278 | sMsMsWsHsWsH
-1584 |  236.00 :   126 (  54f   72b)      4f    6b     6     0      0 |  0.140278 | sMsWsWsHsMsH
-1584 |  236.00 :   104 (  44f   60b)      4f    6b     6     0      0 |  0.140278 | sWsHsMsMsWsH
-1584 |  239.00 :   130 (  56f   74b)      4f    6b     6     0      0 |  0.142172 | sMsWsHsWsMsH
-1584 |  247.00 :   126 (  54f   72b)      4f    6b     6     0      0 |  0.147222 | sMsHsMsWsWsH
-1584 |  263.00 :   121 (  51f   70b)      8f   11b     6     0      0 |  0.156818 | sMsWWsHMsWH
-1584 |  263.00 :   113 (  49f   64b)      9f   11b     6     0      0 |  0.158586 | MsWsWHMH
-1584 |  266.00 :   111 (  47f   64b)      8f   11b     6     0      0 |  0.160480 | MHMsWsWH
-1584 |  272.00 :   101 (  45f   56b)      8f   11b     6     0      0 |  0.162500 | MWsMsWHsMsW
-1584 |  272.00 :   120 (  52f   68b)      9f   11b     6     0      0 |  0.163636 | MsWsWHsMsH
-1584 |  275.00 :   102 (  46f   56b)      8f   11b     6     0      0 |  0.162626 | sMWsHsMsWHsMsW
-1584 |  275.00 :   102 (  46f   56b)      8f   11b     6     0      0 |  0.163258 | sMWHsMsWHMsW
-1584 |  277.00 :   109 (  47f   62b)      8f   11b     6     0      0 |  0.163889 | sMsWHsMsWsHMsW
-1584 |  277.00 :   109 (  47f   62b)      8f   11b     6     0      0 |  0.165657 | sMsWHsMsWMW
-1584 |  288.00 :   118 (  51f   67b)      8f   11b     6     0      0 |  0.170202 | sMsWsHsMsWsHsMsW
-1584 |  293.00 :   105 (  47f   58b)      8f   11b     6     0      0 |  0.176894 | sMWsHsWHsM
-1584 |  293.00 :   105 (  47f   58b)      8f   11b     6     0      0 |  0.177525 | sMWHWHsM
-1584 |  294.00 :   111 (  47f   64b)      8f   11b     6     0      0 |  0.176389 | sMsWHsMWsHM
-1584 |  295.00 :   101 (  43f   58b)      8f   11b     6     0      0 |  0.177020 | WsHMsWHsMsW
-1584 |  295.00 :   125 (  53f   72b)      8f   11b     6     0      0 |  0.177525 | sMsWsMsWsMsW
-1584 |  298.00 :   140 (  60f   80b)      8f   11b     6     0      0 |  0.180051 | MHsMsWsWsH
-1584 |  299.00 :   105 (  45f   60b)      8f   11b     6     0      0 |  0.180682 | sWHsMsHMsW
+1584 |  196.00 :    86 (  38f   48b)      4f    6b    6      0      0 |  0.115152 | sMWHHMsWH
+1584 |  198.00 :    88 (  38f   50b)      4f    6b    6      0      0 |  0.115783 | sMWsHMsMsWH
+1584 |  199.00 :    88 (  38f   50b)      5f    6b    6      0      0 |  0.115278 | MsWsMWHsMsWH
+1584 |  204.00 :    92 (  40f   52b)      5f    6b    6      0      0 |  0.117803 | MsWsMsWHsMsWsH
+1584 |  204.00 :    98 (  42f   56b)      4f    6b    6      0      0 |  0.117803 | sMsWHsMsWsMWsH
+1584 |  206.00 :    95 (  41f   54b)      5f    6b    6      0      0 |  0.119697 | sMsWHMsWsMWH
+1584 |  207.00 :   102 (  43f   59b)      4f    6b    6      0      0 |  0.119697 | sMsWsHMsWsMsWH
+1584 |  215.00 :   107 (  46f   61b)      4f    6b    6      0      0 |  0.124116 | sMsWsHsMsWsMsWsH
+1584 |  215.00 :   109 (  45f   64b)      4f    6b    6      0      0 |  0.126515 | sMsWMWsMsWH
+1584 |  215.00 :    97 (  41f   56b)      4f    6b    6      0      0 |  0.127651 | sMsHMsWsWH
+1584 |  216.00 :   109 (  45f   64b)      4f    6b    6      0      0 |  0.125379 | sMsWsMWsHsMsWH
+1584 |  216.00 :    94 (  40f   54b)      5f    6b    6      0      0 |  0.127146 | MsWHsMsWWsH
+1584 |  216.00 :    85 (  35f   50b)      4f    6b    6      0      0 |  0.128283 | WsMsHsMsWH
+1584 |  216.00 :    85 (  35f   50b)      4f    6b    6      0      0 |  0.128283 | sMsMWsHsWH
+1584 |  217.00 :    86 (  36f   50b)      4f    6b    6      0      0 |  0.129545 | WMHsMsWH
+1584 |  218.00 :    87 (  35f   52b)      4f    6b    6      0      0 |  0.129545 | WsHsMsMsWH
+1584 |  222.00 :   114 (  48f   66b)      4f    6b    6      0      0 |  0.128535 | sMsWsMsWsHsMsWsH
+1584 |  222.00 :   115 (  49f   66b)      4f    6b    6      0      0 |  0.132702 | sMsWHWMH
+1584 |  225.00 :    90 (  40f   50b)      5f    6b   12      0      0 |  0.133460 | MsWHsMWHH
+1584 |  226.00 :    94 (  40f   54b)      4f    6b    6      0      0 |  0.133965 | sWsMsHsMsWsH
+1584 |  226.00 :    94 (  40f   54b)      4f    6b    6      0      0 |  0.134596 | sMsMsWHWsH
+1584 |  226.00 :    94 (  40f   54b)      4f    6b    6      0      0 |  0.134596 | sWHsMsMWsH
+1584 |  226.00 :    94 (  40f   54b)      4f    6b    6      0      0 |  0.134596 | sWMHsMsWsH
+1584 |  226.00 :    95 (  39f   56b)      4f    6b    6      0      0 |  0.135227 | sMsMWHWH
+1584 |  227.00 :   119 (  51f   68b)      4f    6b    6      0      0 |  0.135227 | sMsWsWsHMH
+1584 |  230.00 :   123 (  53f   70b)      4f    6b    6      0      0 |  0.137121 | sMsWsHsWMH
+1584 |  231.00 :   122 (  52f   70b)      4f    6b    6      0      0 |  0.137753 | sMsWHWsMsH
+1584 |  232.00 :    96 (  40f   56b)      5f    6b    6      0      0 |  0.139015 | WHsMsMWH
+1584 |  236.00 :   104 (  44f   60b)      4f    6b    6      0      0 |  0.140278 | sMsMsWsHsWsH
+1584 |  236.00 :   126 (  54f   72b)      4f    6b    6      0      0 |  0.140278 | sMsWsWsHsMsH
+1584 |  236.00 :   104 (  44f   60b)      4f    6b    6      0      0 |  0.140278 | sWsHsMsMsWsH
+1584 |  239.00 :   130 (  56f   74b)      4f    6b    6      0      0 |  0.142172 | sMsWsHsWsMsH
+1584 |  247.00 :   126 (  54f   72b)      4f    6b    6      0      0 |  0.147222 | sMsHsMsWsWsH
+1584 |  263.00 :   121 (  51f   70b)      8f   11b    6      0      0 |  0.156818 | sMsWWsHMsWH
+1584 |  263.00 :   113 (  49f   64b)      9f   11b    6      0      0 |  0.158586 | MsWsWHMH
+1584 |  266.00 :   111 (  47f   64b)      8f   11b    6      0      0 |  0.160480 | MHMsWsWH
+1584 |  272.00 :   101 (  45f   56b)      8f   11b    6      0      0 |  0.162500 | MWsMsWHsMsW
+1584 |  272.00 :   120 (  52f   68b)      9f   11b    6      0      0 |  0.163636 | MsWsWHsMsH
+1584 |  275.00 :   102 (  46f   56b)      8f   11b    6      0      0 |  0.162626 | sMWsHsMsWHsMsW
+1584 |  275.00 :   102 (  46f   56b)      8f   11b    6      0      0 |  0.163258 | sMWHsMsWHMsW
+1584 |  277.00 :   109 (  47f   62b)      8f   11b    6      0      0 |  0.163889 | sMsWHsMsWsHMsW
+1584 |  277.00 :   109 (  47f   62b)      8f   11b    6      0      0 |  0.165657 | sMsWHsMsWMW
+1584 |  288.00 :   118 (  51f   67b)      8f   11b    6      0      0 |  0.170202 | sMsWsHsMsWsHsMsW
+1584 |  293.00 :   105 (  47f   58b)      8f   11b    6      0      0 |  0.176894 | sMWsHsWHsM
+1584 |  293.00 :   105 (  47f   58b)      8f   11b    6      0      0 |  0.177525 | sMWHWHsM
+1584 |  294.00 :   111 (  47f   64b)      8f   11b    6      0      0 |  0.176389 | sMsWHsMWsHM
+1584 |  295.00 :   101 (  43f   58b)      8f   11b    6      0      0 |  0.177020 | WsHMsWHsMsW
+1584 |  295.00 :   125 (  53f   72b)      8f   11b    6      0      0 |  0.177525 | sMsWsMsWsMsW
+1584 |  298.00 :   140 (  60f   80b)      8f   11b    6      0      0 |  0.180051 | MHsMsWsWsH
+1584 |  299.00 :   105 (  45f   60b)      8f   11b    6      0      0 |  0.180682 | sWHsMsHMsW
 -----|----------------------------------------------------------------|-----------|-----------
  len |  music         4-bell runs          lb5s      56s   65s    TEs | avg score | calling
 -----|----------------------------------------------------------------|-----------|-----------
-1584 |  299.00 :   105 (  45f   60b)      8f   11b     6     0      0 |  0.181313 | sWHMHMsW
-1584 |  299.00 :   105 (  45f   60b)      8f   11b     6     0      0 |  0.182955 | sMsMsWsW
-1584 |  299.00 :   105 (  45f   60b)      8f   11b     6     0      0 |  0.182955 | sWsMsMsW
-1584 |  304.00 :   121 (  51f   70b)      8f   11b     6     0      0 |  0.183838 | sMsWHWsHsM
-1584 |  308.00 :   125 (  53f   72b)      8f   11b     6     0      0 |  0.188636 | sMsHsHsM
-1584 |  309.00 :   115 (  49f   66b)      8f   11b     6     0      0 |  0.186364 | sWsHsMsHsMsW
-1584 |  309.00 :   115 (  49f   66b)      8f   11b     6     0      0 |  0.186995 | sWsHMHsMsW
-1584 |  309.00 :   125 (  53f   72b)      8f   11b     6     0      0 |  0.189268 | sMsWsWsM
-1584 |  310.00 :   124 (  52f   72b)     12f   17b     6     0      0 |  0.186490 | MsMsWHsMWsH
-1584 |  310.00 :   127 (  55f   72b)      8f   11b     6     0      0 |  0.186995 | sMsHsMsWsHsW
-1584 |  312.00 :   129 (  55f   74b)      8f   11b     6     0      0 |  0.188258 | sMsWsHsWsHsM
-1584 |  315.00 :   103 (  45f   58b)      9f   11b    12     0      0 |  0.190278 | HMsWHsMWH
-1584 |  320.00 :   110 (  48f   62b)      8f   11b    12     0      0 |  0.196212 | sMsMsHsH
-1584 |  333.00 :   141 (  61f   80b)      9f   12b     6     0      0 |  0.202146 | sMsHsMsWHW
-1584 |  335.00 :   129 (  55f   74b)      8f   11b     6     0      0 |  0.205682 | sWsHsHsW
-1584 |  335.00 :   114 (  50f   64b)      8f   11b    12     0      0 |  0.205682 | sWsWsHsH
-1584 |  339.00 :   104 (  46f   58b)      8f   11b    18     0      0 |  0.210606 | HHH
-1584 |  340.00 :   125 (  53f   72b)      9f   12b     6     0      0 |  0.211237 | WWW
-1584 |  344.00 :   134 (  58f   76b)      8f   11b    12     0      0 |  0.211364 | sHsMsMsH
-1584 |  356.00 :   134 (  58f   76b)      8f   11b    12     0      0 |  0.218939 | sHsWsWsH
-1584 |  361.00 :   141 (  61f   80b)     12f   16b     6     0      0 |  0.219823 | MHsMsWsHsW
-1584 |  384.00 :   155 (  67f   88b)     13f   17b     6     0      0 |  0.234975 | MHsMsWHW
-1584 |  390.00 :   127 (  53f   74b)     16f   22b     6     0      0 |  0.242803 | MMM
+1584 |  299.00 :   105 (  45f   60b)      8f   11b    6      0      0 |  0.181313 | sWHMHMsW
+1584 |  299.00 :   105 (  45f   60b)      8f   11b    6      0      0 |  0.182955 | sMsMsWsW
+1584 |  299.00 :   105 (  45f   60b)      8f   11b    6      0      0 |  0.182955 | sWsMsMsW
+1584 |  304.00 :   121 (  51f   70b)      8f   11b    6      0      0 |  0.183838 | sMsWHWsHsM
+1584 |  308.00 :   125 (  53f   72b)      8f   11b    6      0      0 |  0.188636 | sMsHsHsM
+1584 |  309.00 :   115 (  49f   66b)      8f   11b    6      0      0 |  0.186364 | sWsHsMsHsMsW
+1584 |  309.00 :   115 (  49f   66b)      8f   11b    6      0      0 |  0.186995 | sWsHMHsMsW
+1584 |  309.00 :   125 (  53f   72b)      8f   11b    6      0      0 |  0.189268 | sMsWsWsM
+1584 |  310.00 :   124 (  52f   72b)     12f   17b    6      0      0 |  0.186490 | MsMsWHsMWsH
+1584 |  310.00 :   127 (  55f   72b)      8f   11b    6      0      0 |  0.186995 | sMsHsMsWsHsW
+1584 |  312.00 :   129 (  55f   74b)      8f   11b    6      0      0 |  0.188258 | sMsWsHsWsHsM
+1584 |  315.00 :   103 (  45f   58b)      9f   11b   12      0      0 |  0.190278 | HMsWHsMWH
+1584 |  320.00 :   110 (  48f   62b)      8f   11b   12      0      0 |  0.196212 | sMsMsHsH
+1584 |  333.00 :   141 (  61f   80b)      9f   12b    6      0      0 |  0.202146 | sMsHsMsWHW
+1584 |  335.00 :   129 (  55f   74b)      8f   11b    6      0      0 |  0.205682 | sWsHsHsW
+1584 |  335.00 :   114 (  50f   64b)      8f   11b   12      0      0 |  0.205682 | sWsWsHsH
+1584 |  339.00 :   104 (  46f   58b)      8f   11b   18      0      0 |  0.210606 | HHH
+1584 |  340.00 :   125 (  53f   72b)      9f   12b    6      0      0 |  0.211237 | WWW
+1584 |  344.00 :   134 (  58f   76b)      8f   11b   12      0      0 |  0.211364 | sHsMsMsH
+1584 |  356.00 :   134 (  58f   76b)      8f   11b   12      0      0 |  0.218939 | sHsWsWsH
+1584 |  361.00 :   141 (  61f   80b)     12f   16b    6      0      0 |  0.219823 | MHsMsWsHsW
+1584 |  384.00 :   155 (  67f   88b)     13f   17b    6      0      0 |  0.234975 | MHsMsWHW
+1584 |  390.00 :   127 (  53f   74b)     16f   22b    6      0      0 |  0.242803 | MMM
 -----|----------------------------------------------------------------|-----------|-----------
  len |  music         4-bell runs          lb5s      56s   65s    TEs | avg score | calling
 '''
 "test/cases/default-music/minor.toml" = '''
 len |  music      4-bell runs   56s   65s | avg score | calling
 ----|-------------------------------------|-----------|-----------
-120 |   14.60 :   6 ( 2f  4b)     8     0 |  0.121667 | 
-144 |   16.60 :   6 ( 2f  4b)     8     0 |  0.090278 | IW
- 72 |   17.80 :   7 ( 5f  2b)    24     0 |  0.172222 | HHH
-240 |   19.60 :   6 ( 3f  3b)     8     0 |  0.051667 | IBIB
-144 |   20.20 :  12 ( 7f  5b)    16     0 |  0.115278 | BH
-240 |   21.60 :   9 ( 4f  5b)     8     0 |  0.060000 | BFWW
-216 |   21.80 :  10 ( 8f  2b)    24     0 |  0.050926 | HIBWWH
-216 |   21.80 :   8 ( 6f  2b)    24     0 |  0.050926 | IBWWHH
-288 |   22.60 :  11 ( 4f  7b)     8     0 |  0.047222 | BFBFW
-144 |   23.20 :   8 ( 5f  3b)    16     0 |  0.136111 | HB
-240 |   24.20 :  14 ( 7f  7b)    16     0 |  0.063333 | IFBWH
-288 |   24.60 :  10 ( 5f  5b)     8     0 |  0.054167 | IHHIB
-240 |   25.20 :  10 ( 5f  5b)    16     0 |  0.067500 | HIFBW
-240 |   25.80 :  11 ( 6f  5b)    24     0 |  0.077500 | HHFI
-288 |   27.20 :   9 ( 6f  3b)    16     0 |  0.063194 | IBWWB
-288 |   27.80 :  12 ( 6f  6b)    24     0 |  0.065278 | FWWHH
-288 |   27.80 :  10 ( 7f  3b)    24     0 |  0.065278 | HHFWW
-288 |   27.80 :  11 ( 6f  5b)    24     0 |  0.065278 | IBIHH
-240 |   27.80 :  13 ( 6f  7b)    24     0 |  0.085833 | FIHH
-288 |   28.80 :  14 ( 9f  5b)    24     0 |  0.068750 | HIBIH
-216 |   28.80 :  10 ( 6f  4b)    24     0 |  0.083333 | HHIBWW
-288 |   29.20 :  18 ( 8f 10b)    16     0 |  0.070139 | FIFIH
-288 |   29.80 :  13 ( 7f  6b)    24     0 |  0.072222 | HHIBI
-288 |   30.80 :  16 ( 9f  7b)    24     0 |  0.075694 | HFWWH
-288 |   31.20 :  15 ( 8f  7b)    16     0 |  0.077083 | BIBWW
-288 |   32.20 :  16 ( 6f 10b)    16     0 |  0.080556 | HFIFI
-240 |   32.80 :  18 (10f  8b)    24     0 |  0.106667 | HFIH
+120 |   14.60 :   6 ( 2f  4b)    8     0  |  0.121667 | 
+144 |   16.60 :   6 ( 2f  4b)    8     0  |  0.090278 | IW
+ 72 |   17.80 :   7 ( 5f  2b)   24     0  |  0.172222 | HHH
+240 |   19.60 :   6 ( 3f  3b)    8     0  |  0.051667 | IBIB
+144 |   20.20 :  12 ( 7f  5b)   16     0  |  0.115278 | BH
+240 |   21.60 :   9 ( 4f  5b)    8     0  |  0.060000 | BFWW
+216 |   21.80 :  10 ( 8f  2b)   24     0  |  0.050926 | HIBWWH
+216 |   21.80 :   8 ( 6f  2b)   24     0  |  0.050926 | IBWWHH
+288 |   22.60 :  11 ( 4f  7b)    8     0  |  0.047222 | BFBFW
+144 |   23.20 :   8 ( 5f  3b)   16     0  |  0.136111 | HB
+240 |   24.20 :  14 ( 7f  7b)   16     0  |  0.063333 | IFBWH
+288 |   24.60 :  10 ( 5f  5b)    8     0  |  0.054167 | IHHIB
+240 |   25.20 :  10 ( 5f  5b)   16     0  |  0.067500 | HIFBW
+240 |   25.80 :  11 ( 6f  5b)   24     0  |  0.077500 | HHFI
+288 |   27.20 :   9 ( 6f  3b)   16     0  |  0.063194 | IBWWB
+288 |   27.80 :  12 ( 6f  6b)   24     0  |  0.065278 | FWWHH
+288 |   27.80 :  10 ( 7f  3b)   24     0  |  0.065278 | HHFWW
+288 |   27.80 :  11 ( 6f  5b)   24     0  |  0.065278 | IBIHH
+240 |   27.80 :  13 ( 6f  7b)   24     0  |  0.085833 | FIHH
+288 |   28.80 :  14 ( 9f  5b)   24     0  |  0.068750 | HIBIH
+216 |   28.80 :  10 ( 6f  4b)   24     0  |  0.083333 | HHIBWW
+288 |   29.20 :  18 ( 8f 10b)   16     0  |  0.070139 | FIFIH
+288 |   29.80 :  13 ( 7f  6b)   24     0  |  0.072222 | HHIBI
+288 |   30.80 :  16 ( 9f  7b)   24     0  |  0.075694 | HFWWH
+288 |   31.20 :  15 ( 8f  7b)   16     0  |  0.077083 | BIBWW
+288 |   32.20 :  16 ( 6f 10b)   16     0  |  0.080556 | HFIFI
+240 |   32.80 :  18 (10f  8b)   24     0  |  0.106667 | HFIH
 ----|-------------------------------------|-----------|-----------
 len |  music      4-bell runs   56s   65s | avg score | calling
 '''
 "test/cases/default-music/royal.toml" = '''
 len |  music         4-bell runs         lb5s     56s   65s    09s | avg score | calling
 ----|--------------------------------------------------------------|-----------|-----------
-602 |   79.00 :    28 (  11f   17b)     2f   4b     3     0      0 |  0.103156 | sMxBsMxBsW>
-602 |   83.00 :    32 (  13f   19b)     2f   4b     3     0      0 |  0.102159 | sMsWxBsMxBsMsW>
-602 |   83.00 :    32 (  13f   19b)     2f   4b     3     0      0 |  0.103821 | sMsWxBMxBMsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.089895 | MWxBsMsWxHsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.092257 | sMWxBsWxHsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.093045 | MWxBMWHMsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.094094 | sMWxBsMWHsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.096457 | sMxBsWHMsW>
-762 |   89.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.097769 | MWxBWHsW>
-760 |   92.00 :    35 (  13f   22b)     2f   4b     6     0      0 |  0.092368 | sMxBMWxBsMWH
-760 |   93.00 :    36 (  14f   22b)     2f   4b     6     0      0 |  0.094737 | sMxBsMsWxBsWH
-762 |   93.00 :    42 (  17f   25b)     2f   4b     3     0      0 |  0.097507 | sMsWxBWxHsW>
-762 |   93.00 :    38 (  15f   23b)     2f   4b     3     0      0 |  0.099344 | MWsHsMsWxBM>
-762 |   93.00 :    42 (  17f   25b)     2f   4b     3     0      0 |  0.101706 | MsWxBsWHsW>
-762 |   94.00 :    39 (  16f   23b)     2f   4b     3     0      0 |  0.098819 | sMxBsMsWxHM>
-762 |   94.00 :    39 (  16f   23b)     2f   4b     3     0      0 |  0.103018 | sMWsMsWxBM>
-762 |   95.00 :    40 (  15f   25b)     2f   4b     3     0      0 |  0.099081 | MWxBMWxHsM>
-762 |   95.00 :    40 (  15f   25b)     2f   4b     3     0      0 |  0.102493 | sMxBsWxHsM>
-760 |   96.00 :    39 (  15f   24b)     2f   4b     6     0      0 |  0.092632 | sMsWxBsMsWxBsMsWH
-760 |   96.00 :    39 (  15f   24b)     2f   4b     6     0      0 |  0.093947 | MsWxBsMWxBsMsWH
-760 |   96.00 :    39 (  15f   24b)     2f   4b     6     0      0 |  0.093947 | sMsWxBMsWxBsMWH
-760 |   96.00 :    43 (  15f   28b)     2f   4b     3     1      0 |  0.095789 | sMxBMWxBsWxH
-760 |   96.00 :    43 (  15f   28b)     2f   4b     3     1      0 |  0.095789 | sMxBMsWxBWxH
-762 |   96.00 :    41 (  16f   25b)     2f   4b     3     0      0 |  0.105643 | sMxBsMWHsM>
-760 |   97.00 :    40 (  16f   24b)     2f   4b     6     0      0 |  0.098947 | MsWxBMWxBsWH
-760 |   97.00 :    40 (  16f   24b)     2f   4b     6     0      0 |  0.101316 | sMxBsMWxBWH
-762 |   98.00 :    43 (  18f   25b)     2f   4b     3     0      0 |  0.103018 | MsWxBMWxHM>
-760 |  100.00 :    47 (  17f   30b)     2f   4b     3     1      0 |  0.095000 | MsWxBsMsWxBsMWxH
-760 |  100.00 :    47 (  17f   30b)     2f   4b     3     1      0 |  0.095000 | sMsWxBsMWxBsMWxH
-760 |  100.00 :    47 (  17f   30b)     2f   4b     3     1      0 |  0.097368 | sMsWxBMsWxBsWxH
-760 |  100.00 :    47 (  17f   30b)     2f   4b     3     1      0 |  0.098684 | sMsWxBMWxBWxH
-762 |  100.00 :    45 (  18f   27b)     2f   4b     3     0      0 |  0.108530 | MsWxBMsWHsM>
-720 |  100.00 :    47 (  17f   30b)     2f   4b     3     1      0 |  0.116111 | sMxHsMWxH
-760 |  101.00 :    48 (  18f   30b)     2f   4b     3     1      0 |  0.098684 | sMxBsMWxBsMsWxH
-760 |  101.00 :    44 (  18f   26b)     2f   4b     6     0      0 |  0.104211 | MsWxBMsWxBWH
-762 |  104.00 :    40 (  15f   25b)     2f   4b     3     0      0 |  0.117979 | WxBxHsW>
-720 |  104.00 :    50 (  20f   30b)     2f   4b     3     1      0 |  0.123611 | sMWHMsWxH
-760 |  105.00 :    52 (  20f   32b)     2f   4b     3     1      0 |  0.101579 | MsWxBMsWxBsMsWxH
-762 |  105.00 :    42 (  17f   25b)     3f   4b     5     0      0 |  0.119816 | MsWsMsWxB>
-762 |  105.00 :    41 (  16f   25b)     2f   4b     3     0      0 |  0.121129 | WxBWMsW>
-762 |  106.00 :    42 (  17f   25b)     2f   4b     3     0      0 |  0.120604 | WxHxBsW>
-720 |  106.00 :    47 (  19f   28b)     2f   4b     6     0      0 |  0.135833 | sMsHMH
-602 |  107.00 :    38 (  15f   23b)     4f   6b     3     0      0 |  0.151329 | MxBMxBsW>
-762 |  108.00 :    40 (  15f   25b)     2f   4b     3     0      0 |  0.125066 | WsMWxBM>
-720 |  108.00 :    54 (  20f   34b)     2f   4b     3     1      0 |  0.131667 | sMsWHMxH
-720 |  108.00 :    51 (  19f   32b)     2f   4b     6     0      0 |  0.131667 | sMsWxHWH
-762 |  109.00 :    45 (  18f   27b)     2f   4b     3     0      0 |  0.125066 | sWxBsWMsW>
-720 |  109.00 :    54 (  22f   32b)     2f   4b     3     1      0 |  0.128611 | sMWxHsMxH
-720 |  110.00 :    44 (  18f   26b)     4f   4b     6     0      0 |  0.131944 | MsWxHsMWH
-720 |  111.00 :    41 (  15f   26b)     2f   4b     6     0      0 |  0.142778 | WsHsWH
+602 |   79.00 :    28 (  11f   17b)     2f   4b    3     0       0 |  0.103156 | sMxBsMxBsW>
+602 |   83.00 :    32 (  13f   19b)     2f   4b    3     0       0 |  0.102159 | sMsWxBsMxBsMsW>
+602 |   83.00 :    32 (  13f   19b)     2f   4b    3     0       0 |  0.103821 | sMsWxBMxBMsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.089895 | MWxBsMsWxHsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.092257 | sMWxBsWxHsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.093045 | MWxBMWHMsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.094094 | sMWxBsMWHsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.096457 | sMxBsWHMsW>
+762 |   89.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.097769 | MWxBWHsW>
+760 |   92.00 :    35 (  13f   22b)     2f   4b    6     0       0 |  0.092368 | sMxBMWxBsMWH
+760 |   93.00 :    36 (  14f   22b)     2f   4b    6     0       0 |  0.094737 | sMxBsMsWxBsWH
+762 |   93.00 :    42 (  17f   25b)     2f   4b    3     0       0 |  0.097507 | sMsWxBWxHsW>
+762 |   93.00 :    38 (  15f   23b)     2f   4b    3     0       0 |  0.099344 | MWsHsMsWxBM>
+762 |   93.00 :    42 (  17f   25b)     2f   4b    3     0       0 |  0.101706 | MsWxBsWHsW>
+762 |   94.00 :    39 (  16f   23b)     2f   4b    3     0       0 |  0.098819 | sMxBsMsWxHM>
+762 |   94.00 :    39 (  16f   23b)     2f   4b    3     0       0 |  0.103018 | sMWsMsWxBM>
+762 |   95.00 :    40 (  15f   25b)     2f   4b    3     0       0 |  0.099081 | MWxBMWxHsM>
+762 |   95.00 :    40 (  15f   25b)     2f   4b    3     0       0 |  0.102493 | sMxBsWxHsM>
+760 |   96.00 :    39 (  15f   24b)     2f   4b    6     0       0 |  0.092632 | sMsWxBsMsWxBsMsWH
+760 |   96.00 :    39 (  15f   24b)     2f   4b    6     0       0 |  0.093947 | MsWxBsMWxBsMsWH
+760 |   96.00 :    39 (  15f   24b)     2f   4b    6     0       0 |  0.093947 | sMsWxBMsWxBsMWH
+760 |   96.00 :    43 (  15f   28b)     2f   4b    3     1       0 |  0.095789 | sMxBMWxBsWxH
+760 |   96.00 :    43 (  15f   28b)     2f   4b    3     1       0 |  0.095789 | sMxBMsWxBWxH
+762 |   96.00 :    41 (  16f   25b)     2f   4b    3     0       0 |  0.105643 | sMxBsMWHsM>
+760 |   97.00 :    40 (  16f   24b)     2f   4b    6     0       0 |  0.098947 | MsWxBMWxBsWH
+760 |   97.00 :    40 (  16f   24b)     2f   4b    6     0       0 |  0.101316 | sMxBsMWxBWH
+762 |   98.00 :    43 (  18f   25b)     2f   4b    3     0       0 |  0.103018 | MsWxBMWxHM>
+760 |  100.00 :    47 (  17f   30b)     2f   4b    3     1       0 |  0.095000 | MsWxBsMsWxBsMWxH
+760 |  100.00 :    47 (  17f   30b)     2f   4b    3     1       0 |  0.095000 | sMsWxBsMWxBsMWxH
+760 |  100.00 :    47 (  17f   30b)     2f   4b    3     1       0 |  0.097368 | sMsWxBMsWxBsWxH
+760 |  100.00 :    47 (  17f   30b)     2f   4b    3     1       0 |  0.098684 | sMsWxBMWxBWxH
+762 |  100.00 :    45 (  18f   27b)     2f   4b    3     0       0 |  0.108530 | MsWxBMsWHsM>
+720 |  100.00 :    47 (  17f   30b)     2f   4b    3     1       0 |  0.116111 | sMxHsMWxH
+760 |  101.00 :    48 (  18f   30b)     2f   4b    3     1       0 |  0.098684 | sMxBsMWxBsMsWxH
+760 |  101.00 :    44 (  18f   26b)     2f   4b    6     0       0 |  0.104211 | MsWxBMsWxBWH
+762 |  104.00 :    40 (  15f   25b)     2f   4b    3     0       0 |  0.117979 | WxBxHsW>
+720 |  104.00 :    50 (  20f   30b)     2f   4b    3     1       0 |  0.123611 | sMWHMsWxH
+760 |  105.00 :    52 (  20f   32b)     2f   4b    3     1       0 |  0.101579 | MsWxBMsWxBsMsWxH
+762 |  105.00 :    42 (  17f   25b)     3f   4b    5     0       0 |  0.119816 | MsWsMsWxB>
+762 |  105.00 :    41 (  16f   25b)     2f   4b    3     0       0 |  0.121129 | WxBWMsW>
+762 |  106.00 :    42 (  17f   25b)     2f   4b    3     0       0 |  0.120604 | WxHxBsW>
+720 |  106.00 :    47 (  19f   28b)     2f   4b    6     0       0 |  0.135833 | sMsHMH
+602 |  107.00 :    38 (  15f   23b)     4f   6b    3     0       0 |  0.151329 | MxBMxBsW>
+762 |  108.00 :    40 (  15f   25b)     2f   4b    3     0       0 |  0.125066 | WsMWxBM>
+720 |  108.00 :    54 (  20f   34b)     2f   4b    3     1       0 |  0.131667 | sMsWHMxH
+720 |  108.00 :    51 (  19f   32b)     2f   4b    6     0       0 |  0.131667 | sMsWxHWH
+762 |  109.00 :    45 (  18f   27b)     2f   4b    3     0       0 |  0.125066 | sWxBsWMsW>
+720 |  109.00 :    54 (  22f   32b)     2f   4b    3     1       0 |  0.128611 | sMWxHsMxH
+720 |  110.00 :    44 (  18f   26b)     4f   4b    6     0       0 |  0.131944 | MsWxHsMWH
+720 |  111.00 :    41 (  15f   26b)     2f   4b    6     0       0 |  0.142778 | WsHsWH
 ----|--------------------------------------------------------------|-----------|-----------
 len |  music         4-bell runs         lb5s     56s   65s    09s | avg score | calling
 ----|--------------------------------------------------------------|-----------|-----------
-720 |  112.00 :    59 (  21f   38b)     2f   4b     3     1      0 |  0.128889 | sMsWxHsMsWxH
-762 |  113.00 :    54 (  21f   33b)     3f   4b     3     0      0 |  0.124278 | MsWsHsMsWxBsM>
-762 |  114.00 :    46 (  17f   29b)     2f   4b     3     0      0 |  0.131627 | sWxBMsWsM>
-720 |  114.00 :    52 (  20f   32b)     4f   4b     3     1      0 |  0.135556 | MsWxHsWxH
-720 |  115.00 :    54 (  22f   32b)     2f   4b     6     0      0 |  0.146944 | sMsHsMsH
-762 |  116.00 :    44 (  17f   27b)     2f   4b     5     0      0 |  0.140289 | sWMxB>
-720 |  117.00 :    47 (  17f   30b)     2f   4b     6     0      0 |  0.152500 | WHWH
-760 |  120.00 :    45 (  17f   28b)     4f   6b     6     0      0 |  0.129211 | MxBsMWxBsMWH
-760 |  121.00 :    46 (  18f   28b)     4f   6b     6     0      0 |  0.132895 | MxBMsWxBsWH
-720 |  121.00 :    55 (  19f   36b)     2f   4b     3     1      0 |  0.149722 | WHsMsWxH
-720 |  121.00 :    50 (  20f   30b)     2f   4b     6     0      0 |  0.156667 | sWHWsH
-762 |  122.00 :    49 (  20f   29b)     4f   6b     3     0      0 |  0.136877 | MxBMsWxHM>
-720 |  122.00 :    55 (  21f   34b)     2f   4b     3     1      0 |  0.146667 | sWxHMsWxH
-760 |  124.00 :    53 (  19f   34b)     4f   6b     3     1      0 |  0.132632 | MxBsMWxBsWxH
-760 |  124.00 :    53 (  19f   34b)     4f   6b     3     1      0 |  0.132632 | MxBsMsWxBWxH
-762 |  124.00 :    51 (  20f   31b)     4f   6b     3     0      0 |  0.143701 | MxBMWHsM>
-760 |  125.00 :    50 (  20f   30b)     4f   6b     6     0      0 |  0.139474 | MxBMWxBWH
-720 |  126.00 :    45 (  17f   28b)     4f   8b     6     0      0 |  0.160000 | MWHMWH
-720 |  127.00 :    49 (  19f   30b)     4f   7b     6     0      0 |  0.158056 | MxHsMsWH
-720 |  127.00 :    56 (  22f   34b)     2f   4b     6     0      0 |  0.163611 | sWsHsWsH
-760 |  129.00 :    58 (  22f   36b)     4f   6b     3     1      0 |  0.136842 | MxBMWxBsMsWxH
-760 |  131.00 :    56 (  22f   34b)     3f   6b     5     1      0 |  0.141842 | sMWxBMsWxBxH
-720 |  137.00 :    57 (  23f   34b)     4f   7b     6     0      0 |  0.180278 | MHMH
-762 |  139.00 :    53 (  22f   31b)     3f   6b     5     0      0 |  0.164436 | xBsWsHMsW>
-762 |  143.00 :    54 (  21f   33b)     3f   6b     5     0      0 |  0.173360 | xBMWsM>
-762 |  143.00 :    53 (  22f   31b)     3f   6b     5     0      0 |  0.173360 | xBWsHM>
-760 |  144.00 :    57 (  21f   36b)     3f   6b     5     1      0 |  0.165000 | xBMxBWxH
-720 |  146.00 :    64 (  26f   38b)     4f   7b     6     0      0 |  0.191389 | MHsMsH
-760 |  147.00 :    60 (  22f   38b)     3f   6b     5     1      0 |  0.162895 | xBsMWxBMsWxH
-762 |  149.00 :    60 (  23f   37b)     3f   6b     5     0      0 |  0.177559 | xBsMWsHsM>
-720 |  153.00 :    53 (  21f   32b)     4f   7b     6     0      0 |  0.206111 | sMsM
-720 |  157.00 :    57 (  23f   34b)     4f   7b     6     0      0 |  0.211667 | sWsW
-760 |  159.00 :    66 (  26f   40b)     5f   8b     5     1      0 |  0.184737 | MxBWxBxH
-720 |  178.00 :    62 (  26f   36b)     4f   7b    12     0      0 |  0.240833 | sHsH
+720 |  112.00 :    59 (  21f   38b)     2f   4b    3     1       0 |  0.128889 | sMsWxHsMsWxH
+762 |  113.00 :    54 (  21f   33b)     3f   4b    3     0       0 |  0.124278 | MsWsHsMsWxBsM>
+762 |  114.00 :    46 (  17f   29b)     2f   4b    3     0       0 |  0.131627 | sWxBMsWsM>
+720 |  114.00 :    52 (  20f   32b)     4f   4b    3     1       0 |  0.135556 | MsWxHsWxH
+720 |  115.00 :    54 (  22f   32b)     2f   4b    6     0       0 |  0.146944 | sMsHsMsH
+762 |  116.00 :    44 (  17f   27b)     2f   4b    5     0       0 |  0.140289 | sWMxB>
+720 |  117.00 :    47 (  17f   30b)     2f   4b    6     0       0 |  0.152500 | WHWH
+760 |  120.00 :    45 (  17f   28b)     4f   6b    6     0       0 |  0.129211 | MxBsMWxBsMWH
+760 |  121.00 :    46 (  18f   28b)     4f   6b    6     0       0 |  0.132895 | MxBMsWxBsWH
+720 |  121.00 :    55 (  19f   36b)     2f   4b    3     1       0 |  0.149722 | WHsMsWxH
+720 |  121.00 :    50 (  20f   30b)     2f   4b    6     0       0 |  0.156667 | sWHWsH
+762 |  122.00 :    49 (  20f   29b)     4f   6b    3     0       0 |  0.136877 | MxBMsWxHM>
+720 |  122.00 :    55 (  21f   34b)     2f   4b    3     1       0 |  0.146667 | sWxHMsWxH
+760 |  124.00 :    53 (  19f   34b)     4f   6b    3     1       0 |  0.132632 | MxBsMWxBsWxH
+760 |  124.00 :    53 (  19f   34b)     4f   6b    3     1       0 |  0.132632 | MxBsMsWxBWxH
+762 |  124.00 :    51 (  20f   31b)     4f   6b    3     0       0 |  0.143701 | MxBMWHsM>
+760 |  125.00 :    50 (  20f   30b)     4f   6b    6     0       0 |  0.139474 | MxBMWxBWH
+720 |  126.00 :    45 (  17f   28b)     4f   8b    6     0       0 |  0.160000 | MWHMWH
+720 |  127.00 :    49 (  19f   30b)     4f   7b    6     0       0 |  0.158056 | MxHsMsWH
+720 |  127.00 :    56 (  22f   34b)     2f   4b    6     0       0 |  0.163611 | sWsHsWsH
+760 |  129.00 :    58 (  22f   36b)     4f   6b    3     1       0 |  0.136842 | MxBMWxBsMsWxH
+760 |  131.00 :    56 (  22f   34b)     3f   6b    5     1       0 |  0.141842 | sMWxBMsWxBxH
+720 |  137.00 :    57 (  23f   34b)     4f   7b    6     0       0 |  0.180278 | MHMH
+762 |  139.00 :    53 (  22f   31b)     3f   6b    5     0       0 |  0.164436 | xBsWsHMsW>
+762 |  143.00 :    54 (  21f   33b)     3f   6b    5     0       0 |  0.173360 | xBMWsM>
+762 |  143.00 :    53 (  22f   31b)     3f   6b    5     0       0 |  0.173360 | xBWsHM>
+760 |  144.00 :    57 (  21f   36b)     3f   6b    5     1       0 |  0.165000 | xBMxBWxH
+720 |  146.00 :    64 (  26f   38b)     4f   7b    6     0       0 |  0.191389 | MHsMsH
+760 |  147.00 :    60 (  22f   38b)     3f   6b    5     1       0 |  0.162895 | xBsMWxBMsWxH
+762 |  149.00 :    60 (  23f   37b)     3f   6b    5     0       0 |  0.177559 | xBsMWsHsM>
+720 |  153.00 :    53 (  21f   32b)     4f   7b    6     0       0 |  0.206111 | sMsM
+720 |  157.00 :    57 (  23f   34b)     4f   7b    6     0       0 |  0.211667 | sWsW
+760 |  159.00 :    66 (  26f   40b)     5f   8b    5     1       0 |  0.184737 | MxBWxBxH
+720 |  178.00 :    62 (  26f   36b)     4f   7b   12     0       0 |  0.240833 | sHsH
 ----|--------------------------------------------------------------|-----------|-----------
 len |  music         4-bell runs         lb5s     56s   65s    09s | avg score | calling
 '''
@@ -2040,12 +2040,12 @@ len    B   Y  |  music       4-bell runs      5-bell runs    6-bell runs   7-bel
 256 :  96 160 |   72.00 :   27 ( 10f  17b)   13 ( 5f  8b)   11 ( 5f  6b)    6 (3f 3b)     2 (2f 0b)     0f  0b    0f  9b    4f  0b |  0.281250 | BYYBYYBY
 256 :  96 160 |   72.00 :   23 (  9f  14b)   14 ( 6f  8b)   14 ( 6f  8b)    9 (3f 6b)     3 (3f 0b)     0f  0b    0f  3b    6f  0b |  0.281250 | YYBBYYYB
 256 :  96 160 |   78.00 :   31 ( 14f  17b)   15 ( 7f  8b)   11 ( 7f  4b)    6 (4f 2b)     2 (2f 0b)     0f  0b    0f  9b    4f  0b |  0.304688 | BYYBBYYY
-256 :  96 160 |   78.00 :   26 (  9f  17b)   16 ( 7f  9b)   16 ( 7f  9b)    11 (5f 6b)    3 (3f 0b)     0f  0b    0f  2b    4f  0b |  0.304688 | YYBYBBYY
-256 :  96 160 |   81.00 :   27 (  9f  18b)   16 ( 6f 10b)   16 ( 6f 10b)    11 (4f 7b)    3 (3f 0b)     0f  0b    0f  2b    6f  0b |  0.316406 | YYBBYBYY
+256 :  96 160 |   78.00 :   26 (  9f  17b)   16 ( 7f  9b)   16 ( 7f  9b)   11 (5f 6b)     3 (3f 0b)     0f  0b    0f  2b    4f  0b |  0.304688 | YYBYBBYY
+256 :  96 160 |   81.00 :   27 (  9f  18b)   16 ( 6f 10b)   16 ( 6f 10b)   11 (4f 7b)     3 (3f 0b)     0f  0b    0f  2b    6f  0b |  0.316406 | YYBBYBYY
 256 :  96 160 |   82.00 :   29 ( 14f  15b)   16 ( 9f  7b)   14 ( 9f  5b)    8 (5f 3b)     3 (3f 0b)     0f  0b    0f  8b    4f  0b |  0.320312 | BYYYBYYB
 256 :  96 160 |   85.00 :   30 ( 14f  16b)   16 ( 8f  8b)   14 ( 8f  6b)    8 (4f 4b)     3 (3f 0b)     0f  0b    0f  8b    6f  0b |  0.332031 | BYYBYYYB
-256 :  96 160 |   91.00 :   33 ( 14f  19b)   18 ( 9f  9b)   16 ( 9f  7b)    10 (6f 4b)    3 (3f 0b)     0f  0b    0f  7b    4f  0b |  0.355469 | BYYYBBYY
-256 :  96 160 |   94.00 :   34 ( 14f  20b)   18 ( 8f 10b)   16 ( 8f  8b)    10 (5f 5b)    3 (3f 0b)     0f  0b    0f  7b    6f  0b |  0.367188 | BYYBYBYY
+256 :  96 160 |   91.00 :   33 ( 14f  19b)   18 ( 9f  9b)   16 ( 9f  7b)   10 (6f 4b)     3 (3f 0b)     0f  0b    0f  7b    4f  0b |  0.355469 | BYYYBBYY
+256 :  96 160 |   94.00 :   34 ( 14f  20b)   18 ( 8f 10b)   16 ( 8f  8b)   10 (5f 5b)     3 (3f 0b)     0f  0b    0f  7b    6f  0b |  0.367188 | BYYBYBYY
 --------------|--------------------------------------------------------------------------------------------------------------------|-----------|-----------
 len    B   Y  |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs    6578s     5678s     8765s  | avg score | calling
 '''
@@ -2308,9 +2308,9 @@ len |  music  | avg score | calling
 "test/cases/multipart-far-calls.toml" = '''
  len |  music         4-bell runs          5-bell runs        6-bell runs      7-bell runs    8-bell runs   9-bell runs   10-bell runs     09876s      67890s      65432s      23456s  | avg score | calling
 -----|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-----------
- 720 |  167.60 :    82 (  46f   36b)     43 (  23f   20b)    17 (  9f   8b)    9 ( 5f  4b)    8 ( 4f  4b)    4 (2f 2b)      1 (1f 0b)     14f   0b     0f  14b     0f   6b     7f   0b |  0.222778 | BI
-1440 |  211.60 :   126 (  68f   58b)     43 (  23f   20b)    17 (  9f   8b)    9 ( 5f  4b)    8 ( 4f  4b)    4 (2f 2b)      1 (1f 0b)     14f   0b     0f  14b     0f   6b     7f   0b |  0.135556 | sVsVBI
-1440 |  268.60 :   154 (  79f   75b)     59 (  30f   29b)    18 (  9f   9b)   10 ( 5f  5b)   10 ( 5f  5b)    6 (3f 3b)      2 (2f 0b)     14f   0b     0f  14b     0f   7b     7f   2b |  0.176528 | VBIV
+ 720 |  167.60 :    82 (  46f   36b)     43 (  23f   20b)    17 (  9f   8b)    9 ( 5f  4b)    8 ( 4f  4b)    4 (2f 2b)     1 (1f 0b)      14f   0b     0f  14b     0f   6b     7f   0b |  0.222778 | BI
+1440 |  211.60 :   126 (  68f   58b)     43 (  23f   20b)    17 (  9f   8b)    9 ( 5f  4b)    8 ( 4f  4b)    4 (2f 2b)     1 (1f 0b)      14f   0b     0f  14b     0f   6b     7f   0b |  0.135556 | sVsVBI
+1440 |  268.60 :   154 (  79f   75b)     59 (  30f   29b)    18 (  9f   9b)   10 ( 5f  5b)   10 ( 5f  5b)    6 (3f 3b)     2 (2f 0b)      14f   0b     0f  14b     0f   7b     7f   2b |  0.176528 | VBIV
 -----|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-----------
  len |  music         4-bell runs          5-bell runs        6-bell runs      7-bell runs    8-bell runs   9-bell runs   10-bell runs     09876s      67890s      65432s      23456s  | avg score | calling
 '''
@@ -2370,539 +2370,539 @@ len |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8
 "test/cases/music-preset-major.toml" = '''
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-192 |   14.00 :   1      0f   5b      0f   8b |  0.011458 | sMMMsMBW
-288 |   14.00 :   1      0f   5b      0f   8b |  0.013889 | MsWWBsW
-288 |   14.00 :   1      0f   5b      0f   8b |  0.013889 | sMHsHBW
-288 |   14.00 :   1      0f   5b      0f   8b |  0.013889 | sMWHBsW
-144 |   14.00 :   1      0f   5b      0f   8b |  0.059722 | MBW
-288 |   15.00 :   1      1f   5b      0f   8b |  0.011111 | MMBsWBsW
-288 |   15.00 :   1      0f   6b      0f   8b |  0.017361 | MBsHHsW
-288 |   15.00 :   1      0f   6b      0f   8b |  0.017361 | sMBHMsW
-288 |   15.00 :   1      0f   6b      0f   8b |  0.017361 | sMBMsMW
-288 |   16.00 :   1      0f   7b      0f   8b |  0.011111 | sMBsWsMBsW
-288 |   16.00 :   1      0f   7b      0f   8b |  0.014583 | MBsWMBsW
-288 |   16.00 :   1      0f   7b      0f   8b |  0.014583 | sMBsMBWW
-240 |   17.00 :   1      0f   8b      0f   8b | -0.005000 | sMMMsMBsWWWsW
-192 |   17.00 :   1      0f   8b      0f   8b |  0.027083 | MBsWWWsW
-288 |   19.00 :   1      0f  10b      0f   8b |  0.025000 | sMBWsMBW
-112 |   21.00 :   1      0f   4b      8f   8b |  0.187500 | 
-256 |   24.00 :   1      1f   6b      0f  16b |  0.019531 | MMsMMBWsWWWH
-240 |   24.00 :   1      1f   6b      0f  16b |  0.028333 | MMsMMBWWsWH
-240 |   24.00 :   1      1f   6b      0f  16b |  0.028333 | sMMMBWsWWWH
-224 |   24.00 :   1      1f   6b      0f  16b |  0.038393 | MMsMMBsWWH
-224 |   24.00 :   1      1f   6b      0f  16b |  0.038393 | MsMBWsWWWH
-224 |   24.00 :   1      1f   6b      0f  16b |  0.038393 | sMMMBWWsWH
-208 |   24.00 :   1      1f   6b      0f  16b |  0.050000 | MsMBWWsWH
-208 |   24.00 :   1      1f   6b      0f  16b |  0.050000 | sMMMBsWWH
-192 |   24.00 :   1      1f   6b      0f  16b |  0.063542 | MsMBsWWH
- 32 |   24.00 :   2      0f   6b      0f  16b |  0.606250 | sHsH
-288 |   25.00 :   2      1f   6b      0f  16b |  0.045833 | MMBBsWsH
-288 |   25.00 :   2      0f   7b      0f  16b |  0.045833 | sMBBWWsH
-224 |   26.00 :   1      0f   9b      0f  16b |  0.047321 | HMMsMMBsWW
-288 |   26.00 :   2      0f   8b      0f  16b |  0.049306 | sHMMBBsW
-208 |   26.00 :   1      0f   9b      0f  16b |  0.059615 | HsMMMBsWW
-192 |   26.00 :   1      0f   9b      0f  16b |  0.073958 | HMsMBsWW
-240 |   27.00 :   1      0f  10b      0f  16b |  0.040833 | HMMsMMBWWsW
-224 |   27.00 :   1      0f  10b      0f  16b |  0.051786 | HsMMMBWWsW
-288 |   27.00 :   1      1f   5b     12f   8b |  0.052778 | BsWMMBsW
-288 |   27.00 :   2      0f   9b      0f  16b |  0.052778 | sHsMBBWW
-288 |   27.00 :   1      0f   6b     12f   8b |  0.059028 | MsMWsMB
-208 |   27.00 :   1      0f  10b      0f  16b |  0.064423 | HMsMBWWsW
-256 |   28.00 :   1      0f  11b      0f  16b |  0.035156 | HMMsMMBWsWWW
-240 |   28.00 :   1      0f  11b      0f  16b |  0.045000 | HsMMMBWsWWW
-224 |   28.00 :   1      0f  11b      0f  16b |  0.056250 | HMsMBWsWWW
-288 |   28.00 :   1      0f   7b     12f   8b |  0.056250 | sMBWWsMB
-288 |   28.00 :   1      1f   6b     12f   8b |  0.062500 | BsWMsWW
-256 |   31.00 :   1      0f   6b      8f  16b |  0.053906 | MsMMMWWsWWH
-240 |   31.00 :   1      0f   6b      8f  16b |  0.065000 | MMsMWWsWWH
-240 |   31.00 :   1      0f   6b      8f  16b |  0.065000 | MsMMMsWWWH
-224 |   31.00 :   1      0f   6b      8f  16b |  0.077679 | MMsMsWWWH
-224 |   31.00 :   1      0f   6b      8f  16b |  0.077679 | MsMMMWsWH
-224 |   31.00 :   1      0f   6b      8f  16b |  0.077679 | sMMWWsWWH
-208 |   31.00 :   1      0f   6b      8f  16b |  0.092308 | MMsMWsWH
+192 |   14.00 :   1      0f   5b     0f   8b  |  0.011458 | sMMMsMBW
+288 |   14.00 :   1      0f   5b     0f   8b  |  0.013889 | MsWWBsW
+288 |   14.00 :   1      0f   5b     0f   8b  |  0.013889 | sMHsHBW
+288 |   14.00 :   1      0f   5b     0f   8b  |  0.013889 | sMWHBsW
+144 |   14.00 :   1      0f   5b     0f   8b  |  0.059722 | MBW
+288 |   15.00 :   1      1f   5b     0f   8b  |  0.011111 | MMBsWBsW
+288 |   15.00 :   1      0f   6b     0f   8b  |  0.017361 | MBsHHsW
+288 |   15.00 :   1      0f   6b     0f   8b  |  0.017361 | sMBHMsW
+288 |   15.00 :   1      0f   6b     0f   8b  |  0.017361 | sMBMsMW
+288 |   16.00 :   1      0f   7b     0f   8b  |  0.011111 | sMBsWsMBsW
+288 |   16.00 :   1      0f   7b     0f   8b  |  0.014583 | MBsWMBsW
+288 |   16.00 :   1      0f   7b     0f   8b  |  0.014583 | sMBsMBWW
+240 |   17.00 :   1      0f   8b     0f   8b  | -0.005000 | sMMMsMBsWWWsW
+192 |   17.00 :   1      0f   8b     0f   8b  |  0.027083 | MBsWWWsW
+288 |   19.00 :   1      0f  10b     0f   8b  |  0.025000 | sMBWsMBW
+112 |   21.00 :   1      0f   4b     8f   8b  |  0.187500 | 
+256 |   24.00 :   1      1f   6b     0f  16b  |  0.019531 | MMsMMBWsWWWH
+240 |   24.00 :   1      1f   6b     0f  16b  |  0.028333 | MMsMMBWWsWH
+240 |   24.00 :   1      1f   6b     0f  16b  |  0.028333 | sMMMBWsWWWH
+224 |   24.00 :   1      1f   6b     0f  16b  |  0.038393 | MMsMMBsWWH
+224 |   24.00 :   1      1f   6b     0f  16b  |  0.038393 | MsMBWsWWWH
+224 |   24.00 :   1      1f   6b     0f  16b  |  0.038393 | sMMMBWWsWH
+208 |   24.00 :   1      1f   6b     0f  16b  |  0.050000 | MsMBWWsWH
+208 |   24.00 :   1      1f   6b     0f  16b  |  0.050000 | sMMMBsWWH
+192 |   24.00 :   1      1f   6b     0f  16b  |  0.063542 | MsMBsWWH
+ 32 |   24.00 :   2      0f   6b     0f  16b  |  0.606250 | sHsH
+288 |   25.00 :   2      1f   6b     0f  16b  |  0.045833 | MMBBsWsH
+288 |   25.00 :   2      0f   7b     0f  16b  |  0.045833 | sMBBWWsH
+224 |   26.00 :   1      0f   9b     0f  16b  |  0.047321 | HMMsMMBsWW
+288 |   26.00 :   2      0f   8b     0f  16b  |  0.049306 | sHMMBBsW
+208 |   26.00 :   1      0f   9b     0f  16b  |  0.059615 | HsMMMBsWW
+192 |   26.00 :   1      0f   9b     0f  16b  |  0.073958 | HMsMBsWW
+240 |   27.00 :   1      0f  10b     0f  16b  |  0.040833 | HMMsMMBWWsW
+224 |   27.00 :   1      0f  10b     0f  16b  |  0.051786 | HsMMMBWWsW
+288 |   27.00 :   1      1f   5b    12f   8b  |  0.052778 | BsWMMBsW
+288 |   27.00 :   2      0f   9b     0f  16b  |  0.052778 | sHsMBBWW
+288 |   27.00 :   1      0f   6b    12f   8b  |  0.059028 | MsMWsMB
+208 |   27.00 :   1      0f  10b     0f  16b  |  0.064423 | HMsMBWWsW
+256 |   28.00 :   1      0f  11b     0f  16b  |  0.035156 | HMMsMMBWsWWW
+240 |   28.00 :   1      0f  11b     0f  16b  |  0.045000 | HsMMMBWsWWW
+224 |   28.00 :   1      0f  11b     0f  16b  |  0.056250 | HMsMBWsWWW
+288 |   28.00 :   1      0f   7b    12f   8b  |  0.056250 | sMBWWsMB
+288 |   28.00 :   1      1f   6b    12f   8b  |  0.062500 | BsWMsWW
+256 |   31.00 :   1      0f   6b     8f  16b  |  0.053906 | MsMMMWWsWWH
+240 |   31.00 :   1      0f   6b     8f  16b  |  0.065000 | MMsMWWsWWH
+240 |   31.00 :   1      0f   6b     8f  16b  |  0.065000 | MsMMMsWWWH
+224 |   31.00 :   1      0f   6b     8f  16b  |  0.077679 | MMsMsWWWH
+224 |   31.00 :   1      0f   6b     8f  16b  |  0.077679 | MsMMMWsWH
+224 |   31.00 :   1      0f   6b     8f  16b  |  0.077679 | sMMWWsWWH
+208 |   31.00 :   1      0f   6b     8f  16b  |  0.092308 | MMsMWsWH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-208 |   31.00 :   1      0f   6b      8f  16b |  0.092308 | sMMsWWWH
-192 |   31.00 :   1      0f   6b      8f  16b |  0.109375 | sMMWsWH
-288 |   32.00 :   1      1f   6b      8f  16b |  0.082639 | sMsHMH
-288 |   32.00 :   1      1f   6b      8f  16b |  0.086111 | MHMH
-288 |   33.00 :   2      1f   6b      8f  16b |  0.082639 | sMsHsMsH
-288 |   33.00 :   1      0f   8b      8f  16b |  0.086111 | HWsHsW
-288 |   33.00 :   2      1f   6b      8f  16b |  0.086111 | MHsMsH
-288 |   33.00 :   1      0f   8b      8f  16b |  0.086111 | WsHsWH
-288 |   33.00 :   1      0f   8b      8f  16b |  0.089583 | HWHW
-288 |   33.00 :   1      0f   8b      8f  16b |  0.089583 | WHWH
-288 |   34.00 :   2      1f   7b      8f  16b |  0.086111 | sHsMsHsM
-288 |   34.00 :   2      0f   8b      8f  16b |  0.086111 | sWsHsWsH
-288 |   34.00 :   2      1f   7b      8f  16b |  0.089583 | sHMHsM
-288 |   34.00 :   2      0f   8b      8f  16b |  0.089583 | sWHWsH
-224 |   34.00 :   1      0f   9b      8f  16b |  0.091071 | HMsMMMWsW
-208 |   34.00 :   1      0f   9b      8f  16b |  0.106731 | HMMsMWsW
-192 |   34.00 :   1      0f   9b      8f  16b |  0.125000 | HsMMWsW
- 48 |   34.00 :   1      0f   9b      0f  24b |  0.595833 | HHH
-272 |   35.00 :   2      0f   9b      0f  24b |  0.048529 | sHMMsMMBsWWWsWH
-256 |   35.00 :   2      0f   9b      0f  24b |  0.058594 | sHsMMMBsWWWsWH
-240 |   35.00 :   2      0f   9b      0f  24b |  0.070000 | sHMsMBsWWWsWH
-288 |   35.00 :   1      1f   9b      0f  24b |  0.080556 | HsMBBsWH
-288 |   35.00 :   1      0f  10b      0f  24b |  0.080556 | sMBBsWHH
-240 |   35.00 :   1      0f  10b      8f  16b |  0.081667 | HMsMMMsWWW
-224 |   35.00 :   2      0f   9b      0f  24b |  0.087500 | sHMMsMMBWH
-288 |   35.00 :   2      1f   8b      8f  16b |  0.089583 | sHsWsHsW
-288 |   35.00 :   2      1f   8b      8f  16b |  0.093056 | sHsWHW
-224 |   35.00 :   1      0f  10b      8f  16b |  0.095536 | HMMsMsWWW
-208 |   35.00 :   2      0f   9b      0f  24b |  0.102885 | sHsMMMBWH
-208 |   35.00 :   1      0f  10b      8f  16b |  0.111538 | HsMMsWWW
-192 |   35.00 :   2      0f   9b      0f  24b |  0.120833 | sHMsMBWH
-272 |   36.00 :   2      1f   9b      0f  24b |  0.052206 | HsMMMsMBWsWWWsH
-272 |   36.00 :   2      1f   9b      0f  24b |  0.052206 | MMsMMBsWWWsWHsH
-256 |   36.00 :   2      1f   9b      0f  24b |  0.062500 | HsMMMsMBWWsWsH
-256 |   36.00 :   2      1f   9b      0f  24b |  0.062500 | sMMMBsWWWsWHsH
-256 |   36.00 :   1      0f  11b      8f  16b |  0.073438 | HMsMMMWWsWW
-240 |   36.00 :   2      1f   9b      0f  24b |  0.074167 | HsMMMsMBsWWsH
-240 |   36.00 :   2      1f   9b      0f  24b |  0.074167 | MsMBsWWWsWHsH
-288 |   36.00 :   1      0f  11b      0f  24b |  0.084028 | HHsMBBsW
-240 |   36.00 :   1      0f  11b      8f  16b |  0.085833 | HMMsMWWsWW
-288 |   36.00 :   1      1f   6b     12f  16b |  0.090278 | BsWsMWH
-288 |   36.00 :   1      1f   6b     12f  16b |  0.090278 | MsWsMBH
-224 |   36.00 :   2      1f   9b      0f  24b |  0.091964 | HMBWsWWWsH
-224 |   36.00 :   1      0f  11b      0f  24b |  0.091964 | HsHMMsMMBW
-224 |   36.00 :   2      1f   9b      0f  24b |  0.091964 | MMsMMBWHsH
-224 |   36.00 :   1      0f  11b      8f  16b |  0.100000 | HsMMWWsWW
-208 |   36.00 :   2      1f   9b      0f  24b |  0.107692 | HMBWWsWsH
-208 |   36.00 :   1      0f  11b      0f  24b |  0.107692 | HsHsMMMBW
-208 |   36.00 :   2      1f   9b      0f  24b |  0.107692 | sMMMBWHsH
-192 |   36.00 :   2      1f   9b      0f  24b |  0.126042 | HMBsWWsH
+208 |   31.00 :   1      0f   6b     8f  16b  |  0.092308 | sMMsWWWH
+192 |   31.00 :   1      0f   6b     8f  16b  |  0.109375 | sMMWsWH
+288 |   32.00 :   1      1f   6b     8f  16b  |  0.082639 | sMsHMH
+288 |   32.00 :   1      1f   6b     8f  16b  |  0.086111 | MHMH
+288 |   33.00 :   2      1f   6b     8f  16b  |  0.082639 | sMsHsMsH
+288 |   33.00 :   1      0f   8b     8f  16b  |  0.086111 | HWsHsW
+288 |   33.00 :   2      1f   6b     8f  16b  |  0.086111 | MHsMsH
+288 |   33.00 :   1      0f   8b     8f  16b  |  0.086111 | WsHsWH
+288 |   33.00 :   1      0f   8b     8f  16b  |  0.089583 | HWHW
+288 |   33.00 :   1      0f   8b     8f  16b  |  0.089583 | WHWH
+288 |   34.00 :   2      1f   7b     8f  16b  |  0.086111 | sHsMsHsM
+288 |   34.00 :   2      0f   8b     8f  16b  |  0.086111 | sWsHsWsH
+288 |   34.00 :   2      1f   7b     8f  16b  |  0.089583 | sHMHsM
+288 |   34.00 :   2      0f   8b     8f  16b  |  0.089583 | sWHWsH
+224 |   34.00 :   1      0f   9b     8f  16b  |  0.091071 | HMsMMMWsW
+208 |   34.00 :   1      0f   9b     8f  16b  |  0.106731 | HMMsMWsW
+192 |   34.00 :   1      0f   9b     8f  16b  |  0.125000 | HsMMWsW
+ 48 |   34.00 :   1      0f   9b     0f  24b  |  0.595833 | HHH
+272 |   35.00 :   2      0f   9b     0f  24b  |  0.048529 | sHMMsMMBsWWWsWH
+256 |   35.00 :   2      0f   9b     0f  24b  |  0.058594 | sHsMMMBsWWWsWH
+240 |   35.00 :   2      0f   9b     0f  24b  |  0.070000 | sHMsMBsWWWsWH
+288 |   35.00 :   1      1f   9b     0f  24b  |  0.080556 | HsMBBsWH
+288 |   35.00 :   1      0f  10b     0f  24b  |  0.080556 | sMBBsWHH
+240 |   35.00 :   1      0f  10b     8f  16b  |  0.081667 | HMsMMMsWWW
+224 |   35.00 :   2      0f   9b     0f  24b  |  0.087500 | sHMMsMMBWH
+288 |   35.00 :   2      1f   8b     8f  16b  |  0.089583 | sHsWsHsW
+288 |   35.00 :   2      1f   8b     8f  16b  |  0.093056 | sHsWHW
+224 |   35.00 :   1      0f  10b     8f  16b  |  0.095536 | HMMsMsWWW
+208 |   35.00 :   2      0f   9b     0f  24b  |  0.102885 | sHsMMMBWH
+208 |   35.00 :   1      0f  10b     8f  16b  |  0.111538 | HsMMsWWW
+192 |   35.00 :   2      0f   9b     0f  24b  |  0.120833 | sHMsMBWH
+272 |   36.00 :   2      1f   9b     0f  24b  |  0.052206 | HsMMMsMBWsWWWsH
+272 |   36.00 :   2      1f   9b     0f  24b  |  0.052206 | MMsMMBsWWWsWHsH
+256 |   36.00 :   2      1f   9b     0f  24b  |  0.062500 | HsMMMsMBWWsWsH
+256 |   36.00 :   2      1f   9b     0f  24b  |  0.062500 | sMMMBsWWWsWHsH
+256 |   36.00 :   1      0f  11b     8f  16b  |  0.073438 | HMsMMMWWsWW
+240 |   36.00 :   2      1f   9b     0f  24b  |  0.074167 | HsMMMsMBsWWsH
+240 |   36.00 :   2      1f   9b     0f  24b  |  0.074167 | MsMBsWWWsWHsH
+288 |   36.00 :   1      0f  11b     0f  24b  |  0.084028 | HHsMBBsW
+240 |   36.00 :   1      0f  11b     8f  16b  |  0.085833 | HMMsMWWsWW
+288 |   36.00 :   1      1f   6b    12f  16b  |  0.090278 | BsWsMWH
+288 |   36.00 :   1      1f   6b    12f  16b  |  0.090278 | MsWsMBH
+224 |   36.00 :   2      1f   9b     0f  24b  |  0.091964 | HMBWsWWWsH
+224 |   36.00 :   1      0f  11b     0f  24b  |  0.091964 | HsHMMsMMBW
+224 |   36.00 :   2      1f   9b     0f  24b  |  0.091964 | MMsMMBWHsH
+224 |   36.00 :   1      0f  11b     8f  16b  |  0.100000 | HsMMWWsWW
+208 |   36.00 :   2      1f   9b     0f  24b  |  0.107692 | HMBWWsWsH
+208 |   36.00 :   1      0f  11b     0f  24b  |  0.107692 | HsHsMMMBW
+208 |   36.00 :   2      1f   9b     0f  24b  |  0.107692 | sMMMBWHsH
+192 |   36.00 :   2      1f   9b     0f  24b  |  0.126042 | HMBsWWsH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-192 |   36.00 :   1      0f  11b      0f  24b |  0.126042 | HsHMsMBW
-192 |   36.00 :   2      1f   9b      0f  24b |  0.126042 | MsMBWHsH
-240 |   38.00 :   2      0f  12b      0f  24b |  0.082500 | sMMMsMBsWWsHH
-288 |   38.00 :   1      1f   4b     24f   8b |  0.090972 | BWWsHsMB
-288 |   38.00 :   1      1f   4b     24f   8b |  0.090972 | BsWHHsMB
-288 |   38.00 :   1      1f   4b     24f   8b |  0.090972 | BsWsHMMB
-288 |   38.00 :   1      1f   8b     12f  16b |  0.097222 | HBsWsMW
-288 |   38.00 :   1      0f   9b     12f  16b |  0.097222 | HMsWsMB
-288 |   38.00 :   1      0f  13b      8f  16b |  0.103472 | HsMsHM
-192 |   38.00 :   2      0f  12b      0f  24b |  0.136458 | MBsWWsHH
-272 |   39.00 :   1      0f  14b      0f  24b |  0.063235 | HsHMMsMMBsWWWsW
-256 |   39.00 :   1      0f  14b      0f  24b |  0.074219 | HsHsMMMBsWWWsW
-256 |   39.00 :   2      0f  13b      0f  24b |  0.074219 | sMMMsMBWWsWsHH
-240 |   39.00 :   1      0f  14b      0f  24b |  0.086667 | HsHMsMBsWWWsW
-240 |   39.00 :   3      0f  12b      0f  24b |  0.086667 | sHHsMMMsMBsWW
-288 |   39.00 :   1      0f  14b      8f  16b |  0.110417 | HMHM
-208 |   39.00 :   2      0f  13b      0f  24b |  0.122115 | MBWWsWsHH
-192 |   39.00 :   3      0f  12b      0f  24b |  0.141667 | sHHMBsWW
-272 |   40.00 :   2      0f  14b      0f  24b |  0.066912 | sMMMsMBWsWWWsHH
-256 |   40.00 :   3      0f  13b      0f  24b |  0.078125 | sHHsMMMsMBWWsW
-224 |   40.00 :   2      0f  14b      0f  24b |  0.109821 | MBWsWWWsHH
-208 |   40.00 :   3      0f  13b      0f  24b |  0.126923 | sHHMBWWsW
-272 |   41.00 :   3      0f  14b      0f  24b |  0.070588 | sHHsMMMsMBWsWWW
-224 |   41.00 :   3      0f  14b      0f  24b |  0.114286 | sHHMBWsWWW
-208 |   43.00 :   2      0f   9b      8f  24b |  0.150000 | HWWsWWsH
-208 |   43.00 :   1      0f  10b      8f  24b |  0.150000 | HsHMsMMM
-208 |   43.00 :   2      0f   9b      8f  24b |  0.150000 | MsMMMHsH
-192 |   43.00 :   1      0f  10b      8f  24b |  0.171875 | HsHMMsM
-192 |   43.00 :   2      0f   9b      8f  24b |  0.171875 | HsWWWsH
-192 |   43.00 :   2      0f   9b      8f  24b |  0.171875 | MMsMHsH
-176 |   43.00 :   2      0f   9b      8f  24b |  0.197727 | HWsWsH
-176 |   43.00 :   1      0f  10b      8f  24b |  0.197727 | HsHsMM
-176 |   43.00 :   2      0f   9b      8f  24b |  0.197727 | sMMHsH
-208 |   44.00 :   2      1f   9b      8f  24b |  0.154808 | sHMsMMMH
-192 |   44.00 :   2      1f   9b      8f  24b |  0.177083 | sHMMsMH
-176 |   44.00 :   2      1f   9b      8f  24b |  0.203409 | sHsMMH
-288 |   46.00 :   2      0f  12b      0f  32b |  0.077778 | HHMMsMMBsWWWsWsH
-288 |   46.00 :   1      1f  12b      0f  32b |  0.077778 | HsHsMMMsMBWsWWWH
-288 |   46.00 :   1      1f  12b      0f  32b |  0.077778 | MMsMMBsWWWsWsHHH
-288 |   46.00 :   2      0f  12b      0f  32b |  0.077778 | sHsMMMsMBWsWWWHH
-272 |   46.00 :   2      0f  12b      0f  32b |  0.088971 | HHsMMMBsWWWsWsH
-272 |   46.00 :   1      1f  12b      0f  32b |  0.088971 | HsHsMMMsMBWWsWH
-272 |   46.00 :   2      0f  12b      0f  32b |  0.088971 | sHsMMMsMBWWsWHH
-272 |   46.00 :   1      1f  12b      0f  32b |  0.088971 | sMMMBsWWWsWsHHH
-256 |   46.00 :   2      0f  12b      0f  32b |  0.101563 | HHMsMBsWWWsWsH
-256 |   46.00 :   1      1f  12b      0f  32b |  0.101563 | HsHsMMMsMBsWWH
-256 |   46.00 :   1      1f  12b      0f  32b |  0.101562 | MsMBsWWWsWsHHH
-256 |   46.00 :   2      0f  12b      0f  32b |  0.101563 | sHsMMMsMBsWWHH
-240 |   46.00 :   2      0f  12b      0f  32b |  0.120000 | HHMMsMMBWsH
-240 |   46.00 :   1      1f  12b      0f  32b |  0.120000 | HsHMBWsWWWH
+192 |   36.00 :   1      0f  11b     0f  24b  |  0.126042 | HsHMsMBW
+192 |   36.00 :   2      1f   9b     0f  24b  |  0.126042 | MsMBWHsH
+240 |   38.00 :   2      0f  12b     0f  24b  |  0.082500 | sMMMsMBsWWsHH
+288 |   38.00 :   1      1f   4b    24f   8b  |  0.090972 | BWWsHsMB
+288 |   38.00 :   1      1f   4b    24f   8b  |  0.090972 | BsWHHsMB
+288 |   38.00 :   1      1f   4b    24f   8b  |  0.090972 | BsWsHMMB
+288 |   38.00 :   1      1f   8b    12f  16b  |  0.097222 | HBsWsMW
+288 |   38.00 :   1      0f   9b    12f  16b  |  0.097222 | HMsWsMB
+288 |   38.00 :   1      0f  13b     8f  16b  |  0.103472 | HsMsHM
+192 |   38.00 :   2      0f  12b     0f  24b  |  0.136458 | MBsWWsHH
+272 |   39.00 :   1      0f  14b     0f  24b  |  0.063235 | HsHMMsMMBsWWWsW
+256 |   39.00 :   1      0f  14b     0f  24b  |  0.074219 | HsHsMMMBsWWWsW
+256 |   39.00 :   2      0f  13b     0f  24b  |  0.074219 | sMMMsMBWWsWsHH
+240 |   39.00 :   1      0f  14b     0f  24b  |  0.086667 | HsHMsMBsWWWsW
+240 |   39.00 :   3      0f  12b     0f  24b  |  0.086667 | sHHsMMMsMBsWW
+288 |   39.00 :   1      0f  14b     8f  16b  |  0.110417 | HMHM
+208 |   39.00 :   2      0f  13b     0f  24b  |  0.122115 | MBWWsWsHH
+192 |   39.00 :   3      0f  12b     0f  24b  |  0.141667 | sHHMBsWW
+272 |   40.00 :   2      0f  14b     0f  24b  |  0.066912 | sMMMsMBWsWWWsHH
+256 |   40.00 :   3      0f  13b     0f  24b  |  0.078125 | sHHsMMMsMBWWsW
+224 |   40.00 :   2      0f  14b     0f  24b  |  0.109821 | MBWsWWWsHH
+208 |   40.00 :   3      0f  13b     0f  24b  |  0.126923 | sHHMBWWsW
+272 |   41.00 :   3      0f  14b     0f  24b  |  0.070588 | sHHsMMMsMBWsWWW
+224 |   41.00 :   3      0f  14b     0f  24b  |  0.114286 | sHHMBWsWWW
+208 |   43.00 :   2      0f   9b     8f  24b  |  0.150000 | HWWsWWsH
+208 |   43.00 :   1      0f  10b     8f  24b  |  0.150000 | HsHMsMMM
+208 |   43.00 :   2      0f   9b     8f  24b  |  0.150000 | MsMMMHsH
+192 |   43.00 :   1      0f  10b     8f  24b  |  0.171875 | HsHMMsM
+192 |   43.00 :   2      0f   9b     8f  24b  |  0.171875 | HsWWWsH
+192 |   43.00 :   2      0f   9b     8f  24b  |  0.171875 | MMsMHsH
+176 |   43.00 :   2      0f   9b     8f  24b  |  0.197727 | HWsWsH
+176 |   43.00 :   1      0f  10b     8f  24b  |  0.197727 | HsHsMM
+176 |   43.00 :   2      0f   9b     8f  24b  |  0.197727 | sMMHsH
+208 |   44.00 :   2      1f   9b     8f  24b  |  0.154808 | sHMsMMMH
+192 |   44.00 :   2      1f   9b     8f  24b  |  0.177083 | sHMMsMH
+176 |   44.00 :   2      1f   9b     8f  24b  |  0.203409 | sHsMMH
+288 |   46.00 :   2      0f  12b     0f  32b  |  0.077778 | HHMMsMMBsWWWsWsH
+288 |   46.00 :   1      1f  12b     0f  32b  |  0.077778 | HsHsMMMsMBWsWWWH
+288 |   46.00 :   1      1f  12b     0f  32b  |  0.077778 | MMsMMBsWWWsWsHHH
+288 |   46.00 :   2      0f  12b     0f  32b  |  0.077778 | sHsMMMsMBWsWWWHH
+272 |   46.00 :   2      0f  12b     0f  32b  |  0.088971 | HHsMMMBsWWWsWsH
+272 |   46.00 :   1      1f  12b     0f  32b  |  0.088971 | HsHsMMMsMBWWsWH
+272 |   46.00 :   2      0f  12b     0f  32b  |  0.088971 | sHsMMMsMBWWsWHH
+272 |   46.00 :   1      1f  12b     0f  32b  |  0.088971 | sMMMBsWWWsWsHHH
+256 |   46.00 :   2      0f  12b     0f  32b  |  0.101563 | HHMsMBsWWWsWsH
+256 |   46.00 :   1      1f  12b     0f  32b  |  0.101563 | HsHsMMMsMBsWWH
+256 |   46.00 :   1      1f  12b     0f  32b  |  0.101562 | MsMBsWWWsWsHHH
+256 |   46.00 :   2      0f  12b     0f  32b  |  0.101563 | sHsMMMsMBsWWHH
+240 |   46.00 :   2      0f  12b     0f  32b  |  0.120000 | HHMMsMMBWsH
+240 |   46.00 :   1      1f  12b     0f  32b  |  0.120000 | HsHMBWsWWWH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-240 |   46.00 :   1      1f  12b      0f  32b |  0.120000 | MMsMMBWsHHH
-240 |   46.00 :   2      0f  12b      0f  32b |  0.120000 | sHMBWsWWWHH
-224 |   46.00 :   2      0f  12b      0f  32b |  0.136607 | HHsMMMBWsH
-224 |   46.00 :   1      1f  12b      0f  32b |  0.136607 | HsHMBWWsWH
-224 |   46.00 :   2      0f  12b      0f  32b |  0.136607 | sHMBWWsWHH
-224 |   46.00 :   1      1f  12b      0f  32b |  0.136607 | sMMMBWsHHH
-208 |   46.00 :   2      0f  12b      0f  32b |  0.155769 | HHMsMBWsH
-208 |   46.00 :   1      1f  12b      0f  32b |  0.155769 | HsHMBsWWH
-208 |   46.00 :   1      1f  12b      0f  32b |  0.155769 | MsMBWsHHH
-208 |   46.00 :   2      0f  12b      0f  32b |  0.155769 | sHMBsWWHH
-176 |   46.00 :   2      0f  12b      8f  24b |  0.214773 | WsWsHH
- 64 |   46.00 :   2      0f  12b      0f  32b |  0.590625 | HsHHsH
-192 |   47.00 :   2      0f  13b      8f  24b |  0.192708 | sWWWsHH
-176 |   47.00 :   3      0f  12b      8f  24b |  0.220455 | sHHWsW
- 64 |   47.00 :   3      0f  12b      0f  32b |  0.606250 | sHHsHH
-240 |   48.00 :   2      0f  14b      0f  32b |  0.128333 | HMMsMMBWsHH
-224 |   48.00 :   2      0f  14b      0f  32b |  0.145536 | HsMMMBWsHH
-208 |   48.00 :   2      0f  14b      0f  32b |  0.165385 | HMsMBWsHH
-208 |   48.00 :   2      0f  14b      8f  24b |  0.174038 | WWsWWsHH
-192 |   48.00 :   3      0f  13b      8f  24b |  0.197917 | sHHsWWW
-256 |   49.00 :   2      0f  15b      0f  32b |  0.113281 | HHsHsMMMsMBsWW
-240 |   49.00 :   3      0f  14b      0f  32b |  0.132500 | sHHHMMsMMBW
-224 |   49.00 :   3      0f  14b      0f  32b |  0.150000 | sHHHsMMMBW
-208 |   49.00 :   2      0f  15b      0f  32b |  0.170192 | HHsHMBsWW
-208 |   49.00 :   3      0f  14b      0f  32b |  0.170192 | sHHHMsMBW
-208 |   49.00 :   3      0f  14b      8f  24b |  0.178846 | sHHWWsWW
-272 |   50.00 :   2      0f  16b      0f  32b |  0.103676 | HHsHsMMMsMBWWsW
-256 |   50.00 :   3      0f  15b      0f  32b |  0.117188 | sMMMsMBsWWHHsH
-224 |   50.00 :   2      0f  16b      0f  32b |  0.154464 | HHsHMBWWsW
-208 |   50.00 :   3      0f  15b      0f  32b |  0.175000 | MBsWWHHsH
-288 |   51.00 :   2      0f  17b      0f  32b |  0.095139 | HHsHsMMMsMBWsWWW
-288 |   51.00 :   2      0f  17b      0f  32b |  0.095139 | HMMsMMBsWWWsWsHH
-272 |   51.00 :   2      0f  17b      0f  32b |  0.107353 | HsMMMBsWWWsWsHH
-272 |   51.00 :   3      0f  16b      0f  32b |  0.107353 | sMMMsMBWWsWHHsH
-256 |   51.00 :   2      0f  17b      0f  32b |  0.121094 | HMsMBsWWWsWsHH
-240 |   51.00 :   2      0f  17b      0f  32b |  0.140833 | HHsHMBWsWWW
-224 |   51.00 :   3      0f  16b      0f  32b |  0.158929 | MBWWsWHHsH
-288 |   52.00 :   3      0f  17b      0f  32b |  0.098611 | sHHHMMsMMBsWWWsW
-288 |   52.00 :   3      0f  17b      0f  32b |  0.098611 | sMMMsMBWsWWWHHsH
-272 |   52.00 :   3      0f  17b      0f  32b |  0.111029 | sHHHsMMMBsWWWsW
-256 |   52.00 :   3      0f  17b      0f  32b |  0.125000 | sHHHMsMBsWWWsW
-240 |   52.00 :   3      0f  17b      0f  32b |  0.145000 | MBWsWWWHHsH
-224 |   53.00 :   1      0f  12b      8f  32b |  0.175893 | HsHWWsWWH
-224 |   53.00 :   1      0f  12b      8f  32b |  0.175893 | MsMMMsHHH
-208 |   53.00 :   1      0f  12b      8f  32b |  0.198077 | HsHsWWWH
-208 |   53.00 :   1      0f  12b      8f  32b |  0.198077 | MMsMsHHH
-192 |   53.00 :   1      0f  12b      8f  32b |  0.223958 | HsHWsWH
-192 |   53.00 :   1      0f  12b      8f  32b |  0.223958 | sMMsHHH
-224 |   55.00 :   2      1f  12b      8f  32b |  0.184821 | HHMsMMMsH
-224 |   55.00 :   2      0f  13b      8f  32b |  0.184821 | HMsMMMsHH
+240 |   46.00 :   1      1f  12b     0f  32b  |  0.120000 | MMsMMBWsHHH
+240 |   46.00 :   2      0f  12b     0f  32b  |  0.120000 | sHMBWsWWWHH
+224 |   46.00 :   2      0f  12b     0f  32b  |  0.136607 | HHsMMMBWsH
+224 |   46.00 :   1      1f  12b     0f  32b  |  0.136607 | HsHMBWWsWH
+224 |   46.00 :   2      0f  12b     0f  32b  |  0.136607 | sHMBWWsWHH
+224 |   46.00 :   1      1f  12b     0f  32b  |  0.136607 | sMMMBWsHHH
+208 |   46.00 :   2      0f  12b     0f  32b  |  0.155769 | HHMsMBWsH
+208 |   46.00 :   1      1f  12b     0f  32b  |  0.155769 | HsHMBsWWH
+208 |   46.00 :   1      1f  12b     0f  32b  |  0.155769 | MsMBWsHHH
+208 |   46.00 :   2      0f  12b     0f  32b  |  0.155769 | sHMBsWWHH
+176 |   46.00 :   2      0f  12b     8f  24b  |  0.214773 | WsWsHH
+ 64 |   46.00 :   2      0f  12b     0f  32b  |  0.590625 | HsHHsH
+192 |   47.00 :   2      0f  13b     8f  24b  |  0.192708 | sWWWsHH
+176 |   47.00 :   3      0f  12b     8f  24b  |  0.220455 | sHHWsW
+ 64 |   47.00 :   3      0f  12b     0f  32b  |  0.606250 | sHHsHH
+240 |   48.00 :   2      0f  14b     0f  32b  |  0.128333 | HMMsMMBWsHH
+224 |   48.00 :   2      0f  14b     0f  32b  |  0.145536 | HsMMMBWsHH
+208 |   48.00 :   2      0f  14b     0f  32b  |  0.165385 | HMsMBWsHH
+208 |   48.00 :   2      0f  14b     8f  24b  |  0.174038 | WWsWWsHH
+192 |   48.00 :   3      0f  13b     8f  24b  |  0.197917 | sHHsWWW
+256 |   49.00 :   2      0f  15b     0f  32b  |  0.113281 | HHsHsMMMsMBsWW
+240 |   49.00 :   3      0f  14b     0f  32b  |  0.132500 | sHHHMMsMMBW
+224 |   49.00 :   3      0f  14b     0f  32b  |  0.150000 | sHHHsMMMBW
+208 |   49.00 :   2      0f  15b     0f  32b  |  0.170192 | HHsHMBsWW
+208 |   49.00 :   3      0f  14b     0f  32b  |  0.170192 | sHHHMsMBW
+208 |   49.00 :   3      0f  14b     8f  24b  |  0.178846 | sHHWWsWW
+272 |   50.00 :   2      0f  16b     0f  32b  |  0.103676 | HHsHsMMMsMBWWsW
+256 |   50.00 :   3      0f  15b     0f  32b  |  0.117188 | sMMMsMBsWWHHsH
+224 |   50.00 :   2      0f  16b     0f  32b  |  0.154464 | HHsHMBWWsW
+208 |   50.00 :   3      0f  15b     0f  32b  |  0.175000 | MBsWWHHsH
+288 |   51.00 :   2      0f  17b     0f  32b  |  0.095139 | HHsHsMMMsMBWsWWW
+288 |   51.00 :   2      0f  17b     0f  32b  |  0.095139 | HMMsMMBsWWWsWsHH
+272 |   51.00 :   2      0f  17b     0f  32b  |  0.107353 | HsMMMBsWWWsWsHH
+272 |   51.00 :   3      0f  16b     0f  32b  |  0.107353 | sMMMsMBWWsWHHsH
+256 |   51.00 :   2      0f  17b     0f  32b  |  0.121094 | HMsMBsWWWsWsHH
+240 |   51.00 :   2      0f  17b     0f  32b  |  0.140833 | HHsHMBWsWWW
+224 |   51.00 :   3      0f  16b     0f  32b  |  0.158929 | MBWWsWHHsH
+288 |   52.00 :   3      0f  17b     0f  32b  |  0.098611 | sHHHMMsMMBsWWWsW
+288 |   52.00 :   3      0f  17b     0f  32b  |  0.098611 | sMMMsMBWsWWWHHsH
+272 |   52.00 :   3      0f  17b     0f  32b  |  0.111029 | sHHHsMMMBsWWWsW
+256 |   52.00 :   3      0f  17b     0f  32b  |  0.125000 | sHHHMsMBsWWWsW
+240 |   52.00 :   3      0f  17b     0f  32b  |  0.145000 | MBWsWWWHHsH
+224 |   53.00 :   1      0f  12b     8f  32b  |  0.175893 | HsHWWsWWH
+224 |   53.00 :   1      0f  12b     8f  32b  |  0.175893 | MsMMMsHHH
+208 |   53.00 :   1      0f  12b     8f  32b  |  0.198077 | HsHsWWWH
+208 |   53.00 :   1      0f  12b     8f  32b  |  0.198077 | MMsMsHHH
+192 |   53.00 :   1      0f  12b     8f  32b  |  0.223958 | HsHWsWH
+192 |   53.00 :   1      0f  12b     8f  32b  |  0.223958 | sMMsHHH
+224 |   55.00 :   2      1f  12b     8f  32b  |  0.184821 | HHMsMMMsH
+224 |   55.00 :   2      0f  13b     8f  32b  |  0.184821 | HMsMMMsHH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-224 |   55.00 :   2      1f  12b      8f  32b |  0.184821 | sHWWsWWHH
-208 |   55.00 :   2      1f  12b      8f  32b |  0.207692 | HHMMsMsH
-208 |   55.00 :   2      0f  13b      8f  32b |  0.207692 | HMMsMsHH
-208 |   55.00 :   2      1f  12b      8f  32b |  0.207692 | sHsWWWHH
-192 |   55.00 :   2      1f  12b      8f  32b |  0.234375 | HHsMMsH
-192 |   55.00 :   2      0f  13b      8f  32b |  0.234375 | HsMMsHH
-192 |   55.00 :   2      1f  12b      8f  32b |  0.234375 | sHWsWHH
-288 |   56.00 :   1      1f  10b     20f  24b |  0.159722 | HsHBWsM
-224 |   56.00 :   3      0f  13b      8f  32b |  0.189286 | sHHHMsMMM
-208 |   56.00 :   3      0f  13b      8f  32b |  0.212500 | sHHHMMsM
-192 |   56.00 :   3      0f  13b      8f  32b |  0.239583 | sHHHsMM
-288 |   57.00 :   2      0f  15b      0f  40b |  0.115972 | HHsMMMsMBWWsWHsH
-288 |   57.00 :   2      0f  15b      0f  40b |  0.115972 | HsHHsMMMBsWWWsWH
-288 |   57.00 :   2      0f  15b      0f  40b |  0.115972 | sHMMsMMBWWsWsHHH
-288 |   57.00 :   2      0f  15b      0f  40b |  0.115972 | sHsMMMBWsWWWsHHH
-272 |   57.00 :   2      0f  15b      0f  40b |  0.129412 | HHsMMMsMBsWWHsH
-272 |   57.00 :   2      0f  15b      0f  40b |  0.129412 | HsHHMsMBsWWWsWH
-272 |   57.00 :   2      0f  15b      0f  40b |  0.129412 | sHMMsMMBsWWsHHH
-272 |   57.00 :   2      0f  15b      0f  40b |  0.129412 | sHMsMBWsWWWsHHH
-272 |   57.00 :   2      0f  15b      0f  40b |  0.129412 | sHsMMMBWWsWsHHH
-256 |   57.00 :   2      0f  15b      0f  40b |  0.144531 | sHMsMBWWsWsHHH
-256 |   57.00 :   2      0f  15b      0f  40b |  0.144531 | sHsMMMBsWWsHHH
-256 |   57.00 :   2      0f  15b      0f  40b |  0.148438 | HHMBWsWWWHsH
-256 |   57.00 :   2      0f  15b      0f  40b |  0.148438 | HsHHMMsMMBWH
-240 |   57.00 :   2      0f  15b      0f  40b |  0.161667 | sHMsMBsWWsHHH
-288 |   57.00 :   2      2f   9b     20f  24b |  0.163194 | sHBWsMH
-240 |   57.00 :   2      0f  15b      0f  40b |  0.165833 | HHMBWWsWHsH
-240 |   57.00 :   2      0f  15b      0f  40b |  0.165833 | HsHHsMMMBWH
-224 |   57.00 :   2      0f  15b      0f  40b |  0.185714 | HHMBsWWHsH
-224 |   57.00 :   2      0f  15b      0f  40b |  0.185714 | HsHHMsMBWH
-192 |   57.00 :   2      0f  15b      8f  32b |  0.244792 | HHsHWsW
-288 |   58.00 :   2      0f  12b     20f  24b |  0.166667 | sWMBsHH
-208 |   58.00 :   2      0f  16b      8f  32b |  0.222115 | HHsHsWWW
-192 |   58.00 :   3      0f  15b      8f  32b |  0.250000 | WsWHHsH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | HHsHMMsMMBWWsWsH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | HHsHsMMMBWsWWWsH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | HsMMMsMBWWsWHsHH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | MMsMMBWWsWsHHHsH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | sHHHsMMMsMBWWsWH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | sHHsMMMBsWWWsWHH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | sMMMBWsWWWsHHHsH
-288 |   59.00 :   3      1f  15b      0f  40b |  0.122917 | sMMMBsWWWsWHHsHH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | HHsHMMsMMBsWWsH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | HHsHMsMBWsWWWsH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | HHsHsMMMBWWsWsH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | HsMMMsMBsWWHsHH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | MMsMMBsWWsHHHsH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | MsMBWsWWWsHHHsH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | MsMBsWWWsWHHsHH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | sHHHsMMMsMBsWWH
+224 |   55.00 :   2      1f  12b     8f  32b  |  0.184821 | sHWWsWWHH
+208 |   55.00 :   2      1f  12b     8f  32b  |  0.207692 | HHMMsMsH
+208 |   55.00 :   2      0f  13b     8f  32b  |  0.207692 | HMMsMsHH
+208 |   55.00 :   2      1f  12b     8f  32b  |  0.207692 | sHsWWWHH
+192 |   55.00 :   2      1f  12b     8f  32b  |  0.234375 | HHsMMsH
+192 |   55.00 :   2      0f  13b     8f  32b  |  0.234375 | HsMMsHH
+192 |   55.00 :   2      1f  12b     8f  32b  |  0.234375 | sHWsWHH
+288 |   56.00 :   1      1f  10b    20f  24b  |  0.159722 | HsHBWsM
+224 |   56.00 :   3      0f  13b     8f  32b  |  0.189286 | sHHHMsMMM
+208 |   56.00 :   3      0f  13b     8f  32b  |  0.212500 | sHHHMMsM
+192 |   56.00 :   3      0f  13b     8f  32b  |  0.239583 | sHHHsMM
+288 |   57.00 :   2      0f  15b     0f  40b  |  0.115972 | HHsMMMsMBWWsWHsH
+288 |   57.00 :   2      0f  15b     0f  40b  |  0.115972 | HsHHsMMMBsWWWsWH
+288 |   57.00 :   2      0f  15b     0f  40b  |  0.115972 | sHMMsMMBWWsWsHHH
+288 |   57.00 :   2      0f  15b     0f  40b  |  0.115972 | sHsMMMBWsWWWsHHH
+272 |   57.00 :   2      0f  15b     0f  40b  |  0.129412 | HHsMMMsMBsWWHsH
+272 |   57.00 :   2      0f  15b     0f  40b  |  0.129412 | HsHHMsMBsWWWsWH
+272 |   57.00 :   2      0f  15b     0f  40b  |  0.129412 | sHMMsMMBsWWsHHH
+272 |   57.00 :   2      0f  15b     0f  40b  |  0.129412 | sHMsMBWsWWWsHHH
+272 |   57.00 :   2      0f  15b     0f  40b  |  0.129412 | sHsMMMBWWsWsHHH
+256 |   57.00 :   2      0f  15b     0f  40b  |  0.144531 | sHMsMBWWsWsHHH
+256 |   57.00 :   2      0f  15b     0f  40b  |  0.144531 | sHsMMMBsWWsHHH
+256 |   57.00 :   2      0f  15b     0f  40b  |  0.148438 | HHMBWsWWWHsH
+256 |   57.00 :   2      0f  15b     0f  40b  |  0.148438 | HsHHMMsMMBWH
+240 |   57.00 :   2      0f  15b     0f  40b  |  0.161667 | sHMsMBsWWsHHH
+288 |   57.00 :   2      2f   9b    20f  24b  |  0.163194 | sHBWsMH
+240 |   57.00 :   2      0f  15b     0f  40b  |  0.165833 | HHMBWWsWHsH
+240 |   57.00 :   2      0f  15b     0f  40b  |  0.165833 | HsHHsMMMBWH
+224 |   57.00 :   2      0f  15b     0f  40b  |  0.185714 | HHMBsWWHsH
+224 |   57.00 :   2      0f  15b     0f  40b  |  0.185714 | HsHHMsMBWH
+192 |   57.00 :   2      0f  15b     8f  32b  |  0.244792 | HHsHWsW
+288 |   58.00 :   2      0f  12b    20f  24b  |  0.166667 | sWMBsHH
+208 |   58.00 :   2      0f  16b     8f  32b  |  0.222115 | HHsHsWWW
+192 |   58.00 :   3      0f  15b     8f  32b  |  0.250000 | WsWHHsH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | HHsHMMsMMBWWsWsH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | HHsHsMMMBWsWWWsH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | HsMMMsMBWWsWHsHH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | MMsMMBWWsWsHHHsH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | sHHHsMMMsMBWWsWH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | sHHsMMMBsWWWsWHH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | sMMMBWsWWWsHHHsH
+288 |   59.00 :   3      1f  15b     0f  40b  |  0.122917 | sMMMBsWWWsWHHsHH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | HHsHMMsMMBsWWsH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | HHsHMsMBWsWWWsH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | HHsHsMMMBWWsWsH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | HsMMMsMBsWWHsHH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | MMsMMBsWWsHHHsH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | MsMBWsWWWsHHHsH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | MsMBsWWWsWHHsHH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | sHHHsMMMsMBsWWH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | sHHMsMBsWWWsWHH
-272 |   59.00 :   3      1f  15b      0f  40b |  0.136765 | sMMMBWWsWsHHHsH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.152344 | HHsHMsMBWWsWsH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.152344 | HHsHsMMMBsWWsH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.152344 | MsMBWWsWsHHHsH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.152344 | sMMMBsWWsHHHsH
-256 |   59.00 :   2      0f  17b      0f  40b |  0.156250 | HHsHHMMsMMBW
-256 |   59.00 :   3      1f  15b      0f  40b |  0.156250 | HMBWsWWWHsHH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.156250 | MMsMMBWHHsHH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.156250 | sHHHMBWsWWWH
-256 |   59.00 :   3      1f  15b      0f  40b |  0.156250 | sHHMMsMMBWHH
-240 |   59.00 :   3      1f  15b      0f  40b |  0.170000 | HHsHMsMBsWWsH
-240 |   59.00 :   3      1f  15b      0f  40b |  0.170000 | MsMBsWWsHHHsH
-288 |   59.00 :   2      1f  12b     20f  24b |  0.170139 | BWsMHsH
-288 |   59.00 :   2      1f  12b     20f  24b |  0.170139 | HsWMBsH
-288 |   59.00 :   3      0f  12b     20f  24b |  0.170139 | sHHsWMB
-240 |   59.00 :   2      0f  17b      0f  40b |  0.174167 | HHsHHsMMMBW
-240 |   59.00 :   3      1f  15b      0f  40b |  0.174167 | HMBWWsWHsHH
-240 |   59.00 :   3      1f  15b      0f  40b |  0.174167 | sHHHMBWWsWH
-240 |   59.00 :   3      1f  15b      0f  40b |  0.174167 | sHHsMMMBWHH
-240 |   59.00 :   3      1f  15b      0f  40b |  0.174167 | sMMMBWHHsHH
-224 |   59.00 :   2      0f  17b      0f  40b |  0.194643 | HHsHHMsMBW
-224 |   59.00 :   3      1f  15b      0f  40b |  0.194643 | HMBsWWHsHH
-224 |   59.00 :   3      1f  15b      0f  40b |  0.194643 | MsMBWHHsHH
-224 |   59.00 :   3      1f  15b      0f  40b |  0.194643 | sHHHMBsWWH
-224 |   59.00 :   3      1f  15b      0f  40b |  0.194643 | sHHMsMBWHH
-224 |   59.00 :   2      0f  17b      8f  32b |  0.202679 | HHsHWWsWW
-208 |   59.00 :   3      0f  16b      8f  32b |  0.226923 | sWWWHHsH
-272 |   60.00 :   2      0f  18b      0f  40b |  0.140441 | HsHMMsMMBsWWsHH
-272 |   60.00 :   2      0f  18b      0f  40b |  0.140441 | sMMMsMBsWWHsHHH
-256 |   60.00 :   2      0f  18b      0f  40b |  0.156250 | HsHsMMMBsWWsHH
-256 |   60.00 :   3      0f  17b      0f  40b |  0.160156 | HMMsMMBWHHsH
-240 |   60.00 :   2      0f  18b      0f  40b |  0.174167 | HsHMsMBsWWsHH
-240 |   60.00 :   3      0f  17b      0f  40b |  0.178333 | HsMMMBWHHsH
-224 |   60.00 :   3      0f  17b      0f  40b |  0.199107 | HMsMBWHHsH
-224 |   60.00 :   2      0f  18b      0f  40b |  0.199107 | MBsWWHsHHH
-224 |   60.00 :   3      0f  17b      8f  32b |  0.207143 | WWsWWHHsH
-288 |   61.00 :   2      0f  19b      0f  40b |  0.129861 | HsHMMsMMBWWsWsHH
-288 |   61.00 :   2      0f  19b      0f  40b |  0.129861 | sMMMsMBWWsWHsHHH
-272 |   61.00 :   3      0f  18b      0f  40b |  0.144118 | HsHHHsMMMsMBsWW
-272 |   61.00 :   2      0f  19b      0f  40b |  0.144118 | HsHsMMMBWWsWsHH
-272 |   61.00 :   3      0f  18b      0f  40b |  0.144118 | sHHHsHMMsMMBsWW
-256 |   61.00 :   2      0f  19b      0f  40b |  0.160156 | HsHMsMBWWsWsHH
-256 |   61.00 :   3      0f  18b      0f  40b |  0.160156 | sHHHsHsMMMBsWW
-240 |   61.00 :   3      0f  18b      0f  40b |  0.178333 | sHHHsHMsMBsWW
-240 |   61.00 :   2      0f  19b      0f  40b |  0.182500 | MBWWsWHsHHH
-224 |   61.00 :   3      0f  18b      0f  40b |  0.203571 | HsHHHMBsWW
-288 |   62.00 :   2      0f  20b      0f  40b |  0.133333 | HHsHHsMMMBsWWWsW
-288 |   62.00 :   3      0f  19b      0f  40b |  0.133333 | HsHHHsMMMsMBWWsW
-288 |   62.00 :   2      0f  20b      0f  40b |  0.133333 | HsHsMMMBWsWWWsHH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | sHHMsMBsWWWsWHH
+272 |   59.00 :   3      1f  15b     0f  40b  |  0.136765 | sMMMBWWsWsHHHsH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.152344 | HHsHMsMBWWsWsH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.152344 | HHsHsMMMBsWWsH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.152344 | MsMBWWsWsHHHsH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.152344 | sMMMBsWWsHHHsH
+256 |   59.00 :   2      0f  17b     0f  40b  |  0.156250 | HHsHHMMsMMBW
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.156250 | HMBWsWWWHsHH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.156250 | MMsMMBWHHsHH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.156250 | sHHHMBWsWWWH
+256 |   59.00 :   3      1f  15b     0f  40b  |  0.156250 | sHHMMsMMBWHH
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.170000 | HHsHMsMBsWWsH
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.170000 | MsMBsWWsHHHsH
+288 |   59.00 :   2      1f  12b    20f  24b  |  0.170139 | BWsMHsH
+288 |   59.00 :   2      1f  12b    20f  24b  |  0.170139 | HsWMBsH
+288 |   59.00 :   3      0f  12b    20f  24b  |  0.170139 | sHHsWMB
+240 |   59.00 :   2      0f  17b     0f  40b  |  0.174167 | HHsHHsMMMBW
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.174167 | HMBWWsWHsHH
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.174167 | sHHHMBWWsWH
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.174167 | sHHsMMMBWHH
+240 |   59.00 :   3      1f  15b     0f  40b  |  0.174167 | sMMMBWHHsHH
+224 |   59.00 :   2      0f  17b     0f  40b  |  0.194643 | HHsHHMsMBW
+224 |   59.00 :   3      1f  15b     0f  40b  |  0.194643 | HMBsWWHsHH
+224 |   59.00 :   3      1f  15b     0f  40b  |  0.194643 | MsMBWHHsHH
+224 |   59.00 :   3      1f  15b     0f  40b  |  0.194643 | sHHHMBsWWH
+224 |   59.00 :   3      1f  15b     0f  40b  |  0.194643 | sHHMsMBWHH
+224 |   59.00 :   2      0f  17b     8f  32b  |  0.202679 | HHsHWWsWW
+208 |   59.00 :   3      0f  16b     8f  32b  |  0.226923 | sWWWHHsH
+272 |   60.00 :   2      0f  18b     0f  40b  |  0.140441 | HsHMMsMMBsWWsHH
+272 |   60.00 :   2      0f  18b     0f  40b  |  0.140441 | sMMMsMBsWWHsHHH
+256 |   60.00 :   2      0f  18b     0f  40b  |  0.156250 | HsHsMMMBsWWsHH
+256 |   60.00 :   3      0f  17b     0f  40b  |  0.160156 | HMMsMMBWHHsH
+240 |   60.00 :   2      0f  18b     0f  40b  |  0.174167 | HsHMsMBsWWsHH
+240 |   60.00 :   3      0f  17b     0f  40b  |  0.178333 | HsMMMBWHHsH
+224 |   60.00 :   3      0f  17b     0f  40b  |  0.199107 | HMsMBWHHsH
+224 |   60.00 :   2      0f  18b     0f  40b  |  0.199107 | MBsWWHsHHH
+224 |   60.00 :   3      0f  17b     8f  32b  |  0.207143 | WWsWWHHsH
+288 |   61.00 :   2      0f  19b     0f  40b  |  0.129861 | HsHMMsMMBWWsWsHH
+288 |   61.00 :   2      0f  19b     0f  40b  |  0.129861 | sMMMsMBWWsWHsHHH
+272 |   61.00 :   3      0f  18b     0f  40b  |  0.144118 | HsHHHsMMMsMBsWW
+272 |   61.00 :   2      0f  19b     0f  40b  |  0.144118 | HsHsMMMBWWsWsHH
+272 |   61.00 :   3      0f  18b     0f  40b  |  0.144118 | sHHHsHMMsMMBsWW
+256 |   61.00 :   2      0f  19b     0f  40b  |  0.160156 | HsHMsMBWWsWsHH
+256 |   61.00 :   3      0f  18b     0f  40b  |  0.160156 | sHHHsHsMMMBsWW
+240 |   61.00 :   3      0f  18b     0f  40b  |  0.178333 | sHHHsHMsMBsWW
+240 |   61.00 :   2      0f  19b     0f  40b  |  0.182500 | MBWWsWHsHHH
+224 |   61.00 :   3      0f  18b     0f  40b  |  0.203571 | HsHHHMBsWW
+288 |   62.00 :   2      0f  20b     0f  40b  |  0.133333 | HHsHHsMMMBsWWWsW
+288 |   62.00 :   3      0f  19b     0f  40b  |  0.133333 | HsHHHsMMMsMBWWsW
+288 |   62.00 :   2      0f  20b     0f  40b  |  0.133333 | HsHsMMMBWsWWWsHH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-288 |   62.00 :   3      0f  19b      0f  40b |  0.133333 | sHHHsHMMsMMBWWsW
-272 |   62.00 :   2      0f  20b      0f  40b |  0.147794 | HHsHHMsMBsWWWsW
-272 |   62.00 :   2      0f  20b      0f  40b |  0.147794 | HsHMsMBWsWWWsHH
-272 |   62.00 :   3      0f  19b      0f  40b |  0.147794 | sHHHsHsMMMBWWsW
-256 |   62.00 :   3      0f  19b      0f  40b |  0.164063 | sHHHsHMsMBWWsW
-256 |   62.00 :   2      0f  20b      0f  40b |  0.167969 | MBWsWWWHsHHH
-240 |   62.00 :   3      0f  19b      0f  40b |  0.186667 | HsHHHMBWWsW
-288 |   63.00 :   3      0f  20b      0f  40b |  0.136806 | HsMMMBsWWWsWHHsH
-288 |   63.00 :   3      0f  20b      0f  40b |  0.136806 | sHHHsHsMMMBWsWWW
-272 |   63.00 :   3      0f  20b      0f  40b |  0.151471 | HMsMBsWWWsWHHsH
-272 |   63.00 :   3      0f  20b      0f  40b |  0.151471 | sHHHsHMsMBWsWWW
-256 |   63.00 :   3      0f  20b      0f  40b |  0.171875 | HsHHHMBWsWWW
-288 |   66.00 :   3      0f  15b      8f  40b |  0.153472 | HHsHMMsMWWsWWsH
-288 |   66.00 :   3      0f  15b      8f  40b |  0.153472 | HHsHMsMMMsWWWsH
-288 |   66.00 :   3      0f  15b      8f  40b |  0.153472 | MMsMWWsWWsHHHsH
-288 |   66.00 :   3      0f  15b      8f  40b |  0.153472 | MsMMMsWWWsHHHsH
-288 |   66.00 :   2      1f  15b      8f  40b |  0.153472 | sHMMsMWWsWWsHHH
-288 |   66.00 :   2      1f  15b      8f  40b |  0.153472 | sHMsMMMsWWWsHHH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | HHsHMMsMsWWWsH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | HHsHMsMMMWsWsH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | HHsHsMMWWsWWsH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | MMsMsWWWsHHHsH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | MsMMMWsWsHHHsH
-272 |   66.00 :   2      1f  15b      8f  40b |  0.169118 | sHMMsMsWWWsHHH
-272 |   66.00 :   2      1f  15b      8f  40b |  0.169118 | sHMsMMMWsWsHHH
-272 |   66.00 :   2      1f  15b      8f  40b |  0.169118 | sHsMMWWsWWsHHH
-272 |   66.00 :   3      0f  15b      8f  40b |  0.169118 | sMMWWsWWsHHHsH
-256 |   66.00 :   3      0f  15b      8f  40b |  0.186719 | HHsHMMsMWsWsH
-256 |   66.00 :   3      0f  15b      8f  40b |  0.186719 | HHsHsMMsWWWsH
-256 |   66.00 :   3      0f  15b      8f  40b |  0.186719 | MMsMWsWsHHHsH
-256 |   66.00 :   2      1f  15b      8f  40b |  0.186719 | sHMMsMWsWsHHH
-256 |   66.00 :   2      1f  15b      8f  40b |  0.186719 | sHsMMsWWWsHHH
-256 |   66.00 :   3      0f  15b      8f  40b |  0.186719 | sMMsWWWsHHHsH
-240 |   66.00 :   3      0f  15b      8f  40b |  0.206667 | HHsHsMMWsWsH
-240 |   66.00 :   2      1f  15b      8f  40b |  0.206667 | sHsMMWsWsHHH
-240 |   66.00 :   3      0f  15b      8f  40b |  0.206667 | sMMWsWsHHHsH
-240 |   66.00 :   2      1f  15b      8f  40b |  0.210833 | HHWWsWWHsH
-240 |   66.00 :   2      0f  16b      8f  40b |  0.210833 | HHsHHMsMMM
-240 |   66.00 :   3      0f  15b      8f  40b |  0.210833 | HWWsWWHsHH
-240 |   66.00 :   2      1f  15b      8f  40b |  0.210833 | HsHHMsMMMH
-240 |   66.00 :   3      0f  15b      8f  40b |  0.210833 | MsMMMHHsHH
-240 |   66.00 :   3      0f  15b      8f  40b |  0.210833 | sHHHWWsWWH
-240 |   66.00 :   3      0f  15b      8f  40b |  0.210833 | sHHMsMMMHH
-224 |   66.00 :   2      0f  16b      8f  40b |  0.233929 | HHsHHMMsM
-224 |   66.00 :   2      1f  15b      8f  40b |  0.233929 | HHsWWWHsH
-224 |   66.00 :   2      1f  15b      8f  40b |  0.233929 | HsHHMMsMH
-224 |   66.00 :   3      0f  15b      8f  40b |  0.233929 | HsWWWHsHH
-224 |   66.00 :   3      0f  15b      8f  40b |  0.233929 | MMsMHHsHH
-224 |   66.00 :   3      0f  15b      8f  40b |  0.233929 | sHHHsWWWH
-224 |   66.00 :   3      0f  15b      8f  40b |  0.233929 | sHHMMsMHH
+288 |   62.00 :   3      0f  19b     0f  40b  |  0.133333 | sHHHsHMMsMMBWWsW
+272 |   62.00 :   2      0f  20b     0f  40b  |  0.147794 | HHsHHMsMBsWWWsW
+272 |   62.00 :   2      0f  20b     0f  40b  |  0.147794 | HsHMsMBWsWWWsHH
+272 |   62.00 :   3      0f  19b     0f  40b  |  0.147794 | sHHHsHsMMMBWWsW
+256 |   62.00 :   3      0f  19b     0f  40b  |  0.164063 | sHHHsHMsMBWWsW
+256 |   62.00 :   2      0f  20b     0f  40b  |  0.167969 | MBWsWWWHsHHH
+240 |   62.00 :   3      0f  19b     0f  40b  |  0.186667 | HsHHHMBWWsW
+288 |   63.00 :   3      0f  20b     0f  40b  |  0.136806 | HsMMMBsWWWsWHHsH
+288 |   63.00 :   3      0f  20b     0f  40b  |  0.136806 | sHHHsHsMMMBWsWWW
+272 |   63.00 :   3      0f  20b     0f  40b  |  0.151471 | HMsMBsWWWsWHHsH
+272 |   63.00 :   3      0f  20b     0f  40b  |  0.151471 | sHHHsHMsMBWsWWW
+256 |   63.00 :   3      0f  20b     0f  40b  |  0.171875 | HsHHHMBWsWWW
+288 |   66.00 :   3      0f  15b     8f  40b  |  0.153472 | HHsHMMsMWWsWWsH
+288 |   66.00 :   3      0f  15b     8f  40b  |  0.153472 | HHsHMsMMMsWWWsH
+288 |   66.00 :   3      0f  15b     8f  40b  |  0.153472 | MMsMWWsWWsHHHsH
+288 |   66.00 :   3      0f  15b     8f  40b  |  0.153472 | MsMMMsWWWsHHHsH
+288 |   66.00 :   2      1f  15b     8f  40b  |  0.153472 | sHMMsMWWsWWsHHH
+288 |   66.00 :   2      1f  15b     8f  40b  |  0.153472 | sHMsMMMsWWWsHHH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | HHsHMMsMsWWWsH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | HHsHMsMMMWsWsH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | HHsHsMMWWsWWsH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | MMsMsWWWsHHHsH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | MsMMMWsWsHHHsH
+272 |   66.00 :   2      1f  15b     8f  40b  |  0.169118 | sHMMsMsWWWsHHH
+272 |   66.00 :   2      1f  15b     8f  40b  |  0.169118 | sHMsMMMWsWsHHH
+272 |   66.00 :   2      1f  15b     8f  40b  |  0.169118 | sHsMMWWsWWsHHH
+272 |   66.00 :   3      0f  15b     8f  40b  |  0.169118 | sMMWWsWWsHHHsH
+256 |   66.00 :   3      0f  15b     8f  40b  |  0.186719 | HHsHMMsMWsWsH
+256 |   66.00 :   3      0f  15b     8f  40b  |  0.186719 | HHsHsMMsWWWsH
+256 |   66.00 :   3      0f  15b     8f  40b  |  0.186719 | MMsMWsWsHHHsH
+256 |   66.00 :   2      1f  15b     8f  40b  |  0.186719 | sHMMsMWsWsHHH
+256 |   66.00 :   2      1f  15b     8f  40b  |  0.186719 | sHsMMsWWWsHHH
+256 |   66.00 :   3      0f  15b     8f  40b  |  0.186719 | sMMsWWWsHHHsH
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.206667 | HHsHsMMWsWsH
+240 |   66.00 :   2      1f  15b     8f  40b  |  0.206667 | sHsMMWsWsHHH
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.206667 | sMMWsWsHHHsH
+240 |   66.00 :   2      1f  15b     8f  40b  |  0.210833 | HHWWsWWHsH
+240 |   66.00 :   2      0f  16b     8f  40b  |  0.210833 | HHsHHMsMMM
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.210833 | HWWsWWHsHH
+240 |   66.00 :   2      1f  15b     8f  40b  |  0.210833 | HsHHMsMMMH
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.210833 | MsMMMHHsHH
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.210833 | sHHHWWsWWH
+240 |   66.00 :   3      0f  15b     8f  40b  |  0.210833 | sHHMsMMMHH
+224 |   66.00 :   2      0f  16b     8f  40b  |  0.233929 | HHsHHMMsM
+224 |   66.00 :   2      1f  15b     8f  40b  |  0.233929 | HHsWWWHsH
+224 |   66.00 :   2      1f  15b     8f  40b  |  0.233929 | HsHHMMsMH
+224 |   66.00 :   3      0f  15b     8f  40b  |  0.233929 | HsWWWHsHH
+224 |   66.00 :   3      0f  15b     8f  40b  |  0.233929 | MMsMHHsHH
+224 |   66.00 :   3      0f  15b     8f  40b  |  0.233929 | sHHHsWWWH
+224 |   66.00 :   3      0f  15b     8f  40b  |  0.233929 | sHHMMsMHH
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 ----|-----------------------------------------|-----------|-----------
-208 |   66.00 :   2      1f  15b      8f  40b |  0.260577 | HHWsWHsH
-208 |   66.00 :   2      0f  16b      8f  40b |  0.260577 | HHsHHsMM
-208 |   66.00 :   3      0f  15b      8f  40b |  0.260577 | HWsWHsHH
-208 |   66.00 :   2      1f  15b      8f  40b |  0.260577 | HsHHsMMH
-208 |   66.00 :   3      0f  15b      8f  40b |  0.260577 | sHHHWsWH
-208 |   66.00 :   3      0f  15b      8f  40b |  0.260577 | sHHsMMHH
-208 |   66.00 :   3      0f  15b      8f  40b |  0.260577 | sMMHHsHH
-240 |   67.00 :   3      0f  16b      8f  40b |  0.215000 | HMsMMMHHsH
-224 |   67.00 :   3      0f  16b      8f  40b |  0.238393 | HMMsMHHsH
-208 |   67.00 :   3      0f  16b      8f  40b |  0.265385 | HsMMHHsH
-272 |   68.00 :   2      0f  18b      8f  40b |  0.176471 | HsHMsMMMWsWsHH
-256 |   68.00 :   2      0f  18b      8f  40b |  0.194531 | HsHMMsMWsWsHH
-240 |   68.00 :   2      0f  18b      8f  40b |  0.215000 | HsHsMMWsWsHH
-208 |   68.00 :   2      0f  18b      8f  40b |  0.270192 | WsWHsHHH
-288 |   69.00 :   2      0f  19b      8f  40b |  0.163889 | HsHMsMMMsWWWsHH
-272 |   69.00 :   2      0f  19b      8f  40b |  0.180147 | HsHMMsMsWWWsHH
-272 |   69.00 :   3      0f  18b      8f  40b |  0.180147 | sHHHsHMsMMMWsW
-256 |   69.00 :   2      0f  19b      8f  40b |  0.198438 | HsHsMMsWWWsHH
-256 |   69.00 :   3      0f  18b      8f  40b |  0.198438 | sHHHsHMMsMWsW
-240 |   69.00 :   3      0f  18b      8f  40b |  0.219167 | sHHHsHsMMWsW
-224 |   69.00 :   2      0f  19b      8f  40b |  0.247321 | sWWWHsHHH
-208 |   69.00 :   3      0f  18b      8f  40b |  0.275000 | HsHHHWsW
- 96 |   69.00 :   3      0f  18b      0f  48b |  0.595833 | HHsHHHsH
- 96 |   69.00 :   3      0f  18b      0f  48b |  0.595833 | HsHHHsHH
- 96 |   69.00 :   3      0f  18b      0f  48b |  0.595833 | sHHHsHHH
-288 |   70.00 :   2      0f  20b      8f  40b |  0.167361 | HsHMMsMWWsWWsHH
-288 |   70.00 :   3      0f  19b      8f  40b |  0.167361 | sHHHsHMsMMMsWWW
-272 |   70.00 :   2      0f  20b      8f  40b |  0.183824 | HsHsMMWWsWWsHH
-272 |   70.00 :   3      0f  19b      8f  40b |  0.183824 | sHHHsHMMsMsWWW
-256 |   70.00 :   3      0f  19b      8f  40b |  0.202344 | sHHHsHsMMsWWW
-240 |   70.00 :   2      0f  20b      8f  40b |  0.227500 | WWsWWHsHHH
-224 |   70.00 :   3      0f  19b      8f  40b |  0.251786 | HsHHHsWWW
-288 |   71.00 :   3      0f  20b      8f  40b |  0.170833 | sHHHsHMMsMWWsWW
-272 |   71.00 :   3      0f  20b      8f  40b |  0.187500 | sHHHsHsMMWWsWW
-240 |   71.00 :   3      0f  20b      8f  40b |  0.231667 | HsHHHWWsWW
+208 |   66.00 :   2      1f  15b     8f  40b  |  0.260577 | HHWsWHsH
+208 |   66.00 :   2      0f  16b     8f  40b  |  0.260577 | HHsHHsMM
+208 |   66.00 :   3      0f  15b     8f  40b  |  0.260577 | HWsWHsHH
+208 |   66.00 :   2      1f  15b     8f  40b  |  0.260577 | HsHHsMMH
+208 |   66.00 :   3      0f  15b     8f  40b  |  0.260577 | sHHHWsWH
+208 |   66.00 :   3      0f  15b     8f  40b  |  0.260577 | sHHsMMHH
+208 |   66.00 :   3      0f  15b     8f  40b  |  0.260577 | sMMHHsHH
+240 |   67.00 :   3      0f  16b     8f  40b  |  0.215000 | HMsMMMHHsH
+224 |   67.00 :   3      0f  16b     8f  40b  |  0.238393 | HMMsMHHsH
+208 |   67.00 :   3      0f  16b     8f  40b  |  0.265385 | HsMMHHsH
+272 |   68.00 :   2      0f  18b     8f  40b  |  0.176471 | HsHMsMMMWsWsHH
+256 |   68.00 :   2      0f  18b     8f  40b  |  0.194531 | HsHMMsMWsWsHH
+240 |   68.00 :   2      0f  18b     8f  40b  |  0.215000 | HsHsMMWsWsHH
+208 |   68.00 :   2      0f  18b     8f  40b  |  0.270192 | WsWHsHHH
+288 |   69.00 :   2      0f  19b     8f  40b  |  0.163889 | HsHMsMMMsWWWsHH
+272 |   69.00 :   2      0f  19b     8f  40b  |  0.180147 | HsHMMsMsWWWsHH
+272 |   69.00 :   3      0f  18b     8f  40b  |  0.180147 | sHHHsHMsMMMWsW
+256 |   69.00 :   2      0f  19b     8f  40b  |  0.198438 | HsHsMMsWWWsHH
+256 |   69.00 :   3      0f  18b     8f  40b  |  0.198438 | sHHHsHMMsMWsW
+240 |   69.00 :   3      0f  18b     8f  40b  |  0.219167 | sHHHsHsMMWsW
+224 |   69.00 :   2      0f  19b     8f  40b  |  0.247321 | sWWWHsHHH
+208 |   69.00 :   3      0f  18b     8f  40b  |  0.275000 | HsHHHWsW
+ 96 |   69.00 :   3      0f  18b     0f  48b  |  0.595833 | HHsHHHsH
+ 96 |   69.00 :   3      0f  18b     0f  48b  |  0.595833 | HsHHHsHH
+ 96 |   69.00 :   3      0f  18b     0f  48b  |  0.595833 | sHHHsHHH
+288 |   70.00 :   2      0f  20b     8f  40b  |  0.167361 | HsHMMsMWWsWWsHH
+288 |   70.00 :   3      0f  19b     8f  40b  |  0.167361 | sHHHsHMsMMMsWWW
+272 |   70.00 :   2      0f  20b     8f  40b  |  0.183824 | HsHsMMWWsWWsHH
+272 |   70.00 :   3      0f  19b     8f  40b  |  0.183824 | sHHHsHMMsMsWWW
+256 |   70.00 :   3      0f  19b     8f  40b  |  0.202344 | sHHHsHsMMsWWW
+240 |   70.00 :   2      0f  20b     8f  40b  |  0.227500 | WWsWWHsHHH
+224 |   70.00 :   3      0f  19b     8f  40b  |  0.251786 | HsHHHsWWW
+288 |   71.00 :   3      0f  20b     8f  40b  |  0.170833 | sHHHsHMMsMWWsWW
+272 |   71.00 :   3      0f  20b     8f  40b  |  0.187500 | sHHHsHsMMWWsWW
+240 |   71.00 :   3      0f  20b     8f  40b  |  0.231667 | HsHHHWWsWW
 ----|-----------------------------------------|-----------|-----------
 len |  music     NMs      CRUs     5678 combs | avg score | calling
 '''
 "test/cases/music-preset-triples.toml" = '''
 len |  music     NMs   CRUs   5678 combs | avg score | calling
 ----|------------------------------------|-----------|-----------
-112 |    8.00 :   0       4         4    | -0.042857 | WsBsTsBsMH
-112 |    8.00 :   0       4         4    | -0.042857 | sWsBsTsBMH
-112 |    8.00 :   0       4         4    | -0.033929 | WBBsBsMH
-112 |    8.00 :   0       4         4    | -0.033929 | WBsBIsMH
-112 |    8.00 :   0       4         4    | -0.033929 | WsBIIsMH
-112 |    8.00 :   0       4         4    | -0.033929 | sWBBsBMH
-112 |    8.00 :   0       4         4    | -0.033929 | sWBsBIMH
-112 |    8.00 :   0       4         4    | -0.033929 | sWsBIIMH
-112 |    9.00 :   1       4         4    | -0.042857 | sWsBsTsBsMsH
-112 |    9.00 :   1       4         4    | -0.033929 | WsBsTsBMsH
-112 |    9.00 :   1       4         4    | -0.033929 | sWBBsBsMsH
-112 |    9.00 :   1       4         4    | -0.033929 | sWBsBIsMsH
-112 |    9.00 :   1       4         4    | -0.033929 | sWsBIIsMsH
-112 |    9.00 :   1       4         4    | -0.025000 | WBBsBMsH
-112 |    9.00 :   1       4         4    | -0.025000 | WBsBIMsH
-112 |    9.00 :   1       4         4    | -0.025000 | WsBIIMsH
-140 |    9.00 :   1       4         4    | -0.001429 | sWsFsHsM
-140 |    9.00 :   1       4         4    | -0.001429 | sWsHsFsM
-140 |    9.00 :   1       4         4    | -0.001429 | sWsTsTsM
-140 |    9.00 :   1       4         4    |  0.005714 | WFsHsM
-140 |   11.00 :   1       6         4    |  0.020000 | sWsHFM
-112 |   11.00 :   1       6         4    |  0.033929 | WBIM
-112 |   12.00 :   0       6         6    | -0.007143 | WsFsHsWsFH
-112 |   12.00 :   0       6         6    | -0.007143 | sFsMsHFsMH
-112 |   12.00 :   0       6         6    | -0.007143 | sFsMsHsFMH
-112 |   12.00 :   0       6         6    | -0.007143 | sWFsHsWsFH
-112 |   12.00 :   0       6         6    |  0.001786 | FMsHFsMH
-112 |   12.00 :   0       6         6    |  0.001786 | FMsHsFMH
-112 |   12.00 :   0       6         6    |  0.001786 | WsFsHWFH
-112 |   12.00 :   0       6         6    |  0.001786 | sWFsHWFH
-140 |   12.00 :   0       6         6    |  0.027143 | WsBsFH
-140 |   12.00 :   0       6         6    |  0.027143 | sFsBMH
-112 |   12.00 :   0       6         6    |  0.033929 | WsTsBH
-112 |   12.00 :   0       6         6    |  0.033929 | sBsTMH
-112 |   12.00 :   0       6         6    |  0.042857 | BBMH
-112 |   12.00 :   0       6         6    |  0.042857 | WIIH
-112 |   13.00 :   1       6         6    | -0.007143 | sFsMsHsFsMsH
-112 |   13.00 :   1       6         6    | -0.007143 | sWsFsHsWsFsH
-112 |   13.00 :   1       6         6    |  0.001786 | FMsHsFsMsH
-112 |   13.00 :   1       6         6    |  0.001786 | WFsHsWsFsH
-112 |   13.00 :   1       6         6    |  0.001786 | sFsMsHFMsH
-112 |   13.00 :   1       6         6    |  0.001786 | sWsFsHWFsH
-112 |   13.00 :   1       6         6    |  0.010714 | FMsHFMsH
-112 |   13.00 :   1       6         6    |  0.010714 | WFsHWFsH
-140 |   13.00 :   1       6         6    |  0.027143 | sFsBsMsH
-140 |   13.00 :   1       6         6    |  0.027143 | sFsHsBsM
-140 |   13.00 :   1       6         6    |  0.027143 | sTsTsBsM
-140 |   13.00 :   1       6         6    |  0.027143 | sWsBsFsH
-140 |   13.00 :   1       6         6    |  0.027143 | sWsBsHsF
-140 |   13.00 :   1       6         6    |  0.027143 | sWsBsTsT
+112 |    8.00 :   0      4         4     | -0.042857 | WsBsTsBsMH
+112 |    8.00 :   0      4         4     | -0.042857 | sWsBsTsBMH
+112 |    8.00 :   0      4         4     | -0.033929 | WBBsBsMH
+112 |    8.00 :   0      4         4     | -0.033929 | WBsBIsMH
+112 |    8.00 :   0      4         4     | -0.033929 | WsBIIsMH
+112 |    8.00 :   0      4         4     | -0.033929 | sWBBsBMH
+112 |    8.00 :   0      4         4     | -0.033929 | sWBsBIMH
+112 |    8.00 :   0      4         4     | -0.033929 | sWsBIIMH
+112 |    9.00 :   1      4         4     | -0.042857 | sWsBsTsBsMsH
+112 |    9.00 :   1      4         4     | -0.033929 | WsBsTsBMsH
+112 |    9.00 :   1      4         4     | -0.033929 | sWBBsBsMsH
+112 |    9.00 :   1      4         4     | -0.033929 | sWBsBIsMsH
+112 |    9.00 :   1      4         4     | -0.033929 | sWsBIIsMsH
+112 |    9.00 :   1      4         4     | -0.025000 | WBBsBMsH
+112 |    9.00 :   1      4         4     | -0.025000 | WBsBIMsH
+112 |    9.00 :   1      4         4     | -0.025000 | WsBIIMsH
+140 |    9.00 :   1      4         4     | -0.001429 | sWsFsHsM
+140 |    9.00 :   1      4         4     | -0.001429 | sWsHsFsM
+140 |    9.00 :   1      4         4     | -0.001429 | sWsTsTsM
+140 |    9.00 :   1      4         4     |  0.005714 | WFsHsM
+140 |   11.00 :   1      6         4     |  0.020000 | sWsHFM
+112 |   11.00 :   1      6         4     |  0.033929 | WBIM
+112 |   12.00 :   0      6         6     | -0.007143 | WsFsHsWsFH
+112 |   12.00 :   0      6         6     | -0.007143 | sFsMsHFsMH
+112 |   12.00 :   0      6         6     | -0.007143 | sFsMsHsFMH
+112 |   12.00 :   0      6         6     | -0.007143 | sWFsHsWsFH
+112 |   12.00 :   0      6         6     |  0.001786 | FMsHFsMH
+112 |   12.00 :   0      6         6     |  0.001786 | FMsHsFMH
+112 |   12.00 :   0      6         6     |  0.001786 | WsFsHWFH
+112 |   12.00 :   0      6         6     |  0.001786 | sWFsHWFH
+140 |   12.00 :   0      6         6     |  0.027143 | WsBsFH
+140 |   12.00 :   0      6         6     |  0.027143 | sFsBMH
+112 |   12.00 :   0      6         6     |  0.033929 | WsTsBH
+112 |   12.00 :   0      6         6     |  0.033929 | sBsTMH
+112 |   12.00 :   0      6         6     |  0.042857 | BBMH
+112 |   12.00 :   0      6         6     |  0.042857 | WIIH
+112 |   13.00 :   1      6         6     | -0.007143 | sFsMsHsFsMsH
+112 |   13.00 :   1      6         6     | -0.007143 | sWsFsHsWsFsH
+112 |   13.00 :   1      6         6     |  0.001786 | FMsHsFsMsH
+112 |   13.00 :   1      6         6     |  0.001786 | WFsHsWsFsH
+112 |   13.00 :   1      6         6     |  0.001786 | sFsMsHFMsH
+112 |   13.00 :   1      6         6     |  0.001786 | sWsFsHWFsH
+112 |   13.00 :   1      6         6     |  0.010714 | FMsHFMsH
+112 |   13.00 :   1      6         6     |  0.010714 | WFsHWFsH
+140 |   13.00 :   1      6         6     |  0.027143 | sFsBsMsH
+140 |   13.00 :   1      6         6     |  0.027143 | sFsHsBsM
+140 |   13.00 :   1      6         6     |  0.027143 | sTsTsBsM
+140 |   13.00 :   1      6         6     |  0.027143 | sWsBsFsH
+140 |   13.00 :   1      6         6     |  0.027143 | sWsBsHsF
+140 |   13.00 :   1      6         6     |  0.027143 | sWsBsTsT
 ----|------------------------------------|-----------|-----------
 len |  music     NMs   CRUs   5678 combs | avg score | calling
 ----|------------------------------------|-----------|-----------
-112 |   13.00 :   1       6         6    |  0.033929 | sBsTsMsH
-112 |   13.00 :   1       6         6    |  0.033929 | sFsMsFsM
-112 |   13.00 :   1       6         6    |  0.033929 | sWsFsWsF
-112 |   13.00 :   1       6         6    |  0.033929 | sWsTsBsH
-140 |   13.00 :   1       6         6    |  0.034286 | sTIIsM
-140 |   13.00 :   1       6         6    |  0.034286 | sWBBsT
-112 |   13.00 :   1       6         6    |  0.042857 | BBsMsH
-112 |   13.00 :   1       6         6    |  0.042857 | FMsFsM
-112 |   13.00 :   1       6         6    |  0.042857 | WFsWsF
-112 |   13.00 :   1       6         6    |  0.042857 | sWIIsH
-112 |   13.00 :   1       6         6    |  0.042857 | sWsFWF
-112 |   13.00 :   1       6         6    |  0.051786 | WFWF
-112 |   14.00 :   0       6         8    |  0.019643 | FsMHFsMH
-112 |   14.00 :   0       6         8    |  0.019643 | FsMHsFMH
-112 |   14.00 :   0       6         8    |  0.019643 | WsFHWsFH
-112 |   14.00 :   0       6         8    |  0.019643 | WsFHsWFH
-112 |   14.00 :   0       6         8    |  0.019643 | sFMHFsMH
-112 |   14.00 :   0       6         8    |  0.019643 | sFMHsFMH
-112 |   14.00 :   0       6         8    |  0.019643 | sWFHWsFH
-112 |   14.00 :   0       6         8    |  0.019643 | sWFHsWFH
-112 |   15.00 :   1       6         8    |  0.019643 | FsMHsFsMsH
-112 |   15.00 :   1       6         8    |  0.019643 | sFMHsFsMsH
-112 |   15.00 :   1       6         8    |  0.019643 | sWsFHWsFsH
-112 |   15.00 :   1       6         8    |  0.019643 | sWsFHsWFsH
-112 |   15.00 :   1       6         8    |  0.028571 | FsMHFMsH
-112 |   15.00 :   1       6         8    |  0.028571 | WFHWsFsH
-112 |   15.00 :   1       6         8    |  0.028571 | WFHsWFsH
-112 |   15.00 :   1       6         8    |  0.028571 | sFMHFMsH
-112 |   15.00 :   1       8         6    |  0.060714 | sFsMFM
-112 |   15.00 :   1       8         6    |  0.069643 | FMFM
-112 |   16.00 :   0       8         8    |  0.078571 | FHFH
-112 |   18.00 :   2       8         8    |  0.005357 | WsFsMsHWsFsMsH
-112 |   18.00 :   2       8         8    |  0.005357 | sWFsMsHsWFsMsH
-112 |   18.00 :   2       8         8    |  0.005357 | sWsFMsHsWsFMsH
-112 |   18.00 :   2       8         8    |  0.005357 | sWsFsMHsWsFsMH
-112 |   18.00 :   2       8         8    |  0.023214 | WFMsHWFMsH
-112 |   18.00 :   2       8         8    |  0.023214 | WFsMHWFsMH
-112 |   18.00 :   2       8         8    |  0.023214 | WsFMHWsFMH
-112 |   18.00 :   2       8         8    |  0.023214 | sWFMHsWFMH
-112 |   19.00 :   3       8         8    |  0.046429 | sWsFsMsWsFsM
-112 |   19.00 :   3       8         8    |  0.055357 | WFsMsWsFsM
-112 |   19.00 :   3       8         8    |  0.055357 | WsFMsWsFsM
-112 |   19.00 :   3       8         8    |  0.055357 | sWFMsWsFsM
-112 |   21.00 :   3      10         8    |  0.073214 | sWsFsMWFsM
-112 |   21.00 :   3      10         8    |  0.073214 | sWsFsMsWFM
-112 |   21.00 :   3      10         8    |  0.082143 | WFsMWFsM
-112 |   21.00 :   3      10         8    |  0.082143 | WFsMsWFM
-112 |   21.00 :   3      10         8    |  0.082143 | WsFMWFsM
-112 |   21.00 :   3      10         8    |  0.082143 | WsFMsWFM
-112 |   21.00 :   3      10         8    |  0.082143 | sWFMWFsM
+112 |   13.00 :   1      6         6     |  0.033929 | sBsTsMsH
+112 |   13.00 :   1      6         6     |  0.033929 | sFsMsFsM
+112 |   13.00 :   1      6         6     |  0.033929 | sWsFsWsF
+112 |   13.00 :   1      6         6     |  0.033929 | sWsTsBsH
+140 |   13.00 :   1      6         6     |  0.034286 | sTIIsM
+140 |   13.00 :   1      6         6     |  0.034286 | sWBBsT
+112 |   13.00 :   1      6         6     |  0.042857 | BBsMsH
+112 |   13.00 :   1      6         6     |  0.042857 | FMsFsM
+112 |   13.00 :   1      6         6     |  0.042857 | WFsWsF
+112 |   13.00 :   1      6         6     |  0.042857 | sWIIsH
+112 |   13.00 :   1      6         6     |  0.042857 | sWsFWF
+112 |   13.00 :   1      6         6     |  0.051786 | WFWF
+112 |   14.00 :   0      6         8     |  0.019643 | FsMHFsMH
+112 |   14.00 :   0      6         8     |  0.019643 | FsMHsFMH
+112 |   14.00 :   0      6         8     |  0.019643 | WsFHWsFH
+112 |   14.00 :   0      6         8     |  0.019643 | WsFHsWFH
+112 |   14.00 :   0      6         8     |  0.019643 | sFMHFsMH
+112 |   14.00 :   0      6         8     |  0.019643 | sFMHsFMH
+112 |   14.00 :   0      6         8     |  0.019643 | sWFHWsFH
+112 |   14.00 :   0      6         8     |  0.019643 | sWFHsWFH
+112 |   15.00 :   1      6         8     |  0.019643 | FsMHsFsMsH
+112 |   15.00 :   1      6         8     |  0.019643 | sFMHsFsMsH
+112 |   15.00 :   1      6         8     |  0.019643 | sWsFHWsFsH
+112 |   15.00 :   1      6         8     |  0.019643 | sWsFHsWFsH
+112 |   15.00 :   1      6         8     |  0.028571 | FsMHFMsH
+112 |   15.00 :   1      6         8     |  0.028571 | WFHWsFsH
+112 |   15.00 :   1      6         8     |  0.028571 | WFHsWFsH
+112 |   15.00 :   1      6         8     |  0.028571 | sFMHFMsH
+112 |   15.00 :   1      8         6     |  0.060714 | sFsMFM
+112 |   15.00 :   1      8         6     |  0.069643 | FMFM
+112 |   16.00 :   0      8         8     |  0.078571 | FHFH
+112 |   18.00 :   2      8         8     |  0.005357 | WsFsMsHWsFsMsH
+112 |   18.00 :   2      8         8     |  0.005357 | sWFsMsHsWFsMsH
+112 |   18.00 :   2      8         8     |  0.005357 | sWsFMsHsWsFMsH
+112 |   18.00 :   2      8         8     |  0.005357 | sWsFsMHsWsFsMH
+112 |   18.00 :   2      8         8     |  0.023214 | WFMsHWFMsH
+112 |   18.00 :   2      8         8     |  0.023214 | WFsMHWFsMH
+112 |   18.00 :   2      8         8     |  0.023214 | WsFMHWsFMH
+112 |   18.00 :   2      8         8     |  0.023214 | sWFMHsWFMH
+112 |   19.00 :   3      8         8     |  0.046429 | sWsFsMsWsFsM
+112 |   19.00 :   3      8         8     |  0.055357 | WFsMsWsFsM
+112 |   19.00 :   3      8         8     |  0.055357 | WsFMsWsFsM
+112 |   19.00 :   3      8         8     |  0.055357 | sWFMsWsFsM
+112 |   21.00 :   3     10         8     |  0.073214 | sWsFsMWFsM
+112 |   21.00 :   3     10         8     |  0.073214 | sWsFsMsWFM
+112 |   21.00 :   3     10         8     |  0.082143 | WFsMWFsM
+112 |   21.00 :   3     10         8     |  0.082143 | WFsMsWFM
+112 |   21.00 :   3     10         8     |  0.082143 | WsFMWFsM
+112 |   21.00 :   3     10         8     |  0.082143 | WsFMsWFM
+112 |   21.00 :   3     10         8     |  0.082143 | sWFMWFsM
 ----|------------------------------------|-----------|-----------
 len |  music     NMs   CRUs   5678 combs | avg score | calling
 ----|------------------------------------|-----------|-----------
-112 |   21.00 :   3      10         8    |  0.082143 | sWFMsWFM
-140 |   21.00 :   1      10        10    |  0.084286 | sBsMsFsH
-140 |   21.00 :   1      10        10    |  0.084286 | sBsMsHsF
-140 |   21.00 :   1      10        10    |  0.084286 | sFsHsWsB
-140 |   21.00 :   1      10        10    |  0.084286 | sFsMsWsH
-140 |   21.00 :   1      10        10    |  0.084286 | sFsWsBsH
-140 |   21.00 :   1      10        10    |  0.084286 | sMsWsFsH
-140 |   21.00 :   1      10        10    |  0.091429 | FMsWsH
-140 |   21.00 :   1      10        10    |  0.091429 | sBMHsF
-140 |   21.00 :   1      10        10    |  0.091429 | sFHWsB
-140 |   21.00 :   1      10        10    |  0.091429 | sMWFsH
-112 |   23.00 :   3      12         8    |  0.091071 | sWsFsMWsFM
-112 |   23.00 :   3      12         8    |  0.100000 | WFsMWsFM
-112 |   23.00 :   3      12         8    |  0.100000 | WsFMWsFM
-112 |   23.00 :   3      12         8    |  0.100000 | sWFMWsFM
+112 |   21.00 :   3     10         8     |  0.082143 | sWFMsWFM
+140 |   21.00 :   1     10        10     |  0.084286 | sBsMsFsH
+140 |   21.00 :   1     10        10     |  0.084286 | sBsMsHsF
+140 |   21.00 :   1     10        10     |  0.084286 | sFsHsWsB
+140 |   21.00 :   1     10        10     |  0.084286 | sFsMsWsH
+140 |   21.00 :   1     10        10     |  0.084286 | sFsWsBsH
+140 |   21.00 :   1     10        10     |  0.084286 | sMsWsFsH
+140 |   21.00 :   1     10        10     |  0.091429 | FMsWsH
+140 |   21.00 :   1     10        10     |  0.091429 | sBMHsF
+140 |   21.00 :   1     10        10     |  0.091429 | sFHWsB
+140 |   21.00 :   1     10        10     |  0.091429 | sMWFsH
+112 |   23.00 :   3     12         8     |  0.091071 | sWsFsMWsFM
+112 |   23.00 :   3     12         8     |  0.100000 | WFsMWsFM
+112 |   23.00 :   3     12         8     |  0.100000 | WsFMWsFM
+112 |   23.00 :   3     12         8     |  0.100000 | sWFMWsFM
 ----|------------------------------------|-----------|-----------
 len |  music     NMs   CRUs   5678 combs | avg score | calling
 '''
