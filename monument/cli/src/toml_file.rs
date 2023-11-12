@@ -169,7 +169,7 @@ impl TomlFile {
         crate::utils::parse_toml(&toml_buf)
     }
 
-    /// Build a [`Search`] which corresponds to this `TomlFile`
+    /// Build a set of [`Parameters`] from this `TomlFile`
     pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<(Parameters, Vec<MusicDisplay>)> {
         log::debug!("Generating params");
 

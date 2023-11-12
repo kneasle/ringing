@@ -43,7 +43,7 @@ pub enum Error {
     DifferentStartEndRowInMultipart,
     /// Some [`Call`] refers to a label that doesn't exist
     UndefinedLabel { call_name: String, label: String },
-    /// The [`SearchBuilder`] didn't define any [`Method`]s
+    /// No methods were defined
     NoMethods,
     /// Two [`Method`]s use the same shorthand
     DuplicateShorthand {

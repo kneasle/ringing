@@ -182,13 +182,14 @@ impl Pattern {
             .collect_vec()
     }
 
-    /// Creates a normalised `Pattern` from an [`Iterator`] of [`Elem`]s
+    /// Creates a `Pattern` from an [`Iterator`] of just [`Bell`]s.  I.e. this pattern will contain
+    /// no `x`s.
     pub fn from_bells(iter: impl IntoIterator<Item = Bell>) -> Result<Self, PatternError> {
         Self::from_vec(iter.into_iter().map(Some).collect_vec())
     }
 
-    /// Creates a `Pattern` from a [`Vec`] of [`Elem`]s, checking the invariants and normalising
-    /// the result.  This uses the allocation of the given [`Vec`].
+    /// Creates a `Pattern` from a [`Vec`] of [`Option`]al [`Bell`]s.  `None`s are used as `x`s in
+    /// the pattern.
     pub fn from_vec(bells: Vec<Option<Bell>>) -> Result<Self, PatternError> {
         // Check uniqueness of bells
         let bell_counts = bells.iter().filter_map(|b| *b).counts();
@@ -201,20 +202,12 @@ impl Pattern {
         Ok(unsafe { Self::from_vec_unchecked(bells) })
     }
 
-    /// Creates a `Pattern` from an [`Iterator`] of [`Elem`]s, without normalising.
+    /// Creates a `Pattern` from a [`Vec`] of [`Option`]al [`Bell`]s, without checking
+    /// whether they form a valid [`Pattern`].
     ///
     /// # Safety
     ///
     /// Safe if all the [`Bell`]s returned by `iter` are unique.
-    pub unsafe fn from_elems_unchecked(iter: impl IntoIterator<Item = Option<Bell>>) -> Self {
-        Self::from_vec_unchecked(iter.into_iter().collect_vec())
-    }
-
-    /// Creates a `Pattern` from a [`Vec`] of [`Elem`]s, without normalising or checking invariants.
-    ///
-    /// # Safety
-    ///
-    /// This is safe if all the bells in `elems` are unique.
     #[inline]
     pub unsafe fn from_vec_unchecked(bells: Vec<Option<Bell>>) -> Self {
         Self { bells }

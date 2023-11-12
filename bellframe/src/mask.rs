@@ -8,8 +8,6 @@ use itertools::Itertools;
 
 /// A mask which fixes the location of some [`Bell`]s.  Unfilled positions are usually denoted by
 /// `'x'` (`X` is not a valid [`Bell`] name).
-///
-/// This can also be thought of as a music [`Pattern`] with no `*`s.
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Mask {
     bells: Vec<Option<Bell>>,

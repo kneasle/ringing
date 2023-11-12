@@ -52,5 +52,5 @@ pub mod utils;
 
 pub use composition::Composition;
 pub use error::{Error, Result};
-pub use group::PartHeadGroup;
+pub use group::{PartHead, PartHeadGroup, PhRotation};
 pub use search::{Config, Progress, Search, Update};

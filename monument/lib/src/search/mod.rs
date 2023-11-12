@@ -30,7 +30,7 @@ use self::atw::AtwTable;
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
-/// [to abort them](Self::signal_abort) or receive [`Update`]s on their [`Progress`].  If you just
+/// to receive [`Update`]s on their [`Progress`].  If you just
 /// want to run a (hopefully quick) search, use [`Parameters::run`] or
 /// [`Parameters::run_with_config`].  Both of those will deal with handling the [`Search`] for
 /// you.
@@ -79,8 +79,8 @@ impl Search {
         })
     }
 
-    /// Runs the search, **blocking the current thread** until either the search is completed or an
-    /// [abort is signalled](Self::signal_abort).
+    /// Runs the search, **blocking the current thread** until either the search is completed or
+    /// is aborted
     pub fn run(&self, update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
