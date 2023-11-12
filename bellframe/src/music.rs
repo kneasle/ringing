@@ -344,20 +344,6 @@ impl Pattern {
             // Add the match
             *counts.get_mut(position) += 1;
         }
-
-        // HACK: Full-length runs (i.e. rounds and backrounds) used to be counted twice: once off
-        // the front, once off the back.  To eliminate this noise from the test cases, we hackily
-        // add this behaviour back here
-        // TODO: Revert this behaviour
-        let rounds_bells = rows.stage.bells().map(Some).collect_vec();
-        let is_rounds = self.bells == rounds_bells;
-        let mut backrounds_bells = rounds_bells;
-        backrounds_bells.reverse();
-        let is_backrounds = self.bells == backrounds_bells;
-        if is_rounds || is_backrounds {
-            counts.back = counts.front;
-        }
-
         counts
     }
 
