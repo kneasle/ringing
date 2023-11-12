@@ -27,7 +27,6 @@ pattern = "8765"
 pattern = "87"
 stroke = "back"
 weight.back = 0 # Display these at backstroke but don't score them
-name = "87s"
 
 #-----------------#
 #- Music scoring -#

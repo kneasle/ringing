@@ -8,7 +8,11 @@ show = false # Only show 4-bell runs
 [[music]]
 pattern = "56"
 weight.back = 0.2
-name = "*56" # TODO: Make this "56s"
+
+[[music]]
+pattern = "65"
+weight.back = -0.5
+stroke = "back"
 
 [[music]]
 # Queens, 'whittingtons', exploded tittums and tittums

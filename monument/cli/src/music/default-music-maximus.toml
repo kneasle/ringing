@@ -33,7 +33,6 @@ weight.back = 1
 name = "65s"
 
 [[music]]
-pattern = "*TE"
+pattern = "TE"
 stroke = "back"
 weight.back = -0.7
-show = false

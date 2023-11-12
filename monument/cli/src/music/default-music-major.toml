@@ -15,7 +15,6 @@ weight.front = 3
 show = false
 
 [[music]]
-patterns = ["87"]
+pattern = "87"
 stroke = "back"
 weight.back = -0.7
-name = "87s"
