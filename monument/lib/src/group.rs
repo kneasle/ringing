@@ -55,7 +55,7 @@ impl PartHeadGroup {
         self.part_heads.last().unwrap().effective_stage()
     }
 
-    /// Returns the number of unique [`PartHead`]s in this `PartHeadGroup`.
+    /// Returns the number of part heads in this `PartHeadGroup`.
     pub fn size(&self) -> usize {
         self.part_heads.len()
     }

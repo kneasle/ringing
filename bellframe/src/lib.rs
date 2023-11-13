@@ -1,6 +1,5 @@
 //! Idiomatic Rust representations of commonly used primitives for Change Ringing compositions.
 
-#![deny(clippy::all)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
 mod bell;
@@ -25,11 +24,12 @@ pub use call::Call;
 pub use mask::Mask;
 pub use method::Method;
 pub use method_lib::MethodLib;
+pub use music::MusicType;
 pub use parity::Parity;
 pub use place_not::{PlaceNot, PnBlock};
 pub use row::{same_stage_vec::SameStageVec, InvalidRowError, Row, RowBuf};
 pub use stage::{IncompatibleStages, Stage};
-pub use stroke::Stroke;
+pub use stroke::{Stroke, StrokeSet};
 pub use truth::Truth;
 pub use utils::run_len;
 

@@ -1,5 +1,5 @@
 # Music file for 10-bell complib music compositions
-# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# Music is split into two sections, the first gives what music to display in the header (which has zero
 # weighting) and the second gives the scoring that counts towards the total music score.
 
 #--------------------------#
@@ -8,39 +8,31 @@
 
 # Display 56s
 [[music]]
+pattern = "567890"
 name = "56s"
-patterns = ["567890*", "*567890"]
-weight = 0
 
 # Display 65s
 [[music]]
-name = "56s"
-patterns = ["657890*", "*657890"]
-weight = 0
+pattern = "657890"
+name = "65s"
 
 # 4-bell Runs
 [[music]]
 run_length = 4
-weight = 0
 
 # Display 09s at back
 [[music]]
-pattern = "*09"
+pattern = "09"
 stroke = "back"
-weight = 0
+weight.back = 0
 
 #-----------------#
 #- Music scoring -#
 #-----------------#
 
-# 56s & 65s
+# 5, 6, 7, 8 and 9 Bell Runs
 [[music]]
-patterns = ["567890*", "*567890", "657890*", "*657890"]  # Boost 56s and 65s
-show = false
-
-# 4, 5, 6, 7, 8 and 9 Bell Runs
-[[music]]
-run_lengths = [4, 5, 6, 7, 8, 9]
+run_lengths = [5, 6, 7, 8, 9]
 show = false
 
 # Near Misses
@@ -51,7 +43,11 @@ show = false
 
 # Combinations from named rows
 [[music]]
-patterns = ["*24680", "*975680", "x6x7x8x9x0"]  # From Queens, Whittingtons and Tittums
+patterns = ["24680", "975680"]  # From Queens, Whittingtons
+weight.back = 1
+show = false
+[[music]]
+pattern = "x5x6x7x8x9x0" # From tittums
 show = false
 
 # Named Rows

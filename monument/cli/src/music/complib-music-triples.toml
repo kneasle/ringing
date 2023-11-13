@@ -8,49 +8,34 @@
 
 # Display 567s & 657s
 [[music]]
-name = "567s"
-pattern = "*567"
-weight = 0
+pattern = "567"
+weight.back = 1
 
 # Display 657s
 [[music]]
-name = "657s"
-pattern = "*657"
-weight = 0
+pattern = "657"
+weight.back = 1
 
 #crus
 [[music]]
 preset = "crus"
-weight = 0
 
 # 4-bell Runs
 [[music]]
 run_length = 4
-weight = 0
 
 # 46s
 [[music]]
-name = "46s"
-pattern = "*46"
-weight = 0
+pattern = "46"
+weight.back = 1
 
 #-----------------#
 #- Music scoring -#
 #-----------------#
 
-# 56s & 65s
-[[music]]
-patterns = ["*567", "*657"]  # Boost 567s and 657s
-show = false
-
-# crus
-[[music]]
-preset = "crus"
-show = false
-
 # 4, 5, and 6 Bell Runs
 [[music]]
-run_lengths = [4, 5, 6]
+run_lengths = [5, 6]
 show = false
 
 # Combination Near Misses
@@ -66,14 +51,16 @@ show = false
 
 # 46s (Breakdown)
 [[music]]
-patterns = ["*46", "*246", "*746", "*7546"]
+patterns = ["246", "746", "7546"]
+weight.back = 1
 show = false
 
 # Combinations from named rows
 [[music]]
-patterns = ["*246", "*346", "*347", "*357",    # From Queens, Whittingtons, Hagdyke
-            "*374", "*576", "*746", "*756",    # From Tittums, Bowbells, Princesses, Burdette
-            "*765", "x5x6x7x"]                 # From Rollercoaster, Tittums
+patterns = ["246", "346", "347", "357",    # From Queens, Whittingtons, Hagdyke
+            "374", "576", "746", "756",    # From Tittums, Bowbells, Princesses, Burdette
+            "765", "5x6x7x"]                 # From Rollercoaster, Tittums
+weight.back = 1
 show = false
 
 # Named Rows

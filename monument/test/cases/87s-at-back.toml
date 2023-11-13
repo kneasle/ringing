@@ -9,4 +9,4 @@ base_music = "none" # Only count 87s as score
 [[music]]
 pattern = "*87"
 stroke = "back"
-weight = -10
+weight.back = -10

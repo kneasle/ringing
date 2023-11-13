@@ -180,7 +180,7 @@ impl CompositionPrinter {
                 .then(|| search.effective_part_head_stage().num_bells()),
             music_widths: music_displays
                 .iter()
-                .map(|d| d.col_width(&search))
+                .map(|d| d.col_width(search.parameters()))
                 .collect_vec(),
 
             search,
@@ -327,9 +327,9 @@ impl CompositionPrinter {
         }
         for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
             s.push_str("  ");
-            write_centered_text(
+            write_left_centered_text(
                 &mut s,
-                &music_display.display_counts(&self.search, &music_counts),
+                &music_display.display_counts(&music_counts, self.search.parameters()),
                 *col_width,
             );
             s.push(' ');
@@ -353,6 +353,14 @@ fn write_centered_text(out: &mut String, text: &str, width: usize) {
     push_multiple(' ', w - (w / 2), out);
     out.push_str(text);
     push_multiple(' ', w / 2, out);
+}
+
+/// Write some `string` to `out`, centering it among `width` spaces (rounding to the left).
+fn write_left_centered_text(out: &mut String, text: &str, width: usize) {
+    let w = width.saturating_sub(text.len());
+    push_multiple(' ', w / 2, out);
+    out.push_str(text);
+    push_multiple(' ', w - (w / 2), out);
 }
 
 /// Push `n` copies of `c` to the end of `out`

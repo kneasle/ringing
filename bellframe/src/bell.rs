@@ -2,6 +2,7 @@
 
 use std::fmt::{Debug, Display, Formatter};
 
+use bytemuck::{Pod, Zeroable};
 #[cfg(feature = "serde")]
 use serde_crate::{
     de::{Error, Visitor},
@@ -20,7 +21,7 @@ const BELL_NAMES: &str = "1234567890ETABCDFGHJKLMNPQRSUVWYZ";
 
 /// A type-safe representation of a 'bell', which adds things like conversions to and from
 /// commonly-used bell names.  Each `Bell` takes a single byte in memory.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Zeroable, Pod)]
 #[repr(transparent)] // Needed to force memory layout
 pub struct Bell {
     /// A zero-indexed number representing the `Bell`.  I.e the treble is always
@@ -105,6 +106,7 @@ impl Bell {
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
+    // TODO: Make this panic when constructing bell #0
     pub fn from_number(number: u8) -> Option<Bell> {
         number.checked_sub(1).map(Bell::from_index)
     }

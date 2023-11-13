@@ -1,14 +1,18 @@
-length = { min = 1250, max = 1280 }
-num_comps = 50
+length = "QP"
 method = "Bristol Surprise Major"
 
 [[music]]
-run_lengths = [4, 5, 6, 7]
+run_length = 4
 
 [[music]]
-pattern = "*6578"
+run_lengths = [5, 6, 7]
+show = false # Don't display runs longer than 4
+
+[[music]]
+pattern = "6578"
 
 # Boost 5678s off the front
 [[music]]
-patterns = ["5678*", "8765*"]
-weight = 3
+patterns = ["5678", "8765"]
+weight.front = 3
+weight.back = 3

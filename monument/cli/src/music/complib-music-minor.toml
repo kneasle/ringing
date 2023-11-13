@@ -1,5 +1,5 @@
 # Music file for 6-bell complib music compositions
-# Music is plit into two scetions, the first gives what music to display in the header (which has zero
+# Music is split into two sections, the first gives what music to display in the header (which has zero
 # weighting) and the second gives the scoring that counts towards the total music score.
 
 #--------------------------#
@@ -8,9 +8,9 @@
 
 # Display 65s at back
 [[music]]
-pattern = "*65"
+pattern = "65"
 stroke = "back"
-weight = 0
+weight.back = 0
 
 #-----------------#
 #- Music scoring -#
@@ -18,7 +18,8 @@ weight = 0
 
 # 56s
 [[music]]
-pattern = "*56"  # Boost 56s
+pattern = "56"  # Boost 56s
+weight.back = 1
 show = false
 
 # 4 and 5 Bell Runs

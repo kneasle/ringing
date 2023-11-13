@@ -2,9 +2,5 @@ length = "practice"
 methods = [
     "Cambridge Surprise Minor",
     "London Surprise Minor",
-    # "Primrose Surprise Minor",
-    # "Bourne Surprise Minor",
-    # "Ipswich Surprise Minor",
 ]
-end_indices = [21] # Only allow finishing at the handstroke snap
-music_file = "music-6.toml"
+end_indices = [-3] # Only allow finishing at the handstroke snap (i.e. 3 rows before the lead end)

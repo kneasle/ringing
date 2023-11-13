@@ -305,7 +305,6 @@ impl<'graph> LinkView<'graph> {
 // BUILTIN PASSES //
 ////////////////////
 
-mod music; // Proving chunks as required/unusable based on music requirements
 mod strip_refs; // Strip references to non-existent chunks
 
 mod passes {
@@ -329,9 +328,6 @@ mod passes {
             compute_distances(),
             strip_long_chunks(),
             Pass::Single(Box::new(super::strip_refs::remove_dangling_refs)),
-            // Music optimisation
-            Pass::Single(Box::new(super::music::required_music_min)),
-            Pass::Single(Box::new(super::music::remove_chunks_exceeding_max_count)),
             // Required chunk optimisation
             mark_single_start_or_end_as_required(),
             remove_chunks_false_against_required(),
@@ -339,6 +335,7 @@ mod passes {
             remove_links_between_false_chunks(),
             remove_chunks_with_long_method_counts(),
             remove_links_with_long_method_counts(),
+            remove_chunks_which_exceed_music_limits(),
         ]
         .into_iter()
         .map(Mutex::new)
@@ -379,6 +376,26 @@ mod passes {
                         true
                     }
                 })
+            },
+        ))
+    }
+
+    fn remove_chunks_which_exceed_music_limits() -> Pass {
+        Pass::Single(Box::new(
+            |graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges| {
+                graph.chunks.retain(|_id, chunk| {
+                    // Determine whether this chunk's music counts exceed the limit specified in
+                    // the parameters
+                    for (idx, music_type) in params.music_types.iter().enumerate() {
+                        if let Some(limit) = music_type.count_range.max {
+                            let counts = chunk.music_counts.as_slice()[idx];
+                            if music_type.masked_total(counts) > limit {
+                                return false; // Chunk contributes too much of this music
+                            }
+                        }
+                    }
+                    true
+                });
             },
         ))
     }

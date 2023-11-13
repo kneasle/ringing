@@ -5,35 +5,34 @@ run_length = 4
 run_lengths = [5, 6, 7, 8, 9, 10]
 show = false # Only show 4-bell runs
 
-# Counting 67890s as 7-bell runs tends to make Monument generate very static compositions, leaving 6
-# unaffected for as long as possible.  So we nerf 7890s generally to encourage it to generate more
+# Counting 67890s as 5-bell runs tends to make Monument generate very static compositions, leaving 6
+# unaffected for as long as possible.  So we nerf 67890s generally to encourage it to generate more
 # interesting comps
 [[music]]
-patterns = ["0987*", "*7890"]
-weight = -2
+patterns = ["09876", "67890"]
+weight.front = -1
+weight.back = -1
 show = false
 
 # Boost scores of LB5s in order to make Monument generate more of them (this and nerfing 67890s will
 # make Monument prefer LB5 courses over just keeping the 6 at home for ages).
 [[music]]
-patterns = [
-    "*65432", "23456*",
-    "*23456", "65432*",
-    "*76543", "34567*",
-]
-weight = 3
+patterns = ["65432", "23456", "76543", "34567"]
+weight.front = 3
+weight.back = 3
 name = "lb5s"
 
 [[music]]
-pattern = "*567890"
+pattern = "567890"
+weight.back = 1
 name = "56s"
 
 [[music]]
-pattern = "*657890"
+pattern = "657890"
+weight.back = 1
 name = "65s"
 
 [[music]]
-pattern = "*09"
+pattern = "09"
 stroke = "back"
-weight = -0.7
-show = false
+weight.back = -0.7

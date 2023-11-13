@@ -6,11 +6,8 @@ use std::{
 
 use anyhow::anyhow;
 use bellframe::{
-    method::LABEL_LEAD_END,
-    method_lib::SearchError,
-    music::{Elem, Pattern},
-    place_not::PnBlockParseError,
-    Bell, Mask, MethodLib, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END, method_lib::SearchError, place_not::PnBlockParseError, Bell, Mask,
+    MethodLib, RowBuf, Stage, Stroke,
 };
 use colored::Colorize;
 use index_vec::index_vec;
@@ -172,7 +169,7 @@ impl TomlFile {
         crate::utils::parse_toml(&toml_buf)
     }
 
-    /// Build a [`Search`] which corresponds to this `TomlFile`
+    /// Build a set of [`Parameters`] from this `TomlFile`
     pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<(Parameters, Vec<MusicDisplay>)> {
         log::debug!("Generating params");
 
@@ -202,7 +199,7 @@ impl TomlFile {
                 anyhow!("No methods specified.  Try something like `method = \"Bristol Surprise Major\"`.")
             })?;
 
-        let (music_displays, music_types) = self.music(toml_path, stage)?;
+        let (music_types, music_displays) = self.music(toml_path, stage)?;
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
         let calling_bell = match self.calling_bell {
@@ -313,7 +310,7 @@ impl TomlFile {
         &self,
         toml_path: &Path,
         stage: Stage,
-    ) -> anyhow::Result<(Vec<MusicDisplay>, MusicTypeVec<MusicType>)> {
+    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
         // Load TOML for the music file
         let music_file_str = match &self.music_file {
             Some(relative_music_path) => {
@@ -345,11 +342,8 @@ impl TomlFile {
                 let left_bell = right_bell + 1;
                 // ... add patterns for `*<left><right>` and `*<right><left>`
                 for (b1, b2) in [(left_bell, right_bell), (right_bell, left_bell)] {
-                    let pattern =
-                        Pattern::from_elems([Elem::Star, Elem::Bell(b1), Elem::Bell(b2)], stage)
-                            .expect("Handbell patterns should always be valid regexes");
-                    let mask = Mask::from_pattern(&pattern)
-                        .expect("Handbell patterns should only have one `*`");
+                    let mask_string = format!("*{b1}{b2}");
+                    let mask = Mask::parse_with_stage(&mask_string, stage).unwrap();
                     course_weights.push((mask, self.handbell_coursing_weight));
                 }
             }

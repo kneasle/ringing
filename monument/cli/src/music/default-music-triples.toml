@@ -7,16 +7,16 @@ show = false # Only show 4-bell runs
 
 # 5678 combinations
 [[music]]
-patterns = ["*657", "*567", "*765", "*756", "*675", "*576"]
+preset = "5678 combinations"
 show = false
 
 # Queens and Kings
 [[music]]
 patterns = ["1357246", "7531246"]
-weight = 3
+weight.front = 3
 show = false
 
 [[music]]
-pattern = "*46"
-weight = 0.2
+pattern = "46"
+weight.back = 0.2
 name = "46s"

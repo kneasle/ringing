@@ -1,4 +1,4 @@
 length = "QP"
-start_indices = [2]
 method = "Superlative Surprise Major"
-music_file = "music-8.toml"
+snap_start = true # Only allow snap starts (i.e. 2 rows after the lead end)
+                  # This is equivalent to: start_indices = [2] 

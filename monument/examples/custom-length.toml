@@ -1,3 +1,5 @@
+# By default "QP" would include QPs with a length of 13XX.  However, many ringers prefer to
+# exclusively ring QPs with length of 12XX, so this lowers the upper bound to only include such
+# compositions.
 length = { min = 1250, max = 1300 }
 method = "Plain Bob Major"
-music_file = "music-8.toml"

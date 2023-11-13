@@ -32,7 +32,7 @@ impl From<&MethodLib> for MethodLibSerde {
             for method in methods.values() {
                 groups
                     .entry((*stage, method.full_class))
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(method);
             }
         }
@@ -80,9 +80,7 @@ impl From<MethodLibSerde> for MethodLib {
             );
 
             // Get the group of methods that correspond to this group's stage
-            let method_map = unpacked_method_map
-                .entry(stage)
-                .or_insert_with(HashMap::new);
+            let method_map = unpacked_method_map.entry(stage).or_default();
 
             // Go through each method and unpack it into the `method_map`
             for m in group.methods {

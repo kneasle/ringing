@@ -1,7 +1,3 @@
 length = "QP"
-methods = [
-    "Yorkshire Surprise Major",
-    { title = "Lessness Surprise Major", shorthand = "E" },
-]
+method = "Yorkshire Surprise Major"
 courses = ["*78", "*7856"]
-music_file = "music-8.toml"

@@ -3,76 +3,87 @@ use std::{
     ops::Mul,
 };
 
-use crate::{
-    music::{self, Pattern},
-    Bell, Row, RowBuf, Stage,
-};
+use crate::{Bell, Row, RowBuf, Stage};
 use itertools::Itertools;
 
 /// A mask which fixes the location of some [`Bell`]s.  Unfilled positions are usually denoted by
 /// `'x'` (`X` is not a valid [`Bell`] name).
-///
-/// This can also be thought of as a music [`Pattern`] with no `*`s.
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Mask {
     bells: Vec<Option<Bell>>,
 }
 
 impl Mask {
-    pub fn parse(s: &str) -> Self {
-        Self {
-            bells: s
-                .chars()
-                .filter_map(|c| match c {
-                    'x' | 'X' | '.' => Some(None),
-                    // Return `Some(Some(Bell))` if `other_char` is a bell name, otherwise `None`
-                    // to ignore random chars
-                    other_char => Bell::from_name(other_char).map(Some),
-                })
-                .collect_vec(),
-        }
+    pub fn parse(s: &str) -> Result<Self, ParseError> {
+        let bells = s
+            .chars()
+            .filter_map(|c| match c {
+                'x' | 'X' | '.' => Some(None),
+                // Return `Some(Some(Bell))` if `other_char` is a bell name, otherwise `None`
+                // to ignore random chars
+                other_char => Bell::from_name(other_char).map(Some),
+            })
+            .collect_vec();
 
-        // TODO: Check validity
+        Self::from_vec(bells)
     }
 
     pub fn parse_with_stage(s: &str, stage: Stage) -> Result<Self, ParseError> {
-        let pattern = Pattern::parse(s, stage).map_err(ParseError::Pattern)?;
-        Self::from_pattern(&pattern).map_err(|MultipleStars| ParseError::MultipleStars)
-    }
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        enum StringElement {
+            Bell(Bell),
+            X,
+            Star,
+        }
 
-    /// Convert a [`Pattern`] into a `Mask` of the same [`Stage`], expanding at most one `*` if it
-    /// exists.
-    pub fn from_pattern(pattern: &Pattern) -> Result<Self, MultipleStars> {
-        let stage = pattern.stage();
-
-        // Validate the pattern
-        let num_elems = pattern.elems().len();
-        let num_stars = pattern
-            .elems()
+        // Parse the string into a sequence of [`StringElements`]
+        let elements = s
+            .chars()
+            .filter_map(|c| {
+                Some(match c {
+                    '*' => StringElement::Star,
+                    'x' | 'X' | '.' => StringElement::X,
+                    // Return `Some(Some(Bell))` if `other_char` is a bell name, otherwise `None`
+                    // to ignore random chars
+                    other_char => StringElement::Bell(Bell::from_name(other_char)?),
+                })
+            })
+            .collect_vec();
+        // Determine how many bells each star should be expanded to
+        let num_stars = elements
             .iter()
-            .filter(|elem| **elem == music::Elem::Star)
+            .filter(|e| e == &&StringElement::Star)
             .count();
-        let star_length = match num_stars {
-            0 => {
-                assert_eq!(num_elems, stage.num_bells());
-                0
-            }
-            1 => stage.num_bells() - (num_elems - num_stars),
-            _ => return Err(MultipleStars),
-        };
-        // Construct mask
+        let num_non_stars = elements.len() - num_stars;
+        // Error checking
+        let min_required_stage = Stage::new(num_non_stars as u8);
+        if min_required_stage > stage {
+            return Err(ParseError::TooLong {
+                min_required_stage,
+                provided_stage: stage,
+            });
+        }
+        if num_stars == 0 && min_required_stage < stage {
+            return Err(ParseError::TooShort {
+                mask_str: s.to_owned(),
+                mask_stage: min_required_stage,
+                provided_stage: stage,
+            });
+        }
+        if num_stars > 1 {
+            return Err(ParseError::MultipleStars);
+        }
+        // Convert to bells, expanding the star if needed
+        let star_length = stage.num_bells() - num_non_stars;
         let mut bells = Vec::new();
-        for &elem in pattern.elems() {
+        for elem in elements {
             match elem {
-                // Explicit bells are preserved, provided they fit into the stage
-                music::Elem::Bell(b) => bells.push(Some(b)),
-                // 'x's are always preserved
-                music::Elem::X => bells.push(None),
-                // If the star exists, replace it with `star_length` 'x's
-                music::Elem::Star => bells.extend(std::iter::repeat(None).take(star_length)),
+                StringElement::Bell(b) => bells.push(Some(b)),
+                StringElement::X => bells.push(None),
+                StringElement::Star => bells.extend(std::iter::repeat(None).take(star_length)),
             }
         }
-        Ok(Self { bells })
+        Self::from_vec(bells)
     }
 
     /// Creates a `Mask` that fully specifies a given [`Row`]
@@ -118,15 +129,29 @@ impl Mask {
 
     /// Directly create a [`Mask`] from a sequence of ([`Option`]al) [`Bell`]s
     #[inline]
-    pub fn from_bells(bells: impl IntoIterator<Item = Option<Bell>>) -> Self {
+    pub fn from_bells(bells: impl IntoIterator<Item = Option<Bell>>) -> Result<Self, ParseError> {
         Self::from_vec(bells.into_iter().collect_vec())
     }
 
     /// Directly create a [`Mask`] from a [`Vec`] of ([`Option`]al) [`Bell`]s.
-    #[inline]
-    // TODO: Verify the sequence here
-    pub fn from_vec(bells: Vec<Option<Bell>>) -> Self {
-        Self { bells }
+    pub fn from_vec(bells: Vec<Option<Bell>>) -> Result<Self, ParseError> {
+        // Check for duplicate bells
+        let mut just_bells = bells.iter().copied().flatten().collect_vec();
+        just_bells.sort();
+        for (b1, b2) in just_bells.iter().tuple_windows() {
+            if b1 == b2 {
+                return Err(ParseError::DuplicateBell(*b1));
+            }
+        }
+        // Check for bells out of stage
+        let stage = Stage::new(bells.len() as u8);
+        for b in just_bells {
+            if !stage.contains(b) {
+                return Err(ParseError::BellOutOfStage(b, stage));
+            }
+        }
+        // If neither check failed, these `bells` must form a valid `Mask`
+        Ok(Self { bells })
     }
 
     pub fn contains(&self, bell: Bell) -> bool {
@@ -354,33 +379,54 @@ impl Mask {
 #[derive(Debug, Clone, Copy)]
 pub struct BellAlreadySet(pub Bell);
 
-/// Error returned by [`Mask::from_pattern`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MultipleStars;
-
-impl Display for MultipleStars {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "`Mask`s can't have more than one `*`")
-    }
-}
-
-impl std::error::Error for MultipleStars {}
-
 /// The different ways that [`Mask::parse_with_stage`] can fail
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseError {
-    Pattern(crate::music::PatternError),
+    TooLong {
+        min_required_stage: Stage,
+        provided_stage: Stage,
+    },
+    TooShort {
+        mask_str: String,
+        mask_stage: Stage,
+        provided_stage: Stage,
+    },
     MultipleStars,
+    DuplicateBell(Bell),
+    BellOutOfStage(Bell, Stage),
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseError::MultipleStars => write!(
+            ParseError::MultipleStars => write!(f, "too many `*`s.  Masks can only have one `*`"),
+            ParseError::TooLong {
+                min_required_stage,
+                provided_stage,
+            } => write!(
                 f,
-                "too many `*`s.  Masks can only have one region with `x` or `*`."
+                "Mask would be too long for {}; {} would be required",
+                provided_stage, min_required_stage
             ),
-            ParseError::Pattern(pattern_error) => pattern_error.write_message(f, "mask"),
+            ParseError::TooShort {
+                mask_str,
+                mask_stage,
+                provided_stage,
+            } => {
+                let extra_bells = provided_stage
+                    .bells()
+                    .skip(mask_stage.num_bells())
+                    .filter_map(Bell::to_char)
+                    .collect::<String>();
+                write!(
+                    f,
+                    "Mask is too short; did you mean `{mask_str}*` or `{mask_str}{extra_bells}`?"
+                )
+            }
+            ParseError::DuplicateBell(bell) => write!(f, "Bell {bell} is used twice"),
+            ParseError::BellOutOfStage(bell, stage) => {
+                write!(f, "Bell {bell} falls outside of stage {stage}")
+            }
         }
     }
 }
@@ -553,34 +599,25 @@ impl From<RowBuf> for Mask {
     }
 }
 
-impl From<Mask> for Pattern {
-    fn from(mask: Mask) -> Pattern {
-        Pattern::from_elems(
-            mask.bells
-                .iter()
-                .map(|b| b.map_or(music::Elem::X, music::Elem::Bell)),
-            mask.stage(),
-        )
-        // TODO: This will be safe once `Mask` gets stricter invariants
-        .unwrap()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn from_pattern() {
+    fn parse_with_stage() {
         #[track_caller]
         fn check_ok(pattern: &str, num_bells: u8, mask: &str) {
-            let pattern = Pattern::parse(pattern, Stage::new(num_bells)).unwrap();
-            assert_eq!(Mask::from_pattern(&pattern), Ok(Mask::parse(mask)));
+            assert_eq!(
+                Mask::parse_with_stage(&pattern, Stage::new(num_bells)),
+                Mask::parse(mask),
+            );
         }
         #[track_caller]
-        fn check_err(pattern: &str, num_bells: u8) {
-            let pattern = Pattern::parse(pattern, Stage::new(num_bells)).unwrap();
-            assert_eq!(Mask::from_pattern(&pattern), Err(MultipleStars));
+        fn check_err(pattern: &str, num_bells: u8, err: ParseError) {
+            assert_eq!(
+                Mask::parse_with_stage(&pattern, Stage::new(num_bells)),
+                Err(err)
+            );
         }
 
         check_ok("xxx3", 4, "xxx3");
@@ -588,21 +625,50 @@ mod tests {
         check_ok("3*", 4, "3xxx");
         check_ok("3*", 6, "3xxxxx");
         check_ok("3*x", 6, "3xxxxx");
-        check_ok("3**x", 6, "3xxxxx"); // Doesn't error because stars are normalised
-        check_ok("3*xx*", 6, "3xxxxx"); // Doesn't error because stars are normalised
         check_ok("3*4", 6, "3xxxx4");
         check_ok("3*x4", 6, "3xxxx4");
         check_ok("*78", 8, "xxxxxx78");
 
-        check_err("5*3*8", 8);
-        check_err("*5*", 8);
+        check_err("5*3*8", 8, ParseError::MultipleStars);
+        check_err("*5*", 8, ParseError::MultipleStars);
+        check_err("3**x", 6, ParseError::MultipleStars);
+        check_err("3*xx*", 6, ParseError::MultipleStars);
+
+        check_err(
+            "*9x",
+            8,
+            ParseError::BellOutOfStage(Bell::from_number(9).unwrap(), Stage::MAJOR),
+        );
+        check_err(
+            "23453*",
+            8,
+            ParseError::DuplicateBell(Bell::from_number(3).unwrap()),
+        );
+        check_err(
+            "1234*x5678",
+            8,
+            ParseError::TooLong {
+                min_required_stage: Stage::CATERS,
+                provided_stage: Stage::MAJOR,
+            },
+        );
+        check_err(
+            "1234x5678",
+            8,
+            ParseError::TooLong {
+                min_required_stage: Stage::CATERS,
+                provided_stage: Stage::MAJOR,
+            },
+        );
     }
 
     #[test]
     fn matches() {
         #[track_caller]
         fn check(mask: &str, row: &str, exp_match: bool) {
-            let is_match = Mask::parse(mask).matches(&RowBuf::parse(row).unwrap());
+            let is_match = Mask::parse(mask)
+                .unwrap()
+                .matches(&RowBuf::parse(row).unwrap());
             match (is_match, exp_match) {
                 (true, false) => panic!("'{}' unexpectedly matched '{}'", mask, row),
                 (false, true) => panic!("'{}' unexpectedly didn't match '{}'", row, mask),
@@ -623,9 +689,10 @@ mod tests {
 
     #[test]
     fn row_mul_mask() {
+        #[track_caller]
         fn check_ok(row: &str, mask: &str, exp_mask_str: &str) {
-            let new_mask = RowBuf::parse(row).unwrap().as_row() * &Mask::parse(mask);
-            let exp_mask = Mask::parse(exp_mask_str);
+            let new_mask = RowBuf::parse(row).unwrap().as_row() * &Mask::parse(mask).unwrap();
+            let exp_mask = Mask::parse(exp_mask_str).unwrap();
             assert_eq!(
                 new_mask, exp_mask,
                 "{} * {} gave {} (expected {})",
@@ -640,9 +707,10 @@ mod tests {
 
     #[test]
     fn mask_mul_row() {
+        #[track_caller]
         fn check_ok(mask: &str, row: &str, exp_mask_str: &str) {
-            let new_mask = Mask::parse(mask).mul(&RowBuf::parse(row).unwrap());
-            let exp_mask = Mask::parse(exp_mask_str);
+            let new_mask = Mask::parse(mask).unwrap().mul(&RowBuf::parse(row).unwrap());
+            let exp_mask = Mask::parse(exp_mask_str).unwrap();
             assert_eq!(
                 new_mask, exp_mask,
                 "{} * {} gave {} (expected {})",

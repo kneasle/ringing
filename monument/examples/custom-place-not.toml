@@ -1,5 +1,4 @@
 length = "QP"
-music_file = "music-8.toml"
 
 [method]
 name = "Jadd's Method"

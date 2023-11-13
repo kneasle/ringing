@@ -1,15 +1,18 @@
-# Standard music file for 8-bell compositions
+# Simple music file for 8-bell compositions
 
+
+
+# Score all run lengths, but only display 4-bell runs
 [[music]]
-run_lengths = [4, 5, 6, 7, 8]
-
+run_length = 4 
 [[music]]
-patterns = [
-    "6578*", "*6578",
-    "5678*", "*5678",
-    "8765*", "*8765",
-]
+run_lengths = [5, 6, 7, 8]
 
+# Give 5678s, 6578s and 8765s the default weight of 1 (both on the front and back of a row)
+[[music]]
+patterns = ["6578", "5678", "8765"]
+
+# Give Queens with a score of 3
 [[music]]
 pattern = "13572468"
-weight = 3
+weight.front = 3

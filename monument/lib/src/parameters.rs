@@ -8,7 +8,7 @@ use std::{
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::Pattern, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
@@ -22,10 +22,10 @@ use crate::{
     Composition, Config, Search, Update,
 };
 
-/// Fully built specification for which [`Composition`](crate::Composition)s should be generated.
+/// Fully built specification for which [`Composition`]s should be generated.
 ///
-/// Compare this to [`search::Config`](crate::search::Config), which determines _how_ those
-/// [`Composition`](crate::Composition)s are generated (and therefore determines how quickly the
+/// Compare this to [`Config`], which determines _how_ those
+/// [`Composition`]s are generated (and therefore determines how quickly the
 /// results are generated).
 #[derive(Debug, Clone)]
 pub struct Parameters {
@@ -51,14 +51,13 @@ pub struct Parameters {
     pub end_row: RowBuf,
     // TODO: Explicitly compute PH group, leave user to just input rows?
     pub part_head_group: PartHeadGroup,
-    /// [`Score`]s applied to every row in every course containing a lead head matching the
+    /// Score applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
     pub course_weights: Vec<(Mask, f32)>,
 
     // MUSIC
     pub music_types: MusicTypeVec<MusicType>,
-    /// The [`Stroke`] of the first [`Row`](bellframe::Row) in the composition that isn't
-    /// `self.start_row`
+    /// The [`Stroke`] of the first [`Row`] in the composition that isn't `self.start_row`
     // TODO: Compute this automatically from sub-lead index
     pub start_stroke: Stroke,
 }
@@ -347,7 +346,7 @@ pub struct Method {
     /// to fit within `inner.lead_len()`.
     pub end_indices: Vec<isize>,
 
-    /// The [`Mask`]s which *course heads* must satisfy, as set by [`crate::SearchBuilder::courses`].
+    /// The [`Mask`]s which *course heads* must satisfy
     pub allowed_courses: Vec<CourseSet>,
 }
 
@@ -558,7 +557,7 @@ impl Call {
         }
     }
 
-    /// Create a [`parameters::Call`] which replaces the lead end with a given [`PlaceNot`]
+    /// Create a `Call` which replaces the lead end with a given [`PlaceNot`]
     pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
         Self {
             id,
@@ -573,7 +572,7 @@ impl Call {
     }
 }
 
-/// The different types of [`BaseCalls`] that can be created.
+/// The different types of base calls that can be created.
 #[derive(Debug, Clone, Copy)]
 pub enum BaseCallType {
     /// `14` bobs and `1234` singles
@@ -706,39 +705,37 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 pub struct MusicType {
     pub id: MusicTypeId,
 
-    pub patterns: Vec<Pattern>,
-    pub strokes: StrokeSet,
-    pub weight: f32,
+    pub inner: bellframe::MusicType,
+    pub optional_weights: AtRowPositions<Option<f32>>,
     pub count_range: OptionalRangeInclusive,
+    // TODO: Count ranges for front/internal/back/wrap
 }
 
 impl MusicType {
-    /// Return the total number of possible instances of this music type, or `None` if the
-    /// computation caused `usize` to overflow.
-    pub(crate) fn max_count(&self) -> Option<usize> {
-        let mut sum = 0;
-        for r in &self.patterns {
-            sum += r.num_matching_rows()?;
-        }
-        Some(sum)
+    pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
+        (counts.map(|x| x as f32) * self.weights()).total()
+    }
+
+    /// Return the total counts, only from [`RowPosition`](bellframe::music::RowPosition)s for which
+    /// `Self::optional_weights` are not [`None`].
+    pub fn masked_total(&self, counts: AtRowPositions<usize>) -> usize {
+        counts.masked(!self.mask(), 0).total()
+    }
+
+    pub fn weights(&self) -> AtRowPositions<f32> {
+        self.optional_weights.map(|v| v.unwrap_or(0.0))
+    }
+
+    pub fn mask(&self) -> AtRowPositions<bool> {
+        self.optional_weights.map(|v| v.is_some())
     }
 }
 
-/// A set of at least one [`Stroke`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StrokeSet {
-    Hand,
-    Back,
-    Both,
-}
+impl Deref for MusicType {
+    type Target = bellframe::MusicType;
 
-impl StrokeSet {
-    pub fn contains(self, stroke: Stroke) -> bool {
-        match self {
-            Self::Both => true,
-            Self::Hand => stroke == Stroke::Hand,
-            Self::Back => stroke == Stroke::Back,
-        }
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
@@ -867,10 +864,13 @@ impl CourseSet {
                 let min_offset = -(min_bell.index_u8() as i16);
                 let max_offset = (method.stage().num_bells_u8() - max_bell.number()) as i16;
                 for offset in min_offset..=max_offset {
-                    expanded_masks.push(Mask::from_bells(
-                        mask.bells()
-                            .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
-                    ));
+                    expanded_masks.push(
+                        Mask::from_bells(
+                            mask.bells()
+                                .map(|maybe_bell| maybe_bell.map(|b| b + offset)),
+                        )
+                        .unwrap(), // Substituting bells can't make the mask invalid
+                    );
                 }
             }
             course_masks = expanded_masks;
@@ -916,7 +916,7 @@ fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mas
 
 /// An inclusive range where each side is optionally bounded.
 ///
-/// This is essentially a combination of [`RangeInclusive`](std::ops::RangeInclusive)
+/// This is essentially a combination of [`RangeInclusive`]
 /// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
 /// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
 #[derive(Debug, Clone, Copy, Default)]
