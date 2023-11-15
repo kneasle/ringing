@@ -23,7 +23,7 @@ use std::{
 };
 
 use log::LevelFilter;
-use monument::{Composition, Search};
+use monument::{Composition, CompositionGetter, Search};
 use ordered_float::OrderedFloat;
 use ringing_utils::PrettyDuration;
 use simple_logger::SimpleLogger;
@@ -119,10 +119,11 @@ pub fn run(
         OrderedFloat(rounded)
     }
     comps.sort_by_cached_key(|(comp, _generation_index)| {
+        let comp = CompositionGetter::new(comp, &params).unwrap();
         (
-            rounded_float(comp.music_score(&params)),
+            rounded_float(comp.music_score()),
             rounded_float(comp.average_score()),
-            comp.call_string(&params),
+            comp.call_string(),
         )
     });
     Ok(Some(SearchResult {

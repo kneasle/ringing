@@ -6,7 +6,7 @@ use bellframe::row::ShortRow;
 use colored::Colorize;
 use itertools::Itertools;
 use log::log_enabled;
-use monument::{Composition, Progress, Search, Update};
+use monument::{Composition, CompositionGetter, Progress, Search, Update};
 use ringing_utils::BigNumInt;
 
 use crate::music::MusicDisplay;
@@ -285,7 +285,7 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
-        let params = self.search.parameters();
+        let comp = CompositionGetter::new(comp, self.search.parameters()).unwrap();
 
         let mut s = String::new();
         // Comp index
@@ -297,10 +297,7 @@ impl CompositionPrinter {
         // Method counts (for spliced)
         if self.method_count_widths.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self
-                .method_count_widths
-                .iter()
-                .zip_eq(comp.method_counts(params))
+            for ((width, _), count) in self.method_count_widths.iter().zip_eq(comp.method_counts())
             {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
@@ -308,7 +305,7 @@ impl CompositionPrinter {
         s.push('|');
         // Atw
         if self.print_atw {
-            let factor = comp.atw_factor(params);
+            let factor = comp.atw_factor();
             if factor > 0.999999 {
                 s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {
@@ -320,7 +317,7 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        let (music_counts, music_score) = comp.music_counts_and_score(params); // Only call `music_counts` once!
+        let (music_counts, music_score) = comp.music_counts_and_score(); // Only call `music_counts` once!
         write!(s, " {:>7.2} ", music_score).unwrap();
         if !self.music_displays.is_empty() {
             s.push(':');
@@ -339,7 +336,7 @@ impl CompositionPrinter {
             s,
             "| {:>9.6} | {}",
             comp.average_score(),
-            comp.call_string(params)
+            comp.call_string()
         )
         .unwrap();
 

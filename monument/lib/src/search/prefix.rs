@@ -10,7 +10,7 @@ use datasize::DataSize;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    composition::{Composition, PathElem},
+    composition::{Composition, CompositionGetter, PathElem},
     graph::LinkSide,
     group::PartHead,
     parameters::SpliceStyle,
@@ -321,10 +321,15 @@ impl CompPrefix {
         };
         // Sanity check that the composition is true
         if params.require_truth {
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp.length());
-            for row in comp.rows(params).rows() {
+            let comp_getter = CompositionGetter::new(&comp, params).unwrap();
+
+            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp_getter.length());
+            for row in comp_getter.rows().rows() {
                 if !rows_so_far.insert(row) {
-                    panic!("Generated false composition ({})", comp.call_string(params));
+                    panic!(
+                        "Generated false composition ({})",
+                        comp_getter.call_string()
+                    );
                 }
             }
         }

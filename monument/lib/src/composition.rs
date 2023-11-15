@@ -9,7 +9,10 @@ use bellframe::{music::AtRowPositions, Bell, Block, Row, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 
 use crate::{
-    parameters::{CallDisplayStyle, CallId, MethodId, MethodVec, MusicTypeVec, Parameters},
+    parameters::{
+        Call, CallDisplayStyle, CallId, CallIdx, MethodId, MethodIdx, MethodVec, MusicTypeVec,
+        Parameters,
+    },
     utils::lengths::{PerPartLength, TotalLength},
 };
 
@@ -33,65 +36,131 @@ pub struct Composition {
     pub(crate) total_score: f32,
 }
 
-impl Composition {
+/// A piece of a [`Composition`]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct PathElem {
+    pub start_row: RowBuf,
+    pub method_id: MethodId,
+    pub start_sub_lead_idx: usize,
+    pub length: PerPartLength,
+    pub call_to_end: Option<CallId>,
+}
+
+impl PathElem {
+    pub fn ends_with_plain(&self) -> bool {
+        self.call_to_end.is_none()
+    }
+
+    pub(crate) fn end_sub_lead_idx(&self, params: &Parameters) -> usize {
+        params
+            .get_method(self.method_id)
+            .add_sub_lead_idx(self.start_sub_lead_idx, self.length)
+    }
+}
+
+//////////////////
+// CALCULATIONS //
+//////////////////
+
+/// Struct which combines a [`Composition`] with a set of [`Parameters`] from which the extra data
+/// is taken.
+#[derive(Debug, Clone)]
+pub struct CompositionGetter<'c, 'p> {
+    composition: &'c Composition,
+    params: &'p Parameters,
+
+    method_map: HashMap<MethodId, MethodData>,
+    call_map: HashMap<CallId, CallIdx>,
+}
+
+#[derive(Debug, Clone)]
+struct MethodData {
+    idx: MethodIdx,
+    double_plain_course: Block<(MethodId, usize)>,
+}
+
+impl<'c, 'p> CompositionGetter<'c, 'p> {
+    /* CONSTRUCTION/VALIDATION */
+
+    pub fn new(composition: &'c Composition, params: &'p Parameters) -> Option<Self> {
+        if composition.stage != params.stage {
+            return None;
+        }
+
+        Some(CompositionGetter {
+            composition,
+            params,
+
+            method_map: Self::method_map(composition, params)?,
+            call_map: Self::call_map(composition, params)?,
+        })
+    }
+
+    /// If every [`MethodId`] in this `Composition` is in the [`Parameters`], returns `Some(map)`
+    /// where `map` maps [`MethodId`]s to their corresponding [`MethodIdx`].  Otherwise, returns
+    /// `None`.
+    fn method_map(
+        composition: &Composition,
+        params: &Parameters,
+    ) -> Option<HashMap<MethodId, MethodData>> {
+        let methods = composition
+            .path
+            .iter()
+            .map(|e| e.method_id)
+            .collect::<HashSet<_>>();
+
+        let mut method_map = HashMap::new();
+        for id in methods {
+            let idx = params.methods.position(|m| m.id == id)?;
+            let mut double_plain_course = params.methods[idx]
+                .plain_course()
+                .map_annots(|annot| (id, annot.sub_lead_idx));
+            double_plain_course.extend_from_within(..);
+            method_map.insert(
+                id,
+                MethodData {
+                    idx,
+                    double_plain_course,
+                },
+            );
+        }
+        Some(method_map)
+    }
+
+    /// If every [`CallId`] in this `Composition` is in the [`Parameters`], returns `Some(map)`
+    /// where `map` maps [`CallId`]s to their corresponding [`CallId`].  Otherwise, returns `None`.
+    fn call_map(
+        composition: &Composition,
+        params: &Parameters,
+    ) -> Option<HashMap<CallId, CallIdx>> {
+        let call_ids_used = composition
+            .path
+            .iter()
+            .filter_map(|e| e.call_to_end)
+            .collect::<HashSet<_>>();
+
+        let mut call_map = HashMap::new();
+        for id in call_ids_used {
+            call_map.insert(id, params.calls.position(|c| c.id == id)?);
+        }
+        Some(call_map)
+    }
+
+    /* GETTERS */
+
     /// The number of [`Row`]s in this composition.
     pub fn length(&self) -> usize {
-        self.length.as_usize()
-    }
-
-    /// A slice containing the number of [`Row`]s generated for each [`Method`] used in the
-    /// [`Search`].  These are stored in the same order as the [`Method`]s.
-    pub fn method_counts(&self, params: &Parameters) -> MethodVec<usize> {
-        let counts_per_method_id = self
-            .rows(params)
-            .annots()
-            .counts_by(|(method_id, _)| *method_id);
-
-        params
-            .methods
-            .iter()
-            .map(|m| *counts_per_method_id.get(&m.id).unwrap_or(&0))
-            .collect()
-    }
-
-    /// Compute [`Self::music_counts`] and use it to calculate [`Self::music_score`].  Calling
-    /// them separately would cause the music to be calculated twice.
-    pub fn music_counts_and_score(
-        &self,
-        params: &Parameters,
-    ) -> (MusicTypeVec<AtRowPositions<usize>>, f32) {
-        let music_counts = self.music_counts(params);
-        let mut music_score = 0.0;
-        for (count, music_type) in music_counts.iter().zip_eq(&params.music_types) {
-            music_score += music_type.as_overall_score(*count);
-        }
-        (music_counts, music_score)
-    }
-
-    /// Score generated by just the [`MusicType`]s (not including calls, changes of methods,
-    /// etc.).
-    pub fn music_score(&self, params: &Parameters) -> f32 {
-        self.music_counts_and_score(params).1
-    }
-
-    /// The number of *instances* of each [`MusicType`] in the [`Search`].
-    pub fn music_counts(&self, params: &Parameters) -> MusicTypeVec<AtRowPositions<usize>> {
-        let rows = self.rows(params);
-        params
-            .music_types
-            .iter()
-            .map(|mt| mt.count(&rows, !self.start_stroke))
-            .collect()
+        self.composition.length.as_usize()
     }
 
     pub fn part_head(&self) -> &Row {
-        &self.part_head
+        &self.composition.part_head
     }
 
     /// The total score generated by this composition from all the different weights (music, calls,
     /// changes of method, handbell coursing, etc.).
     pub fn total_score(&self) -> f32 {
-        self.total_score
+        self.composition.total_score
     }
 
     /// The average score generated by each [`Row`] in this composition.  This is equal to
@@ -100,45 +169,22 @@ impl Composition {
         self.total_score() / self.length() as f32
     }
 
-    /// Returns a factor in `0.0..=1.0` where 0.0 means nothing was rung and 1.0 means everything
-    /// was rung (i.e. the composition is atw)
-    pub fn atw_factor(&self, params: &Parameters) -> f32 {
-        // Determine the working bells, and store this in a bitmap
-        let working_bells = params.working_bells();
-        let mut is_working = vec![false; self.stage.num_bells()];
-        for b in &working_bells {
-            is_working[b.index()] = true;
-        }
-        // Determine how many `(bell, place, method, sub-lead-idx)` quadruples are actually possible
-        let total_unique_row_positions = working_bells.len() // Working bells
-            * working_bells.len() // Working place bells
-            * params.methods.iter().map(|m| m.lead_len()).sum::<usize>();
-        // Compute which `(bell, place, method, sub-lead-index)` quadruples have been rung in this
-        // composition.
-        //
-        // TODO: Use a more efficient storage method
-        let mut rung_place_bell_positions = HashSet::<(Bell, u8, MethodId, usize)>::new();
-        for (&(method_id, sub_lead_idx), row) in self.rows(params).annot_rows() {
-            for (place, bell) in row.bell_iter().enumerate() {
-                if is_working[bell.index()] {
-                    rung_place_bell_positions.insert((bell, place as u8, method_id, sub_lead_idx));
-                }
-            }
-        }
-
-        rung_place_bell_positions.len() as f32 / total_unique_row_positions as f32
-    }
-
     /// Generate a human-friendly [`String`] summarising the calling of this composition.  For
     /// example, [this composition](https://complib.org/composition/87419) would have a
     /// `call_string` of `D[B]BL[W]N[M]SE[sH]NCYW[sH]`.
-    pub fn call_string(&self, params: &Parameters) -> String {
+    pub fn call_string(&self) -> String {
+        let Self {
+            composition,
+            params,
+            ..
+        } = self;
+
         let needs_brackets =
             params.is_spliced() || params.call_display_style == CallDisplayStyle::Positional;
-        let is_snap_start = self.path[0].start_sub_lead_idx > 0;
-        let is_snap_finish = self.path.last().unwrap().end_sub_lead_idx(params) > 0;
+        let is_snap_start = composition.path[0].start_sub_lead_idx > 0;
+        let is_snap_finish = composition.path.last().unwrap().end_sub_lead_idx(params) > 0;
 
-        let mut path_iter = self.path.iter().peekable();
+        let mut path_iter = composition.path.iter().peekable();
 
         let mut s = String::new();
         if params.call_display_style == CallDisplayStyle::Positional {
@@ -151,7 +197,7 @@ impl Composition {
                 // Add one shorthand for every lead *covered* (not number of lead heads reached)
                 //
                 // TODO: Deal with half-lead spliced
-                let method = params.get_method(path_elem.method_id);
+                let method = self.get_method(path_elem.method_id);
                 let num_leads_covered = num_leads_covered(
                     method.lead_len(),
                     path_elem.start_sub_lead_idx,
@@ -163,15 +209,14 @@ impl Composition {
             }
             // Call text
             if let Some(call_id) = path_elem.call_to_end {
-                let call = params.get_call(call_id);
-
+                let call = self.get_call(call_id);
                 s.push_str(if needs_brackets { "[" } else { "" });
                 // Call position
                 match params.call_display_style {
                     CallDisplayStyle::CallingPositions(calling_bell) => {
                         let row_after_call = path_iter
                             .peek()
-                            .map_or(&self.part_head, |path_elem| &path_elem.start_row);
+                            .map_or(&composition.part_head, |path_elem| &path_elem.start_row);
                         let place_of_calling_bell = row_after_call.place_of(calling_bell).unwrap();
                         let calling_position = &call.calling_positions[place_of_calling_bell];
                         s.push_str(call.short_symbol());
@@ -186,6 +231,73 @@ impl Composition {
         s.push_str(if is_snap_finish { ">" } else { "" });
 
         s
+    }
+
+    /// Returns a factor in `0.0..=1.0` where 0.0 means nothing was rung and 1.0 means everything
+    /// was rung (i.e. the composition is atw)
+    pub fn atw_factor(&self) -> f32 {
+        // Determine the working bells, and store this in a bitmap
+        let working_bells = self.params.working_bells();
+        let mut is_working = vec![false; self.composition.stage.num_bells()];
+        for b in &working_bells {
+            is_working[b.index()] = true;
+        }
+        // Determine how many `(bell, place, method, sub-lead-idx)` quadruples are actually possible
+        let total_unique_row_positions = working_bells.len() // Working bells
+            * working_bells.len() // Working place bells
+            * self.params.methods.iter().map(|m| m.lead_len()).sum::<usize>();
+        // Compute which `(bell, place, method, sub-lead-index)` quadruples have been rung in this
+        // composition.
+        //
+        // TODO: Use a more efficient storage method
+        let mut rung_place_bell_positions = HashSet::<(Bell, u8, MethodId, usize)>::new();
+        for (&(method_id, sub_lead_idx), row) in self.rows().annot_rows() {
+            for (place, bell) in row.bell_iter().enumerate() {
+                if is_working[bell.index()] {
+                    rung_place_bell_positions.insert((bell, place as u8, method_id, sub_lead_idx));
+                }
+            }
+        }
+
+        rung_place_bell_positions.len() as f32 / total_unique_row_positions as f32
+    }
+
+    /// A slice containing the number of [`Row`]s generated for each [`Method`] used in the
+    /// [`Search`].  These are stored in the same order as the [`Method`]s.
+    pub fn method_counts(&self) -> MethodVec<TotalLength> {
+        let mut method_counts = index_vec::index_vec![TotalLength::ZERO; self.params.methods.len()];
+        for elem in &self.composition.path {
+            let idx = self.method_map[&elem.method_id].idx;
+            method_counts[idx] += elem.length.as_total(&self.params.part_head_group);
+        }
+        method_counts
+    }
+
+    /// Compute [`Self::music_counts`] and use it to calculate [`Self::music_score`].  Calling
+    /// them separately would cause the music to be calculated twice.
+    pub fn music_counts_and_score(&self) -> (MusicTypeVec<AtRowPositions<usize>>, f32) {
+        let music_counts = self.music_counts();
+        let mut music_score = 0.0;
+        for (count, music_type) in music_counts.iter().zip_eq(&self.params.music_types) {
+            music_score += music_type.as_overall_score(*count);
+        }
+        (music_counts, music_score)
+    }
+
+    /// Score generated by just the [`MusicType`]s (not including calls, changes of methods,
+    /// etc.).
+    pub fn music_score(&self) -> f32 {
+        self.music_counts_and_score().1
+    }
+
+    /// The number of *instances* of each [`MusicType`] in the [`Search`].
+    pub fn music_counts(&self) -> MusicTypeVec<AtRowPositions<usize>> {
+        let rows = self.rows();
+        self.params
+            .music_types
+            .iter()
+            .map(|mt| mt.count(&rows, !self.composition.start_stroke))
+            .collect()
     }
 
     /// Return a [`Block`] containing the [`Row`]s in this composition.  Each [`Row`] is annotated
@@ -206,38 +318,25 @@ impl Composition {
     ///        ...
     /// }
     /// ```
-    pub fn rows(&self, params: &Parameters) -> Block<(MethodId, usize)> {
-        assert_eq!(self.stage, params.stage);
-        let mut plain_course_cache = HashMap::<MethodId, Block<(MethodId, usize)>>::new();
-
+    ///
+    /// If this `Composition` uses methods or calls which are not specified in the [`Parameters`],
+    /// then `None` is returned.
+    pub fn rows(&self) -> Block<(MethodId, usize)> {
         // Generate the first part
         let mut first_part =
-            Block::<(MethodId, usize)>::with_leftover_row(params.start_row.clone());
-        for elem in &self.path {
+            Block::<(MethodId, usize)>::with_leftover_row(self.params.start_row.clone());
+        for elem in &self.composition.path {
             assert_eq!(first_part.leftover_row(), elem.start_row.as_row());
-            // Get the plain course of the current method
-            let plain_course = plain_course_cache.entry(elem.method_id).or_insert_with(|| {
-                params
-                    .get_method(elem.method_id)
-                    .plain_course()
-                    .map_annots(|annot| (elem.method_id, annot.sub_lead_idx))
-            });
-            // Add this elem to the first part
+            // Copy the corresponding part of this method's (double) plain course
+            let double_plain_course = &self.method_map[&elem.method_id].double_plain_course;
             let start_idx = elem.start_sub_lead_idx;
             let end_idx = start_idx + elem.length.as_usize();
-            if end_idx > plain_course.len() {
-                // `elem` wraps over the course head, so copy it in two pieces
-                first_part.extend_range(plain_course, start_idx..);
-                first_part.extend_range(plain_course, ..end_idx - plain_course.len());
-            } else {
-                // `elem` doesn't wrap over the course head, so copy it in one piece
-                first_part.extend_range(plain_course, start_idx..end_idx);
-            }
+            first_part.extend_range(double_plain_course, start_idx..end_idx);
             // If this PathElem ends in a call, then change the `leftover_row` to suit
             if let Some(call_id) = elem.call_to_end {
                 let last_non_leftover_row = first_part.rows().next_back().unwrap();
                 let new_leftover_row =
-                    last_non_leftover_row * params.get_call(call_id).place_notation.transposition();
+                    last_non_leftover_row * self.get_call(call_id).place_notation.transposition();
                 first_part.leftover_row_mut().copy_from(&new_leftover_row);
             }
         }
@@ -245,34 +344,20 @@ impl Composition {
         // Generate the other parts from the first
         let part_len = first_part.len();
         let mut comp = first_part;
-        for _ in 0..params.num_parts() - 1 {
+        for _ in 0..self.params.num_parts() - 1 {
             comp.extend_from_within(..part_len);
         }
         assert_eq!(comp.len(), self.length());
-        assert_eq!(comp.leftover_row(), &params.end_row);
+        assert_eq!(comp.leftover_row(), &self.params.end_row);
         comp
     }
-}
 
-/// A piece of a [`Composition`]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct PathElem {
-    pub start_row: RowBuf,
-    pub method_id: MethodId,
-    pub start_sub_lead_idx: usize,
-    pub length: PerPartLength,
-    pub call_to_end: Option<CallId>,
-}
-
-impl PathElem {
-    pub fn ends_with_plain(&self) -> bool {
-        self.call_to_end.is_none()
+    fn get_method(&self, id: MethodId) -> &Method {
+        &self.params.methods[self.method_map[&id].idx]
     }
 
-    pub(crate) fn end_sub_lead_idx(&self, params: &Parameters) -> usize {
-        params
-            .get_method(self.method_id)
-            .add_sub_lead_idx(self.start_sub_lead_idx, self.length)
+    fn get_call(&self, id: CallId) -> &Call {
+        &self.params.calls[self.call_map[&id]]
     }
 }
 
