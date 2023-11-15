@@ -42,6 +42,7 @@ pub fn draw_params_gui(params: &mut crate::Parameters, ui: &mut egui::Ui) {
 }
 
 fn draw_general_params(params: &mut crate::Parameters, ui: &mut egui::Ui) {
+    let params = &mut params.inner;
     ParamTable::show(ui, 0, |grid| {
         grid.add_label("Stage", params.stage);
         grid.add_param("Length", |ui| {
@@ -95,15 +96,19 @@ fn draw_method_params(params: &mut crate::Parameters, ui: &mut egui::Ui) {
         ParamTable::show(ui, 0, |grid| {
             grid.add_param("Splice locations", |ui| {
                 ui.selectable_value(
-                    &mut params.splice_style,
+                    &mut params.inner.splice_style,
                     SpliceStyle::LeadLabels,
                     "At leads",
                 );
-                ui.selectable_value(&mut params.splice_style, SpliceStyle::Calls, "At calls");
+                ui.selectable_value(
+                    &mut params.inner.splice_style,
+                    SpliceStyle::Calls,
+                    "At calls",
+                );
             });
             grid.add_param_widget(
                 "Score per splice",
-                egui::Slider::new(&mut params.splice_weight, -5.0..=5.0),
+                egui::Slider::new(&mut params.inner.splice_weight, -5.0..=5.0),
             );
             grid.add_todo("Count range");
             grid.add_todo("Start indices");
@@ -179,8 +184,8 @@ fn draw_music_params(params: &mut crate::Parameters, ui: &mut egui::Ui) {
     ParamTable::show(ui, 0, |grid| {
         grid.add_todo("Music types");
         grid.add_param("Start stroke", |ui| {
-            ui.selectable_value(&mut params.start_stroke, Stroke::Hand, "Handstroke");
-            ui.selectable_value(&mut params.start_stroke, Stroke::Back, "Backstroke");
+            ui.selectable_value(&mut params.inner.start_stroke, Stroke::Hand, "Handstroke");
+            ui.selectable_value(&mut params.inner.start_stroke, Stroke::Back, "Backstroke");
         });
     });
 }

@@ -1,15 +1,27 @@
-use std::ops::{Deref, DerefMut};
+use bellframe::{Mask, PlaceNot, RowBuf, Stage, Stroke};
+use itertools::Itertools;
+use monument::{
+    parameters::{Call, CallDisplayStyle, CallId, Method, OptionalRangeInclusive, SpliceStyle},
+    PartHeadGroup,
+};
 
-use monument::parameters::{Call, Method};
+use crate::utils::len_range;
 
 #[derive(Debug, Clone)]
 pub struct Parameters {
-    inner: monument::parameters::Parameters,
+    pub inner: monument::parameters::Parameters,
     pub maybe_unused_methods: Vec<(bool, Method)>,
     pub maybe_unused_calls: Vec<(bool, Call)>,
 }
 
 impl Parameters {
+    pub fn to_monument(&self) -> monument::Parameters {
+        let mut params = self.inner.clone();
+        params.methods = self.used_methods().cloned().collect();
+        params.calls = self.used_calls().cloned().collect();
+        params
+    }
+
     pub fn used_methods(&self) -> impl Iterator<Item = &Method> {
         self.maybe_unused_methods
             .iter()
@@ -24,8 +36,8 @@ impl Parameters {
             .map(|(_, c)| c)
     }
 
-    pub fn to_monument(&self) -> monument::Parameters {
-        todo!()
+    pub fn is_spliced(&self) -> bool {
+        self.used_methods().count() > 1
     }
 
     pub fn yorkshire_s8_qps() -> Self {
@@ -79,6 +91,7 @@ impl Parameters {
             music_types: index_vec::index_vec![],
             start_stroke: Stroke::Hand,
         };
+
         crate::Parameters {
             inner: monument_params,
             maybe_unused_methods: vec![
@@ -88,19 +101,5 @@ impl Parameters {
             ],
             maybe_unused_calls,
         }
-    }
-}
-
-impl Deref for Parameters {
-    type Target = monument::Parameters;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for Parameters {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
     }
 }

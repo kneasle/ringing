@@ -1,15 +1,7 @@
-use bellframe::{Mask, PlaceNot, RowBuf, Stage, Stroke};
 use eframe::egui;
-use itertools::Itertools;
-use monument::{
-    parameters::{Call, CallDisplayStyle, CallId, OptionalRangeInclusive, SpliceStyle},
-    Composition, PartHeadGroup,
-};
+use monument::{Composition, CompositionGetter};
 
-use crate::{
-    search::SearchThreadHandle,
-    utils::{len_range, ParamTable},
-};
+use crate::{search::SearchThreadHandle, utils::ParamTable};
 
 /// A 'project' is a group of `Search`es, sharing methods, calls, etc.  Conceptually, these
 /// searches are all iterations looking for the same compositions.
@@ -96,6 +88,8 @@ impl Project {
     }
 
     pub fn draw_composition_list(&mut self, ui: &mut egui::Ui) {
+        let monument_params = self.params.to_monument();
+
         if !self.has_comps() {
             ui.vertical_centered(|ui| ui.label("No compositions yet"));
         } else {
@@ -103,7 +97,9 @@ impl Project {
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     for c in &self.compositions {
-                        ui.label(c.call_string());
+                        if let Some(getter) = CompositionGetter::new(c, &monument_params) {
+                            ui.label(getter.call_string());
+                        }
                     }
                 });
         }
@@ -134,7 +130,7 @@ impl Default for Project {
     fn default() -> Self {
         Self {
             name: "Yorksire S8 Peals".to_owned(),
-            params: yorkshire_s8_qps(),
+            params: crate::Parameters::yorkshire_s8_qps(),
             compositions: vec![],
             search_progress: None,
         }
