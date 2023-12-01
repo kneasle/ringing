@@ -166,8 +166,9 @@ impl SearchResult {
         }
         println!("{}", self.comp_printer.footer_lines());
         eprintln!(
-            "{} compositions generated{} {}",
+            "{} composition{} generated{} {}",
             self.comps.len(),
+            if self.comps.len() == 1 { "" } else { "s" }, // Handle "1 composition"
             match self.aborted {
                 true => ", aborted after",
                 false => " in",
