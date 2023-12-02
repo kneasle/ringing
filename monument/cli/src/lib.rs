@@ -122,7 +122,7 @@ pub fn run(
         let comp = CompositionGetter::new(comp, &params).unwrap();
         (
             rounded_float(comp.music_score()),
-            rounded_float(comp.average_score()),
+            rounded_float(comp.score_per_row()),
             comp.call_string(),
         )
     });

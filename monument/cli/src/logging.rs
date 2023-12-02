@@ -335,7 +335,7 @@ impl CompositionPrinter {
         write!(
             s,
             "| {:>9.6} | {}",
-            comp.average_score(),
+            comp.score_per_row(),
             comp.call_string()
         )
         .unwrap();
