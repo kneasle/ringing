@@ -79,7 +79,7 @@ impl Parameters {
 
             methods: index_vec::index_vec![],
             splice_style: SpliceStyle::LeadLabels,
-            splice_weight: 0.0,
+            splice_weight: -1.0,
             calls: index_vec::index_vec![],
             call_display_style: CallDisplayStyle::CallingPositions(stage.tenor()),
             atw_weight: None, // Don't calculate atw
