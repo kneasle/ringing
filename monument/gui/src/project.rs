@@ -1,5 +1,7 @@
-use eframe::egui;
+use eframe::egui::{self, RichText};
+use itertools::Itertools;
 use monument::{Composition, CompositionGetter};
+use ordered_float::OrderedFloat;
 
 use crate::{search::SearchThreadHandle, utils::ParamTable};
 
@@ -94,13 +96,38 @@ impl Project {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
-                    for c in &self.compositions {
-                        if let Some(getter) = CompositionGetter::new(c, &monument_params) {
-                            ui.label(getter.call_string());
-                        }
-                    }
+                    self.draw_comps(&monument_params, ui);
                 });
         }
+    }
+
+    fn draw_comps(&mut self, params: &monument::Parameters, ui: &mut egui::Ui) {
+        // Generate getters for all comps which still match the current params
+        let mut comp_getters = self
+            .compositions
+            .iter()
+            .filter_map(|c| CompositionGetter::new(c, params))
+            .collect_vec();
+        // Sort them by total score
+        comp_getters.sort_by_cached_key(|g| OrderedFloat(-g.total_score()));
+        // Display them in a grid
+        // TODO: Custom (animated!) widget for this
+        egui::Grid::new("Comp grid").striped(true).show(ui, |ui| {
+            // Header
+            ui.label(RichText::new("Length").strong());
+            ui.label(RichText::new("Score").strong());
+            ui.label(RichText::new("Score/row").strong());
+            ui.label(RichText::new("Call string").strong());
+            ui.end_row();
+
+            for g in comp_getters {
+                ui.label(g.length().to_string());
+                ui.label(format!("{:.2}", g.total_score()));
+                ui.label(format!("{:.6}", g.score_per_row()));
+                ui.label(g.call_string());
+                ui.end_row()
+            }
+        });
     }
 
     /////////////
