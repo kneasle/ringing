@@ -1,3 +1,5 @@
+mod gui;
+
 use bellframe::{Mask, PlaceNot, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use monument::{
@@ -10,8 +12,8 @@ use crate::utils::len_range;
 #[derive(Debug, Clone)]
 pub struct Parameters {
     pub inner: monument::parameters::Parameters,
-    pub maybe_unused_methods: Vec<(bool, Method)>,
-    pub maybe_unused_calls: Vec<(bool, Call)>,
+    maybe_unused_methods: Vec<(bool, Method)>,
+    maybe_unused_calls: Vec<(bool, Call)>,
 }
 
 impl Parameters {
