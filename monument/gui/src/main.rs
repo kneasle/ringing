@@ -1,5 +1,4 @@
 mod parameters;
-mod params_gui;
 mod project;
 mod search;
 mod utils;

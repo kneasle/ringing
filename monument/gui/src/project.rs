@@ -37,9 +37,7 @@ impl Project {
         // Comp params
         ui.add_space(10.0);
         ui.heading("Composition Parameters");
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            crate::params_gui::draw_params_gui(&mut self.params, ui)
-        });
+        egui::ScrollArea::vertical().show(ui, |ui| self.params.draw_gui(ui));
 
         should_search
     }
