@@ -11,7 +11,7 @@ use itertools::Itertools;
 use crate::{
     parameters::{
         Call, CallDisplayStyle, CallId, CallIdx, MethodId, MethodIdx, MethodVec, MusicTypeVec,
-        Parameters,
+        Parameters, SpliceStyle,
     },
     utils::lengths::{PerPartLength, TotalLength},
 };
@@ -56,6 +56,13 @@ impl PathElem {
             .get_method(self.method_id)
             .add_sub_lead_idx(self.start_sub_lead_idx, self.length)
     }
+
+    /// Returns true if going from `self` to `next` would be considered a 'splice'
+    fn is_splice_with(&self, next: &Self, params: &Parameters) -> bool {
+        let is_continuation = self.method_id == next.method_id
+            && self.end_sub_lead_idx(params) == next.start_sub_lead_idx;
+        !is_continuation
+    }
 }
 
 //////////////////
@@ -83,16 +90,40 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
     /* CONSTRUCTION/VALIDATION */
 
     pub fn new(composition: &'c Composition, params: &'p Parameters) -> Option<Self> {
+        // All methods/calls used must still exist
+        let method_map = Self::method_map(composition, params)?;
+        let call_map = Self::call_map(composition, params)?;
+
+        // Stages must match
         if composition.stage != params.stage {
             return None;
+        }
+        // Splice style must be satisfied
+        if params.splice_style == SpliceStyle::Calls {
+            let is_invalid_splice = |e1: &PathElem, e2: &PathElem| -> bool {
+                // PERF: use the method map to speed up the splicing check
+                e1.is_splice_with(e2, params) && e1.ends_with_plain()
+            };
+            for (elem1, elem2) in composition.path.iter().tuple_windows() {
+                if is_invalid_splice(elem1, elem2) {
+                    return None; // Splice but no call
+                }
+            }
+            if params.is_multipart() && composition.path.len() > 2 {
+                let first = composition.path.first().unwrap();
+                let last = composition.path.last().unwrap();
+                if is_invalid_splice(last, first) {
+                    return None; // Splice but no call over part head
+                }
+            }
         }
 
         Some(CompositionGetter {
             composition,
             params,
 
-            method_map: Self::method_map(composition, params)?,
-            call_map: Self::call_map(composition, params)?,
+            method_map,
+            call_map,
         })
     }
 
