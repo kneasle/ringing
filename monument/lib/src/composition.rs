@@ -98,24 +98,13 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
         if composition.stage != params.stage {
             return None;
         }
+        // Length must match
+        if !params.length.contains(&composition.length) {
+            return None;
+        }
         // Splice style must be satisfied
-        if params.splice_style == SpliceStyle::Calls {
-            let is_invalid_splice = |e1: &PathElem, e2: &PathElem| -> bool {
-                // PERF: use the method map to speed up the splicing check
-                e1.is_splice_with(e2, params) && e1.ends_with_plain()
-            };
-            for (elem1, elem2) in composition.path.iter().tuple_windows() {
-                if is_invalid_splice(elem1, elem2) {
-                    return None; // Splice but no call
-                }
-            }
-            if params.is_multipart() && composition.path.len() > 2 {
-                let first = composition.path.first().unwrap();
-                let last = composition.path.last().unwrap();
-                if is_invalid_splice(last, first) {
-                    return None; // Splice but no call over part head
-                }
-            }
+        if !Self::is_splice_style_satisfied(composition, params) {
+            return None;
         }
 
         Some(CompositionGetter {
@@ -175,6 +164,31 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
             call_map.insert(id, params.calls.position(|c| c.id == id)?);
         }
         Some(call_map)
+    }
+
+    fn is_splice_style_satisfied(composition: &Composition, params: &Parameters) -> bool {
+        match params.splice_style {
+            SpliceStyle::LeadLabels => true, // Assume all comps are still valid
+            SpliceStyle::Calls => {
+                let is_invalid_splice = |e1: &PathElem, e2: &PathElem| -> bool {
+                    // PERF: use the method map to speed up the splicing check
+                    e1.is_splice_with(e2, params) && e1.ends_with_plain()
+                };
+                for (elem1, elem2) in composition.path.iter().tuple_windows() {
+                    if is_invalid_splice(elem1, elem2) {
+                        return false; // Splice but no call
+                    }
+                }
+                if params.is_multipart() && composition.path.len() > 2 {
+                    let first = composition.path.first().unwrap();
+                    let last = composition.path.last().unwrap();
+                    if is_invalid_splice(last, first) {
+                        return false; // Splice but no call over part head
+                    }
+                }
+                true
+            }
+        }
     }
 
     /* GETTERS */
