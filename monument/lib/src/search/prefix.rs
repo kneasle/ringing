@@ -1,10 +1,5 @@
-use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashSet},
-    ops::Deref,
-};
+use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref};
 
-use bellframe::Row;
 use bit_vec::BitVec;
 use datasize::DataSize;
 use ordered_float::OrderedFloat;
@@ -322,15 +317,11 @@ impl CompPrefix {
         // Sanity check that the composition is true
         if params.require_truth {
             let comp_getter = CompositionGetter::new(&comp, params).unwrap();
-
-            let mut rows_so_far = HashSet::<&Row>::with_capacity(comp_getter.length());
-            for row in comp_getter.rows().rows() {
-                if !rows_so_far.insert(row) {
-                    panic!(
-                        "Generated false composition ({})",
-                        comp_getter.call_string()
-                    );
-                }
+            if !comp_getter.is_true() {
+                panic!(
+                    "Generated false composition ({})",
+                    comp_getter.call_string()
+                );
             }
         }
         // Finally, return the comp
