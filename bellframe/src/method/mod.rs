@@ -213,11 +213,11 @@ impl Method {
     }
 
     /// An [`Iterator`] over the sub-lead indices of a particular lead label.
-    pub fn all_label_indices(&self) -> Vec<(&str, usize)> {
+    pub fn all_label_indices(&self) -> Vec<(usize, &str)> {
         let mut label_indices = Vec::new();
         for (sub_lead_idx, labels) in self.first_lead.annots().enumerate() {
             for label in labels {
-                label_indices.push((label.as_str(), sub_lead_idx));
+                label_indices.push((sub_lead_idx, label.as_str()));
             }
         }
         label_indices

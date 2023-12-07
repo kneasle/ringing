@@ -2,6 +2,7 @@
 //! starting [`Row`] and yields a sequence of permuted [`Row`]s.
 
 use std::{
+    collections::HashSet,
     fmt::{Debug, Display, Formatter},
     iter::repeat_with,
     ops::RangeBounds,
@@ -12,7 +13,7 @@ use itertools::Itertools;
 
 use crate::{
     row::{same_stage_vec, DbgRow},
-    utils, Bell, Row, RowBuf, SameStageVec, Stage,
+    utils, Bell, Row, RowBuf, SameStageVec, Stage, Truth,
 };
 
 /// A block of [`Row`], each of which can be given an annotation of any type.  Blocks can start
@@ -191,6 +192,23 @@ impl<A> Block<A> {
     #[inline]
     pub fn leftover_row_mut(&mut self) -> &mut Row {
         self.rows.last_mut().unwrap()
+    }
+
+    #[inline]
+    pub fn is_true(&self) -> bool {
+        self.truth().is_true()
+    }
+
+    /// Returns whether a row is repeated within this [`Block`] (not including the
+    /// [leftover row](Self::leftover_row))
+    pub fn truth(&self) -> Truth {
+        let mut rows_so_far = HashSet::<&Row>::with_capacity(self.len());
+        for row in self.rows() {
+            if !rows_so_far.insert(row) {
+                return Truth::False; // Row has repeated
+            }
+        }
+        Truth::True // If no rows repeated, composition is true
     }
 
     //////////////////////////////

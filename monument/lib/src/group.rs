@@ -13,8 +13,8 @@ pub struct PartHeadGroup {
     /// Invariant: there is some row `r` such that `part_heads[i] = r^i` for all `i`.
     // PERF: Make this a `SameStageVec`
     part_heads: Vec<RowBuf>,
-    /// For each value in `part_heads`, the corresponding bit is `1` iff that part head generates
-    /// all the others
+    /// For each value in `part_heads`, the bit at index `i` is `1` iff that `part_heads[i]` is
+    /// a generator for this group
     is_generator_bitmap: u64,
 }
 
@@ -121,6 +121,18 @@ impl PartHeadGroup {
     /// Given an abstract [`PartHead`], return the corresponding [`Row`]
     pub fn get_row(&self, element: PartHead) -> &Row {
         &self.part_heads[element.index as usize]
+    }
+
+    pub fn get_part_head(&self, row: &Row) -> Option<PartHead> {
+        let index = self.part_heads.iter().position(|x| x == row)?;
+        Some(PartHead { index: index as u8 })
+    }
+
+    pub fn is_row_generator(&self, row: &Row) -> bool {
+        let Some(part_head) = self.get_part_head(row) else {
+            return false; // Can't be a generator if it isn't in the group
+        };
+        self.is_generator(part_head)
     }
 
     /// Returns `true` iff every [`PartHead`] in this group is a power of the given `part_head`

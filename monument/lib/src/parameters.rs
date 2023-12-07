@@ -49,7 +49,6 @@ pub struct Parameters {
     // NOTE: Course masks are defined on each `Method`
     pub start_row: RowBuf,
     pub end_row: RowBuf,
-    // TODO: Explicitly compute PH group, leave user to just input rows?
     pub part_head_group: PartHeadGroup,
     /// Score applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
@@ -276,6 +275,19 @@ impl Parameters {
                 }
             }
         }
+    }
+
+    pub(crate) fn valid_end_labels(&self) -> HashSet<String> {
+        let mut valid_labels = HashSet::new();
+        for m in &self.methods {
+            let wrapped_indices = m.wrapped_indices(Boundary::End, self);
+            for (sub_lead_idx, label) in m.inner.all_label_indices() {
+                if wrapped_indices.contains(&sub_lead_idx) {
+                    valid_labels.insert(label.to_owned());
+                }
+            }
+        }
+        valid_labels
     }
 
     /// Returns a human-readable string representing the given methods.
@@ -511,13 +523,16 @@ pub fn default_shorthand(title: &str) -> String {
 pub struct Call {
     pub id: CallId,
 
-    pub symbol: String,
-    pub calling_positions: Vec<String>,
-
+    // These fields determine what 'functionally' defines a specific call.  Modifying these will
+    // likely invalidate any existing compositions, and thus should not be modified without also
+    // changing the `CallId`.
     pub label_from: String,
     pub label_to: String,
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_notation: PlaceNot,
+
+    pub symbol: String,
+    pub calling_positions: Vec<String>,
 
     pub weight: f32,
 }
@@ -932,6 +947,20 @@ impl OptionalRangeInclusive {
         min: None,
         max: None,
     };
+
+    pub fn contains(self, v: usize) -> bool {
+        if let Some(min) = self.min {
+            if v < min {
+                return false; // `v` is too small
+            }
+        }
+        if let Some(max) = self.max {
+            if v > max {
+                return false; // `v` is too big
+            }
+        }
+        true // `v` is just right :D
+    }
 
     /// Returns `true` if at least one of `min` or `max` is set
     pub fn is_set(self) -> bool {
