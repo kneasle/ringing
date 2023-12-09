@@ -294,6 +294,7 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
         }
         // End indices
         let last_elem = self.composition.path.last().unwrap();
+        let end_sub_lead_idx = last_elem.end_sub_lead_idx(self.params);
         match last_elem.call_to_end {
             None => {
                 // The last element ends with a plain lead, so we need to check that this chunk's
@@ -301,7 +302,7 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
                 let end_indices = self
                     .get_method(last_elem.method_id)
                     .wrapped_indices(Boundary::End, self.params);
-                if !end_indices.contains(&last_elem.end_sub_lead_idx(self.params)) {
+                if !end_indices.contains(&end_sub_lead_idx) {
                     return false; // End index isn't valid for this method
                 }
             }
@@ -313,6 +314,25 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
                 if !self.valid_end_labels.contains(end_label) {
                     return false; // Call's label_to can't correspond to a valid end idx
                 }
+            }
+        }
+        // Check for continuity over the part head (this checks for cases like finishing each part
+        // at a snap and then starting the next part at the lead-end)
+        if self.params.is_multipart() {
+            let start_labels = self
+                .get_method(first_elem.method_id)
+                .get_labels(first_elem.start_sub_lead_idx);
+            let end_labels = self
+                .get_method(last_elem.method_id)
+                .get_labels(end_sub_lead_idx);
+            let is_splice_possible = start_labels.iter().any(|label| end_labels.contains(label));
+            let is_continuous_lead = first_elem.start_sub_lead_idx == end_sub_lead_idx
+                && first_elem.method_id == last_elem.method_id;
+            if !is_splice_possible && !is_continuous_lead && last_elem.ends_with_plain() {
+                return false; // No way to splice over the part heads
+            }
+            if first_elem.start_sub_lead_idx != end_sub_lead_idx {
+                return false; // Composition isn't continuous over the part heads
             }
         }
 
@@ -353,14 +373,14 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
             SpliceStyle::Calls => {
                 let is_invalid_splice = |e1: &PathElem, e2: &PathElem| -> bool {
                     // PERF: use the method map to speed up the splicing check
-                    e1.is_splice_when_followed_by(e2, &self.params) && e1.ends_with_plain()
+                    e1.is_splice_when_followed_by(e2, self.params) && e1.ends_with_plain()
                 };
                 for (elem1, elem2) in self.composition.path.iter().tuple_windows() {
                     if is_invalid_splice(elem1, elem2) {
                         return false; // Splice but no call
                     }
                 }
-                if self.params.is_multipart() && self.composition.path.len() > 2 {
+                if self.params.is_multipart() && !self.composition.path.is_empty() {
                     let first = self.composition.path.first().unwrap();
                     let last = self.composition.path.last().unwrap();
                     if is_invalid_splice(last, first) {
