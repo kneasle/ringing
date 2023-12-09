@@ -10,14 +10,12 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{
-    method::RowAnnot, music::AtRowPositions, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet,
-};
+use bellframe::{music::AtRowPositions, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet};
 use itertools::Itertools;
 
 use crate::{
     group::{PartHeadGroup, PhRotation},
-    parameters::{Call, MethodIdx, MethodVec, Parameters},
+    parameters::{Call, Method, MethodIdx, MethodVec, Parameters},
     search::Config,
     utils::counts::Counts,
 };
@@ -84,20 +82,13 @@ impl Graph {
             return Err(crate::Error::InconsistentStroke);
         }
         // Now we know the starting strokes, count the music on each chunk
-        let double_plain_courses: MethodVec<_> = params
+        let method_caches: MethodVec<MethodCacheData> = params
             .methods
             .iter()
-            .map(|m| {
-                let mut double_plain_course = m.plain_course();
-                // Add another plain course.  We use 'double plain courses' so that the range
-                // covered by a chunk is always a contiguous section of these cached plain
-                // courses (otherwise, a chunk could wrap over the end of one plain course).
-                double_plain_course.extend_from_within(..);
-                double_plain_course
-            })
+            .map(|m| MethodCacheData::new(m, params))
             .collect();
         for (id, chunk) in &mut chunks {
-            count_scores(id, chunk, &double_plain_courses, &start_strokes, params);
+            count_scores(id, chunk, &method_caches, &start_strokes, params);
         }
         log::debug!("  Music counted in {:.2?}", start.elapsed());
 
@@ -128,6 +119,26 @@ impl Graph {
             ends,
         };
         Ok(graph)
+    }
+}
+
+struct MethodCacheData<'params> {
+    double_plain_course: Block<bellframe::method::RowAnnot<'params>>,
+    lead_head_weights: Vec<(Mask, f32)>,
+}
+
+impl<'params> MethodCacheData<'params> {
+    fn new(method: &'params Method, params: &'params Parameters) -> Self {
+        let mut double_plain_course = method.plain_course();
+        // Add another plain course.  We use 'double plain courses' so that the range
+        // covered by a chunk is always a contiguous section of these cached plain
+        // courses (otherwise, a chunk could wrap over the end of one plain course).
+        double_plain_course.extend_from_within(..);
+
+        Self {
+            double_plain_course,
+            lead_head_weights: method.lead_head_weights(params),
+        }
     }
 }
 
@@ -217,7 +228,7 @@ fn get_start_strokes(
 fn count_scores(
     id: &ChunkId,
     chunk: &mut Chunk,
-    double_plain_courses: &MethodVec<Block<RowAnnot>>,
+    method_caches: &MethodVec<MethodCacheData>,
     start_strokes: &Option<HashMap<ChunkId, Stroke>>,
     params: &Parameters,
 ) {
@@ -241,16 +252,19 @@ fn count_scores(
         // start stroke
         None => Stroke::Back,
     };
-    let double_plain_course = &double_plain_courses[id.method];
-    let lead_heads = params.methods[id.method].inner.lead_head().closure();
+    let method_cache = &method_caches[id.method];
 
     for part_head in params.part_head_group.rows() {
         let lead_head_in_part = part_head * id.lead_head.as_ref();
-        let start_row = &lead_head_in_part * double_plain_course.get_row(id.sub_lead_idx).unwrap();
+        let start_row = &lead_head_in_part
+            * method_cache
+                .double_plain_course
+                .get_row(id.sub_lead_idx)
+                .unwrap();
         // Determine the rows that this chunk contains
         let mut rows = Block::empty(params.stage);
         rows.extend_range(
-            double_plain_course,
+            &method_cache.double_plain_course,
             id.sub_lead_idx..(id.sub_lead_idx + chunk.per_part_length.as_usize()),
         );
         rows.pre_multiply(&start_row);
@@ -267,12 +281,10 @@ fn count_scores(
         // methods, `xxxxxx78` will expand into masks
         // `[xxxxxx78, xxxxx8x7, xxx8x7xx, x8x7xxxx, x78xxxxx, xx7x8xxx, xxxx7x8x]` (every one of
         // those leads is included in the course for `xxxxxx78`)
-        for (mask, weight) in &params.course_weights {
-            for lead_head in &lead_heads {
-                if (mask * lead_head).matches(&lead_head_in_part) {
-                    // Weight applies to each row
-                    chunk.score += *weight * chunk.per_part_length.as_usize() as f32;
-                }
+        for (mask, weight) in &method_cache.lead_head_weights {
+            if mask.matches(&lead_head_in_part) {
+                // Weight applies to each row
+                chunk.score += *weight * chunk.per_part_length.as_usize() as f32;
             }
         }
     }

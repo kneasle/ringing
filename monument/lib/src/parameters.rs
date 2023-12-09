@@ -375,6 +375,16 @@ impl Method {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
     }
 
+    pub fn lead_head_weights(&self, params: &Parameters) -> Vec<(Mask, f32)> {
+        let mut mask_weights = Vec::new();
+        for lead_head in self.lead_head().closure() {
+            for (mask, weight) in &params.course_weights {
+                mask_weights.push((mask * &lead_head, *weight));
+            }
+        }
+        mask_weights
+    }
+
     /////////////////////////
     // START/END LOCATIONS //
     /////////////////////////
