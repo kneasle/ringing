@@ -314,9 +314,12 @@ impl CompPrefix {
 
             total_score: score,
         };
+        // Validate the composition by building a `CompositionGetter`.  The checks performed by
+        // `CompositionGetter::new` are much stricter and more correct than those we can perform
+        // here, so we defer entirely to it to check these candidate compositions for validity.
+        let comp_getter = CompositionGetter::new(&comp, params)?;
         // Sanity check that the composition is true
         if params.require_truth {
-            let comp_getter = CompositionGetter::new(&comp, params).unwrap();
             if !comp_getter.is_true() {
                 panic!(
                     "Generated false composition ({})",
