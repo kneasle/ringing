@@ -311,8 +311,6 @@ impl CompPrefix {
             path,
             part_head: params.part_head_group.get_row(self.part_head).to_owned(),
             length: self.length,
-
-            total_score: score,
         };
         // Validate the composition by building a `CompositionGetter`.  The checks performed by
         // `CompositionGetter::new` are much stricter and more correct than those we can perform
@@ -326,6 +324,23 @@ impl CompPrefix {
                     comp_getter.call_string()
                 );
             }
+        }
+        // Validate that the composition thinks it has the same score that we gave it
+        let comp_score = comp_getter.total_score();
+        let abs_diff = (comp_score - score).abs();
+        let rel_diff = abs_diff / f32::max(comp_score, score);
+        let is_bad = if comp_score > 1.0 {
+            rel_diff > 1e-5 // Use relative difference for large numbers
+        } else {
+            abs_diff > 1e-3 // Use absolute difference for small numbers
+        };
+        if is_bad {
+            panic!(
+                "Scores for {} differed by too much (search gives {} but comp gives {})",
+                comp_getter.call_string(),
+                score,
+                comp_score
+            );
         }
         // Finally, return the comp
         Some(comp)
