@@ -2,7 +2,6 @@
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    io::Read,
     path::{Path, PathBuf},
     process::Stdio,
     time::{Duration, Instant},
@@ -76,6 +75,7 @@ pub struct UnrunTestCase<D> {
 pub struct RunTestCase<D> {
     pub base: UnrunTestCase<D>,
     pub duration: Duration,
+    pub panicked: bool,
     pub output: Option<String>,
 }
 
@@ -107,6 +107,7 @@ impl<D> UnrunTestCase<D> {
             return RunTestCase {
                 base: self,
                 duration: Duration::ZERO,
+                panicked: false,
                 output: None,
             };
         }
@@ -143,26 +144,37 @@ impl<D> UnrunTestCase<D> {
             .stderr(if display_stderr {
                 Stdio::inherit()
             } else {
-                Stdio::null()
+                Stdio::piped()
             })
             .spawn()
             .unwrap();
-        let mut output = Vec::new();
-        cmd.stdout.unwrap().read_to_end(&mut output).unwrap();
+        let output = cmd.wait_with_output().unwrap();
         let duration = start.elapsed();
 
+        let panicked = match output.status.code().unwrap() {
+            0 => false,   // Success
+            255 => false, // Expected failure (i.e. a Monument error message)
+            101 => true,  // Panic
+            x => panic!("Unexpected return code: {x}"),
+        };
+        let output_text = if panicked {
+            &output.stderr
+        } else {
+            &output.stdout
+        };
         // Strip color codes from the output
         //
         // ANSI colors are 'esc key' (1b in hex) followed by `[` then some codes, finishing
         // with `m`.  We use `.*?` to consume anything, but stopping at the first `m` (`.*?` is
         // the non-greedy version of `.*`)
-        let output = String::from_utf8_lossy(&output).into_owned();
+        let output = String::from_utf8_lossy(output_text).into_owned();
         let ansi_escape_regex = Regex::new("\x1b\\[.*?m").unwrap();
         let color_free_output = ansi_escape_regex.replace_all(&output, "").into_owned();
 
         RunTestCase {
             base: self,
             duration,
+            panicked,
             output: Some(color_free_output),
         }
     }

@@ -11,6 +11,7 @@ use std::{
 use colored::{Color, ColoredString, Colorize};
 use common::{PathFromMonument, UnrunTestCase};
 use difference::Changeset;
+use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use structopt::StructOpt;
 
@@ -92,7 +93,8 @@ pub fn run(filter: Option<&str>) -> anyhow::Result<Outcome> {
     let completed_tests: Vec<RunTestCase<CaseData>> = cases.into_par_iter().map(run_test).collect();
     // Collate failures and unspecified tests from all `Suite`s
     report_failures(&completed_tests);
-    let outcome = print_summary_string(&completed_tests, start.elapsed());
+    print_fails_summary(&completed_tests);
+    let outcome = print_summary_line(&completed_tests, start.elapsed());
     // Save current results file, used when blessing results
     write_actual_results(completed_tests)?;
 
@@ -258,8 +260,8 @@ pub fn bless_tests(level: BlessLevel, filter: Option<&str>) -> anyhow::Result<()
         for (level, path) in &changed_case_names {
             let name = path.to_string();
             match level {
-                ChangeType::New => println!("     (new) {}", unspecified_str(&name)),
-                ChangeType::Fail => println!("    (fail) {}", fail_str(&name)),
+                ChangeType::New => println!("     (new) {}", unspecified_name_str(&name)),
+                ChangeType::Fail => println!("    (fail) {}", fail_name_str(&name)),
                 ChangeType::Removed => println!(" (removed) {}", name.yellow().bold()),
             }
         }
@@ -278,7 +280,7 @@ pub fn bless_tests(level: BlessLevel, filter: Option<&str>) -> anyhow::Result<()
 fn report_failures(run_cases: &[RunTestCase<CaseData>]) {
     // Report all unspecified tests first
     for case in run_cases {
-        let path_string = unspecified_str(&case.name());
+        let path_string = unspecified_name_str(&case.name());
         if case.outcome() == CaseOutcome::Unspecified {
             println!();
             println!("Unspecified results for {path_string}.  This is the output:",);
@@ -287,11 +289,16 @@ fn report_failures(run_cases: &[RunTestCase<CaseData>]) {
     }
     // Report all the failures second
     for case in run_cases {
-        let path_string = fail_str(&case.name());
+        let path_string = fail_name_str(&case.name());
         match (&case.expected_output, &case.output) {
             (Some(expected), Some(actual)) if expected != actual => {
                 println!();
-                println!("{} produced the wrong output:", path_string);
+                if case.panicked {
+                    println!("{path_string} panicked with message:");
+                } else {
+                    println!("{path_string} produced the wrong output:");
+                }
+                // TODO: Diff changed lines (ala GitHub's diffs)
                 println!("{}", Changeset::new(expected, actual, "\n"));
             }
             _ => {} // Everything else isn't a failure
@@ -299,8 +306,31 @@ fn report_failures(run_cases: &[RunTestCase<CaseData>]) {
     }
 }
 
-/// Generate and print a summary string for the tests.  Returns the outcome of the test suite
-fn print_summary_string(completed_tests: &[RunTestCase<CaseData>], duration: Duration) -> Outcome {
+fn print_fails_summary(completed_tests: &[RunTestCase<CaseData>]) {
+    print_summary_section(completed_tests, CaseOutcome::Unspecified, "Unspecified");
+    print_summary_section(completed_tests, CaseOutcome::Fail, "Failed");
+    print_summary_section(completed_tests, CaseOutcome::Panicked, "Panicked");
+}
+
+fn print_summary_section(
+    completed_tests: &[RunTestCase<CaseData>],
+    outcome: CaseOutcome,
+    name: &str,
+) {
+    let cases = completed_tests
+        .iter()
+        .filter(|t| t.outcome() == outcome)
+        .collect_vec();
+    if !cases.is_empty() {
+        println!("{name}:");
+        for c in cases {
+            println!("  {}", c.name().color(outcome.color()).bold());
+        }
+    }
+}
+
+/// Generate and print a summary string for the tests.  Returns the overall outcome of the suite
+fn print_summary_line(completed_tests: &[RunTestCase<CaseData>], duration: Duration) -> Outcome {
     // Count the test categories
     let mut num_ok = 0;
     let mut num_ignored = 0;
@@ -311,7 +341,7 @@ fn print_summary_string(completed_tests: &[RunTestCase<CaseData>], duration: Dur
             CaseOutcome::Ok | CaseOutcome::Parsed => num_ok += 1,
             CaseOutcome::Ignored => num_ignored += 1,
             CaseOutcome::Unspecified => num_unspecified += 1,
-            CaseOutcome::Fail => num_failures += 1,
+            CaseOutcome::Fail | CaseOutcome::Panicked => num_failures += 1,
         }
     }
     assert_eq!(
@@ -369,26 +399,28 @@ impl RunTestCase<CaseData> {
     }
 
     fn outcome(&self) -> CaseOutcome {
-        // TODO: Clean this up?
-        match self.behaviour {
-            CaseBehaviour::Ignored => CaseOutcome::Ignored,
-            CaseBehaviour::Example | CaseBehaviour::Test => {
-                match (&self.expected_output, &self.output) {
-                    (_, None) => unreachable!(),
-                    (None, Some(_)) => CaseOutcome::Unspecified,
-                    (Some(x), Some(y)) => {
-                        if x == y {
-                            if self.behaviour == CaseBehaviour::Example {
-                                CaseOutcome::Parsed
-                            } else {
-                                CaseOutcome::Ok
-                            }
-                        } else {
-                            CaseOutcome::Fail
-                        }
-                    }
-                }
+        if self.behaviour == CaseBehaviour::Ignored {
+            return CaseOutcome::Ignored;
+        }
+        if self.panicked {
+            return CaseOutcome::Panicked;
+        }
+        let Some(expected_output) = &self.expected_output else {
+            return CaseOutcome::Unspecified;
+        };
+        // Check that outcomes match
+        let actual_output = self
+            .output
+            .as_ref()
+            .expect("Non-ignored tests must have output");
+        if expected_output == actual_output {
+            if self.behaviour == CaseBehaviour::Example {
+                CaseOutcome::Parsed
+            } else {
+                CaseOutcome::Ok
             }
+        } else {
+            CaseOutcome::Fail
         }
     }
 }
@@ -401,16 +433,31 @@ enum CaseOutcome {
     Ignored,
     Unspecified,
     Fail,
+    Panicked, // Failed by panicking
 }
 
 impl CaseOutcome {
-    fn colored_string(self) -> ColoredString {
+    fn string(self) -> &'static str {
         match self {
-            Self::Ok => ok_string(),
-            Self::Parsed => "parsed".color(Color::Green),
-            Self::Ignored => "ignored".color(Color::Yellow),
-            Self::Unspecified => "unspecified".color(UNSPECIFIED_COLOR),
-            Self::Fail => fail_string(),
+            Self::Ok => "ok",
+            Self::Parsed => "parsed",
+            Self::Ignored => "ignored",
+            Self::Unspecified => "unspecified",
+            Self::Fail => "fail",
+            Self::Panicked => "panicked",
+        }
+    }
+
+    fn colored_string(self) -> ColoredString {
+        self.string().color(self.color())
+    }
+
+    fn color(self) -> Color {
+        match self {
+            CaseOutcome::Ok | CaseOutcome::Parsed => OK_COLOR,
+            CaseOutcome::Ignored => IGNORED_COLOR,
+            CaseOutcome::Unspecified => UNSPECIFIED_COLOR,
+            CaseOutcome::Fail | CaseOutcome::Panicked => FAIL_COLOR,
         }
     }
 }
@@ -419,21 +466,23 @@ impl CaseOutcome {
 // UTILS //
 ///////////
 
-fn unspecified_str(s: &str) -> ColoredString {
+fn unspecified_name_str(s: &str) -> ColoredString {
     s.color(UNSPECIFIED_COLOR).bold()
 }
 
-fn fail_str(s: &str) -> ColoredString {
+fn fail_name_str(s: &str) -> ColoredString {
     s.color(FAIL_COLOR).bold()
 }
 
 fn ok_string() -> ColoredString {
-    "ok".color(Color::Green)
+    "ok".color(OK_COLOR)
 }
 
 fn fail_string() -> ColoredString {
     "fail".color(FAIL_COLOR)
 }
 
-const FAIL_COLOR: Color = Color::BrightRed;
+const OK_COLOR: Color = Color::Green;
+const IGNORED_COLOR: Color = Color::Yellow;
 const UNSPECIFIED_COLOR: Color = Color::BrightBlue;
+const FAIL_COLOR: Color = Color::BrightRed;
