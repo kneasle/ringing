@@ -4,13 +4,13 @@ mod common;
 
 use std::{
     collections::HashSet,
-    fmt::Debug,
+    fmt::{Debug, Write},
     time::{Duration, Instant},
 };
 
 use colored::{Color, ColoredString, Colorize};
 use common::{PathFromMonument, UnrunTestCase};
-use difference::Changeset;
+use difference::{Changeset, Difference};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use structopt::StructOpt;
@@ -298,13 +298,85 @@ fn report_failures(run_cases: &[RunTestCase<CaseData>]) {
                 } else {
                     println!("{path_string} produced the wrong output:");
                 }
-                // TODO: Diff changed lines (ala GitHub's diffs)
-                println!("{}", Changeset::new(expected, actual, "\n"));
+                print_diff(expected, actual);
             }
             _ => {} // Everything else isn't a failure
         }
     }
 }
+
+/// Print a pretty diff of the outputs
+fn print_diff(expected_output: &str, actual_output: &str) {
+    // First, diff by lines
+    let changeset = Changeset::new(expected_output, actual_output, "\n");
+    // Now, print the output, but if it looks like lines have slightly changed highlight only the
+    // differences
+    let mut diff_iter = changeset.diffs.iter().peekable();
+    while let Some(diff) = diff_iter.next() {
+        match diff {
+            Difference::Same(s) => println!("{s}"),
+            // If an addition is popped directly, then it can't be part of a small modification,
+            // so just print it normally
+            Difference::Add(s) => println!("{}", s.color(Color::BrightGreen)),
+            Difference::Rem(rem) => {
+                // Small changes to a set of lines will appear as removals followed by almost
+                // identical additions.  So, before printing this, peek at the next element and see
+                // if it's an addition which can be pretty-printed
+                if let Some(Difference::Add(add)) = diff_iter.peek() {
+                    let sub_diff = Changeset::new(rem, add, "");
+                    let amount_changed = sub_diff.distance as f32 / (rem.len() + add.len()) as f32;
+                    if amount_changed < LARGEST_HIGHLIGHTABLE_DIFF {
+                        print_fancy_diff(sub_diff);
+                        // Skip printing this and the next 'add' because we've printed both of them
+                        // already
+                        assert!(matches!(diff_iter.next(), Some(Difference::Add(_))));
+                        continue; // Don't print the highlighting normally
+                    }
+                }
+                println!("{}", rem.color(Color::BrightRed));
+            }
+        }
+    }
+}
+
+fn print_fancy_diff(sub_diff: Changeset) {
+    enum DiffType {
+        Rem,
+        Add,
+    }
+
+    // Build up formatted strings for the removal and addition parts
+    let mut rem_str = String::new();
+    let mut add_str = String::new();
+    let mut add_diff = |s: &str, diff_type: DiffType, highlight: bool| {
+        let (pushable_str, color) = match diff_type {
+            DiffType::Rem => (&mut rem_str, Color::BrightRed),
+            DiffType::Add => (&mut add_str, Color::BrightGreen),
+        };
+        let colored_string = if highlight {
+            s.black().on_color(color)
+        } else {
+            s.color(color)
+        };
+        write!(pushable_str, "{}", colored_string).unwrap();
+    };
+    for change in &sub_diff.diffs {
+        match change {
+            Difference::Same(s) => {
+                // Add this as both a rem and an add, both without highlights
+                add_diff(s, DiffType::Rem, false);
+                add_diff(s, DiffType::Add, false);
+            }
+            Difference::Add(s) => add_diff(s, DiffType::Add, true),
+            Difference::Rem(s) => add_diff(s, DiffType::Rem, true),
+        }
+    }
+    // Print both of these
+    println!("{rem_str}");
+    println!("{add_str}");
+}
+
+const LARGEST_HIGHLIGHTABLE_DIFF: f32 = 0.3;
 
 fn print_fails_summary(completed_tests: &[RunTestCase<CaseData>]) {
     print_summary_section(completed_tests, CaseOutcome::Unspecified, "Unspecified");
