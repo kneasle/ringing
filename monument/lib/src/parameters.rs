@@ -129,20 +129,12 @@ impl Parameters {
         self.calls.position(|c| c.id == id).unwrap()
     }
 
-    pub fn music_type_id_to_idx(&self, id: MusicTypeId) -> MusicTypeIdx {
-        self.music_types.position(|mt| mt.id == id).unwrap()
-    }
-
     pub fn get_method_by_id(&self, id: MethodId) -> &Method {
         &self.methods[self.method_id_to_idx(id)]
     }
 
     pub fn get_call_by_id(&self, id: CallId) -> &Call {
         &self.calls[self.call_id_to_idx(id)]
-    }
-
-    pub fn get_music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
-        &self.music_types[self.music_type_id_to_idx(id)]
     }
 
     //////////////////////
@@ -308,10 +300,6 @@ impl Parameters {
 
     pub fn get_call(&self, id: CallId) -> &Call {
         self.calls.iter().find(|mt| mt.id == id).unwrap()
-    }
-
-    pub fn get_music_type(&self, id: MusicTypeId) -> &MusicType {
-        self.music_types.iter().find(|mt| mt.id == id).unwrap()
     }
 
     pub fn music_types_to_show(&self) -> Vec<(MusicTypeIdx, &MusicType)> {
@@ -716,8 +704,6 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 /// A class of music that Monument should care about
 #[derive(Debug, Clone)]
 pub struct MusicType {
-    pub id: MusicTypeId,
-
     pub show_total: bool,
     pub show_positions: AtRowPositions<bool>,
     pub name: String,
@@ -816,21 +802,6 @@ impl Deref for MusicType {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MusicTypeId(pub u32);
-
-impl From<u32> for MusicTypeId {
-    fn from(value: u32) -> Self {
-        Self(value)
-    }
-}
-
-impl From<MusicTypeId> for u32 {
-    fn from(value: MusicTypeId) -> Self {
-        value.0
     }
 }
 

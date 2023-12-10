@@ -21,7 +21,7 @@ use sysinfo::SystemExt;
 
 use crate::{
     composition::{CompositionDataCache, CompositionId},
-    parameters::{MethodId, MusicTypeId, Parameters},
+    parameters::{MethodId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     utils::IdGenerator,
     Composition,
@@ -120,10 +120,6 @@ impl Search {
 
     pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
         self.params.methods.iter().map(|m| (m, m.shorthand()))
-    }
-
-    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
-        self.params.music_types.iter().map(|ty| ty.id)
     }
 
     pub fn parameters(&self) -> &Parameters {

@@ -4,10 +4,8 @@ use bellframe::{music::AtRowPositions, Mask, PlaceNot, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use monument::{
     parameters::{
-        Call, CallDisplayStyle, CallId, Method, MusicTypeId, MusicTypeVec, OptionalRangeInclusive,
-        SpliceStyle,
+        Call, CallDisplayStyle, CallId, Method, MusicTypeVec, OptionalRangeInclusive, SpliceStyle,
     },
-    utils::IdGenerator,
     PartHeadGroup,
 };
 
@@ -82,7 +80,6 @@ impl Parameters {
         let maybe_unused_calls = vec![(true, bob), (true, single)];
 
         // Music
-        let id_gen = IdGenerator::<MusicTypeId>::starting_at_zero();
         let mut music_types = MusicTypeVec::new();
         let mut add_front_back_music_type =
             |inner: bellframe::MusicType,
@@ -91,7 +88,6 @@ impl Parameters {
              weight: f32,
              name: String| {
                 music_types.push(monument::parameters::MusicType {
-                    id: id_gen.next(),
                     show_total,
                     show_positions: AtRowPositions::front_and_back(show_positions),
                     name,
@@ -134,7 +130,6 @@ impl Parameters {
             "CRUs".to_owned(),
         );
         music_types.push(monument::parameters::MusicType {
-            id: id_gen.next(),
             show_total: false,
             show_positions: AtRowPositions::BACK,
             name: "87s".to_owned(),
