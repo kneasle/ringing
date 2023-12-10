@@ -378,6 +378,18 @@ impl RowPosition {
     pub const ALL: [RowPosition; 4] = [Self::Front, Self::Internal, Self::Back, Self::Wrap];
 }
 
+impl Display for RowPosition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            RowPosition::Front => "Front",
+            RowPosition::Internal => "Internal",
+            RowPosition::Back => "Back",
+            RowPosition::Wrap => "Wrap",
+        };
+        f.write_str(name)
+    }
+}
+
 /// A collection of data (usually counts) for each position in a [`Row`] that music can occur
 /// (front, internal, back, wrap)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
