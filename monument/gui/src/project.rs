@@ -1,4 +1,4 @@
-use eframe::egui::{self, RichText};
+use eframe::egui;
 use itertools::Itertools;
 use monument::{Composition, CompositionGetter};
 use ordered_float::OrderedFloat;
@@ -112,22 +112,46 @@ impl Project {
         comp_getters.sort_by_cached_key(|g| OrderedFloat(-g.total_score()));
         // Display them in a grid
         // TODO: Custom (animated!) widget for this
-        egui::Grid::new("Comp grid").striped(true).show(ui, |ui| {
-            // Header
-            ui.label(RichText::new("Length").strong());
-            ui.label(RichText::new("Score").strong());
-            ui.label(RichText::new("Score/row").strong());
-            ui.label(RichText::new("Call string").strong());
-            ui.end_row();
+        egui::Grid::new("Comp grid")
+            .striped(true)
+            .min_col_width(10.0)
+            .show(ui, |ui| {
+                /* Header */
+                ui.strong("Length");
+                ui.strong("|");
+                ui.strong("Score");
+                ui.strong("Score/row");
 
-            for g in comp_getters {
-                ui.label(g.length().to_string());
-                ui.label(format!("{:.2}", g.total_score()));
-                ui.label(format!("{:.6}", g.score_per_row()));
-                ui.label(g.call_string());
-                ui.end_row()
-            }
-        });
+                ui.strong("|");
+                ui.strong("Music");
+                for (_idx, mt) in params.music_types_to_show() {
+                    ui.strong(&mt.name);
+                }
+
+                ui.strong("|");
+                ui.strong("Call string");
+                ui.end_row();
+
+                /* Compositions */
+                for g in comp_getters {
+                    ui.label(g.length().to_string());
+
+                    ui.label("|");
+                    ui.label(format!("{:.2}", g.total_score()));
+                    ui.label(format!("{:.6}", g.score_per_row()));
+
+                    ui.label("|");
+                    let (music_counts, music_score) = g.music_counts_and_score();
+                    ui.label(format!("{music_score:.2}"));
+                    for (idx, mt) in params.music_types_to_show() {
+                        ui.label(mt.display_counts(music_counts[idx], params.stage));
+                    }
+
+                    ui.label("|");
+                    ui.label(g.call_string());
+                    ui.end_row()
+                }
+            });
     }
 
     /////////////
