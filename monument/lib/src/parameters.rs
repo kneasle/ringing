@@ -27,7 +27,7 @@ use crate::{
 /// Compare this to [`Config`], which determines _how_ those
 /// [`Composition`]s are generated (and therefore determines how quickly the
 /// results are generated).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameters {
     // GENERAL
     pub length: RangeInclusive<TotalLength>,
@@ -315,7 +315,7 @@ impl Parameters {
 /////////////
 
 /// A `Method` used in a [`Search`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Method {
     pub id: MethodId,
     pub inner: bellframe::Method,
@@ -505,7 +505,7 @@ pub fn default_shorthand(title: &str) -> String {
 ///////////
 
 /// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Call {
     pub id: CallId,
 
@@ -702,7 +702,7 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 ///////////
 
 /// A class of music that Monument should care about
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MusicType {
     pub show_total: bool,
     pub show_positions: AtRowPositions<bool>,
@@ -810,7 +810,7 @@ impl Deref for MusicType {
 ////////////////
 
 /// Convenient description of a set of courses via [`Mask`]s.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CourseSet {
     /// List of [`Mask`]s, of which courses should match at least one.
     pub masks: Vec<Mask>,
@@ -970,7 +970,7 @@ fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mas
 /// This is essentially a combination of [`RangeInclusive`]
 /// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
 /// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct OptionalRangeInclusive {
     pub min: Option<usize>,
     pub max: Option<usize>,
