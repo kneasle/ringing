@@ -1,4 +1,4 @@
-use bellframe::Stroke;
+use bellframe::{music::RowPosition, Stroke};
 use eframe::egui;
 use monument::parameters::{default_shorthand, Call, SpliceStyle};
 
@@ -192,8 +192,33 @@ impl super::Parameters {
     }
 
     fn draw_music_params(&mut self, ui: &mut egui::Ui) {
+        egui::Grid::new("Music types").striped(true).show(ui, |ui| {
+            // Header
+            ui.label("");
+            ui.strong("Total");
+            for position in RowPosition::ALL {
+                ui.strong(position.to_string());
+            }
+            ui.end_row();
+
+            // Music types
+            for mt in &mut self.inner.music_types {
+                ui.strong(&mt.name);
+                ui.checkbox(&mut mt.show_total, "");
+                for position in RowPosition::ALL {
+                    ui.horizontal_centered(|ui| {
+                        ui.checkbox(mt.show_positions.get_mut(position), "");
+                        ui.add(
+                            egui::DragValue::new(mt.weights.get_mut(position))
+                                .speed(0.1)
+                                .min_decimals(0),
+                        );
+                    });
+                }
+                ui.end_row();
+            }
+        });
         ParamTable::show(ui, 0, |grid| {
-            grid.add_todo("Music types");
             grid.add_param("Start stroke", |ui| {
                 ui.selectable_value(&mut self.inner.start_stroke, Stroke::Hand, "Handstroke");
                 ui.selectable_value(&mut self.inner.start_stroke, Stroke::Back, "Backstroke");
