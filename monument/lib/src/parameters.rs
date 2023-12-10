@@ -781,7 +781,7 @@ impl MusicType {
 
         let mut s = String::new();
         // Add total count
-        if self.show_total || num_items_to_show == 1 {
+        if self.show_total {
             Self::write_music_count(
                 &mut s,
                 self.masked_total(counts),
@@ -789,7 +789,8 @@ impl MusicType {
             );
         }
         // Add specific counts (if there are any)
-        if num_items_to_show > 1 {
+        let hide_counts = self.show_total && num_items_to_show == 1;
+        if !hide_counts {
             // Add brackets if there's a total score
             if self.show_total {
                 s.push_str(" (");

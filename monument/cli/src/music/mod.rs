@@ -422,9 +422,7 @@ fn music_type_preset(
             ),
             // 5678 combinations don't make sense for any stage other than Triples and Major
             _ => {
-                return Err(anyhow::Error::msg(
-                    "5678 combinations only make sense for Triples and Major",
-                ));
+                anyhow::bail!("5678 combinations only make sense for Triples and Major");
             }
         },
         MusicPreset::NearMisses => (
@@ -434,7 +432,7 @@ fn music_type_preset(
         ),
         MusicPreset::Crus => {
             if stage < Stage::TRIPLES {
-                return Err(anyhow::Error::msg("Can't have CRUs on less than 7 bells"));
+                anyhow::bail!("Can't have CRUs on less than 7 bells");
             }
             let positions = if stage.is_even() {
                 AtRowPositions::FRONT_AND_BACK
@@ -470,13 +468,14 @@ fn new_music_type(
     show_total: bool,
 ) -> MusicType {
     let optional_weights = AtRowPositions::<Option<f32>>::from(common.specified_weight);
+    let num_specified_weights: usize = optional_weights.map(|v| v.is_some() as usize).total();
     // Create music types, etc.
     MusicType {
         id,
         inner: music_type.at_stroke(common.strokes.into()),
         weights: optional_weights.map(|x| x.unwrap_or(0.0)),
         show_positions: optional_weights.map(|x| x.is_some() && common.should_show()),
-        show_total: show_total && common.should_show(),
+        show_total: (show_total || num_specified_weights == 1) && common.should_show(),
         count_range: common.count_range.into(),
         name: match &common.name {
             Some(name) => name.clone(),

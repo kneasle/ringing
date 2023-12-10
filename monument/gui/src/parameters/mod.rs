@@ -134,7 +134,7 @@ impl Parameters {
         );
         music_types.push(monument::parameters::MusicType {
             id: id_gen.next(),
-            show_total: true,
+            show_total: false,
             show_positions: AtRowPositions::BACK,
             name: "87s".to_owned(),
             inner: bellframe::MusicType::reversed_tenors_at_back(stage),
