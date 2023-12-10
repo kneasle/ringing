@@ -1,4 +1,7 @@
-use std::cmp::Ordering;
+use std::{
+    marker::PhantomData,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 pub(crate) mod counts;
 pub(crate) mod lengths;
@@ -27,14 +30,36 @@ impl<Item, Dist: PartialEq> PartialEq for FrontierItem<Item, Dist> {
 impl<Item, Dist: Eq> Eq for FrontierItem<Item, Dist> {}
 
 impl<Item, Dist: Ord> PartialOrd for FrontierItem<Item, Dist> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl<Item, Dist: Ord> Ord for FrontierItem<Item, Dist> {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.distance.cmp(&other.distance)
+    }
+}
+
+/// Struct which generates unique `Id`s.  Can be used with any of [`MethodId`] or [`CallId`].
+#[derive(Debug)]
+pub struct IdGenerator<Id> {
+    next_id: AtomicU32,
+    _id: PhantomData<Id>,
+}
+
+impl<Id: From<u32> + Into<u32>> IdGenerator<Id> {
+    pub fn starting_at_zero() -> Self {
+        Self {
+            next_id: AtomicU32::new(0),
+            _id: PhantomData,
+        }
+    }
+
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&self) -> Id {
+        let id = Id::from(self.next_id.fetch_add(1, Ordering::SeqCst));
+        id
     }
 }
 

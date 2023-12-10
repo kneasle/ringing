@@ -53,8 +53,9 @@ fn worker_thread(
 ) {
     while let Ok((project, params, ctx)) = search_channel_rx.recv() {
         println!("Got new query!");
-        let search =
-            monument::Search::new(params.to_monument(), monument::Config::default()).unwrap(); // TODO: Good error handling
+        let search = monument::Search::new(params.to_monument(), monument::Config::default())
+            .unwrap()
+            .id_generator(project.lock().unwrap().comp_id_generator());
         search.run(
             |update| {
                 project.lock().unwrap().recieve_update(update);

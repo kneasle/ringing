@@ -2,7 +2,10 @@ use bellframe::{
     music::{AtRowPositions, Pattern, RowPosition},
     Stage,
 };
-use monument::parameters::{IdGenerator, MusicType, MusicTypeId, MusicTypeVec};
+use monument::{
+    parameters::{MusicType, MusicTypeId, MusicTypeVec},
+    utils::IdGenerator,
+};
 use serde::Deserialize;
 
 use crate::utils::OptRangeInclusive;

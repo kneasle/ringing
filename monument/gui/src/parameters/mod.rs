@@ -4,9 +4,10 @@ use bellframe::{music::AtRowPositions, Mask, PlaceNot, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use monument::{
     parameters::{
-        Call, CallDisplayStyle, CallId, IdGenerator, Method, MusicTypeId, MusicTypeVec,
-        OptionalRangeInclusive, SpliceStyle,
+        Call, CallDisplayStyle, CallId, Method, MusicTypeId, MusicTypeVec, OptionalRangeInclusive,
+        SpliceStyle,
     },
+    utils::IdGenerator,
     PartHeadGroup,
 };
 
@@ -50,7 +51,7 @@ impl Parameters {
         let cc_lib = bellframe::MethodLib::cc_lib().unwrap();
 
         // Methods
-        let make_method = |title: &str, id: u16| {
+        let make_method = |title: &str, id: u32| {
             let mut method = cc_lib.get_by_title(title).unwrap();
             method.set_lead_end_label();
             monument::parameters::Method {
@@ -81,7 +82,7 @@ impl Parameters {
         let maybe_unused_calls = vec![(true, bob), (true, single)];
 
         // Music
-        let mut id_gen = IdGenerator::<MusicTypeId>::starting_at_zero();
+        let id_gen = IdGenerator::<MusicTypeId>::starting_at_zero();
         let mut music_types = MusicTypeVec::new();
         let mut add_front_back_music_type =
             |inner: bellframe::MusicType,

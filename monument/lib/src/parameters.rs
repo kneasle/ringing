@@ -3,7 +3,6 @@
 use std::{
     collections::HashSet,
     fmt::Write,
-    marker::PhantomData,
     ops::{Deref, Range, RangeInclusive},
     sync::atomic::AtomicBool,
 };
@@ -20,7 +19,7 @@ use crate::{
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
-        Boundary,
+        Boundary, IdGenerator,
     },
     Composition, Config, Search, Update,
 };
@@ -495,15 +494,15 @@ impl std::ops::Deref for Method {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MethodId(pub u16);
+pub struct MethodId(pub u32);
 
-impl From<u16> for MethodId {
-    fn from(value: u16) -> Self {
+impl From<u32> for MethodId {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl From<MethodId> for u16 {
+impl From<MethodId> for u32 {
     fn from(value: MethodId) -> Self {
         value.0
     }
@@ -558,15 +557,15 @@ pub struct Call {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CallId(pub u16);
+pub struct CallId(pub u32);
 
-impl From<u16> for CallId {
-    fn from(value: u16) -> Self {
+impl From<u32> for CallId {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl From<CallId> for u16 {
+impl From<CallId> for u32 {
     fn from(value: CallId) -> Self {
         value.0
     }
@@ -842,15 +841,15 @@ impl Deref for MusicType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MusicTypeId(pub u16);
+pub struct MusicTypeId(pub u32);
 
-impl From<u16> for MusicTypeId {
-    fn from(value: u16) -> Self {
+impl From<u32> for MusicTypeId {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl From<MusicTypeId> for u16 {
+impl From<MusicTypeId> for u32 {
     fn from(value: MusicTypeId) -> Self {
         value.0
     }
@@ -1069,29 +1068,6 @@ impl OptionalRangeInclusive {
             .map(|x| x + 1) // +1 because `OptRange` is inclusive
             .unwrap_or(other.end);
         min..max
-    }
-}
-
-/// Struct which generates unique `Id`s.  Can be used with any of [`MethodId`] or [`CallId`].
-#[derive(Debug, Clone)]
-pub struct IdGenerator<Id> {
-    next_id: u16,
-    _id: PhantomData<Id>,
-}
-
-impl<Id: From<u16> + Into<u16>> IdGenerator<Id> {
-    pub fn starting_at_zero() -> Self {
-        Self {
-            next_id: 0,
-            _id: PhantomData,
-        }
-    }
-
-    #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Id {
-        let id = Id::from(self.next_id);
-        self.next_id += 1;
-        id
     }
 }
 

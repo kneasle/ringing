@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use eframe::egui;
 use itertools::Itertools;
-use monument::{Composition, CompositionGetter};
+use monument::{composition::CompositionId, utils::IdGenerator, Composition, CompositionGetter};
 use ordered_float::OrderedFloat;
 
 use crate::{search::SearchThreadHandle, utils::ParamTable};
@@ -12,6 +14,8 @@ pub struct Project {
     name: String,
     params: crate::Parameters,
     compositions: Vec<Composition>,
+
+    comp_id_generator: Arc<IdGenerator<CompositionId>>,
     search_progress: Option<monument::Progress>,
 }
 
@@ -158,6 +162,10 @@ impl Project {
     // HELPERS //
     /////////////
 
+    pub fn comp_id_generator(&self) -> Arc<IdGenerator<CompositionId>> {
+        self.comp_id_generator.clone()
+    }
+
     pub fn clone_params(&self) -> crate::Parameters {
         self.params.clone()
     }
@@ -181,6 +189,8 @@ impl Default for Project {
             name: "Yorksire S8 Peals".to_owned(),
             params: crate::Parameters::yorkshire_s8_qps(),
             compositions: vec![],
+
+            comp_id_generator: Arc::new(IdGenerator::starting_at_zero()),
             search_progress: None,
         }
     }
