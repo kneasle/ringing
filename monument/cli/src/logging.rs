@@ -1,12 +1,18 @@
 //! Code for handling the logging of compositions or updates provided by Monument
 
-use std::{fmt::Write, io::Write as IoWrite, sync::Arc};
+use std::{
+    fmt::Write,
+    io::Write as IoWrite,
+    sync::{Arc, Mutex},
+};
 
 use bellframe::row::ShortRow;
 use colored::Colorize;
 use itertools::Itertools;
 use log::log_enabled;
-use monument::{Composition, CompositionGetter, Progress, Search, Update};
+use monument::{
+    composition::CompositionDataCache, Composition, CompositionGetter, Progress, Search, Update,
+};
 use ringing_utils::BigNumInt;
 
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
@@ -125,6 +131,7 @@ impl SingleLineProgressLogger {
 #[derive(Debug, Clone)]
 pub struct CompositionPrinter {
     search: Arc<Search>,
+    cache: Arc<Mutex<CompositionDataCache>>,
     /// Counter which records how many compositions have been printed so far
     comps_printed: usize,
 
@@ -149,7 +156,12 @@ pub struct CompositionPrinter {
 }
 
 impl CompositionPrinter {
-    pub fn new(search: Arc<Search>, print_atw: bool, print_comp_widths: bool) -> Self {
+    pub fn new(
+        search: Arc<Search>,
+        cache: Arc<Mutex<CompositionDataCache>>,
+        print_atw: bool,
+        print_comp_widths: bool,
+    ) -> Self {
         Self {
             comp_count_width: print_comp_widths
                 .then_some(search.parameters().num_comps.to_string().len()),
@@ -170,6 +182,7 @@ impl CompositionPrinter {
                 .then(|| search.effective_part_head_stage().num_bells()),
 
             search,
+            cache,
         }
     }
 
@@ -272,7 +285,8 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
-        let comp = CompositionGetter::new(comp, self.search.parameters()).unwrap();
+        let mut cache = self.cache.lock().unwrap();
+        let comp = CompositionGetter::new(comp, self.search.parameters(), &mut cache).unwrap();
 
         let mut s = String::new();
         // Comp index

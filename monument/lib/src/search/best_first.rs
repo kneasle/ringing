@@ -1,12 +1,15 @@
 use std::{
     collections::BinaryHeap,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
 };
 
 use datasize::DataSize;
 use ringing_utils::BigNumInt;
 
-use crate::utils::lengths::TotalLength;
+use crate::{composition::CompositionDataCache, utils::lengths::TotalLength};
 
 use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
@@ -16,7 +19,12 @@ const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions.  This function is the core of Monument, and
 /// almost all of Monument's runtime will be spent in the `while` loop in this function.
-pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
+pub(crate) fn search(
+    search: &Search,
+    mut update_fn: impl FnMut(Update),
+    abort_flag: &AtomicBool,
+    cache: &Mutex<CompositionDataCache>,
+) {
     let mem_limit = search
         .config
         .mem_limit
@@ -57,7 +65,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
     // This loop is the core of Monument - almost all the runtime will be spent here.
     while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier);
+        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier, cache);
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {

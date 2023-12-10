@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref};
+use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref, sync::Mutex};
 
 use bit_vec::BitVec;
 use datasize::DataSize;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    composition::{Composition, CompositionGetter, PathElem},
+    composition::{Composition, CompositionDataCache, CompositionGetter, PathElem},
     graph::LinkSide,
     group::PartHead,
     utils::{counts::Counts, div_rounding_up, lengths::TotalLength},
@@ -148,11 +148,12 @@ impl CompPrefix {
         search: &Search,
         paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
+        cache: &Mutex<CompositionDataCache>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
-            LinkSide::StartOrEnd => return self.check_comp(search, paths),
+            LinkSide::StartOrEnd => return self.check_comp(search, paths, cache),
         };
         let chunk = &search.graph.chunks[chunk_idx];
 
@@ -238,7 +239,12 @@ impl CompPrefix {
 impl CompPrefix {
     /// Assuming that the [`CompPrefix`] has just finished the composition, check if the resulting
     /// composition satisfies the user's requirements.
-    fn check_comp(&self, search: &Search, paths: &Paths) -> Option<Composition> {
+    fn check_comp(
+        &self,
+        search: &Search,
+        paths: &Paths,
+        cache: &Mutex<CompositionDataCache>,
+    ) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
         if !search.refined_ranges.length.contains(&self.length) {
@@ -280,13 +286,16 @@ impl CompPrefix {
         // Validate the composition by building a `CompositionGetter`.  The checks performed by
         // `CompositionGetter::new` are much stricter and more correct than those we can perform
         // here, so we defer entirely to it to check these candidate compositions for validity.
-        let comp_getter = CompositionGetter::new(&comp, &search.params)?;
-        // Sanity check that the composition is true
-        if search.params.require_truth && !comp_getter.is_true() {
-            panic!(
-                "Generated false composition ({})",
-                comp_getter.call_string()
-            );
+        {
+            let mut cache = cache.lock().unwrap();
+            let comp_getter = CompositionGetter::new(&comp, &search.params, &mut cache)?;
+            // Sanity check that the composition is true
+            if search.params.require_truth && !comp_getter.is_true() {
+                panic!(
+                    "Generated false composition ({})",
+                    comp_getter.call_string()
+                );
+            }
         }
         // Finally, return the comp
         Some(comp)
