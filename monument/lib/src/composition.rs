@@ -3,6 +3,7 @@
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    sync::{Arc, Mutex},
 };
 
 use bellframe::{music::AtRowPositions, Bell, Block, Mask, Row, RowBuf, Stage, Stroke};
@@ -125,10 +126,38 @@ impl<'a> CompositionGetter<'a> {
         params: &'a Parameters,
         cache: &'a mut CompositionDataCache,
     ) -> Option<Self> {
+        let validity_cache = Arc::clone(&cache.get_per_param_cache(params).is_valid);
+        let is_valid = validity_cache.lock().unwrap().get(&composition.id).copied();
+        match is_valid {
+            Some(false) => None, // Known bad; reject
+            Some(true) => {
+                // Known good; construct but skip checks
+                let v = Self::new_inner(composition, params, cache, true);
+                assert!(v.is_some());
+                v
+            }
+            None => {
+                // Unknown; construct without skipping checks and save the result
+                let getter = Self::new_inner(composition, params, cache, false);
+                validity_cache
+                    .lock()
+                    .unwrap()
+                    .insert(composition.id, getter.is_some());
+                getter
+            }
+        }
+    }
+
+    fn new_inner(
+        composition: &'a Composition,
+        params: &'a Parameters,
+        cache: &'a mut CompositionDataCache,
+        skip_checks: bool,
+    ) -> Option<Self> {
         // Do cheap checks before calculating anything.  This is useful because the search
         // algorithm produces tons of too-short compositions, so it's worth validating length
         // quickly and thus rejecting these.
-        if !Self::do_cheap_checks(composition, params) {
+        if !skip_checks && !Self::do_cheap_checks(composition, params) {
             return None;
         }
 
@@ -146,7 +175,7 @@ impl<'a> CompositionGetter<'a> {
             call_map,
         };
 
-        if !getter.do_non_cheap_checks() {
+        if !skip_checks && !getter.do_non_cheap_checks() {
             return None;
         }
 
@@ -634,7 +663,26 @@ impl<'a> CompositionGetter<'a> {
 /// calculated once and then re-used for future queries.
 #[derive(Debug, Default)]
 pub struct CompositionDataCache {
+    per_param_cache: Option<(Parameters, PerParamCache)>,
     music_counts: HashMap<(bellframe::MusicType, CompositionId), AtRowPositions<usize>>,
+}
+
+impl CompositionDataCache {
+    fn get_per_param_cache(&mut self, params: &Parameters) -> &mut PerParamCache {
+        // Create a new empty cache if the params changed
+        let current_cached_params = self.per_param_cache.as_ref().map(|(params, _cache)| params);
+        if current_cached_params != Some(params) {
+            self.per_param_cache = Some((params.clone(), PerParamCache::default()));
+        }
+        // Get the (possibly replaced) cache
+        &mut self.per_param_cache.as_mut().unwrap().1
+    }
+}
+
+#[derive(Debug, Default)]
+struct PerParamCache {
+    // TODO: Find a way of doing this without Arc<Mutex<T>>
+    is_valid: Arc<Mutex<HashMap<CompositionId, bool>>>,
 }
 
 ///////////

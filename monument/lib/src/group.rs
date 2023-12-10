@@ -6,7 +6,7 @@ use gcd::Gcd;
 
 /// A group of [`Row`]s, used to represent part heads.  Currently limited to cyclic groups (in the
 /// mathematical sense of 'cyclic').
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartHeadGroup {
     /// The [`Row`]s which make up the `PartHeadGroup`.  `part_heads[0]` is always rounds.
     ///

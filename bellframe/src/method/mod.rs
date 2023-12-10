@@ -15,7 +15,8 @@ pub const LABEL_LEAD_END: &str = "LE";
 /// locations (by their label), and thus the single lead can be modified to determine the effect of
 /// calls in a general way.  This follows how [CompLib](https://complib.org)'s composition input
 /// works.
-#[derive(Debug, Clone)]
+// TODO: Exclude name in equality test?
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Method {
     pub name: String,
     omit_class: bool, // Set to `true` for methods like Grandsire, who's title omits the class
