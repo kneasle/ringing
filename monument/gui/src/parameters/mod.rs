@@ -1,9 +1,12 @@
 mod gui;
 
-use bellframe::{Mask, PlaceNot, RowBuf, Stage, Stroke};
+use bellframe::{music::AtRowPositions, Mask, PlaceNot, RowBuf, Stage, Stroke};
 use itertools::Itertools;
 use monument::{
-    parameters::{Call, CallDisplayStyle, CallId, Method, OptionalRangeInclusive, SpliceStyle},
+    parameters::{
+        Call, CallDisplayStyle, CallId, IdGenerator, Method, MusicTypeId, MusicTypeVec,
+        OptionalRangeInclusive, SpliceStyle,
+    },
     PartHeadGroup,
 };
 
@@ -11,7 +14,7 @@ use crate::utils::len_range;
 
 #[derive(Debug, Clone)]
 pub struct Parameters {
-    pub inner: monument::parameters::Parameters,
+    inner: monument::parameters::Parameters,
     maybe_unused_methods: Vec<(bool, Method)>,
     maybe_unused_calls: Vec<(bool, Call)>,
 }
@@ -46,6 +49,7 @@ impl Parameters {
         let stage = Stage::MAJOR;
         let cc_lib = bellframe::MethodLib::cc_lib().unwrap();
 
+        // Methods
         let make_method = |title: &str, id: u16| {
             let mut method = cc_lib.get_by_title(title).unwrap();
             method.set_lead_end_label();
@@ -60,6 +64,11 @@ impl Parameters {
                 allowed_courses: vec![Mask::parse_with_stage("1*", stage).unwrap().into()],
             }
         };
+        let maybe_unused_methods = vec![
+            (false, make_method("Cambridge Surprise Major", 0)),
+            (true, make_method("Yorkshire Surprise Major", 1)),
+            (false, make_method("Superlative Surprise Major", 2)),
+        ];
 
         // Calls
         let bob = Call::lead_end_call(CallId(0), PlaceNot::parse("14", stage).unwrap(), "-", -1.8);
@@ -71,6 +80,69 @@ impl Parameters {
         );
         let maybe_unused_calls = vec![(true, bob), (true, single)];
 
+        // Music
+        let mut id_gen = IdGenerator::<MusicTypeId>::starting_at_zero();
+        let mut music_types = MusicTypeVec::new();
+        let mut add_front_back_music_type =
+            |inner: bellframe::MusicType,
+             show_total: bool,
+             show_positions: bool,
+             weight: f32,
+             name: String| {
+                music_types.push(monument::parameters::MusicType {
+                    id: id_gen.next(),
+                    show_total,
+                    show_positions: AtRowPositions::front_and_back(show_positions),
+                    name,
+                    inner,
+                    weights: AtRowPositions::front_and_back(weight),
+                    count_range: OptionalRangeInclusive::OPEN,
+                });
+            };
+        for pattern in ["5678", "8765", "6578"] {
+            add_front_back_music_type(
+                bellframe::MusicType::parse(pattern).unwrap(),
+                false,
+                true,
+                1.0,
+                format!("{pattern}s"),
+            );
+        }
+        for run_length in 4u8..=7 {
+            let show = run_length == 4;
+            add_front_back_music_type(
+                bellframe::MusicType::runs(run_length, stage),
+                show,
+                show,
+                1.0,
+                format!("{run_length}-bell runs"),
+            );
+        }
+        add_front_back_music_type(
+            bellframe::MusicType::combination_5678s_major(),
+            false,
+            false,
+            0.1,
+            "5678 combs".to_owned(),
+        );
+        add_front_back_music_type(
+            bellframe::MusicType::crus(stage),
+            false,
+            false,
+            0.0,
+            "CRUs".to_owned(),
+        );
+        music_types.push(monument::parameters::MusicType {
+            id: id_gen.next(),
+            show_total: true,
+            show_positions: AtRowPositions::BACK,
+            name: "87s".to_owned(),
+            inner: bellframe::MusicType::reversed_tenors_at_back(stage),
+            weights: AtRowPositions::new(0.0, 0.0, -1.0, 0.0),
+            count_range: OptionalRangeInclusive::OPEN,
+        });
+
+        // Construct parameters
         let monument_params = monument::Parameters {
             length: len_range(1250, 1350),
             stage,
@@ -90,17 +162,12 @@ impl Parameters {
             part_head_group: PartHeadGroup::one_part(stage),
             course_weights: vec![],
 
-            music_types: index_vec::index_vec![],
+            music_types,
             start_stroke: Stroke::Hand,
         };
-
         crate::Parameters {
             inner: monument_params,
-            maybe_unused_methods: vec![
-                (true, make_method("Cambridge Surprise Major", 0)),
-                (true, make_method("Yorkshire Surprise Major", 1)),
-                (false, make_method("Superlative Surprise Major", 2)),
-            ],
+            maybe_unused_methods,
             maybe_unused_calls,
         }
     }
