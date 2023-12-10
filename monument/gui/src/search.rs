@@ -53,15 +53,19 @@ fn worker_thread(
 ) {
     while let Ok((project, params, ctx)) = search_channel_rx.recv() {
         println!("Got new query!");
+        let project_guard = project.lock().unwrap();
         let search = monument::Search::new(params.to_monument(), monument::Config::default())
             .unwrap()
-            .id_generator(project.lock().unwrap().comp_id_generator());
+            .id_generator(project_guard.comp_id_generator());
+        let comp_cache = project_guard.comp_cache();
+        drop(project_guard); // Release the mutex before the search runs
         search.run(
             |update| {
                 project.lock().unwrap().recieve_update(update);
                 ctx.request_repaint();
             },
             &abort_flag,
+            &comp_cache,
         );
         println!("Finished query, waiting for next one");
     }

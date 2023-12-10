@@ -11,7 +11,7 @@ use std::{
     ops::RangeInclusive,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
 };
 
@@ -19,7 +19,7 @@ use bellframe::Stage;
 use itertools::Itertools;
 
 use crate::{
-    composition::CompositionId,
+    composition::{CompositionDataCache, CompositionId},
     parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     utils::IdGenerator,
@@ -91,12 +91,17 @@ impl Search {
 
     /// Runs the search, **blocking the current thread** until either the search is completed or
     /// is aborted
-    pub fn run(&self, update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
+    pub fn run(
+        &self,
+        update_fn: impl FnMut(Update),
+        abort_flag: &AtomicBool,
+        comp_data_cache: &Mutex<CompositionDataCache>,
+    ) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
         abort_flag.store(false, Ordering::SeqCst);
-        best_first::search(self, update_fn, abort_flag);
+        best_first::search(self, update_fn, abort_flag, comp_data_cache);
     }
 }
 

@@ -17,13 +17,13 @@ use std::{
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::{Duration, Instant},
 };
 
 use log::LevelFilter;
-use monument::{Composition, CompositionGetter, Search};
+use monument::{composition::CompositionDataCache, Composition, CompositionGetter, Search};
 use ordered_float::OrderedFloat;
 use ringing_utils::PrettyDuration;
 use simple_logger::SimpleLogger;
@@ -76,8 +76,10 @@ pub fn run(
     debug_print!(Search, search);
 
     // Build all the data structures for the search
+    let comp_cache = Arc::new(Mutex::new(CompositionDataCache::default()));
     let comp_printer = CompositionPrinter::new(
         search.clone(),
+        comp_cache.clone(),
         toml_file.should_print_atw(),
         !options.dont_display_comp_numbers,
     );
@@ -109,6 +111,7 @@ pub fn run(
             }
         },
         &abort_flag,
+        &comp_cache,
     );
 
     // Once the search has completed, sort the compositions and return
@@ -117,14 +120,16 @@ pub fn run(
         let rounded = (f / FACTOR).round() * FACTOR;
         OrderedFloat(rounded)
     }
+    let mut cache_guard = comp_cache.lock().unwrap();
     comps.sort_by_cached_key(|(comp, _generation_index)| {
-        let comp = CompositionGetter::new(comp, &params).unwrap();
+        let comp = CompositionGetter::new(comp, &params, &mut cache_guard).unwrap();
         (
             rounded_float(comp.music_score()),
             rounded_float(comp.score_per_row()),
             comp.call_string(),
         )
     });
+    drop(cache_guard);
     Ok(Some(SearchResult {
         comps,
         comp_printer,

@@ -96,10 +96,11 @@ impl From<CompositionId> for u32 {
 
 /// Struct which combines a [`Composition`] with a set of [`Parameters`] from which the extra data
 /// is taken.
-#[derive(Debug, Clone)]
-pub struct CompositionGetter<'c, 'p> {
-    composition: &'c Composition,
-    params: &'p Parameters,
+#[derive(Debug)]
+pub struct CompositionGetter<'a> {
+    composition: &'a Composition,
+    params: &'a Parameters,
+    cache: &'a mut CompositionDataCache,
 
     method_map: HashMap<MethodId, MethodData>,
     call_map: HashMap<CallId, CallIdx>,
@@ -116,10 +117,14 @@ struct MethodData {
     lead_head_weights: Vec<(Mask, f32)>,
 }
 
-impl<'c, 'p> CompositionGetter<'c, 'p> {
+impl<'a> CompositionGetter<'a> {
     /* CONSTRUCTION/VALIDATION */
 
-    pub fn new(composition: &'c Composition, params: &'p Parameters) -> Option<Self> {
+    pub fn new(
+        composition: &'a Composition,
+        params: &'a Parameters,
+        cache: &'a mut CompositionDataCache,
+    ) -> Option<Self> {
         // Do cheap checks before calculating anything.  This is useful because the search
         // algorithm produces tons of too-short compositions, so it's worth validating length
         // quickly and thus rejecting these.
@@ -133,6 +138,7 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
         let getter = CompositionGetter {
             composition,
             params,
+            cache,
 
             block: Self::block(composition, params, &method_map, &call_map),
             valid_end_labels: params.valid_end_labels(),
@@ -618,6 +624,17 @@ impl<'c, 'p> CompositionGetter<'c, 'p> {
     fn get_call(&self, id: CallId) -> &Call {
         &self.params.calls[self.call_map[&id]]
     }
+}
+
+/////////////
+// CACHING //
+/////////////
+
+/// Struct which caches expensive properties about [`Composition`]s, so that these values will be
+/// calculated once and then re-used for future queries.
+#[derive(Debug, Default)]
+pub struct CompositionDataCache {
+    music_counts: HashMap<(bellframe::MusicType, CompositionId), AtRowPositions<usize>>,
 }
 
 ///////////
