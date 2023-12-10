@@ -56,11 +56,11 @@ impl eframe::App for MonumentApp {
             })
             .inner;
 
-        egui::SidePanel::right("Comps panel")
-            .default_width(300.0)
-            .show(ctx, |ui| {
-                ui.heading("Composition display");
-            });
+        // egui::SidePanel::right("Comps panel")
+        //     .default_width(300.0)
+        //     .show(ctx, |ui| {
+        //         ui.heading("Composition display");
+        //     });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Compositions");

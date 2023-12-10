@@ -117,7 +117,7 @@ impl Project {
             .compositions
             .iter()
             .filter_map(|comp| {
-                let getter = CompositionGetter::new(comp, params, &mut cache_guard)?;
+                let mut getter = CompositionGetter::new(comp, params, &mut cache_guard)?;
                 Some((getter.score_per_row(), comp))
             })
             .collect_vec();
@@ -147,7 +147,7 @@ impl Project {
 
                 /* Compositions */
                 for (_score, comp) in comps_to_display {
-                    let g = CompositionGetter::new(comp, params, &mut cache_guard).unwrap();
+                    let mut g = CompositionGetter::new(comp, params, &mut cache_guard).unwrap();
 
                     ui.label(g.length().to_string());
 

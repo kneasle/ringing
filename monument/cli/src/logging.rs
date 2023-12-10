@@ -286,7 +286,7 @@ impl CompositionPrinter {
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
         let mut cache = self.cache.lock().unwrap();
-        let comp = CompositionGetter::new(comp, self.search.parameters(), &mut cache).unwrap();
+        let mut comp = CompositionGetter::new(comp, self.search.parameters(), &mut cache).unwrap();
 
         let mut s = String::new();
         // Comp index

@@ -122,11 +122,11 @@ pub fn run(
     }
     let mut cache_guard = comp_cache.lock().unwrap();
     comps.sort_by_cached_key(|(comp, _generation_index)| {
-        let comp = CompositionGetter::new(comp, &params, &mut cache_guard).unwrap();
+        let mut getter = CompositionGetter::new(comp, &params, &mut cache_guard).unwrap();
         (
-            rounded_float(comp.music_score()),
-            rounded_float(comp.score_per_row()),
-            comp.call_string(),
+            rounded_float(getter.music_score()),
+            rounded_float(getter.score_per_row()),
+            getter.call_string(),
         )
     });
     drop(cache_guard);
