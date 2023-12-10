@@ -24,7 +24,7 @@ use serde::Deserialize;
 
 use crate::{
     calls::{BaseCalls, CustomCall},
-    music::{BaseMusic, MusicDisplay, TomlMusic},
+    music::{BaseMusic, TomlMusic},
     utils::OptRangeInclusive,
 };
 
@@ -170,7 +170,7 @@ impl TomlFile {
     }
 
     /// Build a set of [`Parameters`] from this `TomlFile`
-    pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<(Parameters, Vec<MusicDisplay>)> {
+    pub fn to_params(&self, toml_path: &Path) -> anyhow::Result<Parameters> {
         log::debug!("Generating params");
 
         // Error on deprecated paramaters
@@ -199,7 +199,6 @@ impl TomlFile {
                 anyhow!("No methods specified.  Try something like `method = \"Bristol Surprise Major\"`.")
             })?;
 
-        let (music_types, music_displays) = self.music(toml_path, stage)?;
         let part_head = parse_row("part head", &self.part_head, stage)?;
 
         let calling_bell = match self.calling_bell {
@@ -232,10 +231,10 @@ impl TomlFile {
             end_row: parse_row("end row", &self.end_row, stage)?,
             part_head_group: PartHeadGroup::new(&part_head),
             course_weights: self.course_weights(stage)?,
-            music_types,
+            music_types: self.music(toml_path, stage)?,
             start_stroke: self.start_stroke,
         };
-        Ok((params, music_displays))
+        Ok(params)
     }
 
     pub fn should_print_atw(&self) -> bool {
@@ -306,11 +305,7 @@ impl TomlFile {
         ))
     }
 
-    fn music(
-        &self,
-        toml_path: &Path,
-        stage: Stage,
-    ) -> anyhow::Result<(MusicTypeVec<MusicType>, Vec<MusicDisplay>)> {
+    fn music(&self, toml_path: &Path, stage: Stage) -> anyhow::Result<MusicTypeVec<MusicType>> {
         // Load TOML for the music file
         let music_file_str = match &self.music_file {
             Some(relative_music_path) => {

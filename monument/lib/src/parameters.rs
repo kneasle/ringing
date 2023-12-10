@@ -2,13 +2,16 @@
 
 use std::{
     collections::HashSet,
+    fmt::Write,
     marker::PhantomData,
     ops::{Deref, Range, RangeInclusive},
     sync::atomic::AtomicBool,
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END,
+    music::{AtRowPositions, RowPosition},
+    Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
@@ -331,6 +334,13 @@ impl Parameters {
 
     pub fn get_music_type(&self, id: MusicTypeId) -> &MusicType {
         self.music_types.iter().find(|mt| mt.id == id).unwrap()
+    }
+
+    pub fn music_types_to_show(&self) -> Vec<(MusicTypeIdx, &MusicType)> {
+        self.music_types
+            .iter_enumerated()
+            .filter(|(_idx, mt)| mt.should_show())
+            .collect_vec()
     }
 }
 
@@ -730,29 +740,95 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 pub struct MusicType {
     pub id: MusicTypeId,
 
+    pub show_total: bool,
+    pub show_positions: AtRowPositions<bool>,
+    pub name: String,
+
     pub inner: bellframe::MusicType,
-    pub optional_weights: AtRowPositions<Option<f32>>,
+    pub weights: AtRowPositions<f32>,
     pub count_range: OptionalRangeInclusive,
     // TODO: Count ranges for front/internal/back/wrap
 }
 
 impl MusicType {
     pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
-        (counts.map(|x| x as f32) * self.weights()).total()
+        (counts.map(|x| x as f32) * self.weights).total()
     }
 
     /// Return the total counts, only from [`RowPosition`](bellframe::music::RowPosition)s for which
     /// `Self::optional_weights` are not [`None`].
     pub fn masked_total(&self, counts: AtRowPositions<usize>) -> usize {
-        counts.masked(!self.mask(), 0).total()
+        counts.masked(!self.show_positions, 0).total()
     }
 
-    pub fn weights(&self) -> AtRowPositions<f32> {
-        self.optional_weights.map(|v| v.unwrap_or(0.0))
+    pub fn should_show(&self) -> bool {
+        self.show_total || self.show_positions.any()
     }
 
-    pub fn mask(&self) -> AtRowPositions<bool> {
-        self.optional_weights.map(|v| v.is_some())
+    /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
+    /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
+    pub fn col_width(&self, stage: Stage) -> usize {
+        // We always pad the counts as much as required, so displaying a set of 0s results in a
+        // maximum-width string (i.e. all output strings are the same length)
+        let max_count_width = self.display_counts(AtRowPositions::ZERO, stage).len();
+        max_count_width.max(self.name.len())
+    }
+
+    /// Generate a compact string representing a given set of music counts
+    pub fn display_counts(&self, counts: AtRowPositions<usize>, stage: Stage) -> String {
+        let max_counts = self.max_possible_count(stage);
+        let num_items_to_show: usize = self.show_positions.map(|b| b as usize).total();
+
+        let mut s = String::new();
+        // Add total count
+        if self.show_total || num_items_to_show == 1 {
+            Self::write_music_count(
+                &mut s,
+                self.masked_total(counts),
+                self.masked_total(max_counts),
+            );
+        }
+        // Add specific counts (if there are any)
+        if num_items_to_show > 1 {
+            // Add brackets if there's a total score
+            if self.show_total {
+                s.push_str(" (");
+            }
+            // Add every front/internal/back count for which we have a source
+            let mut is_first_count = true;
+            for (position, position_char) in [
+                (RowPosition::Front, 'f'),
+                (RowPosition::Internal, 'i'),
+                (RowPosition::Back, 'b'),
+                (RowPosition::Wrap, 'w'),
+            ] {
+                if !self.show_positions.get(position) {
+                    continue; // Skip positions we're not showing
+                }
+                // Add separating comma
+                if !is_first_count {
+                    s.push(' ');
+                }
+                is_first_count = false;
+                // Add the number
+                Self::write_music_count(&mut s, *counts.get(position), *max_counts.get(position));
+                s.push(position_char);
+            }
+            if self.show_total {
+                s.push(')'); // Add closing brackets if there's a total score
+            }
+        }
+
+        s
+    }
+
+    /// Prints the width of the largest count possible for a [`MusicType`] (assuming that rows can't be
+    /// repeated).
+    fn write_music_count(s: &mut String, count: usize, max_possible_count: usize) {
+        // `min(4)` because we don't expect more than 9999 instances of a music type, even
+        // if more are theoretically possible
+        let max_count_width = max_possible_count.to_string().len().min(4);
+        write!(s, "{:>width$}", count, width = max_count_width).unwrap();
     }
 }
 
