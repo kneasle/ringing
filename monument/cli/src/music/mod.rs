@@ -2,10 +2,7 @@ use bellframe::{
     music::{AtRowPositions, Pattern, RowPosition},
     Stage,
 };
-use monument::{
-    parameters::{MusicType, MusicTypeId, MusicTypeVec},
-    utils::IdGenerator,
-};
+use monument::parameters::{MusicType, MusicTypeVec};
 use serde::Deserialize;
 
 use crate::utils::OptRangeInclusive;
@@ -171,14 +168,12 @@ pub fn generate_music(
 #[derive(Debug)]
 struct MusicTypeFactory {
     music_types: MusicTypeVec<MusicType>,
-    id_gen: IdGenerator<MusicTypeId>,
 }
 
 impl MusicTypeFactory {
     fn new() -> Self {
         Self {
             music_types: MusicTypeVec::new(),
-            id_gen: IdGenerator::starting_at_zero(),
         }
     }
 
@@ -193,8 +188,7 @@ impl MusicTypeFactory {
         stage: Stage,
     ) -> anyhow::Result<()> {
         for s in toml_musics {
-            self.music_types
-                .extend(s.to_music_types(&mut self.id_gen, stage)?);
+            self.music_types.extend(s.to_music_types(stage)?);
         }
         Ok(())
     }
@@ -306,43 +300,29 @@ impl From<StrokeSet> for bellframe::StrokeSet {
 
 impl TomlMusic {
     /// Generates a [`MusicType`] representing `self`.
-    fn to_music_types(
-        &self,
-        id_gen: &mut IdGenerator<MusicTypeId>,
-        stage: Stage,
-    ) -> anyhow::Result<Vec<MusicType>> {
+    fn to_music_types(&self, stage: Stage) -> anyhow::Result<Vec<MusicType>> {
         // This function just delegates the work to one of `music_type_runs`,
         // `music_type_patterns` or `music_type_preset`.
 
         use std::slice::from_ref;
         match self {
             Self::RunLength { length, common } => {
-                Ok(music_type_runs(from_ref(length), common, id_gen, stage))
+                Ok(music_type_runs(from_ref(length), common, stage))
             }
-            Self::RunLengths { lengths, common } => {
-                Ok(music_type_runs(lengths, common, id_gen, stage))
-            }
+            Self::RunLengths { lengths, common } => Ok(music_type_runs(lengths, common, stage)),
             Self::Pattern { pattern, common } => {
-                music_type_patterns(from_ref(pattern), common, id_gen, stage)
+                music_type_patterns(from_ref(pattern), common, stage)
             }
-            Self::Patterns { patterns, common } => {
-                music_type_patterns(patterns, common, id_gen, stage)
-            }
-            Self::Preset { preset, common } => music_type_preset(*preset, common, id_gen, stage),
+            Self::Patterns { patterns, common } => music_type_patterns(patterns, common, stage),
+            Self::Preset { preset, common } => music_type_preset(*preset, common, stage),
         }
     }
 }
 
-fn music_type_runs(
-    lengths: &[u8],
-    common: &MusicCommon,
-    id_gen: &mut IdGenerator<MusicTypeId>,
-    stage: Stage,
-) -> Vec<MusicType> {
+fn music_type_runs(lengths: &[u8], common: &MusicCommon, stage: Stage) -> Vec<MusicType> {
     let mut music_types = Vec::new();
     for &len in lengths {
         music_types.push(new_music_type(
-            id_gen.next(),
             format!("{len}-bell runs"),
             bellframe::MusicType::runs(len, stage),
             common,
@@ -355,7 +335,6 @@ fn music_type_runs(
 fn music_type_patterns(
     pattern_strings: &[String],
     common: &MusicCommon,
-    id_gen: &mut IdGenerator<MusicTypeId>,
     stage: Stage,
 ) -> anyhow::Result<Vec<MusicType>> {
     let count_range = monument::parameters::OptionalRangeInclusive::from(common.count_range);
@@ -370,7 +349,6 @@ fn music_type_patterns(
         // If this is being shown but no custom name is given, we display each pattern separately
         for pattern in &patterns {
             music_types.push(new_music_type(
-                id_gen.next(),
                 format!("{pattern}s"),
                 bellframe::MusicType::from(pattern.clone()),
                 common,
@@ -382,7 +360,6 @@ fn music_type_patterns(
         // If the user gave a custom name or is not showing this type at all, we combine all the
         // patterns into one [`MusicType`]
         let mut music_type = new_music_type(
-            id_gen.next(),
             String::new(),
             bellframe::MusicType::new(patterns),
             common,
@@ -404,7 +381,6 @@ fn music_type_patterns(
 fn music_type_preset(
     preset: MusicPreset,
     common: &MusicCommon,
-    id_gen: &mut IdGenerator<MusicTypeId>,
     stage: Stage,
 ) -> anyhow::Result<Vec<MusicType>> {
     // Determine the pattern types
@@ -455,7 +431,6 @@ fn music_type_preset(
     }
     // Construct a music type
     Ok(vec![new_music_type(
-        id_gen.next(),
         default_name.to_owned(),
         music_type,
         &common,
@@ -464,7 +439,6 @@ fn music_type_preset(
 }
 
 fn new_music_type(
-    id: MusicTypeId,
     default_name: String,
     music_type: bellframe::MusicType,
     common: &MusicCommon,
@@ -474,7 +448,6 @@ fn new_music_type(
     let num_specified_weights: usize = optional_weights.map(|v| v.is_some() as usize).total();
     // Create music types, etc.
     MusicType {
-        id,
         inner: music_type.at_stroke(common.strokes.into()),
         weights: optional_weights.map(|x| x.unwrap_or(0.0)),
         show_positions: optional_weights.map(|x| x.is_some() && common.should_show()),
