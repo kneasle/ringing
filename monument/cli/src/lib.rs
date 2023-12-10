@@ -66,7 +66,7 @@ pub fn run(
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     let leak_search_memory = env == Environment::Cli;
     // Convert the `TomlFile` into a `Layout` and other data required for running a search
-    let (params, music_displays) = toml_file.to_params(toml_path)?;
+    let params = toml_file.to_params(toml_path)?;
     debug_print!(Params, params);
     // Build the search
     let search = Arc::new(Search::new(
@@ -77,7 +77,6 @@ pub fn run(
 
     // Build all the data structures for the search
     let comp_printer = CompositionPrinter::new(
-        music_displays,
         search.clone(),
         toml_file.should_print_atw(),
         !options.dont_display_comp_numbers,

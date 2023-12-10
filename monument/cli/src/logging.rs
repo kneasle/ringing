@@ -9,8 +9,6 @@ use log::log_enabled;
 use monument::{Composition, CompositionGetter, Progress, Search, Update};
 use ringing_utils::BigNumInt;
 
-use crate::music::MusicDisplay;
-
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
 /// search progresses.
 pub struct SingleLineProgressLogger {
@@ -127,7 +125,6 @@ impl SingleLineProgressLogger {
 #[derive(Debug, Clone)]
 pub struct CompositionPrinter {
     search: Arc<Search>,
-    music_displays: Vec<MusicDisplay>,
     /// Counter which records how many compositions have been printed so far
     comps_printed: usize,
 
@@ -149,17 +146,10 @@ pub struct CompositionPrinter {
     print_atw: bool,
     /// If a part head should be displayed, then what's its width
     part_head_width: Option<usize>,
-    /// The column widths of every `MusicDisplay` in the output
-    music_widths: Vec<usize>,
 }
 
 impl CompositionPrinter {
-    pub fn new(
-        music_displays: Vec<MusicDisplay>,
-        search: Arc<Search>,
-        print_atw: bool,
-        print_comp_widths: bool,
-    ) -> Self {
+    pub fn new(search: Arc<Search>, print_atw: bool, print_comp_widths: bool) -> Self {
         Self {
             comp_count_width: print_comp_widths
                 .then_some(search.parameters().num_comps.to_string().len()),
@@ -178,13 +168,8 @@ impl CompositionPrinter {
             print_atw,
             part_head_width: (search.num_parts() > 2)
                 .then(|| search.effective_part_head_stage().num_bells()),
-            music_widths: music_displays
-                .iter()
-                .map(|d| d.col_width(search.parameters()))
-                .collect_vec(),
 
             search,
-            music_displays,
         }
     }
 
@@ -270,13 +255,15 @@ impl CompositionPrinter {
             s.push('|');
         }
         // Music
+        let params = self.search.parameters();
+        let music_types_to_display = params.music_types_to_show();
         s.push_str("  music  ");
-        if !self.music_displays.is_empty() {
+        if !music_types_to_display.is_empty() {
             s.push(' ');
         }
-        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
+        for (_idx, music_type) in music_types_to_display {
             s.push_str("  ");
-            write_centered_text(&mut s, &music_display.name, *col_width);
+            write_centered_text(&mut s, &music_type.name, music_type.col_width(params.stage));
             s.push(' ');
         }
         // Everything else
@@ -317,17 +304,19 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
+        let params = self.search.parameters();
+        let music_types_to_show = params.music_types_to_show();
         let (music_counts, music_score) = comp.music_counts_and_score(); // Only call `music_counts` once!
         write!(s, " {:>7.2} ", music_score).unwrap();
-        if !self.music_displays.is_empty() {
+        if !music_types_to_show.is_empty() {
             s.push(':');
         }
-        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
+        for (idx, music_type) in music_types_to_show {
             s.push_str("  ");
             write_left_centered_text(
                 &mut s,
-                &music_display.display_counts(&music_counts, self.search.parameters()),
-                *col_width,
+                &music_type.display_counts(music_counts[idx], params.stage),
+                music_type.col_width(params.stage),
             );
             s.push(' ');
         }

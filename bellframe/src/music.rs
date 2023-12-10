@@ -478,6 +478,14 @@ impl<T> AtRowPositions<T> {
         }
     }
 
+    pub fn as_array(self) -> [T; 4] {
+        [self.front, self.internal, self.back, self.wrap]
+    }
+
+    pub fn as_ref_array(&self) -> [&T; 4] {
+        [&self.front, &self.internal, &self.back, &self.wrap]
+    }
+
     pub fn total<V>(&self) -> V
     where
         V: std::iter::Sum<T>,
@@ -493,6 +501,16 @@ impl<T> AtRowPositions<T> {
             back: f(self.back),
             wrap: f(self.wrap),
         }
+    }
+}
+
+impl AtRowPositions<bool> {
+    pub fn any(self) -> bool {
+        self.as_array().into_iter().any(|x| x)
+    }
+
+    pub fn all(self) -> bool {
+        self.as_array().into_iter().all(|x| x)
     }
 }
 
