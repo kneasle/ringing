@@ -19,8 +19,10 @@ use bellframe::Stage;
 use itertools::Itertools;
 
 use crate::{
+    composition::CompositionId,
     parameters::{MethodId, MusicTypeId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
+    utils::IdGenerator,
     Composition,
 };
 
@@ -37,11 +39,13 @@ use self::atw::AtwTable;
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    params: Arc<Parameters>,
     config: Config,
+    params: Arc<Parameters>,
+    id_generator: Arc<IdGenerator<CompositionId>>,
+
+    refined_ranges: RefinedRanges,
     graph: self::graph::Graph,
     atw_table: Arc<AtwTable>,
-    refined_ranges: RefinedRanges,
 }
 
 impl Search {
@@ -70,12 +74,19 @@ impl Search {
         drop(source_graph);
 
         Ok(Search {
-            params: Arc::new(params),
-            atw_table: Arc::new(atw_table),
             config,
+            params: Arc::new(params),
+            id_generator: Arc::new(IdGenerator::starting_at_zero()),
+
             refined_ranges,
             graph,
+            atw_table: Arc::new(atw_table),
         })
+    }
+
+    pub fn id_generator(mut self, gen: Arc<IdGenerator<CompositionId>>) -> Self {
+        self.id_generator = gen;
+        self
     }
 
     /// Runs the search, **blocking the current thread** until either the search is completed or

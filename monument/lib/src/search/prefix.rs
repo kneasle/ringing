@@ -265,9 +265,11 @@ impl CompPrefix {
         // Now we know the composition is valid, construct it and return
         let path = self.flattened_path(search, paths);
         let comp = Composition {
+            id: search.id_generator.next(),
             stage: search.params.stage,
             start_stroke: search.params.start_stroke,
             path,
+
             part_head: search
                 .params
                 .part_head_group

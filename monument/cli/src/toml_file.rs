@@ -14,10 +14,11 @@ use index_vec::index_vec;
 use itertools::Itertools;
 use monument::{
     parameters::{
-        BaseCallType, CallDisplayStyle, CallId, CallVec, IdGenerator, MethodId, MethodVec,
-        MusicType, MusicTypeVec, OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT,
+        BaseCallType, CallDisplayStyle, CallId, CallVec, MethodId, MethodVec, MusicType,
+        MusicTypeVec, OptionalRangeInclusive, Parameters, DEFAULT_BOB_WEIGHT,
         DEFAULT_SINGLE_WEIGHT,
     },
+    utils::IdGenerator,
     Config, PartHeadGroup,
 };
 use serde::Deserialize;
@@ -417,7 +418,7 @@ impl TomlFile {
 
         /* BUILD METHODS */
 
-        let mut id_gen = IdGenerator::<MethodId>::starting_at_zero();
+        let id_gen = IdGenerator::<MethodId>::starting_at_zero();
         let mut methods = MethodVec::new();
         // TODO: Add dummy unused method, to make sure that Monument handles them correctly
         for (mut method, common) in parsed_methods {
