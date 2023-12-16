@@ -50,7 +50,7 @@ mod prove_length;
 mod search;
 pub mod utils;
 
-pub use composition::{Composition, CompositionGetter};
+pub use composition::Composition;
 pub use error::{Error, Result};
 pub use group::{PartHead, PartHeadGroup, PhRotation};
 pub use parameters::Parameters;

@@ -10,9 +10,7 @@ use bellframe::row::ShortRow;
 use colored::Colorize;
 use itertools::Itertools;
 use log::log_enabled;
-use monument::{
-    composition::CompositionDataCache, Composition, CompositionGetter, Progress, Search, Update,
-};
+use monument::{composition::CompositionCache, Composition, Progress, Search, Update};
 use ringing_utils::BigNumInt;
 
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
@@ -131,7 +129,7 @@ impl SingleLineProgressLogger {
 #[derive(Debug, Clone)]
 pub struct CompositionPrinter {
     search: Arc<Search>,
-    cache: Arc<Mutex<CompositionDataCache>>,
+    cache: Arc<Mutex<CompositionCache>>,
     /// Counter which records how many compositions have been printed so far
     comps_printed: usize,
 
@@ -158,7 +156,7 @@ pub struct CompositionPrinter {
 impl CompositionPrinter {
     pub fn new(
         search: Arc<Search>,
-        cache: Arc<Mutex<CompositionDataCache>>,
+        cache: Arc<Mutex<CompositionCache>>,
         print_atw: bool,
         print_comp_widths: bool,
     ) -> Self {
@@ -286,7 +284,8 @@ impl CompositionPrinter {
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
         let mut cache = self.cache.lock().unwrap();
-        let mut comp = CompositionGetter::new(comp, self.search.parameters(), &mut cache).unwrap();
+        let cache_with_params = cache.with_params(&self.search.parameters());
+        let comp = cache_with_params.get_comp_values(comp).unwrap();
 
         let mut s = String::new();
         // Comp index
@@ -320,8 +319,8 @@ impl CompositionPrinter {
         // Music
         let params = self.search.parameters();
         let music_types_to_show = params.music_types_to_show();
-        let (music_counts, music_score) = comp.music_counts_and_score(); // Only call `music_counts` once!
-        write!(s, " {:>7.2} ", music_score).unwrap();
+        let music_counts = comp.music_counts();
+        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
         if !music_types_to_show.is_empty() {
             s.push(':');
         }

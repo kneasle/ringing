@@ -19,7 +19,7 @@ use bellframe::Stage;
 use itertools::Itertools;
 
 use crate::{
-    composition::{CompositionDataCache, CompositionId},
+    composition::{CompositionCache, CompositionId},
     parameters::{MethodId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
     utils::IdGenerator,
@@ -95,7 +95,7 @@ impl Search {
         &self,
         update_fn: impl FnMut(Update),
         abort_flag: &AtomicBool,
-        comp_data_cache: &Mutex<CompositionDataCache>,
+        comp_data_cache: &Mutex<CompositionCache>,
     ) {
         // Make sure that `abort_flag` starts as false (so the search doesn't abort immediately).
         // We want this to be sequentially consistent to make sure that the worker threads don't
