@@ -5,7 +5,7 @@ use datasize::DataSize;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    composition::{Composition, CompositionDataCache, CompositionGetter, PathElem},
+    composition::{Composition, CompositionCache, PathElem},
     graph::LinkSide,
     group::PartHead,
     utils::{counts::Counts, div_rounding_up, lengths::TotalLength},
@@ -148,7 +148,7 @@ impl CompPrefix {
         search: &Search,
         paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
-        cache: &Mutex<CompositionDataCache>,
+        cache: &Mutex<CompositionCache>,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
@@ -243,7 +243,7 @@ impl CompPrefix {
         &self,
         search: &Search,
         paths: &Paths,
-        cache: &Mutex<CompositionDataCache>,
+        cache: &Mutex<CompositionCache>,
     ) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
@@ -268,37 +268,26 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's parameters */
 
+        let mut binding = cache.lock().unwrap();
+        let cache = binding.with_params(&search.params);
+
         // Now we know the composition is valid, construct it and return
         let path = self.flattened_path(search, paths);
-        let comp = Composition {
-            id: search.id_generator.next(),
-            stage: search.params.stage,
-            start_stroke: search.params.start_stroke,
-            path,
-
-            part_head: search
-                .params
-                .part_head_group
-                .get_row(self.part_head)
-                .to_owned(),
-            length: self.length,
-        };
+        let composition =
+            Composition::new(search.id_generator.next(), path, self.part_head, &cache);
         // Validate the composition by building a `CompositionGetter`.  The checks performed by
         // `CompositionGetter::new` are much stricter and more correct than those we can perform
         // here, so we defer entirely to it to check these candidate compositions for validity.
-        {
-            let mut cache = cache.lock().unwrap();
-            let comp_getter = CompositionGetter::new(&comp, &search.params, &mut cache)?;
-            // Sanity check that the composition is true
-            if search.params.require_truth && !comp_getter.is_true() {
-                panic!(
-                    "Generated false composition ({})",
-                    comp_getter.call_string()
-                );
-            }
+        let comp_values = cache.get_comp_values(&composition)?;
+        // Sanity check that the composition is true
+        if search.params.require_truth && !comp_values.is_true() {
+            panic!(
+                "Generated false composition ({})",
+                comp_values.call_string()
+            );
         }
         // Finally, return the comp
-        Some(comp)
+        Some(composition)
     }
 
     /// Create a sequence of [`ChunkId`]/[`LinkId`]s by traversing the [`Graph`] following the

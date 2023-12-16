@@ -9,7 +9,7 @@ use std::{
 use datasize::DataSize;
 use ringing_utils::BigNumInt;
 
-use crate::{composition::CompositionDataCache, utils::lengths::TotalLength};
+use crate::{composition::CompositionCache, utils::lengths::TotalLength};
 
 use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
@@ -23,7 +23,7 @@ pub(crate) fn search(
     search: &Search,
     mut update_fn: impl FnMut(Update),
     abort_flag: &AtomicBool,
-    cache: &Mutex<CompositionDataCache>,
+    cache: &Mutex<CompositionCache>,
 ) {
     let mem_limit = search
         .config

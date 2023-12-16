@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use eframe::egui;
 use itertools::Itertools;
 use monument::{
-    composition::{CompositionDataCache, CompositionId},
+    composition::{CompositionCache, CompositionId},
     utils::IdGenerator,
     Composition, CompositionGetter,
 };
@@ -19,7 +19,7 @@ pub struct Project {
     params: crate::Parameters,
     compositions: Vec<Composition>,
 
-    comp_cache: Arc<Mutex<CompositionDataCache>>,
+    comp_cache: Arc<Mutex<CompositionCache>>,
     comp_id_generator: Arc<IdGenerator<CompositionId>>,
     search_progress: Option<monument::Progress>,
 }
@@ -173,7 +173,7 @@ impl Project {
     // HELPERS //
     /////////////
 
-    pub fn comp_cache(&self) -> Arc<Mutex<CompositionDataCache>> {
+    pub fn comp_cache(&self) -> Arc<Mutex<CompositionCache>> {
         self.comp_cache.clone()
     }
 
@@ -205,7 +205,7 @@ impl Default for Project {
             params: crate::Parameters::yorkshire_s8_qps(),
             compositions: vec![],
 
-            comp_cache: Arc::new(Mutex::new(CompositionDataCache::default())),
+            comp_cache: Arc::new(Mutex::new(CompositionCache::default())),
             comp_id_generator: Arc::new(IdGenerator::starting_at_zero()),
             search_progress: None,
         }
