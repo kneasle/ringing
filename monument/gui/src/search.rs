@@ -65,7 +65,6 @@ fn worker_thread(
                 ctx.request_repaint();
             },
             &abort_flag,
-            &comp_cache,
         );
         println!("Finished query, waiting for next one");
     }

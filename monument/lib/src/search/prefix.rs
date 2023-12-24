@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref, sync::Mutex};
+use std::{cmp::Ordering, collections::BinaryHeap, ops::Deref};
 
 use bit_vec::BitVec;
 use datasize::DataSize;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    composition::{Composition, CompositionCache, PathElem},
+    composition::{Composition, ParamsData, PathElem},
     graph::LinkSide,
     group::PartHead,
     utils::{counts::Counts, div_rounding_up, lengths::TotalLength},
@@ -148,12 +148,12 @@ impl CompPrefix {
         search: &Search,
         paths: &mut Paths,
         frontier: &mut BinaryHeap<Self>,
-        cache: &Mutex<CompositionCache>,
+        param_data: &ParamsData,
     ) -> Option<Composition> {
         // Determine the chunk being expanded (or if it's an end, complete the composition)
         let chunk_idx = match self.next_link_side {
             LinkSide::Chunk(chunk_idx) => chunk_idx,
-            LinkSide::StartOrEnd => return self.check_comp(search, paths, cache),
+            LinkSide::StartOrEnd => return self.check_comp(search, paths, param_data),
         };
         let chunk = &search.graph.chunks[chunk_idx];
 
@@ -243,7 +243,7 @@ impl CompPrefix {
         &self,
         search: &Search,
         paths: &Paths,
-        cache: &Mutex<CompositionCache>,
+        param_data: &ParamsData,
     ) -> Option<Composition> {
         assert!(self.next_link_side.is_start_or_end());
 
@@ -268,17 +268,14 @@ impl CompPrefix {
         /* At this point, all checks on the composition have passed and we know it satisfies the
          * user's parameters */
 
-        let mut binding = cache.lock().unwrap();
-        let cache = binding.with_params(&search.params);
-
         // Now we know the composition is valid, construct it and return
         let path = self.flattened_path(search, paths);
         let composition =
-            Composition::new(search.id_generator.next(), path, self.part_head, &cache);
-        // Validate the composition by building a `CompositionGetter`.  The checks performed by
-        // `CompositionGetter::new` are much stricter and more correct than those we can perform
+            Composition::new(search.id_generator.next(), path, self.part_head, param_data);
+        // Validate the composition by attempting to get its values (as would happen in the GUI).
+        //  The checks performed here are much stricter and more correct than those we can perform
         // here, so we defer entirely to it to check these candidate compositions for validity.
-        let comp_values = cache.get_comp_values(&composition)?;
+        let comp_values = composition.values(param_data)?;
         // Sanity check that the composition is true
         if search.params.require_truth && !comp_values.is_true() {
             panic!(
