@@ -289,19 +289,17 @@ impl CompositionPrinter {
         // Method counts (for spliced)
         if self.method_count_widths.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self.method_count_widths.iter().zip_eq(comp.method_counts())
-            {
+            for ((width, _), count) in self.method_count_widths.iter().zip_eq(&comp.method_counts) {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
         }
         s.push('|');
         // Atw
         if self.print_atw {
-            let factor = comp.atw_factor();
-            if factor > 0.999999 {
+            if comp.atw_factor > 0.999999 {
                 s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {
-                write!(s, " {:>2}% |", (factor * 100.0).floor() as usize).unwrap();
+                write!(s, " {:>2}% |", (comp.atw_factor * 100.0).floor() as usize).unwrap();
             }
         }
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
@@ -310,8 +308,7 @@ impl CompositionPrinter {
         }
         // Music
         let music_types_to_show = self.params.music_types_to_show();
-        let music_counts = comp.music_counts();
-        write!(s, " {:>7.2} ", comp.music_score()).unwrap();
+        write!(s, " {:>7.2} ", comp.music_score).unwrap();
         if !music_types_to_show.is_empty() {
             s.push(':');
         }
@@ -319,19 +316,13 @@ impl CompositionPrinter {
             s.push_str("  ");
             write_left_centered_text(
                 &mut s,
-                &music_type.display_counts(music_counts[idx], self.params.stage),
+                &music_type.display_counts(comp.music_counts[idx], self.params.stage),
                 music_type.col_width(self.params.stage),
             );
             s.push(' ');
         }
         // avg score, call string
-        write!(
-            s,
-            "| {:>9.6} | {}",
-            comp.score_per_row(),
-            comp.call_string()
-        )
-        .unwrap();
+        write!(s, "| {:>9.6} | {}", comp.score_per_row(), comp.call_string).unwrap();
 
         s
     }

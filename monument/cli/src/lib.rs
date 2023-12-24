@@ -121,9 +121,9 @@ pub fn run(
     comps.sort_by_cached_key(|(comp, _generation_index)| {
         let getter = comp.values(&params_data).unwrap();
         (
-            rounded_float(getter.music_score()),
+            rounded_float(getter.music_score),
             rounded_float(getter.score_per_row()),
-            getter.call_string().to_owned(),
+            getter.call_string.clone(),
         )
     });
     Ok(Some(SearchResult {
