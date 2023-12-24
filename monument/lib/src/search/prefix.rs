@@ -278,10 +278,7 @@ impl CompPrefix {
         let comp_values = composition.values(param_data)?;
         // Sanity check that the composition is true
         if search.params.require_truth && !comp_values.is_true() {
-            panic!(
-                "Generated false composition ({})",
-                comp_values.call_string()
-            );
+            panic!("Generated false composition ({})", comp_values.call_string);
         }
         // Finally, return the comp
         Some(composition)

@@ -68,7 +68,7 @@ pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_f
             log::debug!(
                 "Found composition (len {}): {}",
                 comp.length.as_usize(),
-                comp.values(&param_data).unwrap().call_string()
+                comp.values(&param_data).unwrap().call_string
             );
             update_fn(Update::Comp(comp));
             num_comps += 1;
