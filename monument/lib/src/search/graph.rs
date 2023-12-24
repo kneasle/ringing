@@ -62,6 +62,7 @@ impl Graph {
         params: &Parameters,
         atw_table: &AtwTable,
     ) -> Self {
+        log::debug!("Lowering graph");
         let num_chunks = source_graph.chunks.len();
 
         // Assign each chunk ID to a unique `ChunkIdx`, and vice versa.  This way, we can now label
@@ -140,6 +141,8 @@ impl Graph {
                 ));
             }
         }
+
+        log::debug!("Finished lowering graph");
 
         Graph { starts, chunks }
     }

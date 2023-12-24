@@ -51,6 +51,7 @@ impl AtwFlag {
 
 impl AtwTable {
     pub fn new(params: &Parameters, chunk_lengths: &[(ChunkId, PerPartLength)]) -> Self {
+        log::debug!("Building ATW table");
         let atw_weight = match params.atw_weight {
             Some(w) => w,
             None if params.require_atw => 0.0,

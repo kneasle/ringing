@@ -1,15 +1,12 @@
 use std::{
     collections::BinaryHeap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Mutex,
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use datasize::DataSize;
 use ringing_utils::BigNumInt;
 
-use crate::{composition::CompositionCache, utils::lengths::TotalLength};
+use crate::{composition::ParamsData, utils::lengths::TotalLength};
 
 use super::{path::Paths, prefix::CompPrefix, Progress, Search, Update};
 
@@ -19,17 +16,14 @@ const ITERS_BETWEEN_PATH_GCS: usize = 100_000_000;
 
 /// Searches a [`Graph`](m_gr::Graph) for compositions.  This function is the core of Monument, and
 /// almost all of Monument's runtime will be spent in the `while` loop in this function.
-pub(crate) fn search(
-    search: &Search,
-    mut update_fn: impl FnMut(Update),
-    abort_flag: &AtomicBool,
-    cache: &Mutex<CompositionCache>,
-) {
+pub(crate) fn search(search: &Search, mut update_fn: impl FnMut(Update), abort_flag: &AtomicBool) {
     let mem_limit = search
         .config
         .mem_limit
         .unwrap_or_else(super::default_mem_limit);
     log::info!("Limiting memory usage to {}B", BigNumInt(mem_limit));
+
+    let param_data = ParamsData::new(&search.params);
 
     // Initialise the frontier to just the start chunks
     let mut paths = Paths::new();
@@ -58,6 +52,8 @@ pub(crate) fn search(
         };
     }
 
+    log::debug!("Sending first progress update!");
+
     // Send 'empty' update before search starts
     send_progress_update!(truncating_queue = false);
 
@@ -65,10 +61,15 @@ pub(crate) fn search(
     // frontier).  This is best-first search (and can be A* depending on the cost function used).
     // This loop is the core of Monument - almost all the runtime will be spent here.
     while let Some(prefix) = frontier.pop() {
-        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier, cache);
+        let maybe_comp = prefix.expand(search, &mut paths, &mut frontier, &param_data);
 
         // Submit new compositions when they're generated
         if let Some(comp) = maybe_comp {
+            log::debug!(
+                "Found composition (len {}): {}",
+                comp.length.as_usize(),
+                comp.values(&param_data).unwrap().call_string()
+            );
             update_fn(Update::Comp(comp));
             num_comps += 1;
 
