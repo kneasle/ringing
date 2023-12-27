@@ -1,11 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use eframe::egui;
 use itertools::Itertools;
 use monument::{
-    composition::{CompositionCache, CompositionId},
+    composition::{CompositionCache, CompositionId, ParamsData},
     utils::IdGenerator,
-    Composition, CompositionGetter,
+    Composition,
 };
 use ordered_float::OrderedFloat;
 
@@ -19,7 +19,7 @@ pub struct Project {
     params: crate::Parameters,
     compositions: Vec<Composition>,
 
-    comp_cache: Arc<Mutex<CompositionCache>>,
+    pub comp_cache: CompositionCache,
     comp_id_generator: Arc<IdGenerator<CompositionId>>,
     search_progress: Option<monument::Progress>,
 }
@@ -111,18 +111,17 @@ impl Project {
     }
 
     fn draw_comps(&mut self, params: &monument::Parameters, ui: &mut egui::Ui) {
+        let per_param_values = ParamsData::new(params);
+        let mut cache_with_params = self.comp_cache.with_params(params);
+
         // Generate getters for all comps which still match the current params
-        let mut cache_guard = self.comp_cache.lock().unwrap();
         let mut comps_to_display = self
             .compositions
             .iter()
-            .filter_map(|comp| {
-                let mut getter = CompositionGetter::new(comp, params, &mut cache_guard)?;
-                Some((getter.score_per_row(), comp))
-            })
+            .filter_map(|comp| comp.values_with_cache(&per_param_values, &mut cache_with_params))
             .collect_vec();
         // Sort them by total score
-        comps_to_display.sort_by_cached_key(|(score, _comp)| OrderedFloat(-score));
+        comps_to_display.sort_by_cached_key(|values| OrderedFloat(-values.score_per_row()));
         // Display them in a grid
         // TODO: Custom (animated!) widget for this
         egui::Grid::new("Comp grid")
@@ -146,24 +145,21 @@ impl Project {
                 ui.end_row();
 
                 /* Compositions */
-                for (_score, comp) in comps_to_display {
-                    let mut g = CompositionGetter::new(comp, params, &mut cache_guard).unwrap();
-
-                    ui.label(g.length().to_string());
+                for comp_values in comps_to_display {
+                    ui.label(comp_values.length().to_string());
 
                     ui.label("|");
-                    ui.label(format!("{:.2}", g.total_score()));
-                    ui.label(format!("{:.6}", g.score_per_row()));
+                    ui.label(format!("{:.2}", comp_values.total_score));
+                    ui.label(format!("{:.6}", comp_values.score_per_row()));
 
                     ui.label("|");
-                    let (music_counts, music_score) = g.music_counts_and_score();
-                    ui.label(format!("{music_score:.2}"));
+                    ui.label(format!("{:.2}", comp_values.music_score));
                     for (idx, mt) in params.music_types_to_show() {
-                        ui.label(mt.display_counts(music_counts[idx], params.stage));
+                        ui.label(mt.display_counts(comp_values.music_counts[idx], params.stage));
                     }
 
                     ui.label("|");
-                    ui.label(g.call_string());
+                    ui.label(&comp_values.call_string);
                     ui.end_row()
                 }
             });
@@ -172,10 +168,6 @@ impl Project {
     /////////////
     // HELPERS //
     /////////////
-
-    pub fn comp_cache(&self) -> Arc<Mutex<CompositionCache>> {
-        self.comp_cache.clone()
-    }
 
     pub fn comp_id_generator(&self) -> Arc<IdGenerator<CompositionId>> {
         self.comp_id_generator.clone()
@@ -205,7 +197,7 @@ impl Default for Project {
             params: crate::Parameters::yorkshire_s8_qps(),
             compositions: vec![],
 
-            comp_cache: Arc::new(Mutex::new(CompositionCache::default())),
+            comp_cache: CompositionCache::default(),
             comp_id_generator: Arc::new(IdGenerator::starting_at_zero()),
             search_progress: None,
         }
