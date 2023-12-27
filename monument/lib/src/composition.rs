@@ -528,6 +528,16 @@ impl Composition {
         if self.path[0].start_row != params.start_row {
             return false; // Doesn't start in the right row
         }
+        for elem in &self.path {
+            if !params.method_map.contains_key(&elem.method_id) {
+                return false; // Composition uses a method not in params
+            }
+            if let Some(call_id) = elem.call_to_end {
+                if !params.call_map.contains_key(&call_id) {
+                    return false; // Composition uses a call not in params
+                }
+            }
+        }
 
         true // Can't reject composition this easily
     }
