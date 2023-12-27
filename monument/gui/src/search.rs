@@ -57,7 +57,6 @@ fn worker_thread(
         let search = monument::Search::new(params.to_monument(), monument::Config::default())
             .unwrap()
             .id_generator(project_guard.comp_id_generator());
-        let comp_cache = project_guard.comp_cache();
         drop(project_guard); // Release the mutex before the search runs
         search.run(
             |update| {

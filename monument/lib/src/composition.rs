@@ -7,6 +7,7 @@ use std::{
 
 use bellframe::{music::AtRowPositions, Bell, Block, Mask, Row, RowBuf, Stage, Stroke, Truth};
 use itertools::Itertools;
+use lazy_st::lazy;
 
 use crate::{
     parameters::{
@@ -278,25 +279,78 @@ impl<'p> Deref for ParamsData<'p> {
 /// calculated once and then re-used for future queries.
 #[derive(Debug, Default)]
 pub struct CompositionCache {
-    per_param_cache: Option<(Parameters, PerParamCache)>,
+    per_param_cache: Option<(Parameters, HashMap<CompositionId, PerParamCacheEntry>)>,
     music_counts: HashMap<bellframe::MusicType, PerMusicTypeCache>,
 }
 
-type PerMusicTypeCache = HashMap<CompositionId, AtRowPositions<usize>>;
+#[derive(Debug)]
+enum PerParamCacheEntry {
+    Invalid,
+    Valid(ValidPerParamCache),
+}
 
-#[derive(Debug, Default)]
-struct PerParamCache {
-    is_valid: HashMap<CompositionId, bool>,
+#[derive(Debug)]
+struct ValidPerParamCache {
+    // TODO: Add values here
 }
 
 #[derive(Debug)]
 pub struct CacheWithParams<'cache> {
-    cache: &'cache mut CompositionCache,
+    param_wide_values: &'cache mut HashMap<CompositionId, PerParamCacheEntry>,
+    music_type_cache: MusicTypeCache<'cache>,
+}
+
+#[derive(Debug)]
+pub struct MusicTypeCache<'cache> {
+    /// Map to which the contents of `music_type_caches` should be returned
+    cache_source: &'cache mut HashMap<bellframe::MusicType, PerMusicTypeCache>,
+    /// Set of [`PerMusicTypeCache`]s, to be added back to the cache once this is dropped
+    values: Vec<(bellframe::MusicType, PerMusicTypeCache)>,
+    /// For each of Monument's music types, which index from `music_type_caches` should be used
+    /// to access the cache?
+    indices: MusicTypeVec<usize>,
+}
+
+type PerMusicTypeCache = HashMap<CompositionId, AtRowPositions<usize>>;
+
+impl Drop for MusicTypeCache<'_> {
+    fn drop(&mut self) {
+        for (mt, cache) in self.values.drain(..) {
+            self.cache_source.insert(mt, cache);
+        }
+    }
 }
 
 impl CompositionCache {
-    pub fn with_params<'cache>(&'cache mut self, _params: &Parameters) -> CacheWithParams<'cache> {
-        CacheWithParams { cache: self }
+    pub fn with_params<'cache>(&'cache mut self, params: &Parameters) -> CacheWithParams<'cache> {
+        // Get per-param values, preserving the cache if the params haven't changed
+        if self.per_param_cache.as_ref().map(|(p, _)| p) != Some(params) {
+            self.per_param_cache = Some((params.clone(), HashMap::new()));
+        }
+        let param_wide_values = &mut self.per_param_cache.as_mut().unwrap().1;
+
+        // Get the music type caches
+        let mut values = Vec::new();
+        let mut indices = MusicTypeVec::new();
+        for music_type in &params.music_types {
+            let music_type = &music_type.inner;
+            if let Some(idx) = values.iter().position(|(t, _)| t == music_type) {
+                indices.push(idx);
+            } else {
+                indices.push(values.len());
+                let cache_entry = self.music_counts.remove(music_type).unwrap_or_default();
+                values.push((music_type.clone(), cache_entry));
+            }
+        }
+
+        CacheWithParams {
+            param_wide_values,
+            music_type_cache: MusicTypeCache {
+                cache_source: &mut self.music_counts,
+                values,
+                indices,
+            },
+        }
     }
 }
 
@@ -333,7 +387,7 @@ impl Composition {
             return None;
         }
 
-        let music_counts = self.music_counts(params);
+        let music_counts = self.calculate_music_counts(params);
         let music_score = music_counts_to_score(&music_counts, params);
         let atw_factor = self.atw_factor(params);
         let comp_values = CompositionValues {
@@ -356,9 +410,74 @@ impl Composition {
 
     pub fn values_with_cache<'comp>(
         &'comp self,
+        params: &ParamsData,
         cache: &mut CacheWithParams,
     ) -> Option<CompositionValues<'comp>> {
-        todo!()
+        use PerParamCacheEntry::*;
+
+        let per_param_cache = match cache.param_wide_values.get(&self.id) {
+            Some(Invalid) => return None, // Known invalid
+            Some(Valid(e)) => Some(e),    // Known good, with values
+            None => None,                 // We just don't know yet
+        };
+        let is_known_good = per_param_cache.is_some();
+
+        if !is_known_good {
+            if !self.do_cheap_checks(params) {
+                cache.param_wide_values.insert(self.id, Invalid);
+                return None;
+            }
+        }
+
+        let music_counts =
+            self.calculate_music_counts_with_cache(params, &mut cache.music_type_cache);
+        let music_score = music_counts_to_score(&music_counts, params);
+        let atw_factor = self.atw_factor(params);
+        let values = CompositionValues {
+            composition: self,
+
+            call_string: self.call_string(params),
+            method_counts: self.method_counts(params),
+            music_score: music_counts_to_score(&music_counts, params),
+            music_counts,
+            atw_factor,
+            total_score: self.total_score(music_score, atw_factor, params),
+        };
+
+        if !is_known_good {
+            if self.do_cheap_checks(params) {
+                cache
+                    .param_wide_values
+                    .insert(self.id, Valid(ValidPerParamCache {}));
+            } else {
+                cache.param_wide_values.insert(self.id, Invalid);
+                return None;
+            }
+        }
+
+        Some(values)
+    }
+
+    fn calculate_music_counts_with_cache(
+        &self,
+        params: &ParamsData,
+        cache: &mut MusicTypeCache,
+    ) -> MusicTypeVec<AtRowPositions<usize>> {
+        let block = lazy!({
+            println!("Calculating block");
+            params.get_block(&self.path)
+        });
+
+        params
+            .music_types
+            .iter_enumerated()
+            .map(|(idx, music_type)| {
+                let (_mt, comp_id_map) = &mut cache.values[cache.indices[idx]];
+                *comp_id_map
+                    .entry(self.id)
+                    .or_insert_with(|| music_type.count_block(&*block, self.start_stroke))
+            })
+            .collect()
     }
 
     /// Generate a human-friendly [`String`] summarising the calling of this composition.  For
@@ -421,11 +540,11 @@ impl Composition {
 
     /// A slice containing the number of [`Row`]s generated for each [`Method`] used in the
     /// [`Search`].  These are stored in the same order as the [`Method`]s.
-    fn method_counts(&self, param_data: &ParamsData) -> MethodVec<TotalLength> {
-        let mut method_counts = index_vec::index_vec![TotalLength::ZERO; param_data.methods.len()];
+    fn method_counts(&self, params: &ParamsData) -> MethodVec<TotalLength> {
+        let mut method_counts = index_vec::index_vec![TotalLength::ZERO; params.methods.len()];
         for elem in &self.path {
-            let idx = param_data.method_map[&elem.method_id].idx;
-            method_counts[idx] += elem.length.as_total(&param_data.part_head_group);
+            let idx = params.method_map[&elem.method_id].idx;
+            method_counts[idx] += elem.length.as_total(&params.part_head_group);
         }
         method_counts
     }
@@ -448,7 +567,15 @@ impl Composition {
     }
 
     /// The number of *instances* of each [`MusicType`] in the [`Parameters`].
-    fn music_counts<'a>(&self, params: &ParamsData) -> MusicTypeVec<AtRowPositions<usize>> {
+    ///
+    /// This function computes all the rows of the composition, and therefore is quite expensive to
+    /// call.  It's fine to call it every so often (e.g. every time a valid composition is
+    /// generated), but not if there is a lot of time pressure (e.g. recomputing it for every
+    /// composition on every GUI frame).
+    fn calculate_music_counts<'a>(
+        &self,
+        params: &ParamsData,
+    ) -> MusicTypeVec<AtRowPositions<usize>> {
         let block = params.get_block(&self.path);
         params
             .music_types

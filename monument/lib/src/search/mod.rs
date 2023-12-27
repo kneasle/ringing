@@ -210,7 +210,7 @@ fn default_mem_limit() -> usize {
 
     // Use as a memory limit either 80% of available memory or 5GB if we can't access
     // availability
-    let ideal_mem_limit = if sysinfo::System::IS_SUPPORTED {
+    let ideal_mem_limit = if sysinfo::IS_SUPPORTED_SYSTEM {
         (sysinfo::System::new_all().available_memory() as f32 * 0.8) as u64
     } else {
         5_000_000_000u64
