@@ -10,7 +10,7 @@ use std::{
 use anyhow::Context;
 use path_slash::PathExt;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub fn load_cases<D>(
     dirs: &[&str],
@@ -235,9 +235,9 @@ enum IgnoreReason {
 /// easier to digest.
 pub type ResultsFile<T> = BTreeMap<PathFromMonument, T>;
 
-pub fn load_results<'s, T: Deserialize<'s>>(
+pub fn load_results<T: DeserializeOwned>(
     path: impl AsRef<Path>,
-    toml_buf: &'s mut String,
+    toml_buf: &mut String,
 ) -> anyhow::Result<ResultsFile<T>> {
     let full_path = PathFromMonument::new(path).relative_to_cargo_toml();
     if !full_path.exists() {

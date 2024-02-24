@@ -24,21 +24,21 @@ serde = ["serde_crate"]
 
 [dependencies]
 bytemuck = { version = "1.14.0", features = ["derive"] }
-dirs = { version = "5.0", optional = true }
-edit-distance = "2.1"
-factorial = "0.3"
-itertools = "0.11.0"
+dirs = { version = "5.0.1", optional = true }
+edit-distance = "2.1.0"
+factorial = "0.4.0"
+itertools = "0.12.1"
 memchr = "2.6.3"
-reqwest = { version = "0.11", optional = true, features = ["blocking"] }
-serde_json = { version = "1.0", optional = true }
-shortlist = "0.2"
+reqwest = { version = "0.11.18", optional = true, features = ["blocking"] }
+serde_json = { version = "1.0.114", optional = true }
+shortlist = "0.2.0"
 # Dependencies which are only required to generate the CC library
-minidom = { version = "0.15", optional = true }
+minidom = { version = "0.15.2", optional = true }
 
 # Reimport `serde` as `serde_crate` so we can use `serde` as a feature name
 [dependencies.serde_crate]
 package = "serde"
-version = "1.0"
+version = "1.0.197"
 optional = true
 features = ["derive"]
 

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use bellframe::Stroke;
 use monument::parameters::OptionalRangeInclusive;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 
 /// A version of [`OptionalRangeInclusive`] which allows for convenient deserialisation from a
 /// single number (e.g. `count = 5` is equivalent to `count = { min = 5, max = 5 }`)
@@ -42,7 +42,7 @@ pub fn read_file_to_string(path: &Path) -> anyhow::Result<String> {
 }
 
 /// Attempt to read a file as a [`String`], returning a helpful error message on failure
-pub fn parse_toml<'de, T: Deserialize<'de>>(s: &'de str) -> anyhow::Result<T> {
+pub fn parse_toml<'de, T: DeserializeOwned>(s: &'de str) -> anyhow::Result<T> {
     toml::from_str(s)
         .map_err(|e| anyhow::Error::msg(format!("Error parsing composition file: {}", e)))
 }

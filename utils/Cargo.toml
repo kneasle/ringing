@@ -12,4 +12,4 @@ repository = "https://github.com/kneasle/ringing"
 independent = true # This library won't change that often, so we want it to use its own versioning
 
 [dependencies]
-number_prefix = "0.4"
+number_prefix = "0.4.0"
