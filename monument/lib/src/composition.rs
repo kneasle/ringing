@@ -286,12 +286,7 @@ pub struct CompositionCache {
 #[derive(Debug)]
 enum PerParamCacheEntry {
     Invalid,
-    Valid(ValidPerParamCache),
-}
-
-#[derive(Debug)]
-struct ValidPerParamCache {
-    // TODO: Add values here
+    Valid(CompositionValues),
 }
 
 #[derive(Debug)]
@@ -361,9 +356,7 @@ impl CompositionCache {
 /// Struct which combines a [`Composition`] with a set of [`Parameters`] from which the extra data
 /// is taken.
 #[derive(Debug)]
-pub struct CompositionValues<'comp> {
-    pub composition: &'comp Composition,
-
+pub struct CompositionValues {
     pub call_string: String,
     pub method_counts: MethodVec<TotalLength>,
     pub music_counts: MusicTypeVec<AtRowPositions<usize>>,
@@ -371,14 +364,6 @@ pub struct CompositionValues<'comp> {
     pub atw_factor: f32,
     // TODO: Replace this with a simple getter
     pub total_score: f32,
-}
-
-impl Deref for CompositionValues<'_> {
-    type Target = Composition;
-
-    fn deref(&self) -> &Self::Target {
-        self.composition
-    }
 }
 
 impl Composition {
@@ -391,8 +376,6 @@ impl Composition {
         let music_score = music_counts_to_score(&music_counts, params);
         let atw_factor = self.atw_factor(params);
         let comp_values = CompositionValues {
-            composition: self,
-
             call_string: self.call_string(params),
             method_counts: self.method_counts(params),
             music_counts,
@@ -412,7 +395,7 @@ impl Composition {
         &'comp self,
         params: &ParamsData,
         cache: &mut CacheWithParams,
-    ) -> Option<CompositionValues<'comp>> {
+    ) -> Option<CompositionValues> {
         use PerParamCacheEntry::*;
 
         let per_param_cache = match cache.param_wide_values.get(&self.id) {
@@ -434,8 +417,6 @@ impl Composition {
         let music_score = music_counts_to_score(&music_counts, params);
         let atw_factor = self.atw_factor(params);
         let values = CompositionValues {
-            composition: self,
-
             call_string: self.call_string(params),
             method_counts: self.method_counts(params),
             music_score: music_counts_to_score(&music_counts, params),
