@@ -20,8 +20,8 @@ name: Release
 on:
   push:
     # Enable when testing release infrastructure on a branch.
-    # branches:
-    # - release-workflow
+    branches:
+    - release-workflow
     tags:
     - 'v*'
 
@@ -124,8 +124,8 @@ jobs:
 
       # Run tests, just to make sure that we can't accidentally publish an obviously borked build.
       # This **should** be caught by the PR checks, but better safe than sorry.
-    - name: Run tests
-      run: cargo test --release
+    # - name: Run tests
+    #   run: cargo test --release
 
     - name: Strip release binary (linux and macos)
       if: matrix.build == 'linux' || matrix.build == 'macos'

@@ -81,7 +81,7 @@ checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "bellframe"
-version = "0.13.0"
+version = "0.13.2"
 dependencies = [
  "bytemuck",
  "dirs",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "kneasle_ringing_utils"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "number_prefix",
 ]
@@ -729,7 +729,7 @@ dependencies = [
 
 [[package]]
 name = "monument"
-version = "0.14.3"
+version = "0.14.5"
 dependencies = [
  "bellframe",
  "bit-vec",
@@ -747,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "monument_cli"
-version = "0.14.3"
+version = "0.14.5"
 dependencies = [
  "anyhow",
  "bellframe",
