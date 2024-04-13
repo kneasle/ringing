@@ -22,6 +22,9 @@ use crate::{
     },
 };
 
+#[allow(unused_imports)] // Used for doc links
+use crate::{Composition, Config};
+
 /// Fully built specification for which [`Composition`]s should be generated.
 ///
 /// Compare this to [`Config`], which determines _how_ those
@@ -314,7 +317,7 @@ impl Parameters {
 // METHODS //
 /////////////
 
-/// A `Method` used in a [`Search`].
+/// A `Method` used in a [`Search`](crate::Search).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Method {
     pub id: MethodId,
@@ -719,7 +722,7 @@ impl MusicType {
         (counts.map(|x| x as f32) * self.weights).total()
     }
 
-    /// Return the total counts, only from [`RowPosition`](bellframe::music::RowPosition)s for which
+    /// Return the total counts, only from [`RowPosition`]s for which
     /// `Self::optional_weights` are not [`None`].
     pub fn masked_total(&self, counts: AtRowPositions<usize>) -> usize {
         counts.masked(!self.show_positions, 0).total()
@@ -730,7 +733,7 @@ impl MusicType {
     }
 
     /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
-    /// every instance of this [`MusicDisplay`] (assuming rows can't be repeated).
+    /// every instance of this `MusicType` (assuming rows can't be repeated).
     pub fn col_width(&self, stage: Stage) -> usize {
         // We always pad the counts as much as required, so displaying a set of 0s results in a
         // maximum-width string (i.e. all output strings are the same length)

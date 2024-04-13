@@ -41,7 +41,8 @@ impl<Item, Dist: Ord> Ord for FrontierItem<Item, Dist> {
     }
 }
 
-/// Struct which generates unique `Id`s.  Can be used with any of [`MethodId`] or [`CallId`].
+/// Struct which generates unique `Id`s.  Can be used with any of
+/// [`MethodId`](crate::parameters::MethodId) or [`CallId`](crate::parameters::CallId).
 #[derive(Debug)]
 pub struct IdGenerator<Id> {
     next_id: AtomicU32,

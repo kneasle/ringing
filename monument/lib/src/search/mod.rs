@@ -30,11 +30,7 @@ use self::atw::AtwTable;
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
-/// to receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`Parameters::run`] or
-/// [`Parameters::run_with_config`].  Both of those will deal with handling the [`Search`] for
-/// you.
-// TODO: Rename all instances from `data` to `search`
+/// to receive [`Update`]s on their [`Progress`].
 #[derive(Debug)]
 pub struct Search {
     /* Data */
