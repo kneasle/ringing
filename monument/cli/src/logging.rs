@@ -1,15 +1,13 @@
 //! Code for handling the logging of compositions or updates provided by Monument
 
-use std::{fmt::Write, io::Write as IoWrite, sync::Arc};
+use std::{fmt::Write, io::Write as IoWrite};
 
 use bellframe::row::ShortRow;
 use colored::Colorize;
 use itertools::Itertools;
 use log::log_enabled;
-use monument::{Composition, Progress, Search, Update};
+use monument::{composition::ParamsData, Composition, Parameters, Progress, Search, Update};
 use ringing_utils::BigNumInt;
-
-use crate::music::MusicDisplay;
 
 /// Struct which handles logging updates, keeping the updates to a single line which updates as the
 /// search progresses.
@@ -126,8 +124,7 @@ impl SingleLineProgressLogger {
 
 #[derive(Debug, Clone)]
 pub struct CompositionPrinter {
-    search: Arc<Search>,
-    music_displays: Vec<MusicDisplay>,
+    params: Parameters, // TODO: Make this `ParamsData`
     /// Counter which records how many compositions have been printed so far
     comps_printed: usize,
 
@@ -149,24 +146,19 @@ pub struct CompositionPrinter {
     print_atw: bool,
     /// If a part head should be displayed, then what's its width
     part_head_width: Option<usize>,
-    /// The column widths of every `MusicDisplay` in the output
-    music_widths: Vec<usize>,
 }
 
 impl CompositionPrinter {
-    pub fn new(
-        music_displays: Vec<MusicDisplay>,
-        search: Arc<Search>,
-        print_atw: bool,
-        print_comp_widths: bool,
-    ) -> Self {
+    pub fn new(search: &Search, print_atw: bool, print_comp_widths: bool) -> Self {
+        let params = search.parameters().clone();
         Self {
-            comp_count_width: print_comp_widths
-                .then_some(search.parameters().num_comps.to_string().len()),
-            length_width: search.parameters().max_length().to_string().len().max(3),
-            method_count_widths: search
-                .methods()
-                .map(|(method, shorthand)| {
+            comp_count_width: print_comp_widths.then_some(params.num_comps.to_string().len()),
+            length_width: params.max_length().to_string().len().max(3),
+            method_count_widths: params
+                .methods
+                .iter()
+                .map(|method| {
+                    let shorthand = method.shorthand();
                     let max_count_width =
                         search.method_count_range(method.id).end().to_string().len();
                     let max_width = max_count_width.max(shorthand.len());
@@ -176,15 +168,10 @@ impl CompositionPrinter {
             comps_printed: 0,
 
             print_atw,
-            part_head_width: (search.num_parts() > 2)
-                .then(|| search.effective_part_head_stage().num_bells()),
-            music_widths: music_displays
-                .iter()
-                .map(|d| d.col_width(search.parameters()))
-                .collect_vec(),
+            part_head_width: (params.num_parts() > 2)
+                .then(|| params.part_head_group.effective_stage().num_bells()),
 
-            search,
-            music_displays,
+            params,
         }
     }
 
@@ -270,13 +257,18 @@ impl CompositionPrinter {
             s.push('|');
         }
         // Music
+        let music_types_to_display = self.params.music_types_to_show();
         s.push_str("  music  ");
-        if !self.music_displays.is_empty() {
+        if !music_types_to_display.is_empty() {
             s.push(' ');
         }
-        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
+        for (_idx, music_type) in music_types_to_display {
             s.push_str("  ");
-            write_centered_text(&mut s, &music_display.name, *col_width);
+            write_centered_text(
+                &mut s,
+                &music_type.name,
+                music_type.col_width(self.params.stage),
+            );
             s.push(' ');
         }
         // Everything else
@@ -285,7 +277,7 @@ impl CompositionPrinter {
     }
 
     fn comp_string(&self, comp: &Composition, generation_index: usize) -> String {
-        let params = self.search.parameters();
+        let comp = comp.values(&ParamsData::new(&self.params)).unwrap();
 
         let mut s = String::new();
         // Comp index
@@ -297,22 +289,17 @@ impl CompositionPrinter {
         // Method counts (for spliced)
         if self.method_count_widths.len() > 1 {
             s.push_str(": ");
-            for ((width, _), count) in self
-                .method_count_widths
-                .iter()
-                .zip_eq(comp.method_counts(params))
-            {
+            for ((width, _), count) in self.method_count_widths.iter().zip_eq(&comp.method_counts) {
                 write!(s, "{:>width$} ", count, width = *width).unwrap();
             }
         }
         s.push('|');
         // Atw
         if self.print_atw {
-            let factor = comp.atw_factor(params);
-            if factor > 0.999999 {
+            if comp.atw_factor > 0.999999 {
                 s.push_str(&format!(" {} |", "atw".color(colored::Color::BrightGreen)));
             } else {
-                write!(s, " {:>2}% |", (factor * 100.0).floor() as usize).unwrap();
+                write!(s, " {:>2}% |", (comp.atw_factor * 100.0).floor() as usize).unwrap();
             }
         }
         // Part head (if >2 parts; up to 2-parts must always have the same part head)
@@ -320,28 +307,22 @@ impl CompositionPrinter {
             write!(s, " {} |", ShortRow(comp.part_head())).unwrap();
         }
         // Music
-        let (music_counts, music_score) = comp.music_counts_and_score(params); // Only call `music_counts` once!
-        write!(s, " {:>7.2} ", music_score).unwrap();
-        if !self.music_displays.is_empty() {
+        let music_types_to_show = self.params.music_types_to_show();
+        write!(s, " {:>7.2} ", comp.music_score).unwrap();
+        if !music_types_to_show.is_empty() {
             s.push(':');
         }
-        for (music_display, col_width) in self.music_displays.iter().zip_eq(&self.music_widths) {
+        for (idx, music_type) in music_types_to_show {
             s.push_str("  ");
             write_left_centered_text(
                 &mut s,
-                &music_display.display_counts(&music_counts, self.search.parameters()),
-                *col_width,
+                &music_type.display_counts(comp.music_counts[idx], self.params.stage),
+                music_type.col_width(self.params.stage),
             );
             s.push(' ');
         }
         // avg score, call string
-        write!(
-            s,
-            "| {:>9.6} | {}",
-            comp.average_score(),
-            comp.call_string(params)
-        )
-        .unwrap();
+        write!(s, "| {:>9.6} | {}", comp.score_per_row(), comp.call_string).unwrap();
 
         s
     }

@@ -56,10 +56,10 @@ pub(super) fn set_links(
 ///
 /// Naively iterating through every pair of chunks is far too slow, so this instead stores a set of
 /// false lead head transpositions between the different chunk types.  This way, once the table is
-/// built, the computing the falseness of a chunk is one [`HashMap`] lookup and some row
+/// built, computing the falseness of a chunk costs one [`HashMap`] lookup and some row
 /// transpositions.  Building the `FalsenessTable` is still quadratic, but it's quadratic in the
-/// number of _unique chunk ranges_, which is often orders of magnitude smaller than the total
-/// number of chunks.
+/// number of _unique chunk ranges_, which is orders of magnitude smaller than the total number of
+/// chunks and usually scales much slower.
 #[derive(Debug, Clone)]
 struct FalsenessTable {
     /// For each [`ChunkRange`], list the false [`ChunkRange`]s and the lead head transpositions

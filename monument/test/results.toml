@@ -254,7 +254,7 @@ Note: For course mask 1xxx7856, adding extra masks for other parts:
 1344 :   0 224 224   0 448 448 | 66% | 17823456 |  151.90 :   93 ( 45f  48b)    5f  4b    5f  6b    3f  4b     3 |  0.129291 | #WE[-]ES[s]YW[s]
 1344 :   0   0 448 224 224 448 | 66% | 17823456 |  152.00 :   92 ( 37f  55b)    4f  5b    4f  7b    4f  3b     0 |  0.129365 | #WE[-]BS[s]SE[s]
 1344 :   0 448   0 224 224 448 | 66% | 17823456 |  152.90 :   95 ( 37f  58b)    4f  5b    4f  7b    3f  3b     3 |  0.130035 | #WE[-]BY[s]YE[s]
-1344 :   0 224 224 224 448 224 | 83% | 17823456 |  152.90 :   92 ( 38f  54b)    4f  4b    4f  7b    3f  4b     3 |  0.142436 | #WE[-]BS[s]YW[s]
+1344 :   0 224 224 224 448 224 | 83% | 17823456 |  152.90 :   92 ( 38f  54b)    4f  4b    4f  7b    3f  4b     3 |  0.142435 | #WE[-]BS[s]YW[s]
 1344 : 224 224   0 224 448 224 | 83% | 17823456 |  153.80 :   96 ( 44f  52b)    5f  4b    5f  7b    0f  4b     6 |  0.143105 | #WE[s]BY[-]CW[s]
 1344 :   0 224 224 224 224 448 | 83% | 17823456 |  153.90 :   95 ( 37f  58b)    4f  5b    4f  7b    4f  3b     3 |  0.143180 | #WE[-]BS[s]YE[s]
 1344 : 448   0   0 224 448 224 | 66% | 17823456 |  154.80 :   97 ( 44f  53b)    5f  4b    5f  7b    0f  4b     6 |  0.131448 | #WE[s]BC[-]CW[s]
@@ -383,7 +383,7 @@ len    P  S | atw |  music      4-bell runs   56s   65s | avg score | calling
 120 : 60 60 | 52% |   18.40 :   9 ( 5f  4b)   12     0  | -0.000000 | PS[sH]S[sT]S[sW]S[sH]SP[sH]P[sW]P[sF]P[sH]
 120 : 60 60 | 60% |   18.40 :   7 ( 5f  2b)   12     0  | -0.000000 | SP[sH]P[sW]P[sF]P[sH]SP[sH]S[sT]S[sW]S[sH]
 120 : 60 60 | 76% |   18.40 :   5 ( 3f  2b)    7     0  | -0.000000 | SP[sH]P[sW]S[sH]P[sW]PS[sW]S[sH]P[sW]S[sH]
-120 : 60 60 | 64% |   18.40 :  10 ( 5f  5b)    7     0  |  0.000000 | SP[sH]S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]
+120 : 60 60 | 64% |   18.40 :  10 ( 5f  5b)    7     0  | -0.000000 | SP[sH]S[sT]S[sW]P[sF]SP[sT]S[sW]P[sF]P[sH]
 120 : 60 60 | 92% |   18.40 :  11 ( 6f  5b)    7     4  |  0.076667 | P[sW]P[sF]S[sB]SSSS[sT]PPP
 120 : 60 60 | 84% |   18.60 :   8 ( 3f  5b)    3     0  |  0.040000 | P[sW]S[sH]SSS[sF]S[sB]P[sT]PPP[sH]
 ------------|-----|-------------------------------------|-----------|-----------
@@ -494,7 +494,7 @@ len | atw |  music       4-bell runs      5678s     8765s     6578s    87s | avg
 384 | atw |   60.00 :   28 ( 14f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.390625 | sHMMsMH
 352 | atw |   60.00 :   28 ( 16f  12b)    0f 12b    4f  0b    0f  0b     0 |  0.431250 | HWsWsH
 352 | atw |   60.00 :   28 ( 14f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.431250 | sHsMMH
-128 | 24% |   61.00 :   28 ( 12f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.603827 | sHHsHH
+128 | 24% |   61.00 :   28 ( 12f  16b)    0f 16b    0f  0b    0f  0b     0 |  0.603826 | sHHsHH
 384 | atw |   66.00 :   30 ( 16f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.406250 | sHHsWWW
 384 | atw |   67.00 :   30 ( 12f  18b)    0f 16b    4f  0b    0f  0b     0 |  0.408854 | HsMMsHH
 352 | atw |   68.00 :   32 ( 18f  14b)    0f 12b    4f  0b    0f  0b     0 |  0.453977 | sHHWsW
@@ -525,19 +525,19 @@ len    O  P | atw |  music  | avg score | calling
 120 : 40 80 | 80% |    0.00 |  0.336667 | O[H]P[F]O[I]OO[B]P[B]OO[H]P[F]O[I]O[L]OO[F]P[H]
 120 : 40 80 | 80% |    0.00 |  0.336667 | P[F]O[I]P[I]OO[B]O[F]O[I]P[I]OO[B]P[B]OO[H]O[H]
 120 : 40 80 | 80% |    0.00 |  0.336667 | P[F]O[I]P[I]O[L]OO[F]P[H]OO[I]P[I]O[L]O[B]OO[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | OOO[L]O[B]O[F]P[H]OO[I]P[I]O[L]P[L]O[B]O[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]OO[B]P[B]O[F]O[I]P[I]OO[B]O[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]O[L]O[B]OOO[I]P[I]O[L]P[L]O[B]O[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | OO[I]P[I]O[L]O[B]P[B]O[F]O[I]P[I]OOO[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]OOO[B]P[B]O[F]O[I]P[I]O[L]O[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]OO[L]P[L]OO[F]O[I]P[I]O[L]OO[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]O[I]OO[B]P[B]O[F]O[I]P[I]OO[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]O[H]P[F]O[I]O[L]P[L]OO[F]O[I]P[I]OOO[F]P[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]OOO[B]P[B]O[F]OO[L]P[L]O[B]O[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]OO[L]O[B]P[B]O[F]OO[L]P[L]OO[F]P[H]O[H]
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OOO[I]O[L]O[B]P[B]O
-120 : 40 80 | 83% |    0.00 |  0.364444 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OO[H]P[F]O[I]O[L]OO
-120 : 40 80 | 83% |    0.00 |  0.364444 | P[F]OOO[B]O[F]O[I]P[I]OO[B]P[B]O[F]P[H]O[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | OOO[L]O[B]O[F]P[H]OO[I]P[I]O[L]P[L]O[B]O[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | OO[I]P[I]OO[B]P[B]O[F]O[I]P[I]OO[B]O[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | OO[I]P[I]O[L]O[B]OOO[I]P[I]O[L]P[L]O[B]O[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | OO[I]P[I]O[L]O[B]P[B]O[F]O[I]P[I]OOO[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]O[H]P[F]OOO[B]P[B]O[F]O[I]P[I]O[L]O[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]O[H]P[F]OO[L]P[L]OO[F]O[I]P[I]O[L]OO[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]O[H]P[F]O[I]OO[B]P[B]O[F]O[I]P[I]OO[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]O[H]P[F]O[I]O[L]P[L]OO[F]O[I]P[I]OOO[F]P[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]P[F]OOO[B]P[B]O[F]OO[L]P[L]O[B]O[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]P[F]OO[L]O[B]P[B]O[F]OO[L]P[L]OO[F]P[H]O[H]
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OOO[I]O[L]O[B]P[B]O
+120 : 40 80 | 83% |    0.00 |  0.364445 | O[H]P[F]O[I]O[L]P[L]O[B]P[B]OO[H]P[F]O[I]O[L]OO
+120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]OOO[B]O[F]O[I]P[I]OO[B]P[B]O[F]P[H]O[H]O[H]
 120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]OO[L]P[L]O[B]O[F]OOO[B]P[B]O[F]P[H]O[H]O[H]
 120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]O[I]O[L]P[L]OO[F]P[H]OO[I]O[L]P[L]O[B]OO[H]
 120 : 40 80 | 83% |    0.00 |  0.364445 | P[F]O[I]O[L]P[L]O[B]O[F]P[H]OO[I]O[L]P[L]OOO[H]
@@ -1160,7 +1160,7 @@ len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score
 1584 |  312.00 :   129 (  55f   74b)      8f   11b    6      0      0 |  0.188258 | sMsWsHsWsHsM
 1584 |  315.00 :   103 (  45f   58b)      9f   11b   12      0      0 |  0.190278 | HMsWHsMWH
 1584 |  320.00 :   110 (  48f   62b)      8f   11b   12      0      0 |  0.196212 | sMsMsHsH
-1584 |  333.00 :   141 (  61f   80b)      9f   12b    6      0      0 |  0.202146 | sMsHsMsWHW
+1584 |  333.00 :   141 (  61f   80b)      9f   12b    6      0      0 |  0.202147 | sMsHsMsWHW
 1584 |  335.00 :   129 (  55f   74b)      8f   11b    6      0      0 |  0.205682 | sWsHsHsW
 1584 |  335.00 :   114 (  50f   64b)      8f   11b   12      0      0 |  0.205682 | sWsWsHsH
 1584 |  339.00 :   104 (  46f   58b)      8f   11b   18      0      0 |  0.210606 | HHH
@@ -1359,7 +1359,7 @@ len |  music      4-bell runs   46s | avg score | calling
 112 |   27.20 :  10 ( 5f  5b)     6 |  0.128571 | sFsMsHFMsH
 112 |   27.20 :  12 ( 6f  6b)     6 |  0.128571 | sWsBIIsMsH
 112 |   27.20 :  10 ( 5f  5b)     6 |  0.137500 | FMsHFMsH
-140 |   27.60 :  10 ( 5f  5b)     8 |  0.138572 | sFsBMH
+140 |   27.60 :  10 ( 5f  5b)     8 |  0.138571 | sFsBMH
 140 |   28.00 :  10 ( 5f  5b)    10 |  0.134286 | sWsFsHsM
 140 |   28.00 :  10 ( 5f  5b)    10 |  0.141429 | WFsHsM
 140 |   28.60 :   8 ( 4f  4b)     3 |  0.138571 | sFsMsWsH
@@ -2529,7 +2529,7 @@ len |  music     NMs      CRUs     5678 combs | avg score | calling
 272 |   46.00 :   1      1f  12b     0f  32b  |  0.088971 | sMMMBsWWWsWsHHH
 256 |   46.00 :   2      0f  12b     0f  32b  |  0.101563 | HHMsMBsWWWsWsH
 256 |   46.00 :   1      1f  12b     0f  32b  |  0.101563 | HsHsMMMsMBsWWH
-256 |   46.00 :   1      1f  12b     0f  32b  |  0.101562 | MsMBsWWWsWsHHH
+256 |   46.00 :   1      1f  12b     0f  32b  |  0.101563 | MsMBsWWWsWsHHH
 256 |   46.00 :   2      0f  12b     0f  32b  |  0.101563 | sHsMMMsMBsWWHH
 240 |   46.00 :   2      0f  12b     0f  32b  |  0.120000 | HHMMsMMBWsH
 240 |   46.00 :   1      1f  12b     0f  32b  |  0.120000 | HsHMBWsWWWH
@@ -2765,8 +2765,8 @@ len |  music     NMs      CRUs     5678 combs | avg score | calling
 288 |   69.00 :   2      0f  19b     8f  40b  |  0.163889 | HsHMsMMMsWWWsHH
 272 |   69.00 :   2      0f  19b     8f  40b  |  0.180147 | HsHMMsMsWWWsHH
 272 |   69.00 :   3      0f  18b     8f  40b  |  0.180147 | sHHHsHMsMMMWsW
-256 |   69.00 :   2      0f  19b     8f  40b  |  0.198438 | HsHsMMsWWWsHH
-256 |   69.00 :   3      0f  18b     8f  40b  |  0.198438 | sHHHsHMMsMWsW
+256 |   69.00 :   2      0f  19b     8f  40b  |  0.198437 | HsHsMMsWWWsHH
+256 |   69.00 :   3      0f  18b     8f  40b  |  0.198437 | sHHHsHMMsMWsW
 240 |   69.00 :   3      0f  18b     8f  40b  |  0.219167 | sHHHsHsMMWsW
 224 |   69.00 :   2      0f  19b     8f  40b  |  0.247321 | sWWWHsHHH
 208 |   69.00 :   3      0f  18b     8f  40b  |  0.275000 | HsHHHWsW
@@ -3152,7 +3152,6 @@ len    Y   B  |  music  | avg score | calling
 256 : 224  32 |    0.00 | -0.017969 | YYYYYYY[sH]B[sH]
 258 :   2 256 |    0.00 | -0.015891 | B[sH]B[H]BBBBBBY>
 224 :   0 224 |    0.00 |  0.000000 | BBBBBBB
-224 : 224   0 |    0.00 |  0.000000 | YYYYYYY
 --------------|---------|-----------|-----------
 len    Y   B  |  music  | avg score | calling
 '''
@@ -3189,7 +3188,6 @@ len    Y   B  |  music  | avg score | calling
 258 :   2 256 |    0.00 | -0.015891 | B[sH]B[H]BBBBBBY>
 224 :   0 224 |    0.00 |  0.000000 | <BBBBBBBB>
 224 :   0 224 |    0.00 |  0.000000 | BBBBBBB
-224 : 224   0 |    0.00 |  0.000000 | YYYYYYY
 --------------|---------|-----------|-----------
 len    Y   B  |  music  | avg score | calling
 '''

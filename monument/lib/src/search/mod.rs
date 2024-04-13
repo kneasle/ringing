@@ -15,12 +15,13 @@ use std::{
     },
 };
 
-use bellframe::Stage;
 use itertools::Itertools;
 
 use crate::{
-    parameters::{MethodId, MusicTypeId, Parameters},
+    composition::CompositionId,
+    parameters::{MethodId, Parameters},
     prove_length::{prove_lengths, RefinedRanges},
+    utils::IdGenerator,
     Composition,
 };
 
@@ -29,19 +30,17 @@ use self::atw::AtwTable;
 /// Handle to a search being run by Monument.
 ///
 /// This is used if you want to keep control over searches as they are running, for example
-/// to receive [`Update`]s on their [`Progress`].  If you just
-/// want to run a (hopefully quick) search, use [`Parameters::run`] or
-/// [`Parameters::run_with_config`].  Both of those will deal with handling the [`Search`] for
-/// you.
-// TODO: Rename all instances from `data` to `search`
+/// to receive [`Update`]s on their [`Progress`].
 #[derive(Debug)]
 pub struct Search {
     /* Data */
-    params: Arc<Parameters>,
     config: Config,
+    params: Arc<Parameters>,
+    id_generator: Arc<IdGenerator<CompositionId>>,
+
+    refined_ranges: RefinedRanges,
     graph: self::graph::Graph,
     atw_table: Arc<AtwTable>,
-    refined_ranges: RefinedRanges,
 }
 
 impl Search {
@@ -70,12 +69,19 @@ impl Search {
         drop(source_graph);
 
         Ok(Search {
-            params: Arc::new(params),
-            atw_table: Arc::new(atw_table),
             config,
+            params: Arc::new(params),
+            id_generator: Arc::new(IdGenerator::starting_at_zero()),
+
             refined_ranges,
             graph,
+            atw_table: Arc::new(atw_table),
         })
+    }
+
+    pub fn id_generator(mut self, gen: Arc<IdGenerator<CompositionId>>) -> Self {
+        self.id_generator = gen;
+        self
     }
 
     /// Runs the search, **blocking the current thread** until either the search is completed or
@@ -85,15 +91,13 @@ impl Search {
         // We want this to be sequentially consistent to make sure that the worker threads don't
         // see the previous value (which could be 'true').
         abort_flag.store(false, Ordering::SeqCst);
+        log::debug!("Starting search");
         best_first::search(self, update_fn, abort_flag);
     }
 }
 
 impl Search {
-    // TODO: Most of these functions just call the corresponding function in `parameters`, and at
-    // that point, we may as well just force the consumer of the API to call `Self::parameters()`
-    // first.
-
+    // TODO: Remove this once `refined_ranges` are cheaper to compute
     /// Gets the range of counts required of the given [`MethodId`].
     pub fn method_count_range(&self, id: MethodId) -> RangeInclusive<usize> {
         let idx = self.params.method_id_to_idx(id);
@@ -101,31 +105,8 @@ impl Search {
         range.start().as_usize()..=range.end().as_usize()
     }
 
-    pub fn methods(&self) -> impl Iterator<Item = (&crate::parameters::Method, String)> {
-        self.params.methods.iter().map(|m| (m, m.shorthand()))
-    }
-
-    pub fn music_type_ids(&self) -> impl Iterator<Item = MusicTypeId> + '_ {
-        self.params.music_types.iter().map(|ty| ty.id)
-    }
-
     pub fn parameters(&self) -> &Parameters {
         &self.params
-    }
-
-    pub fn num_parts(&self) -> usize {
-        self.params.num_parts()
-    }
-
-    /// Does this `Parameters` generate [`Composition`](crate::Composition)s with more than one part?
-    pub fn is_multipart(&self) -> bool {
-        self.params.is_multipart()
-    }
-
-    /// Gets the [`effective_stage`](bellframe::Row::effective_stage) of the part heads used in
-    /// this `Parameters`.  The short form of every possible part head will be exactly this length.
-    pub fn effective_part_head_stage(&self) -> Stage {
-        self.params.part_head_group.effective_stage()
     }
 }
 
@@ -221,6 +202,8 @@ impl Default for Config {
 /// Return the memory limit for this search, if not specified by the user's [`Config`].  On most
 /// systems, this will return 80% of available memory.
 fn default_mem_limit() -> usize {
+    log::debug!("Getting memory usage");
+
     // Use as a memory limit either 80% of available memory or 5GB if we can't access
     // availability
     let ideal_mem_limit = if sysinfo::IS_SUPPORTED_SYSTEM {
@@ -228,6 +211,7 @@ fn default_mem_limit() -> usize {
     } else {
         5_000_000_000u64
     };
+    log::debug!("Got memory usage");
     // However, always use 500MB less than the memory that's accessible by the system (i.e. if
     // we're running in 32-bit environments like WASM, we can't fill available memory so we
     // just default to `2*32 - 500MB ~= 3.5GB`)

@@ -15,7 +15,8 @@ pub const LABEL_LEAD_END: &str = "LE";
 /// locations (by their label), and thus the single lead can be modified to determine the effect of
 /// calls in a general way.  This follows how [CompLib](https://complib.org)'s composition input
 /// works.
-#[derive(Debug, Clone)]
+// TODO: Exclude name in equality test?
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Method {
     pub name: String,
     omit_class: bool, // Set to `true` for methods like Grandsire, who's title omits the class
@@ -213,11 +214,11 @@ impl Method {
     }
 
     /// An [`Iterator`] over the sub-lead indices of a particular lead label.
-    pub fn all_label_indices(&self) -> Vec<(&str, usize)> {
+    pub fn all_label_indices(&self) -> Vec<(usize, &str)> {
         let mut label_indices = Vec::new();
         for (sub_lead_idx, labels) in self.first_lead.annots().enumerate() {
             for label in labels {
-                label_indices.push((label.as_str(), sub_lead_idx));
+                label_indices.push((sub_lead_idx, label.as_str()));
             }
         }
         label_indices

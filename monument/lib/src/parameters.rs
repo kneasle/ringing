@@ -2,13 +2,14 @@
 
 use std::{
     collections::HashSet,
-    marker::PhantomData,
+    fmt::Write,
     ops::{Deref, Range, RangeInclusive},
-    sync::atomic::AtomicBool,
 };
 
 use bellframe::{
-    method::LABEL_LEAD_END, music::AtRowPositions, Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
+    method::LABEL_LEAD_END,
+    music::{AtRowPositions, RowPosition},
+    Bell, Mask, PlaceNot, Row, RowBuf, Stage, Stroke,
 };
 use itertools::Itertools;
 
@@ -17,17 +18,19 @@ use crate::{
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
-        Boundary,
+        Boundary, IdGenerator,
     },
-    Composition, Config, Search, Update,
 };
+
+#[allow(unused_imports)] // Used for doc links
+use crate::{Composition, Config};
 
 /// Fully built specification for which [`Composition`]s should be generated.
 ///
 /// Compare this to [`Config`], which determines _how_ those
 /// [`Composition`]s are generated (and therefore determines how quickly the
 /// results are generated).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameters {
     // GENERAL
     pub length: RangeInclusive<TotalLength>,
@@ -49,7 +52,6 @@ pub struct Parameters {
     // NOTE: Course masks are defined on each `Method`
     pub start_row: RowBuf,
     pub end_row: RowBuf,
-    // TODO: Explicitly compute PH group, leave user to just input rows?
     pub part_head_group: PartHeadGroup,
     /// Score applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
@@ -63,25 +65,6 @@ pub struct Parameters {
 }
 
 impl Parameters {
-    /// Finish building and run the search with the default [`Config`], blocking until the required
-    /// compositions have been generated.
-    pub fn run(self) -> crate::Result<Vec<Composition>> {
-        self.run_with_config(Config::default())
-    }
-
-    /// Finish building and run the search with a custom [`Config`], blocking until the required
-    /// number of [`Composition`]s have been generated.
-    pub fn run_with_config(self, config: Config) -> crate::Result<Vec<Composition>> {
-        let mut comps = Vec::<Composition>::new();
-        let update_fn = |update| {
-            if let Update::Comp(comp) = update {
-                comps.push(comp);
-            }
-        };
-        Search::new(self, config)?.run(update_fn, &AtomicBool::new(false));
-        Ok(comps)
-    }
-
     pub fn max_length(&self) -> TotalLength {
         *self.length.end()
     }
@@ -149,20 +132,12 @@ impl Parameters {
         self.calls.position(|c| c.id == id).unwrap()
     }
 
-    pub fn music_type_id_to_idx(&self, id: MusicTypeId) -> MusicTypeIdx {
-        self.music_types.position(|mt| mt.id == id).unwrap()
-    }
-
     pub fn get_method_by_id(&self, id: MethodId) -> &Method {
         &self.methods[self.method_id_to_idx(id)]
     }
 
     pub fn get_call_by_id(&self, id: CallId) -> &Call {
         &self.calls[self.call_id_to_idx(id)]
-    }
-
-    pub fn get_music_type_by_id(&self, id: MusicTypeId) -> &MusicType {
-        &self.music_types[self.music_type_id_to_idx(id)]
     }
 
     //////////////////////
@@ -278,6 +253,19 @@ impl Parameters {
         }
     }
 
+    pub(crate) fn valid_end_labels(&self) -> HashSet<String> {
+        let mut valid_labels = HashSet::new();
+        for m in &self.methods {
+            let wrapped_indices = m.wrapped_indices(Boundary::End, self);
+            for (sub_lead_idx, label) in m.inner.all_label_indices() {
+                if wrapped_indices.contains(&sub_lead_idx) {
+                    valid_labels.insert(label.to_owned());
+                }
+            }
+        }
+        valid_labels
+    }
+
     /// Returns a human-readable string representing the given methods.
     ///
     /// This is:
@@ -317,8 +305,11 @@ impl Parameters {
         self.calls.iter().find(|mt| mt.id == id).unwrap()
     }
 
-    pub fn get_music_type(&self, id: MusicTypeId) -> &MusicType {
-        self.music_types.iter().find(|mt| mt.id == id).unwrap()
+    pub fn music_types_to_show(&self) -> Vec<(MusicTypeIdx, &MusicType)> {
+        self.music_types
+            .iter_enumerated()
+            .filter(|(_idx, mt)| mt.should_show())
+            .collect_vec()
     }
 }
 
@@ -326,8 +317,8 @@ impl Parameters {
 // METHODS //
 /////////////
 
-/// A `Method` used in a [`Search`].
-#[derive(Debug, Clone)]
+/// A `Method` used in a [`Search`](crate::Search).
+#[derive(Debug, Clone, PartialEq)]
 pub struct Method {
     pub id: MethodId,
     pub inner: bellframe::Method,
@@ -361,6 +352,16 @@ impl Method {
 
     pub fn add_sub_lead_idx(&self, sub_lead_idx: usize, len: PerPartLength) -> usize {
         (sub_lead_idx + len.as_usize()) % self.lead_len()
+    }
+
+    pub fn lead_head_weights(&self, params: &Parameters) -> Vec<(Mask, f32)> {
+        let mut mask_weights = Vec::new();
+        for lead_head in self.lead_head().closure() {
+            for (mask, weight) in &params.course_weights {
+                mask_weights.push((mask * &lead_head, *weight));
+            }
+        }
+        mask_weights
     }
 
     /////////////////////////
@@ -463,15 +464,15 @@ impl std::ops::Deref for Method {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MethodId(pub u16);
+pub struct MethodId(pub u32);
 
-impl From<u16> for MethodId {
-    fn from(value: u16) -> Self {
+impl From<u32> for MethodId {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl From<MethodId> for u16 {
+impl From<MethodId> for u32 {
     fn from(value: MethodId) -> Self {
         value.0
     }
@@ -507,31 +508,34 @@ pub fn default_shorthand(title: &str) -> String {
 ///////////
 
 /// A type of call (e.g. bob or single)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Call {
     pub id: CallId,
 
-    pub symbol: String,
-    pub calling_positions: Vec<String>,
-
+    // These fields determine what 'functionally' defines a specific call.  Modifying these will
+    // likely invalidate any existing compositions, and thus should not be modified without also
+    // changing the `CallId`.
     pub label_from: String,
     pub label_to: String,
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_notation: PlaceNot,
 
+    pub symbol: String,
+    pub calling_positions: Vec<String>,
+
     pub weight: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CallId(pub u16);
+pub struct CallId(pub u32);
 
-impl From<u16> for CallId {
-    fn from(value: u16) -> Self {
+impl From<u32> for CallId {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl From<CallId> for u16 {
+impl From<CallId> for u32 {
     fn from(value: CallId) -> Self {
         value.0
     }
@@ -701,33 +705,98 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
 ///////////
 
 /// A class of music that Monument should care about
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MusicType {
-    pub id: MusicTypeId,
+    pub show_total: bool,
+    pub show_positions: AtRowPositions<bool>,
+    pub name: String,
 
     pub inner: bellframe::MusicType,
-    pub optional_weights: AtRowPositions<Option<f32>>,
+    pub weights: AtRowPositions<f32>,
     pub count_range: OptionalRangeInclusive,
     // TODO: Count ranges for front/internal/back/wrap
 }
 
 impl MusicType {
     pub fn as_overall_score(&self, counts: AtRowPositions<usize>) -> f32 {
-        (counts.map(|x| x as f32) * self.weights()).total()
+        (counts.map(|x| x as f32) * self.weights).total()
     }
 
-    /// Return the total counts, only from [`RowPosition`](bellframe::music::RowPosition)s for which
+    /// Return the total counts, only from [`RowPosition`]s for which
     /// `Self::optional_weights` are not [`None`].
     pub fn masked_total(&self, counts: AtRowPositions<usize>) -> usize {
-        counts.masked(!self.mask(), 0).total()
+        counts.masked(!self.show_positions, 0).total()
     }
 
-    pub fn weights(&self) -> AtRowPositions<f32> {
-        self.optional_weights.map(|v| v.unwrap_or(0.0))
+    pub fn should_show(&self) -> bool {
+        self.show_total || self.show_positions.any()
     }
 
-    pub fn mask(&self) -> AtRowPositions<bool> {
-        self.optional_weights.map(|v| v.is_some())
+    /// Return the width of the smallest column large enough to be guaranteed to hold (almost)
+    /// every instance of this `MusicType` (assuming rows can't be repeated).
+    pub fn col_width(&self, stage: Stage) -> usize {
+        // We always pad the counts as much as required, so displaying a set of 0s results in a
+        // maximum-width string (i.e. all output strings are the same length)
+        let max_count_width = self.display_counts(AtRowPositions::ZERO, stage).len();
+        max_count_width.max(self.name.len())
+    }
+
+    /// Generate a compact string representing a given set of music counts
+    pub fn display_counts(&self, counts: AtRowPositions<usize>, stage: Stage) -> String {
+        let max_counts = self.max_possible_count(stage);
+        let num_items_to_show: usize = self.show_positions.map(|b| b as usize).total();
+
+        let mut s = String::new();
+        // Add total count
+        if self.show_total {
+            Self::write_music_count(
+                &mut s,
+                self.masked_total(counts),
+                self.masked_total(max_counts),
+            );
+        }
+        // Add specific counts (if there are any)
+        let hide_counts = self.show_total && num_items_to_show == 1;
+        if !hide_counts {
+            // Add brackets if there's a total score
+            if self.show_total {
+                s.push_str(" (");
+            }
+            // Add every front/internal/back count for which we have a source
+            let mut is_first_count = true;
+            for (position, position_char) in [
+                (RowPosition::Front, 'f'),
+                (RowPosition::Internal, 'i'),
+                (RowPosition::Back, 'b'),
+                (RowPosition::Wrap, 'w'),
+            ] {
+                if !self.show_positions.get(position) {
+                    continue; // Skip positions we're not showing
+                }
+                // Add separating comma
+                if !is_first_count {
+                    s.push(' ');
+                }
+                is_first_count = false;
+                // Add the number
+                Self::write_music_count(&mut s, *counts.get(position), *max_counts.get(position));
+                s.push(position_char);
+            }
+            if self.show_total {
+                s.push(')'); // Add closing brackets if there's a total score
+            }
+        }
+
+        s
+    }
+
+    /// Prints the width of the largest count possible for a [`MusicType`] (assuming that rows can't be
+    /// repeated).
+    fn write_music_count(s: &mut String, count: usize, max_possible_count: usize) {
+        // `min(4)` because we don't expect more than 9999 instances of a music type, even
+        // if more are theoretically possible
+        let max_count_width = max_possible_count.to_string().len().min(4);
+        write!(s, "{:>width$}", count, width = max_count_width).unwrap();
     }
 }
 
@@ -739,27 +808,12 @@ impl Deref for MusicType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MusicTypeId(pub u16);
-
-impl From<u16> for MusicTypeId {
-    fn from(value: u16) -> Self {
-        Self(value)
-    }
-}
-
-impl From<MusicTypeId> for u16 {
-    fn from(value: MusicTypeId) -> Self {
-        value.0
-    }
-}
-
 ////////////////
 // MISC TYPES //
 ////////////////
 
 /// Convenient description of a set of courses via [`Mask`]s.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CourseSet {
     /// List of [`Mask`]s, of which courses should match at least one.
     pub masks: Vec<Mask>,
@@ -919,7 +973,7 @@ fn try_fixing_bells(mut mask: Mask, fixed_bells: &[(Bell, usize)]) -> Option<Mas
 /// This is essentially a combination of [`RangeInclusive`]
 /// (`min..=max`), [`RangeToInclusive`](std::ops::RangeToInclusive) (`..=max`),
 /// [`RangeFrom`](std::ops::RangeFrom) (`min..`) and [`RangeFull`](std::ops::RangeFull) (`..`).
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct OptionalRangeInclusive {
     pub min: Option<usize>,
     pub max: Option<usize>,
@@ -932,6 +986,20 @@ impl OptionalRangeInclusive {
         min: None,
         max: None,
     };
+
+    pub fn contains(self, v: usize) -> bool {
+        if let Some(min) = self.min {
+            if v < min {
+                return false; // `v` is too small
+            }
+        }
+        if let Some(max) = self.max {
+            if v > max {
+                return false; // `v` is too big
+            }
+        }
+        true // `v` is just right :D
+    }
 
     /// Returns `true` if at least one of `min` or `max` is set
     pub fn is_set(self) -> bool {
@@ -953,29 +1021,6 @@ impl OptionalRangeInclusive {
             .map(|x| x + 1) // +1 because `OptRange` is inclusive
             .unwrap_or(other.end);
         min..max
-    }
-}
-
-/// Struct which generates unique `Id`s.  Can be used with any of [`MethodId`] or [`CallId`].
-#[derive(Debug, Clone)]
-pub struct IdGenerator<Id> {
-    next_id: u16,
-    _id: PhantomData<Id>,
-}
-
-impl<Id: From<u16> + Into<u16>> IdGenerator<Id> {
-    pub fn starting_at_zero() -> Self {
-        Self {
-            next_id: 0,
-            _id: PhantomData,
-        }
-    }
-
-    #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Id {
-        let id = Id::from(self.next_id);
-        self.next_id += 1;
-        id
     }
 }
 

@@ -23,7 +23,7 @@ use std::{
 };
 
 use log::LevelFilter;
-use monument::{Composition, Search};
+use monument::{composition::ParamsData, Composition, Search};
 use ordered_float::OrderedFloat;
 use ringing_utils::PrettyDuration;
 use simple_logger::SimpleLogger;
@@ -66,7 +66,7 @@ pub fn run(
     // seriously beneficial - it shaves many seconds off Monument's total running time.
     let leak_search_memory = env == Environment::Cli;
     // Convert the `TomlFile` into a `Layout` and other data required for running a search
-    let (params, music_displays) = toml_file.to_params(toml_path)?;
+    let params = toml_file.to_params(toml_path)?;
     debug_print!(Params, params);
     // Build the search
     let search = Arc::new(Search::new(
@@ -77,8 +77,7 @@ pub fn run(
 
     // Build all the data structures for the search
     let comp_printer = CompositionPrinter::new(
-        music_displays,
-        search.clone(),
+        &search,
         toml_file.should_print_atw(),
         !options.dont_display_comp_numbers,
     );
@@ -118,11 +117,13 @@ pub fn run(
         let rounded = (f / FACTOR).round() * FACTOR;
         OrderedFloat(rounded)
     }
+    let params_data = ParamsData::new(&params);
     comps.sort_by_cached_key(|(comp, _generation_index)| {
+        let getter = comp.values(&params_data).unwrap();
         (
-            rounded_float(comp.music_score(&params)),
-            rounded_float(comp.average_score()),
-            comp.call_string(&params),
+            rounded_float(getter.music_score),
+            rounded_float(getter.score_per_row()),
+            getter.call_string.clone(),
         )
     });
     Ok(Some(SearchResult {

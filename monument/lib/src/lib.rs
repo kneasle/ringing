@@ -41,7 +41,7 @@
 #![deny(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links)]
 #![allow(clippy::result_large_err)]
 
-mod composition;
+pub mod composition;
 mod error;
 mod graph;
 mod group;
@@ -53,4 +53,5 @@ pub mod utils;
 pub use composition::Composition;
 pub use error::{Error, Result};
 pub use group::{PartHead, PartHeadGroup, PhRotation};
+pub use parameters::Parameters;
 pub use search::{Config, Progress, Search, Update};

@@ -378,6 +378,18 @@ impl RowPosition {
     pub const ALL: [RowPosition; 4] = [Self::Front, Self::Internal, Self::Back, Self::Wrap];
 }
 
+impl Display for RowPosition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            RowPosition::Front => "Front",
+            RowPosition::Internal => "Internal",
+            RowPosition::Back => "Back",
+            RowPosition::Wrap => "Wrap",
+        };
+        f.write_str(name)
+    }
+}
+
 /// A collection of data (usually counts) for each position in a [`Row`] that music can occur
 /// (front, internal, back, wrap)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -391,43 +403,40 @@ pub struct AtRowPositions<T> {
 impl AtRowPositions<()> {
     pub const ZERO: AtRowPositions<usize> = AtRowPositions::splat(0);
     pub const ZERO_F32: AtRowPositions<f32> = AtRowPositions::splat(0.0);
+}
 
+impl AtRowPositions<bool> {
     /* Masks */
-    pub const FALSE: AtRowPositions<bool> = AtRowPositions::splat(false);
+    pub const FALSE: Self = AtRowPositions::splat(false);
+    pub const TRUE: Self = AtRowPositions::splat(true);
 
-    pub const FRONT: AtRowPositions<bool> = AtRowPositions {
-        front: true,
-        internal: false,
-        back: false,
-        wrap: false,
-    };
-
-    pub const BACK: AtRowPositions<bool> = AtRowPositions {
-        front: false,
-        internal: false,
-        back: true,
-        wrap: false,
-    };
-
-    pub const FRONT_AND_BACK: AtRowPositions<bool> = AtRowPositions {
-        front: true,
-        internal: false,
-        back: true,
-        wrap: false,
-    };
+    pub const FRONT: Self = Self::new(true, false, false, false);
+    pub const BACK: Self = Self::new(false, false, true, false);
+    pub const FRONT_AND_BACK: Self = Self::new(true, false, true, false);
 }
 
 impl<T> AtRowPositions<T> {
+    pub const fn new(front: T, internal: T, back: T, wrap: T) -> Self {
+        Self {
+            front,
+            internal,
+            back,
+            wrap,
+        }
+    }
+
+    pub fn front_and_back(value: T) -> Self
+    where
+        T: Default + Clone,
+    {
+        Self::new(value.clone(), T::default(), value, T::default())
+    }
+
     pub const fn splat(value: T) -> Self
     where
         T: Copy,
     {
-        Self {
-            front: value,
-            internal: value,
-            back: value,
-            wrap: value,
-        }
+        Self::new(value, value, value, value)
     }
 
     pub fn get(&self, position: RowPosition) -> &T {
@@ -478,6 +487,14 @@ impl<T> AtRowPositions<T> {
         }
     }
 
+    pub fn as_array(self) -> [T; 4] {
+        [self.front, self.internal, self.back, self.wrap]
+    }
+
+    pub fn as_ref_array(&self) -> [&T; 4] {
+        [&self.front, &self.internal, &self.back, &self.wrap]
+    }
+
     pub fn total<V>(&self) -> V
     where
         V: std::iter::Sum<T>,
@@ -493,6 +510,16 @@ impl<T> AtRowPositions<T> {
             back: f(self.back),
             wrap: f(self.wrap),
         }
+    }
+}
+
+impl AtRowPositions<bool> {
+    pub fn any(self) -> bool {
+        self.as_array().into_iter().any(|x| x)
+    }
+
+    pub fn all(self) -> bool {
+        self.as_array().into_iter().all(|x| x)
     }
 }
 
