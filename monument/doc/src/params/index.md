@@ -53,7 +53,6 @@ Monument.  If you want to learn how Monument works, check out the
 - [`calls` array:](calls.html#calls)
   - [`place_notation`](calls.html#place_notation)
   - [`symbol`](calls.html#symbol)
-  - [`debug_symbol`](calls.html#debug_symbol)
   - [`label`](calls.html#label)
   - [`weight`](calls.html#weight)
   - [`calling_positions`](calls.html#calling_positions)

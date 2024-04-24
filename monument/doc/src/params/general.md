@@ -41,7 +41,11 @@ length = "peal"      # equivalent to `{ min = 5000, max = 5200 }`
 The number of compositions that Monument will emit before finishing the search.
 
 Monument tends to generate compositions in decreasing order of goodness, so the _first_ `num_comps`
-compositions found will correspond roughly to the _best_ `num_comps` compositions.
+compositions found will correspond roughly to the _best_ `num_comps` compositions.  Note that this
+based on the _average score per row_ (i.e. total score divided by length) - which prevents Monument
+from always generating long compositions because of the extra score from the extra rows.
+
+When printing the final summary, Monument sorts the composition by total music score.
 
 Defaults to `100`.
 
@@ -50,7 +54,7 @@ Defaults to `100`.
 ```toml
 length = "QP"
 method = "Yorkshire Surprise Major"
-num_comps = 5 # Only emit the first five compositions
+num_comps = 5 # Only emit the first (likely best) five compositions
 ```
 
 
