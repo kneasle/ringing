@@ -23,7 +23,7 @@ use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
 /// Compute the layout (ids, lengths and connections) of the graph representing a [`Parameters`].
 ///
 /// This is the only item exported by this module; all the other code should be considered
-/// implementation detail of this function
+/// implementation detail of this function.
 pub(super) fn chunk_lengths<'q>(
     params: &'q Parameters,
     config: &Config,

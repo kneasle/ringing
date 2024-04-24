@@ -10,7 +10,7 @@ use std::{
     time::Instant,
 };
 
-use bellframe::{music::AtRowPositions, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet};
+use bellframe::{music::AtRowPositions, Block, Mask, Row, RowBuf, Stroke, StrokeSet};
 use itertools::Itertools;
 
 use crate::{
@@ -318,7 +318,7 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
     for call in &params.calls {
         if call.calling_positions.len() != params.stage.num_bells() {
             return Err(crate::Error::WrongCallingPositionsLength {
-                call_name: call.symbol.clone(),
+                call_symbol: call.symbol.clone(),
                 calling_position_len: call.calling_positions.len(),
                 stage: params.stage,
             });
@@ -331,7 +331,7 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
         for lead_label in [&call.label_from, &call.label_to] {
             if !defined_labels.contains(lead_label) {
                 return Err(crate::Error::UndefinedLabel {
-                    call_name: call.symbol.clone(),
+                    call_symbol: call.symbol,
                     label: lead_label.clone(),
                 });
             }
@@ -374,15 +374,12 @@ fn check_for_duplicate_call_names(params: &Parameters) -> crate::Result<()> {
     let sorted_calls = params
         .calls
         .iter()
-        .map(|call: &Call| -> (&str, &str, &PlaceNot) {
-            (&call.symbol, &call.label_from, &call.place_notation)
-        })
-        .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
-    for ((sym1, label1, pn1), (sym2, label2, pn2)) in sorted_calls.tuple_windows() {
-        if sym1 == sym2 && label1 == label2 {
+        .map(|call: &Call| (call.symbol, &call.place_notation))
+        .sorted_by_key(|&(sym, _pn)| sym);
+    for ((sym1, pn1), (sym2, pn2)) in sorted_calls.tuple_windows() {
+        if sym1 == sym2 {
             return Err(crate::Error::DuplicateCall {
-                symbol: sym1.to_owned(),
-                label: label1.to_owned(),
+                symbol: sym1,
                 pn1: pn1.clone(),
                 pn2: pn2.clone(),
             });

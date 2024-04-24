@@ -221,6 +221,7 @@ impl TomlFile {
             stage,
             num_comps: self.num_comps,
             require_truth: self.require_truth,
+
             methods: self.build_methods(parsed_methods, &part_head, stage)?,
             splice_style: self.splice_style.into(),
             splice_weight: self.splice_weight,

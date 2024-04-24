@@ -70,11 +70,11 @@ impl Parameters {
         ];
 
         // Calls
-        let bob = Call::lead_end_call(CallId(0), PlaceNot::parse("14", stage).unwrap(), "-", -1.8);
+        let bob = Call::lead_end_call(CallId(0), PlaceNot::parse("14", stage).unwrap(), '-', -1.8);
         let single = Call::lead_end_call(
             CallId(1),
             PlaceNot::parse("1234", stage).unwrap(),
-            "s",
+            's',
             -2.5,
         );
         let maybe_unused_calls = vec![(true, bob), (true, single)];

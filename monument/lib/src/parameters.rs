@@ -520,8 +520,8 @@ pub struct Call {
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_notation: PlaceNot,
 
-    pub symbol: String,
-    pub calling_positions: Vec<String>,
+    pub symbol: char,
+    pub calling_positions: Vec<char>,
 
     pub weight: f32,
 }
@@ -551,22 +551,23 @@ pub enum CallDisplayStyle {
 }
 
 impl Call {
+    pub fn is_bob(&self) -> bool {
+        self.symbol == '-' || self.symbol == '–'
+    }
+
     /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
     /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
     /// `-WsW-WsW-H`.
-    pub(crate) fn short_symbol(&self) -> &str {
-        match self.symbol.as_str() {
-            "-" | "–" => "", // Convert `-` to ``
-            s => s,          // All other calls use their explicit symbol
-        }
+    pub fn short_symbol(&self) -> Option<char> {
+        (!self.is_bob()).then_some(self.symbol)
     }
 
     /// Create a `Call` which replaces the lead end with a given [`PlaceNot`]
-    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
+    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: char, weight: f32) -> Self {
         Self {
             id,
 
-            symbol: symbol.to_owned(),
+            symbol,
             calling_positions: default_calling_positions(&place_not),
             label_from: LABEL_LEAD_END.to_owned(),
             label_to: LABEL_LEAD_END.to_owned(),
@@ -611,7 +612,7 @@ pub fn base_calls(
         calls.push(Call::lead_end_call(
             id_generator.next(),
             bob_pn,
-            "-",
+            '-',
             bob_weight,
         ));
     }
@@ -626,7 +627,7 @@ pub fn base_calls(
         calls.push(Call::lead_end_call(
             id_generator.next(),
             single_pn,
-            "s",
+            's',
             single_weight,
         ));
     }
@@ -635,7 +636,7 @@ pub fn base_calls(
 }
 
 #[allow(clippy::branches_sharing_code)]
-pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<char> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
@@ -645,10 +646,8 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
         // Start off with the single-char position names
         named_positions
         .chars()
-        .map(|c| c.to_string())
-        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
-        // calling positions)
-        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
+        // Extending forever with '?'s (for calling positions with no standard name)
+        .chain(std::iter::repeat('?'))
         // But we consume one value per place in the Stage
         .take(place_not.stage().num_bells())
         .collect_vec();
@@ -658,8 +657,7 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     macro_rules! replace_pos {
         ($idx: expr, $new_val: expr) => {
             if let Some(v) = positions.get_mut($idx) {
-                v.clear();
-                v.push($new_val);
+                *v = $new_val;
             }
         };
     }
@@ -678,8 +676,7 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
             if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
                 if place >= 4 {
                     if let Some(v) = positions.get_mut(place) {
-                        v.clear();
-                        v.push($new_val);
+                        *v = $new_val;
                     }
                 }
             }
@@ -1037,8 +1034,8 @@ mod tests {
     use itertools::Itertools;
 
     /// Converts a string to a list of strings, one of each [`char`] in the input.
-    fn char_vec(string: &str) -> Vec<String> {
-        string.chars().map(|c| c.to_string()).collect_vec()
+    fn char_vec(string: &str) -> Vec<char> {
+        string.chars().collect_vec()
     }
 
     #[test]

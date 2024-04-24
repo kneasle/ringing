@@ -522,13 +522,14 @@ impl Composition {
                         let row_after_call = path_iter
                             .peek()
                             .map_or(&self.part_head, |path_elem| &path_elem.start_row);
-                        let place_of_calling_bell = row_after_call.place_of(calling_bell).unwrap();
-                        let calling_position = &call.calling_positions[place_of_calling_bell];
-                        s.push_str(call.short_symbol());
-                        s.push_str(calling_position);
+                        let place_of_calling_bell = row_after_call.place_of(calling_bell);
+                        let calling_position =
+                            call.calling_positions[place_of_calling_bell as usize];
+                        s.extend(call.short_symbol());
+                        s.push(calling_position);
                     }
                     // TODO: Compute actual counts for positional calls
-                    CallDisplayStyle::Positional => s.push_str(&call.symbol),
+                    CallDisplayStyle::Positional => s.push(call.symbol),
                 }
                 s.push_str(if needs_brackets { "]" } else { "" });
             }
