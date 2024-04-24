@@ -1,0 +1,12 @@
+length = "QP"
+methods = [
+    "Yorkshire Surprise Major",
+    "Cambridge Surprise Major",
+    "Superlative Surprise Major",
+]
+method_count = { min = 100, max = 1200 }
+atw_weight = 100.0
+splice_style = "calls"
+
+calling = "HHWWHHsW"
+base_music = "none"

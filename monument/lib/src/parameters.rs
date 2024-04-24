@@ -1,7 +1,7 @@
 //! Instructions for Monument about what compositions should be generated.
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::Write,
     ops::{Deref, Range, RangeInclusive},
 };
@@ -14,7 +14,7 @@ use bellframe::{
 use itertools::Itertools;
 
 use crate::{
-    graph::ChunkId,
+    graph::{CallSeqVec, ChunkId},
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -57,6 +57,9 @@ pub struct Parameters {
     /// Score applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
     pub course_weights: Vec<(Mask, f32)>,
+    /// If set, force Monument to stick to a specific calling.  Useful for fitting methods to a
+    /// known good calling.
+    pub calling: Option<String>,
 
     // MUSIC
     pub music_types: MusicTypeVec<MusicType>,
@@ -144,6 +147,73 @@ impl Parameters {
     //////////////////////
     // HELPER FUNCTIONS //
     //////////////////////
+
+    pub(crate) fn parsed_call_string(&self) -> crate::Result<Option<CallSeqVec<(CallIdx, u8)>>> {
+        Ok(match &self.calling {
+            Some(s) => Some(self.parse_calling(s)?),
+            None => None,
+        })
+    }
+
+    fn parse_calling(&self, calling: &str) -> crate::Result<CallSeqVec<(CallIdx, u8)>> {
+        #[derive(Debug)]
+        enum CharMeaning {
+            /// Char refers to a call (e.g. "s" in "sH")
+            Call(CallIdx),
+            /// Char refers to a calling position of a bob (e.g. "H" as a shorthand for "-H")
+            BobCallingPosition(CallIdx, u8),
+        }
+
+        // Determine how to read the first char of a calls (see `CharMeaning`).  We add all calls
+        // then all calling positions (rather than combining the loops) so that it's easy to
+        // determine the cause of a name collision (thus improving the error messages).
+        let mut first_char_meanings = HashMap::<char, CharMeaning>::new();
+        for (call_idx, call) in self.calls.iter_enumerated() {
+            if !call.is_bob() {
+                let existing_meaning =
+                    first_char_meanings.insert(call.symbol, CharMeaning::Call(call_idx));
+                assert!(existing_meaning.is_none()); // Non-unique calls should already have errored
+            }
+        }
+        for (call_idx, call) in self.calls.iter_enumerated() {
+            if call.is_bob() {
+                for (position_place, position_char) in call.calling_positions.iter().enumerate() {
+                    let existing_meaning = first_char_meanings.insert(
+                        *position_char,
+                        CharMeaning::BobCallingPosition(call_idx, position_place as u8),
+                    );
+                    // TODO: Raise error
+                }
+            }
+        }
+
+        // Read the call string.  Each loop consumes one call (or skips over one character)
+        let mut calls = CallSeqVec::<(CallIdx, u8)>::new();
+        let mut char_iter = calling.chars();
+        while let Some(c) = char_iter.next() {
+            match first_char_meanings.get(&c) {
+                // Just a call name, so parse the next char as a calling position
+                Some(CharMeaning::Call(call_idx)) => {
+                    let Some(position_char) = char_iter.next() else {
+                        todo!(); // TODO: Return error
+                    };
+                    let position = self.calls[*call_idx]
+                        .calling_positions
+                        .iter()
+                        .position(|p| *p == position_char)
+                        .ok_or_else(|| todo!())?; // TODO: Return error
+                    calls.push((*call_idx, position as u8));
+                }
+                Some(CharMeaning::BobCallingPosition(call_idx, place)) => {
+                    // Call is already fully parsed
+                    calls.push((*call_idx, *place));
+                }
+                None => continue, // TODO: Raise error here?
+            }
+        }
+
+        Ok(calls)
+    }
 
     /// For a given chunk, split that chunk's range into segments where each one falls within a
     /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`

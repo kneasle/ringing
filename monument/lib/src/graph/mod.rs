@@ -90,13 +90,19 @@ pub(crate) struct Chunk {
 /// A link between two [`Chunk`]s in a [`Graph`]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct Link {
-    pub from: LinkSide<ChunkId>,
-    pub to: LinkSide<ChunkId>,
     /// Indexes into [`crate::Parameters::calls`]
     pub call: Option<CallIdx>,
+    pub from: LinkSide<ChunkId>,
+    pub to: LinkSide<ChunkId>,
+
     pub ph_rotation: PhRotation,
     // TODO: Remove this and compute it on the fly for `LinkView`?
     pub ph_rotation_back: PhRotation,
+
+    /// If `Some(x)`, then this link constitutes call number X in the call sequence that Monument is
+    /// following.  For example, if Monument is generating "HHsWsHsW", then the first "H" will have
+    /// `sequence_number = 0`, the second "H" will have `1`, the "sW" will have 2, etc.
+    pub sequence_idx: Option<CallSeqIdx>,
 }
 
 impl Link {
@@ -212,6 +218,9 @@ impl RowIdx {
         }
     }
 }
+
+index_vec::define_index_type! { pub(crate) struct CallSeqIdx = usize; }
+pub(crate) type CallSeqVec<T> = index_vec::IndexVec<CallSeqIdx, T>;
 
 //////////////
 // LINK SET //

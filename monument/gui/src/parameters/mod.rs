@@ -158,6 +158,7 @@ impl Parameters {
             end_row: RowBuf::rounds(stage),
             part_head_group: PartHeadGroup::one_part(stage),
             course_weights: vec![],
+            calling: None,
 
             music_types,
             start_stroke: Stroke::Hand,

@@ -154,6 +154,10 @@ pub struct TomlFile {
     /// Which course heads masks are allowed (overrides `split_tenors`)
     courses: Option<Vec<String>>,
     course_heads: Option<Vec<String>>, // Alias of `courses`, deprecated in v0.13.0
+    /// If set, Monument will only output compositions which have this call sequence.  For example,
+    /// "HHsWsHsW" will output only compositions with the classic 1282 Yorkshire/Cambridge Royal
+    /// calling.
+    calling: Option<String>,
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
     course_weights: Vec<CourseWeightPattern>,
@@ -236,6 +240,8 @@ impl TomlFile {
             start_row: parse_row("start row", &self.start_row, stage)?,
             end_row: parse_row("end row", &self.end_row, stage)?,
             course_weights: self.course_weights(stage)?,
+            calling: self.calling.clone(),
+
             music_types: self.music(toml_path, stage)?,
             start_stroke: self.start_stroke,
         };

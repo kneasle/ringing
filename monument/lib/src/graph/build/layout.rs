@@ -8,7 +8,7 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
+    graph::{CallSeqIdx, ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
     parameters::{CallIdx, MethodIdx, MethodVec, Parameters, SpliceStyle},
     utils::{
@@ -32,31 +32,39 @@ pub(super) fn chunk_lengths<'q>(
     HashMap<ChunkId, PerPartLength>,
     LinkSet,
 )> {
+    // Values to output
     let mut chunk_lengths = HashMap::new();
     let mut links = LinkSet::new();
-
-    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId, TotalLength>>>::new();
     let mut chunk_equiv_map = ChunkEquivalenceMap::new(&params.part_head_group);
+
+    // Working variables
+    let call_sequence = params.parsed_call_string()?;
     let chunk_factory = ChunkFactory::new(params);
+    let mut frontier =
+        BinaryHeap::<Reverse<FrontierItem<(ChunkId, CallSeqIdx), TotalLength>>>::new();
 
     // Populate the frontier with start chunks, and add start links to `links`
     for start_id in boundary_locations(&params.start_row, Boundary::Start, params) {
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
+            call: None,
             from: LinkSide::StartOrEnd,
             to: LinkSide::Chunk(start_id.clone()),
-            call: None,
             ph_rotation,
             ph_rotation_back: !ph_rotation,
+            sequence_idx: None,
         });
-        frontier.push(Reverse(FrontierItem::new(start_id, TotalLength::ZERO)));
+        frontier.push(Reverse(FrontierItem::new(
+            (start_id, CallSeqIdx::new(0)),
+            TotalLength::ZERO,
+        )));
     }
 
     // Repeatedly expand `ChunkId`s in increasing order of distance (i.e. we're exploring the graph
     // using Dijkstra's algorithm).
     while let Some(Reverse(frontier_item)) = frontier.pop() {
         let FrontierItem {
-            item: chunk_id,
+            item: (chunk_id, call_sequence_idx),
             distance: min_distance_from_start,
         } = frontier_item;
 
@@ -79,34 +87,71 @@ pub(super) fn chunk_lengths<'q>(
             continue;
         }
 
+        // Actually add the chunk to the graph
         chunk_lengths.insert(chunk_id.clone(), per_part_length);
+
         // Create the successor links and add the corresponding `ChunkId`s to the frontier
-        let mut links_so_far = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
-        for (id_to, call, is_end) in successors {
-            // Add link to the graph
-            let (id_to, ph_rotation) = chunk_equiv_map.normalise(&id_to);
+        let mut links_from_this_chunk = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
+        for (unnormalised_id_to, call, is_end) in successors {
+            // Determine where this link leads
+            let (id_to, ph_rotation) = chunk_equiv_map.normalise(&unnormalised_id_to);
             let link_side_to = match is_end {
                 true => LinkSide::StartOrEnd,
                 false => LinkSide::Chunk(id_to.clone()),
             };
             // Only store one link between every pair of `LinkSide`s
             // TODO: Always preserve the links with the *highest* score
-            if !links_so_far.insert((link_side_to.clone(), ph_rotation)) {
-                continue; // Skip any link which already exists
+            if !links_from_this_chunk.insert((link_side_to.clone(), ph_rotation)) {
+                continue; // An equivalent link has already been added
+            }
+
+            // If user forces a given call sequence, remove any links which don't correspond to the
+            // correct next call.
+            // TODO: Handle compositions which visit courses multiple times
+            let mut link_sequence_idx = None;
+            let mut next_call_sequence_idx = call_sequence_idx;
+            if let Some(sequence) = &call_sequence {
+                if let Some(call) = call {
+                    let Some(&(expected_next_call, expected_place)) =
+                        sequence.get(call_sequence_idx)
+                    else {
+                        continue; // Skip a call which is past the end of the composition
+                    };
+
+                    // Skip use of the wrong call
+                    if expected_next_call != call {
+                        continue;
+                    }
+
+                    // Skip use of the correct call but at the wrong calling position
+                    let calling_bell_place =
+                        unnormalised_id_to.lead_head.place_of(params.calling_bell);
+                    if calling_bell_place != expected_place {
+                        continue;
+                    }
+
+                    // Allow the call
+                    link_sequence_idx = Some(call_sequence_idx);
+                    next_call_sequence_idx += 1;
+                }
             }
 
             // Add the link
             links.add(Link {
+                call,
                 from: LinkSide::Chunk(chunk_id.clone()),
                 to: link_side_to,
-                call,
                 ph_rotation,
                 ph_rotation_back: !ph_rotation,
+                sequence_idx: link_sequence_idx,
             });
             // If this isn't an end, add the new chunk to the frontier so it becomes part of the
             // graph
             if !is_end {
-                frontier.push(Reverse(FrontierItem::new(id_to, min_distance_after_chunk)));
+                frontier.push(Reverse(FrontierItem::new(
+                    (id_to, next_call_sequence_idx),
+                    min_distance_after_chunk,
+                )));
             }
         }
     }

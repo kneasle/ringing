@@ -1,0 +1,10 @@
+length = "QP"
+methods = [
+    "Yorkshire Surprise Royal",
+    "Cambridge Surprise Royal",
+]
+method_count = { min = 400, max = 900 }
+calling = "HHsWsHsW"
+atw_weight = 100.0
+base_music = "none"
+splice_style = "calls"

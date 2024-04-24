@@ -818,6 +818,77 @@ len |  music     567s   657s   CRUs    4-bell runs   46s | avg score | calling
 ----|----------------------------------------------------|-----------|-----------
 len |  music     567s   657s   CRUs    4-bell runs   46s | avg score | calling
 """
+"test/cases/custom-calling/1250-major.toml" = """
+ len     Y    C    S  | atw |  music  | avg score | calling
+----------------------|-----|---------|-----------|-----------
+1250 :  578  128  544 | 85% |    0.00 |  0.058091 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]SSS[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  674  128  448 | 85% |    0.00 |  0.058091 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]YYY[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  898  128  224 | 85% |    0.00 |  0.058091 | YYYYYYY[H]YYYYYYY[H]YYYY[W]YYYYYYY[W]YYY[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  576  130  544 | 85% |    0.00 |  0.058295 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]SSS[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  672  130  448 | 85% |    0.00 |  0.058295 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]YYY[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  896  130  224 | 85% |    0.00 |  0.058295 | YYYYYYY[H]YYYYYYY[H]YYYY[W]YYYYYYY[W]YYY[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  578  224  448 | 95% |    0.00 |  0.065710 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]CCC[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  576  226  448 | 95% |    0.00 |  0.065778 | YYYYYYY[H]YYYYYYY[H]YYYY[W]SSSSSSS[W]CCC[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  576  450  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  578  448  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  576  322  352 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]SSSS[sW]C>
+1250 :  578  320  352 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]SSSS[sW]Y>
+1250 :  704  322  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]YYYY[sW]C>
+1250 :  706  320  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]CCC[H]SSSSSSS[H]YYYY[sW]Y>
+1250 :  672  354  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]CCCC[sW]C>
+1250 :  674  352  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]CCCC[sW]Y>
+1250 :  672  226  352 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]SSSS[sW]C>
+1250 :  674  224  352 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]SSSS[sW]Y>
+1250 :  800  226  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]YYYY[sW]C>
+1250 :  802  224  224 | atw |    0.00 |  0.069520 | YYYYYYY[H]YYYYYYY[H]YYYY[W]CCCCCCC[W]YYY[H]SSSSSSS[H]YYYY[sW]Y>
+----------------------|-----|---------|-----------|-----------
+ len     Y    C    S  | atw |  music  | avg score | calling
+"""
+"test/cases/custom-calling/1282-royal-single-method.toml" = """
+ len |  music         4-bell runs         lb5s     56s   65s    09s | avg score | calling
+-----|--------------------------------------------------------------|-----------|-----------
+1282 |  207.00 :    83 (  34f   49b)     4f   7b   15     0       0 |  0.153276 | HHsWsHsW>
+-----|--------------------------------------------------------------|-----------|-----------
+ len |  music         4-bell runs         lb5s     56s   65s    09s | avg score | calling
+"""
+"test/cases/custom-calling/1282-royal.toml" = """
+ len    Y   C  | atw |  music  | avg score | calling
+---------------|-----|---------|-----------|-----------
+1282 : 400 882 | 80% |    0.00 |  0.054405 | CCCCCCCCC[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]YYYYY[sW]C>
+1282 : 882 400 | 80% |    0.00 |  0.054405 | YYYYYYYYY[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]CCCCC[sW]Y>
+1282 : 402 880 | 80% |    0.00 |  0.054573 | CCCCCCCCC[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]YYYYY[sW]Y>
+1282 : 880 402 | 80% |    0.00 |  0.054573 | YYYYYYYYY[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]CCCCC[sW]C>
+1282 : 560 722 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]CCCCCCCCC[H]YYYYY[sW]YYYY[sH]YYYYY[sW]C>
+1282 : 562 720 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]CCCCCCCCC[H]YYYYY[sW]YYYY[sH]YYYYY[sW]Y>
+1282 : 560 722 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]CCCC[sH]YYYYY[sW]C>
+1282 : 562 720 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]CCCC[sH]YYYYY[sW]Y>
+1282 : 520 762 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]CCCCC[sW]C>
+1282 : 522 760 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]CCCCC[sW]Y>
+1282 : 720 562 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]YYYYY[sW]C>
+1282 : 722 560 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]CCCCC[sW]YYYY[sH]YYYYY[sW]Y>
+1282 : 560 722 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]CCCC[sH]CCCCC[sW]C>
+1282 : 562 720 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]CCCC[sH]CCCCC[sW]Y>
+1282 : 760 522 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]CCCC[sH]YYYYY[sW]C>
+1282 : 762 520 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]CCCC[sH]YYYYY[sW]Y>
+1282 : 720 562 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]YYYY[sH]CCCCC[sW]C>
+1282 : 722 560 | atw |    0.00 |  0.069813 | CCCCCCCCC[H]YYYYYYYYY[H]YYYYY[sW]YYYY[sH]CCCCC[sW]Y>
+1282 : 560 722 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]CCCC[sH]YYYYY[sW]C>
+1282 : 562 720 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]CCCC[sH]YYYYY[sW]Y>
+1282 : 520 762 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]YYYY[sH]CCCCC[sW]C>
+1282 : 522 760 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]YYYY[sH]CCCCC[sW]Y>
+1282 : 720 562 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]YYYY[sH]YYYYY[sW]C>
+1282 : 722 560 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]CCCCC[sW]YYYY[sH]YYYYY[sW]Y>
+1282 : 560 722 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]CCCCC[sW]C>
+1282 : 562 720 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]CCCCC[sW]Y>
+1282 : 760 522 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]YYYYY[sW]C>
+1282 : 762 520 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]CCCC[sH]YYYYY[sW]Y>
+1282 : 720 562 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]YYYY[sH]CCCCC[sW]C>
+1282 : 722 560 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]CCCCCCCCC[H]YYYYY[sW]YYYY[sH]CCCCC[sW]Y>
+1282 : 720 562 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]YYYYYYYYY[H]CCCCC[sW]CCCC[sH]CCCCC[sW]C>
+1282 : 722 560 | atw |    0.00 |  0.069813 | YYYYYYYYY[H]YYYYYYYYY[H]CCCCC[sW]CCCC[sH]CCCCC[sW]Y>
+---------------|-----|---------|-----------|-----------
+ len    Y   C  | atw |  music  | avg score | calling
+"""
 "test/cases/custom-method-count-1.toml" = """
 len    Y   C  |  music  | avg score | calling
 --------------|---------|-----------|-----------
