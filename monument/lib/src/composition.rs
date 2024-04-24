@@ -518,11 +518,11 @@ impl Composition {
                 s.push_str(if needs_brackets { "[" } else { "" });
                 // Call position
                 match params.call_display_style {
-                    CallDisplayStyle::CallingPositions(calling_bell) => {
+                    CallDisplayStyle::CallingPositions => {
                         let row_after_call = path_iter
                             .peek()
                             .map_or(&self.part_head, |path_elem| &path_elem.start_row);
-                        let place_of_calling_bell = row_after_call.place_of(calling_bell);
+                        let place_of_calling_bell = row_after_call.place_of(params.calling_bell);
                         let calling_position =
                             call.calling_positions[place_of_calling_bell as usize];
                         s.extend(call.short_symbol());

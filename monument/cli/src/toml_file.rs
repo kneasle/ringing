@@ -211,7 +211,7 @@ impl TomlFile {
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
-            CallDisplayStyle::CallingPositions(calling_bell)
+            CallDisplayStyle::CallingPositions
         } else {
             CallDisplayStyle::Positional
         };
@@ -225,13 +225,16 @@ impl TomlFile {
             methods: self.build_methods(parsed_methods, &part_head, stage)?,
             splice_style: self.splice_style.into(),
             splice_weight: self.splice_weight,
-            calls: self.calls(stage)?,
-            call_display_style,
             atw_weight: self.atw_weight,
             require_atw: self.require_atw,
+
+            calls: self.calls(stage)?,
+            call_display_style,
+            calling_bell,
+
+            part_head_group: PartHeadGroup::new(&part_head),
             start_row: parse_row("start row", &self.start_row, stage)?,
             end_row: parse_row("end row", &self.end_row, stage)?,
-            part_head_group: PartHeadGroup::new(&part_head),
             course_weights: self.course_weights(stage)?,
             music_types: self.music(toml_path, stage)?,
             start_stroke: self.start_stroke,

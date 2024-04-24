@@ -44,6 +44,7 @@ pub struct Parameters {
     pub splice_weight: f32,
     pub calls: CallVec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
+    pub calling_bell: Bell,
     pub atw_weight: Option<f32>,
     pub require_atw: bool, // `true` to make Monument only output atw comps
 
@@ -546,8 +547,8 @@ impl From<CallId> for u32 {
 pub enum CallDisplayStyle {
     /// Calls should be displayed as a count since the last course head.
     Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
-    CallingPositions(Bell),
+    /// Calls should be displayed based on the position of the `calling_bell`
+    CallingPositions,
 }
 
 impl Call {
