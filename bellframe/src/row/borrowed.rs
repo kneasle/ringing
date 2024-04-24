@@ -121,16 +121,16 @@ impl Row {
     /// # fn test() -> Option<()> {
     /// let tittums = RowBuf::parse("15263748").unwrap();
     /// // The treble is leading in position 0
-    /// assert_eq!(tittums.place_of(Bell::from_name('1')?)?, 0);
+    /// assert_eq!(tittums.place_of(Bell::from_name('1')?), 0);
     /// // The '5' is at index `1`, because indices always start from zero
-    /// assert_eq!(tittums.place_of(Bell::from_name('5')?)?, 1);
+    /// assert_eq!(tittums.place_of(Bell::from_name('5')?), 1);
     /// # Some(())
     /// # }
     /// # fn main() { test().unwrap() }
     /// ```
     #[inline]
-    pub fn place_of(&self, bell: Bell) -> Option<usize> {
-        self.bell_iter().position(|b| b == bell)
+    pub fn place_of(&self, bell: Bell) -> u8 {
+        self.bell_iter().position(|b| b == bell).unwrap() as u8
     }
 
     /// Gets the [`Bell`] at a given place in this [`Row`], **without** bounds checks.

@@ -349,7 +349,7 @@ fn classify_hunt_cycle(cycle: &Cycle, stage: Stage) -> (bool, HuntBellClass) {
     // because the `path` includes the leftover row and therefore counts the first place twice).
     let mut num_rows_in_each_place = vec![0usize; stage.num_bells()];
     for p in &cycle.full_path {
-        num_rows_in_each_place[*p] += 1;
+        num_rows_in_each_place[*p as usize] += 1;
     }
 
     // A hunt bell path is Little if some places are not visited
@@ -480,7 +480,7 @@ fn sub_classify_plain(working_bell_cycles: Vec<&Cycle>) -> Class {
 /// giving a roughly quadratic algorithm.  This is more than fast enough (it classifies the whole
 /// method library with no noticeable delay), but if someone knows of or wants to implement a
 /// faster algorithm then you're welcome to.
-fn is_palindromic(path: &[usize]) -> bool {
+fn is_palindromic(path: &[u8]) -> bool {
     // Try rotating `reversed_path` by each amount, and test if the result is equal to
     // `is_palindromic`
     for i in 0..path.len() {
@@ -500,7 +500,7 @@ fn is_palindromic(path: &[usize]) -> bool {
 #[derive(Debug, Clone)]
 struct Cycle {
     place_bells: Vec<Bell>,
-    full_path: Vec<usize>, // TODO: Make these Vec<u8>, because places >255 are impossible
+    full_path: Vec<u8>,
 }
 
 impl Cycle {

@@ -251,8 +251,8 @@ impl SameStageVec {
 
     /// Returns a [`Vec`] containing the place of a [`Bell`] in each [`Row`] in this
     /// `SameStageVec`.  Returns `None` if the [`Bell`] exceeds the [`Stage`] of `self`.
-    pub fn path_of(&self, bell: Bell) -> Vec<usize> {
-        self.iter().map(|r| r.place_of(bell).unwrap()).collect_vec()
+    pub fn path_of(&self, bell: Bell) -> Vec<u8> {
+        self.iter().map(|r| r.place_of(bell)).collect_vec()
     }
 
     ////////////////
