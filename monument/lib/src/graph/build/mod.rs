@@ -318,7 +318,7 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
     for call in &params.calls {
         if call.calling_positions.len() != params.stage.num_bells() {
             return Err(crate::Error::WrongCallingPositionsLength {
-                call_symbol: call.symbol.clone(),
+                call_symbol: call.symbol,
                 calling_position_len: call.calling_positions.len(),
                 stage: params.stage,
             });

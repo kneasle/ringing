@@ -59,8 +59,7 @@ impl<Id: From<u32> + Into<u32>> IdGenerator<Id> {
 
     #[allow(clippy::should_implement_trait)]
     pub fn next(&self) -> Id {
-        let id = Id::from(self.next_id.fetch_add(1, Ordering::SeqCst));
-        id
+        Id::from(self.next_id.fetch_add(1, Ordering::SeqCst))
     }
 }
 

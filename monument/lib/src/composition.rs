@@ -422,11 +422,9 @@ impl Composition {
         };
         let is_known_good = per_param_cache.is_some();
 
-        if !is_known_good {
-            if !self.do_cheap_checks(params) {
-                cache.param_wide_values.insert(self.id, Invalid);
-                return None;
-            }
+        if !is_known_good && !self.do_cheap_checks(params) {
+            cache.param_wide_values.insert(self.id, Invalid);
+            return None;
         }
 
         let music_counts =
@@ -573,10 +571,7 @@ impl Composition {
     /// call.  It's fine to call it every so often (e.g. every time a valid composition is
     /// generated), but not if there is a lot of time pressure (e.g. recomputing it for every
     /// composition on every GUI frame).
-    fn calculate_music_counts<'a>(
-        &self,
-        params: &ParamsData,
-    ) -> MusicTypeVec<AtRowPositions<usize>> {
+    fn calculate_music_counts(&self, params: &ParamsData) -> MusicTypeVec<AtRowPositions<usize>> {
         let block = params.get_block(&self.path);
         params
             .music_types
@@ -685,7 +680,7 @@ impl CompositionValues<'_> {
         if params.require_truth && !self.is_true() {
             return false; // Composition is false but we needed it to be true
         }
-        if &self.end_row != &params.end_row {
+        if self.end_row != params.end_row {
             return false; // Comps ends on the wrong row
         }
         for (mt, counts) in params.music_types.iter().zip_eq(&self.music_counts) {

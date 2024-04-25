@@ -529,7 +529,7 @@ impl Cycle {
                 place_bells_in_cycle.push(place_bell);
                 full_path.extend(path);
                 // Move to the next place bell, and
-                place_bell = Bell::from_index(next_place_bell as u8);
+                place_bell = Bell::from_index(next_place_bell);
                 if place_bell == starting_bell {
                     break;
                 }
