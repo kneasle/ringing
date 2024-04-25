@@ -57,7 +57,7 @@ pub(super) fn chunk_lengths<'q>(
             to: LinkSide::Chunk(start_id.clone()),
             ph_rotation,
             ph_rotation_back: !ph_rotation,
-            sequence_idx: None,
+            call_sequence_idx: None,
         });
         frontier.push(Reverse(FrontierItem::new(
             (start_id, CallSeqIdx::new(0)),
@@ -113,10 +113,15 @@ pub(super) fn chunk_lengths<'q>(
 
             // If user forces a given call sequence, remove any links which don't correspond to the
             // correct next call.
-            // TODO: Handle compositions which visit courses multiple times
             let mut link_sequence_idx = None;
             let mut next_call_sequence_idx = call_sequence_idx;
             if let Some(sequence) = &call_sequence {
+                if is_end {
+                    // Any non-call ends appear 'after' all the calls in the composition.  Note how
+                    // this value will get overwritten if this is an end link which has a call.
+                    link_sequence_idx = Some(sequence.len_idx());
+                }
+
                 if let Some(call) = call {
                     let Some(&(expected_next_call, expected_place)) =
                         sequence.get(call_sequence_idx)
@@ -153,7 +158,7 @@ pub(super) fn chunk_lengths<'q>(
                     to: link_side_to,
                     ph_rotation,
                     ph_rotation_back: !ph_rotation,
-                    sequence_idx: link_sequence_idx,
+                    call_sequence_idx: link_sequence_idx,
                 });
             }
             // If this isn't an end, add the new chunk to the frontier so it becomes part of the

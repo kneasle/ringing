@@ -102,7 +102,7 @@ pub(crate) struct Link {
     /// If `Some(x)`, then this link constitutes call number X in the call sequence that Monument is
     /// following.  For example, if Monument is generating "HHsWsHsW", then the first "H" will have
     /// `sequence_number = 0`, the second "H" will have `1`, the "sW" will have 2, etc.
-    pub sequence_idx: Option<CallSeqIdx>,
+    pub call_sequence_idx: Option<CallSeqIdx>,
 }
 
 impl Link {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph::LinkSide,
+    graph::{CallSeqIdx, LinkSide},
     group::{PartHead, PhRotation},
     parameters::{CallIdx, Parameters},
     utils::{
@@ -48,6 +48,11 @@ pub(super) struct Chunk {
 pub(super) struct SuccLink {
     pub call: Option<CallIdx>,
     pub next: LinkSide<ChunkIdx>,
+    /// If a calling is given, and this link corresponds to a call in that sequence, then this
+    /// takes value `Some(idx)` where `idx` is the index of that call.  Otherwise, this is `None`.
+    ///
+    /// These links have to be added in increasing order (skipping sections if the user allows).
+    pub call_sequence_idx: Option<CallSeqIdx>,
     pub score: f32,
     pub ph_rotation: PhRotation,
 }
@@ -104,6 +109,7 @@ impl Graph {
                         Some(SuccLink {
                             call: link.call,
                             score: link_score(source_chunk, link, params),
+                            call_sequence_idx: link.call_sequence_idx,
                             next,
                             ph_rotation: link.ph_rotation,
                         })

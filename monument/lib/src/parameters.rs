@@ -63,7 +63,7 @@ pub struct Parameters {
     /// If a `calling` is given, setting this to `true` will allow Monument to skip round
     /// blocks in the input calling (for example, if this is set to `true` then a calling of
     /// "WWWHHH" would generate "", "WWW", "HHH" and "WWWHHH").
-    pub collapse_round_blocks: bool,
+    pub omit_round_blocks: bool,
 
     // MUSIC
     pub music_types: MusicTypeVec<MusicType>,

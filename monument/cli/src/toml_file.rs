@@ -162,7 +162,7 @@ pub struct TomlFile {
     /// blocks in the input calling (for example, if this is set to `true` then a calling of
     /// "WWWHHH" would generate "", "WWW", "HHH" and "WWWHHH").
     #[serde(default)]
-    collapse_round_blocks: bool,
+    omit_round_blocks: bool,
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
     course_weights: Vec<CourseWeightPattern>,
@@ -246,7 +246,7 @@ impl TomlFile {
             end_row: parse_row("end row", &self.end_row, stage)?,
             course_weights: self.course_weights(stage)?,
             calling: self.calling.clone(),
-            collapse_round_blocks: self.collapse_round_blocks,
+            omit_round_blocks: self.omit_round_blocks,
 
             music_types: self.music(toml_path, stage)?,
             start_stroke: self.start_stroke,

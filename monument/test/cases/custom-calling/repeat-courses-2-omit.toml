@@ -2,3 +2,4 @@ length = { min = 0, max = 10000 }
 method = "Cambridge Surprise Major"
 
 calling = "BBBMHWHHH"
+omit_round_blocks = true
