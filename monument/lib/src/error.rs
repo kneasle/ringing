@@ -63,6 +63,13 @@ pub enum Error {
         pn1: PlaceNot,
         pn2: PlaceNot,
     },
+    /// An error was found when parsing the custom calling
+    CustomCallingParse {
+        /// Index within the 'calling' string where this error occurred, if any
+        char_idx: Option<usize>,
+        /// What went wrong
+        reason: String,
+    },
 
     /* GRAPH BUILD ERRORS */
     /// The given maximum graph size limit was reached
@@ -158,6 +165,9 @@ impl Display for Error {
                 "Call symbol {:?} is used for both {} and {}",
                 symbol, pn1, pn2
             ),
+            Error::CustomCallingParse { reason, .. } => {
+                write!(f, "Error parsing calling: {reason}")
+            }
 
             /* GRAPH BUILD ERRORS */
             Error::SizeLimit(limit) => write!(

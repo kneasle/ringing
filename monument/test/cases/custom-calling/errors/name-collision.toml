@@ -1,0 +1,4 @@
+length = "QP"
+method = "Yorkshire Surprise Major"
+calls = [{ symbol = "H", place_notation = "1456" }] # Intentionally collide with 'H' calling position
+calling = "HHWWHHsW"

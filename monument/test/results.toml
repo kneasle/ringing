@@ -889,6 +889,25 @@ len |  music     567s   657s   CRUs    4-bell runs   46s | avg score | calling
 ---------------|-----|---------|-----------|-----------
  len    Y   C  | atw |  music  | avg score | calling
 """
+"test/cases/custom-calling/errors/invalid-calling-position.toml" = """
+Error: Error parsing calling: 'w' isn't a calling position for 's'
+"""
+"test/cases/custom-calling/errors/invalid-char.toml" = """
+Error: Error parsing calling: Char '&' is not whitespace, nor the start of a valid call.
+"""
+"test/cases/custom-calling/errors/name-collision.toml" = """
+Error: Error parsing calling: A bob calling position 'H' shares its name with a different call.
+"""
+"test/cases/custom-calling/errors/truncated-calling.toml" = """
+Error: Error parsing calling: Expected a calling position for 's', but the string ended.
+"""
+"test/cases/custom-calling/whitespace-in-calling.toml" = """
+ len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+-----|----------------------------------------------------------------|-----------|-----------
+1250 |  108.00 :   48 ( 19f  29b)    1f 16b    8f  1b    0f  0b     0 |  0.075920 | HHWWHHsW>
+-----|----------------------------------------------------------------|-----------|-----------
+ len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+"""
 "test/cases/custom-method-count-1.toml" = """
 len    Y   C  |  music  | avg score | calling
 --------------|---------|-----------|-----------

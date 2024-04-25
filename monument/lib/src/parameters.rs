@@ -182,33 +182,67 @@ impl Parameters {
                         *position_char,
                         CharMeaning::BobCallingPosition(call_idx, position_place as u8),
                     );
-                    // TODO: Raise error
+                    if let Some(CharMeaning::Call(_)) = existing_meaning {
+                        return Err(crate::Error::CustomCallingParse {
+                            char_idx: None,
+                            reason: format!(
+                                "A bob calling position {:?} shares its name with a different call.",
+                                position_char
+                            ),
+                        });
+                    }
                 }
             }
         }
 
         // Read the call string.  Each loop consumes one call (or skips over one character)
         let mut calls = CallSeqVec::<(CallIdx, u8)>::new();
-        let mut char_iter = calling.chars();
-        while let Some(c) = char_iter.next() {
+        let mut char_iter = calling
+            .char_indices()
+            .filter(|(_idx, c)| !c.is_whitespace()); // Prefilter whitespace from the calling
+        while let Some((char_idx, c)) = char_iter.next() {
             match first_char_meanings.get(&c) {
                 // Just a call name, so parse the next char as a calling position
                 Some(CharMeaning::Call(call_idx)) => {
-                    let Some(position_char) = char_iter.next() else {
-                        todo!(); // TODO: Return error
+                    let Some((_char_idx, position_char)) = char_iter.next() else {
+                        return Err(crate::Error::CustomCallingParse {
+                            char_idx: Some(char_idx),
+                            reason: format!(
+                                "Expected a calling position for {c:?}, but the string ended."
+                            ),
+                        });
                     };
-                    let position = self.calls[*call_idx]
+                    let maybe_position = self.calls[*call_idx]
                         .calling_positions
                         .iter()
-                        .position(|p| *p == position_char)
-                        .ok_or_else(|| todo!())?; // TODO: Return error
-                    calls.push((*call_idx, position as u8));
+                        .position(|p| *p == position_char);
+                    match maybe_position {
+                        Some(position) => {
+                            calls.push((*call_idx, position as u8));
+                        }
+                        None => {
+                            return Err(crate::Error::CustomCallingParse {
+                                char_idx: Some(char_idx),
+                                reason: format!(
+                                    "{position_char:?} isn't a calling position for {c:?}"
+                                ),
+                            })
+                        }
+                    }
                 }
+                // Call is already fully parsed
                 Some(CharMeaning::BobCallingPosition(call_idx, place)) => {
-                    // Call is already fully parsed
                     calls.push((*call_idx, *place));
                 }
-                None => continue, // TODO: Raise error here?
+                // Non white-space, non-call, non-bob-calling-position chars are an error
+                None => {
+                    return Err(crate::Error::CustomCallingParse {
+                        char_idx: Some(char_idx),
+                        reason: format!(
+                            "Char {c:?} is not whitespace, nor the start of a valid call."
+                        ),
+                    })
+                }
             }
         }
 
