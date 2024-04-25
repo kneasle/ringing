@@ -1,0 +1,5 @@
+length = { min = 0, max = 10000 }
+method = "Bristol Surprise Major"
+
+part_head = "13254"
+calling = "WHWWHH"

@@ -1,0 +1,5 @@
+length = { min = 0, max = 10000 }
+method = "Cambridge Surprise Major"
+
+calling = "BBBMHWHHH"
+collapse_round_blocks = true

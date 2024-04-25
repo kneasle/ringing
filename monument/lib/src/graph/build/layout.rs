@@ -32,6 +32,9 @@ pub(super) fn chunk_lengths<'q>(
     HashMap<ChunkId, PerPartLength>,
     LinkSet,
 )> {
+    // NOTE: Here we're always tracking the `CallSeqIdx`, even if the user hasn't provided a custom
+    // calling.  If the user hasn't given a calling, the `CallSeqIdx` will always be 0.
+
     // Values to output
     let mut chunk_lengths = HashMap::new();
     let mut links = LinkSet::new();
@@ -40,6 +43,8 @@ pub(super) fn chunk_lengths<'q>(
     // Working variables
     let call_sequence = params.parsed_call_string()?;
     let chunk_factory = ChunkFactory::new(params);
+    let mut chunks_expanded = HashSet::<(ChunkId, CallSeqIdx)>::new();
+    let mut links_generated = HashSet::<(LinkSide<ChunkId>, LinkSide<ChunkId>, PhRotation)>::new();
     let mut frontier =
         BinaryHeap::<Reverse<FrontierItem<(ChunkId, CallSeqIdx), TotalLength>>>::new();
 
@@ -68,7 +73,7 @@ pub(super) fn chunk_lengths<'q>(
             distance: min_distance_from_start,
         } = frontier_item;
 
-        if chunk_lengths.contains_key(&chunk_id) {
+        if chunks_expanded.contains(&(chunk_id.clone(), call_sequence_idx)) {
             continue; // Don't expand the same chunk multiple times
         }
 
@@ -89,6 +94,7 @@ pub(super) fn chunk_lengths<'q>(
 
         // Actually add the chunk to the graph
         chunk_lengths.insert(chunk_id.clone(), per_part_length);
+        chunks_expanded.insert((chunk_id.clone(), call_sequence_idx));
 
         // Create the successor links and add the corresponding `ChunkId`s to the frontier
         let mut links_from_this_chunk = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
@@ -130,21 +136,26 @@ pub(super) fn chunk_lengths<'q>(
                         continue;
                     }
 
-                    // Allow the call
+                    // If we haven't rejected it, allow the call
                     link_sequence_idx = Some(call_sequence_idx);
                     next_call_sequence_idx += 1;
                 }
             }
 
-            // Add the link
-            links.add(Link {
-                call,
-                from: LinkSide::Chunk(chunk_id.clone()),
-                to: link_side_to,
-                ph_rotation,
-                ph_rotation_back: !ph_rotation,
-                sequence_idx: link_sequence_idx,
-            });
+            // Add the link, if it hasn't been added already
+            let link_side_from = LinkSide::Chunk(chunk_id.clone());
+            let is_link_new =
+                links_generated.insert((link_side_from.clone(), link_side_to.clone(), ph_rotation));
+            if is_link_new {
+                links.add(Link {
+                    call,
+                    from: link_side_from,
+                    to: link_side_to,
+                    ph_rotation,
+                    ph_rotation_back: !ph_rotation,
+                    sequence_idx: link_sequence_idx,
+                });
+            }
             // If this isn't an end, add the new chunk to the frontier so it becomes part of the
             // graph
             if !is_end {

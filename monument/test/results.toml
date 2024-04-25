@@ -901,6 +901,33 @@ Error: Error parsing calling: A bob calling position 'H' shares its name with a 
 "test/cases/custom-calling/errors/truncated-calling.toml" = """
 Error: Error parsing calling: Expected a calling position for 's', but the string ended.
 """
+"test/cases/custom-calling/multipart.toml" = """
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+------|----------------------------------------------------------------|-----------|-----------
+ 1280 |  140.00 :   72 ( 32f  40b)    1f 18b    7f  2b    0f  0b     0 |  0.092500 | WHWWHH
+------|----------------------------------------------------------------|-----------|-----------
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+"""
+"test/cases/custom-calling/repeat-courses-1.toml" = """
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+------|----------------------------------------------------------------|-----------|-----------
+  224 |   56.00 :   20 ( 10f  10b)    0f  4b    4f  0b    0f  0b     0 |  0.250000 | 
+  576 |   77.00 :   34 ( 16f  18b)    0f  8b    4f  0b    0f  0b     0 |  0.121181 | WHWH
+  928 |   85.00 :   38 ( 16f  22b)    0f 12b    4f  0b    0f  0b     0 |  0.076078 | WHWWHWHH
+ 1280 |  140.00 :   72 ( 32f  40b)    1f 18b    7f  2b    0f  0b     0 |  0.092500 | WHWWHHWHWWHH
+------|----------------------------------------------------------------|-----------|-----------
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+"""
+"test/cases/custom-calling/repeat-courses-2.toml" = """
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+------|----------------------------------------------------------------|-----------|-----------
+  224 |   37.00 :   15 (  3f  12b)    0f  6b    0f  0b    0f  0b     0 |  0.165179 | 
+  832 |   59.00 :   34 (  5f  29b)    0f  4b    0f  0b    0f  1b     0 |  0.057933 | BBBMHW
+  672 |   71.00 :   32 (  8f  24b)    0f 18b    0f  0b    0f  0b     0 |  0.097619 | HHH
+ 1280 |   93.00 :   51 ( 10f  41b)    0f 16b    0f  0b    0f  1b     0 |  0.060000 | BBBMHWHHH
+------|----------------------------------------------------------------|-----------|-----------
+ len  |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+"""
 "test/cases/custom-calling/whitespace-in-calling.toml" = """
  len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 -----|----------------------------------------------------------------|-----------|-----------
