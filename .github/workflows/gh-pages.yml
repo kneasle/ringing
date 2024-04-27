@@ -35,6 +35,10 @@ jobs:
       # BUILD
       - name: Build
         run: mdbook build monument/doc/
+      - name: Prep doc location
+        run:
+          mkdir -p pages/monument
+          mv monument/doc/book pages/monument/doc
 
       # UPLOAD TO PAGES
       - name: Setup Pages
@@ -43,7 +47,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload output directory
-          path: 'monument/doc/book'
+          path: 'pages'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4 
