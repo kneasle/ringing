@@ -96,8 +96,6 @@ pub(crate) struct Link {
     pub to: LinkSide<ChunkId>,
 
     pub ph_rotation: PhRotation,
-    // TODO: Remove this and compute it on the fly for `LinkView`?
-    pub ph_rotation_back: PhRotation,
 
     /// If `Some(x)`, then this link constitutes call number X in the call sequence that Monument is
     /// following.  For example, if Monument is generating "HHsWsHsW", then the first "H" will have

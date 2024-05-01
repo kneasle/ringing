@@ -56,7 +56,6 @@ pub(super) fn chunk_lengths<'q>(
             from: LinkSide::StartOrEnd,
             to: LinkSide::Chunk(start_id.clone()),
             ph_rotation,
-            ph_rotation_back: !ph_rotation,
             call_sequence_idx: None,
         });
         frontier.push(Reverse(FrontierItem::new(
@@ -157,7 +156,6 @@ pub(super) fn chunk_lengths<'q>(
                     from: link_side_from,
                     to: link_side_to,
                     ph_rotation,
-                    ph_rotation_back: !ph_rotation,
                     call_sequence_idx: link_sequence_idx,
                 });
             }
