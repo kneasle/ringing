@@ -396,12 +396,12 @@ fn check_for_duplicate_call_names(params: &Parameters) -> crate::Result<()> {
 /// needs to be turned into the [`ChunkId`] referring to the 'equivalence class' containing that
 /// [`Chunk`] (using [`ChunkEquivalenceMap`]).
 #[derive(Debug, Clone)]
-struct ChunkIdInFirstPart {
+struct UnnormalizedChunkId {
     lead_head: RowBuf,
     row_idx: RowIdx,
 }
 
-impl Deref for ChunkIdInFirstPart {
+impl Deref for UnnormalizedChunkId {
     type Target = RowIdx;
 
     fn deref(&self) -> &Self::Target {
@@ -425,7 +425,7 @@ impl<'params> ChunkEquivalenceMap<'params> {
         }
     }
 
-    fn normalise(&mut self, id: &ChunkIdInFirstPart) -> (ChunkId, PhRotation) {
+    fn normalise(&mut self, id: &UnnormalizedChunkId) -> (ChunkId, PhRotation) {
         // If this lead head hasn't been normalised yet, add it and each of its equivalent copies
         // in other parts to the normalisation mapping.
         if !self.normalisation.contains_key(&id.lead_head) {

@@ -18,7 +18,7 @@ use crate::{
     Config,
 };
 
-use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
+use super::{ChunkEquivalenceMap, UnnormalizedChunkId};
 
 /// Compute the layout (ids, lengths and connections) of the graph representing a [`Parameters`].
 ///
@@ -36,7 +36,7 @@ pub(super) fn chunk_lengths<'q>(
     // calling.  If the user hasn't given a calling, the `CallSeqIdx` will always be 0.
 
     // Values to output
-    let mut chunk_lengths = HashMap::new();
+    let mut chunk_lengths: HashMap<ChunkId, PerPartLength> = HashMap::new();
     let mut links = LinkSet::new();
     let mut chunk_equiv_map = ChunkEquivalenceMap::new(&params.part_head_group);
 
@@ -198,7 +198,7 @@ impl ChunkFactory {
         params: &Parameters,
     ) -> (
         PerPartLength,
-        Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
+        Vec<(UnnormalizedChunkId, Option<CallIdx>, bool)>,
     ) {
         let course_len = params.methods[chunk_id.method].course_len();
         // Determine the length of the `Chunk` by continually attempting to shorten it with calls
@@ -207,20 +207,19 @@ impl ChunkFactory {
         let mut links_at_shortest_len = Vec::new();
         // Closure to add a new link, shortening the chunk if needed
         let mut add_link =
-            |len: PerPartLength, id: ChunkIdInFirstPart, call: Option<CallIdx>, is_end: bool| {
+            |len: PerPartLength, id: UnnormalizedChunkId, call: Option<CallIdx>, is_end: bool| {
                 // If this link is strictly further away than some other link, then it'll never be
                 // reached
                 if len > shortest_len {
                     return;
                 }
-                // If this new link makes the chunk strictly shorter, then all previous links
-                // become irrelevant
+                // If this new link makes the chunk strictly shorter, then all previously set links
+                // can't be reached
                 if len < shortest_len {
                     shortest_len = len;
                     links_at_shortest_len.clear();
                 }
-                // Now that the chunk is exactly the same length as this link, we can add it as an
-                // end
+                // If the chunk is exactly the same length as this link, we can add it as an link
                 links_at_shortest_len.push((id, call, is_end));
             };
 
@@ -252,7 +251,7 @@ impl ChunkFactory {
 struct EndLookupTable {
     /// For each lead head in each [`Method`], how many rows away is the nearest instance of
     /// `params.end_row` (and the [`ChunkId`] referring to that end's location).
-    end_lookup: HashMap<(RowBuf, MethodIdx), Vec<(PerPartLength, ChunkIdInFirstPart)>>,
+    end_lookup: HashMap<(RowBuf, MethodIdx), Vec<(PerPartLength, UnnormalizedChunkId)>>,
 }
 
 impl EndLookupTable {
@@ -283,7 +282,7 @@ impl EndLookupTable {
         Self { end_lookup }
     }
 
-    fn is_end(&self, chunk_id: &ChunkIdInFirstPart) -> bool {
+    fn is_end(&self, chunk_id: &UnnormalizedChunkId) -> bool {
         match self
             .end_lookup
             .get(&(chunk_id.lead_head.clone(), chunk_id.row_idx.method))
@@ -299,7 +298,7 @@ impl EndLookupTable {
         &self,
         chunk_id: &ChunkId,
         params: &Parameters,
-        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, UnnormalizedChunkId, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
         let method = &params.methods[method_idx];
@@ -506,7 +505,7 @@ impl LinkLookupTable {
         &self,
         chunk_id: &ChunkId,
         params: &Parameters,
-        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, UnnormalizedChunkId, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
             if mask.matches(&chunk_id.lead_head) {
@@ -527,7 +526,7 @@ impl LinkLookupTable {
                         len = params.methods[chunk_id.method].course_len();
                     }
                     for link_entry in link_entries {
-                        let next_chunk_id = ChunkIdInFirstPart {
+                        let next_chunk_id = UnnormalizedChunkId {
                             lead_head: chunk_id.lead_head.as_ref()
                                 * &link_entry.lead_head_transposition,
                             row_idx: link_entry.row_idx_to,
@@ -604,12 +603,12 @@ fn boundary_locations(
     row: &Row,
     boundary: Boundary,
     params: &Parameters,
-) -> Vec<ChunkIdInFirstPart> {
+) -> Vec<UnnormalizedChunkId> {
     // Generate the method starts
     let mut locations = Vec::new();
     for (method_idx, method) in params.methods.iter_enumerated() {
         for (lead_head, sub_lead_idx) in method.boundary_locations(row, boundary, params) {
-            locations.push(ChunkIdInFirstPart {
+            locations.push(UnnormalizedChunkId {
                 lead_head,
                 row_idx: RowIdx::new(method_idx, sub_lead_idx),
             });

@@ -13,7 +13,7 @@ use std::{
 use bellframe::{Mask, Row, RowBuf, SameStageVec, Truth};
 use itertools::Itertools;
 
-use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
+use super::{ChunkEquivalenceMap, UnnormalizedChunkId};
 use crate::{
     graph::{Chunk, ChunkId, PerPartLength, RowIdx},
     parameters::Parameters,
@@ -154,7 +154,7 @@ impl FalsenessTable {
                 // ... for each chunk/LH transposition ...
                 for (false_range, lead_head_transposition) in false_ranges {
                     let false_lead_head = id.lead_head.as_ref() * lead_head_transposition;
-                    let false_id = ChunkIdInFirstPart {
+                    let false_id = UnnormalizedChunkId {
                         lead_head: false_lead_head,
                         row_idx: false_range.start,
                     };
