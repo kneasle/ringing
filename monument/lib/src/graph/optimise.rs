@@ -2,7 +2,7 @@
 
 use std::{
     cmp::{Ordering, Reverse},
-    collections::{BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap, HashSet},
     fmt::Debug,
     ops::Not,
     time::Instant,
@@ -33,15 +33,16 @@ impl Graph {
             // Distance-related optimisation
             self.run_bidirectional_pass(|view| passes::compute_distances(view, params));
             passes::strip_long_chunks(self, params);
-            passes::remove_dangling_refs(self);
             // Required chunk optimisation
-            self.run_bidirectional_pass(passes::mark_single_start_or_end_as_required);
+            self.run_bidirectional_pass(passes::mark_start_or_ends_as_required);
             passes::remove_chunks_false_against_required(self);
             // Misc optimisations
             passes::remove_links_between_false_chunks(self);
             passes::remove_chunks_with_long_method_counts(self, ranges);
             passes::remove_links_with_long_method_counts(self, ranges);
             passes::remove_chunks_which_exceed_music_limits(self, params);
+            // Cleanup
+            passes::remove_dangling_refs(self);
 
             // Check if this optimisation pass has made the graph smaller, stopping if no progress
             // is being made
@@ -79,9 +80,9 @@ impl Graph {
 
     fn size_summary(&self) -> String {
         format!(
-            "{} chunks ({} required); {} links, {} starts, {} ends",
+            "{} chunks, {} required groups, {} links, {} starts, {} ends",
             self.chunks.len(),
-            self.chunks.values().filter(|chunk| chunk.required).count(),
+            self.required_chunk_sets.len(),
             self.links.len(),
             self.starts.len(),
             self.ends.len()
@@ -96,14 +97,28 @@ impl Graph {
     /// 3. Number of required chunks (more is better)
     fn size(&self) -> (usize, usize, Reverse<usize>) {
         let mut num_links = 0;
-        let mut num_required_chunks = 0;
         for chunk in self.chunks.values() {
             num_links += chunk.successors.len();
-            if chunk.required {
-                num_required_chunks += 1;
-            }
         }
-        (self.chunks.len(), num_links, Reverse(num_required_chunks))
+        (
+            self.chunks.len(),                       // Less is better
+            num_links,                               // Less is better
+            Reverse(self.required_chunk_sets.len()), // More is better
+        )
+    }
+
+    /// Remove any [`ChunkId`] in `self.required_chunks` which doesn't point to a valid chunk.
+    fn strip_dangling_required_chunks(&mut self) {
+        // Make a new set of trimmed chunk sets
+        let mut new_required_chunk_sets = HashSet::new();
+        for mut set in std::mem::take(&mut self.required_chunk_sets) {
+            set.retain(|id| self.chunks.contains_key(id));
+            set.sort();
+            set.dedup();
+            new_required_chunk_sets.insert(set);
+        }
+        // Commit them back after we're done
+        self.required_chunk_sets = new_required_chunk_sets;
     }
 }
 
@@ -145,6 +160,8 @@ mod passes {
             chunk.predecessors.retain(|l| graph.links.contains(*l));
             chunk.false_chunks.retain(|id| chunk_ids.contains(id));
         }
+        // Strip dangling links in required chunks
+        graph.strip_dangling_required_chunks();
     }
 
     /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
@@ -223,31 +240,53 @@ mod passes {
 
     /// Checks for a single start/end chunk and marks that chunk as required
     /// (because all compositions must start or end at that chunk).
-    pub(super) fn mark_single_start_or_end_as_required(view: DirectionalView) {
-        let single_chunk_id = match view.starts().iter().exactly_one() {
-            Ok((_link_id, chunk_id)) => chunk_id.clone(),
-            Err(_) => return,
-        };
-        if let Some(chunk) = view.graph.chunks.get_mut(&single_chunk_id) {
-            chunk.required = true;
-        }
+    pub(super) fn mark_start_or_ends_as_required(view: DirectionalView) {
+        let start_chunks = view
+            .starts()
+            .iter()
+            .map(|(_link_id, chunk_id)| chunk_id.to_owned())
+            .collect_vec();
+        view.graph.required_chunk_sets.insert(start_chunks);
     }
 
     /// A [`Pass`] which removes any chunks which are false against a chunk marked as required
     pub(super) fn remove_chunks_false_against_required(graph: &mut Graph) {
+        // Make sure that all links in required_chunks lead to valid chunks
+        graph.strip_dangling_required_chunks();
+
         let mut chunk_ids_to_remove: HashSet<ChunkId> = HashSet::new();
-        // For each required chunk ...
-        for (id, chunk) in &graph.chunks {
-            if chunk.required {
-                // ... mark all its false chunks (**except itself**) to be removed
-                let other_false_chunk_ids = chunk
+        for required_chunk_set in &graph.required_chunk_sets {
+            if required_chunk_set.is_empty() {
+                continue; // If a required chunk set ends up empty, no comps are possible
+            }
+
+            // Put the false chunks of each chunk into a set
+            let mut false_chunks_per_chunk_in_set = Vec::<HashSet<&ChunkId>>::new();
+            for required_id in required_chunk_set {
+                let false_chunks = graph.chunks[required_id]
                     .false_chunks
                     .iter()
-                    .cloned()
-                    .filter(|false_id| false_id != id);
-                chunk_ids_to_remove.extend(other_false_chunk_ids);
+                    .filter(|false_id| *false_id != required_id)
+                    .collect();
+                false_chunks_per_chunk_in_set.push(false_chunks);
+            }
+            // Put the small sets first, to make us reject chunk IDs more quickly
+            false_chunks_per_chunk_in_set.sort_by_key(|k| k.len());
+
+            'chunk_loop: for id in graph.chunks.keys() {
+                for false_set in &false_chunks_per_chunk_in_set {
+                    if !false_set.contains(id) {
+                        // This chunk isn't false against one of the chunks in the set, so don't
+                        // remove it
+                        continue 'chunk_loop;
+                    }
+                }
+                // If this chunk is false against all chunks in this group, remove it
+                chunk_ids_to_remove.insert(id.clone());
             }
         }
+
+        // Remove any chunks we wanted to remove
         graph
             .chunks
             .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));

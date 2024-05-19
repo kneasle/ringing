@@ -4,7 +4,7 @@ mod falseness;
 mod layout;
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     ops::Deref,
     sync::Arc,
     time::Instant,
@@ -117,6 +117,8 @@ impl Graph {
 
             starts,
             ends,
+
+            required_chunk_sets: HashSet::new(),
         };
         Ok(graph)
     }
@@ -165,7 +167,6 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, params: &Parameter
         music_counts: index_vec::index_vec![AtRowPositions::ZERO; params.music_types.len()],
 
         // Used by optimisation passes
-        required: false,
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,
     }
