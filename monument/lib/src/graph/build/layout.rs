@@ -20,18 +20,22 @@ use crate::{
 
 use super::{ChunkEquivalenceMap, UnnormalizedChunkId};
 
+pub(super) struct ChunkLengths<'params> {
+    pub chunk_lengths: HashMap<ChunkId, PerPartLength>,
+    pub links: LinkSet,
+    pub chunk_equiv_map: ChunkEquivalenceMap<'params>,
+
+    pub call_sequence_length: usize,
+}
+
 /// Compute the layout (ids, lengths and connections) of the graph representing a [`Parameters`].
 ///
 /// This is the only item exported by this module; all the other code should be considered
 /// implementation detail of this function.
-pub(super) fn chunk_lengths<'q>(
-    params: &'q Parameters,
+pub(super) fn chunk_lengths<'p>(
+    params: &'p Parameters,
     config: &Config,
-) -> crate::Result<(
-    ChunkEquivalenceMap<'q>,
-    HashMap<ChunkId, PerPartLength>,
-    LinkSet,
-)> {
+) -> crate::Result<ChunkLengths<'p>> {
     // NOTE: Here we're always tracking the `CallSeqIdx`, even if the user hasn't provided a custom
     // calling.  If the user hasn't given a calling, the `CallSeqIdx` will always be 0.
 
@@ -186,7 +190,13 @@ pub(super) fn chunk_lengths<'q>(
         }
     }
 
-    Ok((chunk_equiv_map, chunk_lengths, links))
+    Ok(ChunkLengths {
+        chunk_equiv_map,
+        chunk_lengths,
+        links,
+
+        call_sequence_length: call_sequence.map_or(0, |seq| seq.len()) + 1, // +1 for the end of the comp
+    })
 }
 
 #[derive(Debug, Clone)]

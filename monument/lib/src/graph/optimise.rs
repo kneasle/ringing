@@ -16,6 +16,7 @@ use crate::{
 
 use super::{Chunk, ChunkId, Graph, Link, LinkId, LinkSide};
 
+use itertools::Itertools;
 use Direction::{Backward, Forward};
 
 impl Graph {
@@ -36,6 +37,10 @@ impl Graph {
             // Required chunk optimisation
             self.run_bidirectional_pass(passes::mark_start_or_ends_as_required);
             passes::remove_chunks_false_against_required(self);
+            // Required calls
+            self.run_bidirectional_pass(|view| {
+                passes::remove_links_conflicting_with_calling(view, params)
+            });
             // Misc optimisations
             passes::remove_links_between_false_chunks(self);
             passes::remove_chunks_with_long_method_counts(self, ranges);
@@ -127,7 +132,10 @@ impl Graph {
 ////////////
 
 mod passes {
+    use crate::graph::CallSeqVec;
+
     use super::*;
+    use bellframe::RowBuf;
     use itertools::Itertools;
     use std::collections::HashSet;
 
@@ -291,6 +299,61 @@ mod passes {
             .chunks
             .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
     }
+
+    /* Misc passes */
+
+    pub(super) fn remove_links_conflicting_with_calling(
+        view: DirectionalView,
+        params: &Parameters,
+    ) {
+        if !(params.require_truth && params.calling.is_some() && !params.omit_round_blocks) {
+            return;
+        }
+
+        // Collects which rows can go after each call in the sequences
+        let mut rows_after_each_call: CallSeqVec<HashSet<LinkSide<RowBuf>>> =
+            index_vec::index_vec![HashSet::new(); view.graph.call_sequence_length];
+        for (_id, link_view) in view.links() {
+            if let Some(call_idx) = link_view.link.call_sequence_idx {
+                let row_after_call = link_view.to().map_ref(|id| params.chunk_head(id));
+                rows_after_each_call[call_idx].insert(row_after_call);
+            }
+        }
+
+        // TODO: Make a nice error message if two calls in the seq end on the same row
+
+        let call_goes_to_only_one_row: CallSeqVec<bool> = rows_after_each_call
+            .iter()
+            .map(|set| set.len() == 1)
+            .collect();
+
+        // For each chunk which has some
+        let mut links_to_remove = HashSet::<LinkId>::new();
+        for (_chunk_id, chunk) in view.chunks() {
+            let can_only_be_reached_through_call =
+                chunk.predecessors().into_iter().any(|(_id, link_view)| {
+                    let Some(call_idx) = link_view.link.call_sequence_idx else {
+                        return false;
+                    };
+                    call_goes_to_only_one_row[call_idx]
+                });
+
+            if can_only_be_reached_through_call {
+                // If this chunk can only be reached through a call, then any plain links into
+                // this chunk just can't be rung because they would cause the row after that call
+                // to be repeated
+                for (pred_id, pred_view) in chunk.predecessors() {
+                    if pred_view.link.call_sequence_idx.is_none() {
+                        links_to_remove.insert(pred_id);
+                    }
+                }
+            }
+        }
+
+        view.graph
+            .links
+            .retain(|link_id, _link| !links_to_remove.contains(&link_id));
+    }
 }
 
 ////////////////////////////
@@ -330,6 +393,10 @@ struct DirectionalView<'graph> {
 impl<'graph> DirectionalView<'graph> {
     fn new(graph: &'graph mut Graph, direction: Direction) -> Self {
         Self { graph, direction }
+    }
+
+    fn links(&'graph self) -> Vec<(LinkId, LinkView<'graph>)> {
+        convert_links(self.graph, self.direction, self.graph.links.keys())
     }
 
     #[allow(dead_code)]
@@ -392,23 +459,26 @@ impl<'graph> ChunkView<'graph> {
         }
     }
 
-    fn successors(&'graph self) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
-        self.convert_links(match self.direction {
-            Forward => &self.chunk.successors,
-            Backward => &self.chunk.predecessors,
-        })
+    fn successors(&'graph self) -> Vec<(LinkId, LinkView<'graph>)> {
+        convert_links(
+            self.graph,
+            self.direction,
+            match self.direction {
+                Forward => &self.chunk.successors,
+                Backward => &self.chunk.predecessors,
+            },
+        )
     }
 
-    fn convert_links(
-        &'graph self,
-        links: &'graph [LinkId],
-    ) -> impl Iterator<Item = LinkView<'graph>> + 'graph {
-        links.iter().filter_map(|link_id| {
-            Some(LinkView {
-                link: self.graph.links.get(*link_id)?,
-                direction: self.direction,
-            })
-        })
+    fn predecessors(&'graph self) -> Vec<(LinkId, LinkView<'graph>)> {
+        convert_links(
+            self.graph,
+            self.direction,
+            match self.direction {
+                Forward => &self.chunk.predecessors,
+                Backward => &self.chunk.successors,
+            },
+        )
     }
 }
 
@@ -460,6 +530,25 @@ impl<'graph> LinkView<'graph> {
     }
 }
 
+fn convert_links<'graph>(
+    graph: &'graph Graph,
+    direction: Direction,
+    links: impl IntoIterator<Item = &'graph LinkId>,
+) -> Vec<(LinkId, LinkView<'graph>)> {
+    links
+        .into_iter()
+        .filter_map(move |&link_id| {
+            Some((
+                link_id,
+                LinkView {
+                    link: graph.links.get(link_id)?,
+                    direction,
+                },
+            ))
+        })
+        .collect_vec()
+}
+
 ///////////
 // UTILS //
 ///////////
@@ -508,7 +597,7 @@ fn compute_distances<'a>(
         }
 
         // Expand this chunk
-        for succ_link in chunk_view.successors() {
+        for (_id, succ_link) in chunk_view.successors() {
             let next_chunk_id = match succ_link.to() {
                 LinkSide::Chunk(id) => id.clone(),
                 LinkSide::StartOrEnd => continue,

@@ -52,6 +52,9 @@ pub struct Graph {
     pub(crate) ends: Vec<(LinkId, ChunkId)>,
 
     /* Extra data useful for optimizations*/
+    /// The number of calls in the call sequence.  This is one more than maximum `CallSeqIdx` found
+    /// in this composition (which is usually one longer than the composition length).
+    call_sequence_length: usize,
     /// Exactly one chunk in each of these sets must be rung
     required_chunk_sets: HashSet<Vec<ChunkId>>,
 }
@@ -131,6 +134,13 @@ impl<Id> LinkSide<Id> {
         match self {
             Self::StartOrEnd => LinkSide::StartOrEnd,
             Self::Chunk(c) => LinkSide::Chunk(c),
+        }
+    }
+
+    pub fn map_ref<Id2>(&self, f: impl FnOnce(&Id) -> Id2) -> LinkSide<Id2> {
+        match self {
+            LinkSide::StartOrEnd => LinkSide::StartOrEnd,
+            LinkSide::Chunk(v) => LinkSide::Chunk(f(v)),
         }
     }
 }
@@ -272,9 +282,8 @@ mod link_set {
             self.map.iter()
         }
 
-        #[allow(dead_code)] // Don't want `values` without `keys`
-        pub fn keys(&self) -> std::iter::Copied<std::collections::hash_map::Keys<LinkId, Link>> {
-            self.map.keys().copied()
+        pub fn keys(&self) -> std::collections::hash_map::Keys<LinkId, Link> {
+            self.map.keys()
         }
 
         pub fn values(&self) -> std::collections::hash_map::Values<LinkId, Link> {

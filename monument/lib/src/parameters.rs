@@ -152,6 +152,12 @@ impl Parameters {
     // HELPER FUNCTIONS //
     //////////////////////
 
+    /// Returns the first row in the given `ChunkId`
+    pub(crate) fn chunk_head(&self, id: &ChunkId) -> RowBuf {
+        let method = &self.methods[id.method];
+        id.lead_head.deref() * method.row_in_plain_lead(id.sub_lead_idx)
+    }
+
     pub(crate) fn parsed_call_string(&self) -> crate::Result<Option<CallSeqVec<(CallIdx, u8)>>> {
         Ok(match &self.calling {
             Some(s) => Some(self.parse_calling(s)?),

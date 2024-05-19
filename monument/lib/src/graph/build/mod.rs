@@ -32,8 +32,13 @@ impl Graph {
 
         // Generate chunk layout
         let start = Instant::now();
-        let (mut chunk_equiv_map, chunk_lengths, links) =
-            self::layout::chunk_lengths(params, config)?;
+        let layout::ChunkLengths {
+            chunk_lengths,
+            links,
+            mut chunk_equiv_map,
+
+            call_sequence_length,
+        } = self::layout::chunk_lengths(params, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
         // TODO: Combine overlapping chunks
@@ -118,6 +123,7 @@ impl Graph {
             starts,
             ends,
 
+            call_sequence_length,
             required_chunk_sets: HashSet::new(),
         };
         Ok(graph)
