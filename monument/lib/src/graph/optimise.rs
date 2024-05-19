@@ -24,41 +24,37 @@ impl Graph {
     pub(crate) fn optimise(&mut self, params: &Parameters, ranges: &RefinedRanges) {
         const ITERATION_LIMIT: usize = 20;
 
-        let passes = self::passes::default();
-
         log::debug!("Optimising graph:");
         let mut last_size = self.size();
         log::debug!("  Initial size: {}", self.size_summary());
         let mut iter_count = 0;
-        let mut passes_since_last_time_graph_got_smaller = 0;
         let start_time = Instant::now();
-        'optimisation: loop {
-            // Run every optimisation pass
-            for p in &passes {
-                // TODO: Find a better locking system, or remove the `FnMut` bound so that locking
-                // is unnecessary.  I think that this system can deadlock if multiple threads are
-                // optimising graphs in parallel using the same set of passes.
-                p.lock().unwrap().run(self, params, ranges);
+        loop {
+            // Distance-related optimisation
+            self.run_bidirectional_pass(|view| passes::compute_distances(view, params));
+            passes::strip_long_chunks(self, params);
+            passes::remove_dangling_refs(self);
+            // Required chunk optimisation
+            self.run_bidirectional_pass(passes::mark_single_start_or_end_as_required);
+            passes::remove_chunks_false_against_required(self);
+            // Misc optimisations
+            passes::remove_links_between_false_chunks(self);
+            passes::remove_chunks_with_long_method_counts(self, ranges);
+            passes::remove_links_with_long_method_counts(self, ranges);
+            passes::remove_chunks_which_exceed_music_limits(self, params);
 
-                // Check if this optimisation pass has made the graph smaller
-                let new_size = self.size();
-                match new_size.cmp(&last_size) {
-                    Ordering::Less => passes_since_last_time_graph_got_smaller = 0,
-                    Ordering::Equal => {}
-                    Ordering::Greater => {
-                        unreachable!("Optimisation should never increase graph size")
-                    }
-                }
-                last_size = new_size;
-                // If we've run every optimisation pass without the graph getting smaller, then no
-                // more optimisation is possible
-                if passes_since_last_time_graph_got_smaller >= passes.len() {
-                    break 'optimisation;
-                }
-                passes_since_last_time_graph_got_smaller += 1;
-            }
+            // Check if this optimisation pass has made the graph smaller, stopping if no progress
+            // is being made
             log::debug!("  New     size: {}", self.size_summary());
-
+            let new_size = self.size();
+            match new_size.cmp(&last_size) {
+                Ordering::Less => {}      // Graph got smaller, still work to be done
+                Ordering::Equal => break, // No progress has been made, so no more work to do
+                Ordering::Greater => {
+                    unreachable!("Optimisation should never increase graph size")
+                }
+            }
+            last_size = new_size;
             // Stop optimising if the limit has been reached
             if iter_count > ITERATION_LIMIT {
                 log::warn!(
@@ -74,6 +70,11 @@ impl Graph {
             start_time.elapsed(),
             iter_count
         );
+    }
+
+    fn run_bidirectional_pass(&mut self, mut pass: impl FnMut(DirectionalView)) {
+        pass(DirectionalView::new(self, Direction::Forward));
+        pass(DirectionalView::new(self, Direction::Backward));
     }
 
     fn size_summary(&self) -> String {
@@ -106,38 +107,156 @@ impl Graph {
     }
 }
 
-type SinglePass = Box<dyn FnMut(&mut Graph, &Parameters, &RefinedRanges)>;
-/// A [`Pass`] which can be run both [`Forward`] and [`Backward`] over a [`Graph`].  Very useful
-/// when some graph operation is agnostic to the directionality of the graph, e.g.  computing
-/// distances to/from rounds.
-type DirectionalPass = Box<dyn FnMut(DirectionalView<'_>, &Parameters, &RefinedRanges)>;
+////////////
+// PASSES //
+////////////
 
-/// A pass which modifies a [`Graph`].  Passes are generally intended to perform optimisations -
-/// they preserve the _semantic_ meaning of a [`Graph`] (i.e. the set of true compositions which it
-/// generates), whilst modifying the [`Graph`] to make tree search faster.
-enum Pass {
-    /// Run a single non-directional pass
-    Single(SinglePass),
-    /// Run a `DirectionalPass` twice, [`Forward`] first
-    BothDirections(DirectionalPass),
-}
+mod passes {
+    use super::*;
+    use itertools::Itertools;
+    use std::collections::HashSet;
 
-impl Pass {
-    /// Apply the effect of this [`Pass`] to a [`Graph`]
-    fn run(&mut self, graph: &mut Graph, params: &Parameters, ranges: &RefinedRanges) {
-        match self {
-            Pass::Single(pass) => pass(graph, params, ranges),
-            Pass::BothDirections(pass) => {
-                pass(DirectionalView::new(graph, Forward), params, ranges);
-                pass(DirectionalView::new(graph, Backward), params, ranges);
+    /* Simple passes */
+
+    /// Removes dangling references from the [`Graph`]
+    pub(super) fn remove_dangling_refs(graph: &mut Graph) {
+        // Strip dangling starts and ends
+        for starts_or_ends in [&mut graph.starts, &mut graph.ends] {
+            starts_or_ends.retain(|(_link_id, chunk_id)| graph.chunks.contains_key(chunk_id));
+        }
+        // Strip links with dangling from/to refs
+        graph.links.retain(|_link_id, link| {
+            if let LinkSide::Chunk(from_id) = &link.from {
+                if !graph.chunks.contains_key(from_id) {
+                    return false;
+                }
+            }
+            if let LinkSide::Chunk(to_id) = &link.to {
+                if !graph.chunks.contains_key(to_id) {
+                    return false;
+                }
+            }
+            true // Both from/to are non-dangling
+        });
+        // Strip dangling chunk refs (i.e. predecessor, successor or falseness)
+        let chunk_ids = graph.chunks.keys().cloned().collect::<HashSet<_>>();
+        for chunk in graph.chunks.values_mut() {
+            chunk.successors.retain(|l| graph.links.contains(*l));
+            chunk.predecessors.retain(|l| graph.links.contains(*l));
+            chunk.false_chunks.retain(|id| chunk_ids.contains(id));
+        }
+    }
+
+    /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
+    pub(super) fn remove_links_between_false_chunks(graph: &mut Graph) {
+        graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
+            !chunk_from.false_chunks.contains(id_to)
+        })
+    }
+
+    pub(super) fn remove_chunks_with_long_method_counts(graph: &mut Graph, ranges: &RefinedRanges) {
+        graph
+            .chunks
+            .retain(|id, chunk| chunk.total_length <= *ranges.method_counts[id.method].end())
+    }
+
+    pub(super) fn remove_links_with_long_method_counts(graph: &mut Graph, ranges: &RefinedRanges) {
+        graph.retain_internal_links(|_link, id_from, chunk_from, id_to, chunk_to| {
+            if id_from.method == id_to.method {
+                let max_method_count = *ranges.method_counts[id_from.method].end();
+                chunk_from.total_length + chunk_to.total_length <= max_method_count
+            } else {
+                true
+            }
+        })
+    }
+
+    pub(super) fn remove_chunks_which_exceed_music_limits(graph: &mut Graph, params: &Parameters) {
+        graph.chunks.retain(|_id, chunk| {
+            // Determine whether this chunk's music counts exceed the limit specified in
+            // the parameters
+            for (idx, music_type) in params.music_types.iter().enumerate() {
+                if let Some(limit) = music_type.count_range.max {
+                    let counts = chunk.music_counts.as_slice()[idx];
+                    if music_type.masked_total(counts) > limit {
+                        return false; // Chunk contributes too much of this music
+                    }
+                }
+            }
+            true
+        });
+    }
+
+    /* Distance related passes */
+
+    /// Recomputes the distance to/from rounds for every chunk, and removes any chunks which can't
+    /// reach rounds in either direction.
+    pub(super) fn compute_distances(mut view: DirectionalView, params: &Parameters) {
+        let expanded_chunk_distances = super::compute_distances(
+            view.starts().iter().map(|(_, chunk_id)| chunk_id),
+            &view,
+            Some(params.max_length()),
+        );
+        // Set the chunk distances and strip out unreachable chunks
+        view.retain_chunks(
+            |id, mut chunk_view| match expanded_chunk_distances.get(id) {
+                // keep reachable chunks and update their distance lower bounds
+                Some(&new_distance) => {
+                    *chunk_view.distance_to_boundary_mut() = new_distance;
+                    true
+                }
+                None => false, // Remove unreachable chunks
+            },
+        );
+    }
+
+    /// Removes any chunks which can't be included in a short enough composition.
+    pub(super) fn strip_long_chunks(graph: &mut Graph, params: &Parameters) {
+        graph.chunks.retain(|_id, chunk| {
+            let min_comp_length_with_chunk =
+                chunk.lb_distance_from_rounds + chunk.total_length + chunk.lb_distance_to_rounds;
+            min_comp_length_with_chunk <= params.max_length()
+        });
+    }
+
+    /* Passes relating to required chunks */
+
+    /// Checks for a single start/end chunk and marks that chunk as required
+    /// (because all compositions must start or end at that chunk).
+    pub(super) fn mark_single_start_or_end_as_required(view: DirectionalView) {
+        let single_chunk_id = match view.starts().iter().exactly_one() {
+            Ok((_link_id, chunk_id)) => chunk_id.clone(),
+            Err(_) => return,
+        };
+        if let Some(chunk) = view.graph.chunks.get_mut(&single_chunk_id) {
+            chunk.required = true;
+        }
+    }
+
+    /// A [`Pass`] which removes any chunks which are false against a chunk marked as required
+    pub(super) fn remove_chunks_false_against_required(graph: &mut Graph) {
+        let mut chunk_ids_to_remove: HashSet<ChunkId> = HashSet::new();
+        // For each required chunk ...
+        for (id, chunk) in &graph.chunks {
+            if chunk.required {
+                // ... mark all its false chunks (**except itself**) to be removed
+                let other_false_chunk_ids = chunk
+                    .false_chunks
+                    .iter()
+                    .cloned()
+                    .filter(|false_id| false_id != id);
+                chunk_ids_to_remove.extend(other_false_chunk_ids);
             }
         }
+        graph
+            .chunks
+            .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
     }
 }
 
-////////////////////////
-// DIRECTIONAL PASSES //
-////////////////////////
+////////////////////////////
+// DIRECTIONAL PASS UTILS //
+////////////////////////////
 
 /// A `Direction` in which a [`DirectionalPass`] can be run
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Copy)]
@@ -159,6 +278,7 @@ impl Not for Direction {
     }
 }
 
+// TODO: Do we need this?
 /// The view of a [`Graph`] where 'start'/'end' and 'successors'/'predecessors' are defined in a
 /// given [`Direction`].  I.e. if the [`Direction`] is [`Backward`], then the graph's ordering is
 /// reversed.
@@ -301,185 +421,6 @@ impl<'graph> LinkView<'graph> {
     }
 }
 
-////////////////////
-// BUILTIN PASSES //
-////////////////////
-
-mod strip_refs; // Strip references to non-existent chunks
-
-mod passes {
-    use std::{collections::HashSet, sync::Mutex};
-
-    use itertools::Itertools;
-
-    use crate::{
-        graph::{ChunkId, Graph},
-        parameters::Parameters,
-        prove_length::RefinedRanges,
-    };
-
-    use super::{DirectionalView, Pass};
-
-    /// A default sequence of built-in optimisation passes.  Each is stored in a [`Mutex`] to
-    /// enable concurrent access.
-    pub(super) fn default() -> Vec<Mutex<Pass>> {
-        [
-            // Distance-related optimisation
-            compute_distances(),
-            strip_long_chunks(),
-            Pass::Single(Box::new(super::strip_refs::remove_dangling_refs)),
-            // Required chunk optimisation
-            mark_single_start_or_end_as_required(),
-            remove_chunks_false_against_required(),
-            // Misc optimisations
-            remove_links_between_false_chunks(),
-            remove_chunks_with_long_method_counts(),
-            remove_links_with_long_method_counts(),
-            remove_chunks_which_exceed_music_limits(),
-        ]
-        .into_iter()
-        .map(Mutex::new)
-        .collect_vec()
-    }
-
-    /* Simple passes */
-
-    /// Creates a [`Pass`] which removes any links between two chunks which are mutually false.
-    fn remove_links_between_false_chunks() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, _params: &Parameters, _ranges: &RefinedRanges| {
-                graph.retain_internal_links(|_link, _id_from, chunk_from, id_to, _chunk_to| {
-                    !chunk_from.false_chunks.contains(id_to)
-                })
-            },
-        ))
-    }
-
-    fn remove_chunks_with_long_method_counts() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, _params: &Parameters, ranges: &RefinedRanges| {
-                graph.chunks.retain(|id, chunk| {
-                    chunk.total_length <= *ranges.method_counts[id.method].end()
-                })
-            },
-        ))
-    }
-
-    fn remove_links_with_long_method_counts() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, _params: &Parameters, ranges: &RefinedRanges| {
-                graph.retain_internal_links(|_link, id_from, chunk_from, id_to, chunk_to| {
-                    if id_from.method == id_to.method {
-                        let max_method_count = *ranges.method_counts[id_from.method].end();
-                        chunk_from.total_length + chunk_to.total_length <= max_method_count
-                    } else {
-                        true
-                    }
-                })
-            },
-        ))
-    }
-
-    fn remove_chunks_which_exceed_music_limits() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges| {
-                graph.chunks.retain(|_id, chunk| {
-                    // Determine whether this chunk's music counts exceed the limit specified in
-                    // the parameters
-                    for (idx, music_type) in params.music_types.iter().enumerate() {
-                        if let Some(limit) = music_type.count_range.max {
-                            let counts = chunk.music_counts.as_slice()[idx];
-                            if music_type.masked_total(counts) > limit {
-                                return false; // Chunk contributes too much of this music
-                            }
-                        }
-                    }
-                    true
-                });
-            },
-        ))
-    }
-
-    /* Distance related passes */
-
-    /// Creates a [`Pass`] which recomputes the distances to and from rounds for every chunk,
-    /// removing any which can't reach rounds in either direction.
-    fn compute_distances() -> Pass {
-        Pass::BothDirections(Box::new(
-            |mut view: DirectionalView, params: &Parameters, _ranges: &RefinedRanges| {
-                let expanded_chunk_distances = super::compute_distances(
-                    view.starts().iter().map(|(_, chunk_id)| chunk_id),
-                    &view,
-                    Some(params.max_length()),
-                );
-                // Set the chunk distances and strip out unreachable chunks
-                view.retain_chunks(
-                    |id, mut chunk_view| match expanded_chunk_distances.get(id) {
-                        // keep reachable chunks and update their distance lower bounds
-                        Some(&new_distance) => {
-                            *chunk_view.distance_to_boundary_mut() = new_distance;
-                            true
-                        }
-                        None => false, // Remove unreachable chunks
-                    },
-                );
-            },
-        ))
-    }
-
-    /// A [`Pass`] which removes any chunks which can't be included in a short enough composition.
-    fn strip_long_chunks() -> Pass {
-        Pass::Single(Box::new(
-            |graph: &mut Graph, params: &Parameters, _ranges: &RefinedRanges| {
-                graph.chunks.retain(|_id, chunk| {
-                    let min_comp_length_with_chunk = chunk.lb_distance_from_rounds
-                        + chunk.total_length
-                        + chunk.lb_distance_to_rounds;
-                    min_comp_length_with_chunk <= params.max_length()
-                });
-            },
-        ))
-    }
-
-    /* Passes related to required chunks */
-
-    /// A [`Pass`] which checks for a single start/end chunk and marks that chunk as required
-    /// (because all compositions must start or end at that chunk).
-    fn mark_single_start_or_end_as_required() -> Pass {
-        Pass::BothDirections(Box::new(|view: DirectionalView, _, _| {
-            let single_chunk_id = match view.starts().iter().exactly_one() {
-                Ok((_link_id, chunk_id)) => chunk_id.clone(),
-                Err(_) => return,
-            };
-            if let Some(chunk) = view.graph.chunks.get_mut(&single_chunk_id) {
-                chunk.required = true;
-            }
-        }))
-    }
-
-    /// A [`Pass`] which removes any chunks which are false against a chunk marked as required
-    fn remove_chunks_false_against_required() -> Pass {
-        Pass::Single(Box::new(|graph: &mut Graph, _, _| {
-            let mut chunk_ids_to_remove: HashSet<ChunkId> = HashSet::new();
-            // For each required chunk ...
-            for (id, chunk) in &graph.chunks {
-                if chunk.required {
-                    // ... mark all its false chunks (**except itself**) to be removed
-                    let other_false_chunk_ids = chunk
-                        .false_chunks
-                        .iter()
-                        .cloned()
-                        .filter(|false_id| false_id != id);
-                    chunk_ids_to_remove.extend(other_false_chunk_ids);
-                }
-            }
-            graph
-                .chunks
-                .retain(|id, _chunk| !chunk_ids_to_remove.contains(id));
-        }))
-    }
-}
-
 ///////////
 // UTILS //
 ///////////
@@ -516,7 +457,6 @@ fn compute_distances<'a>(
             assert!(existing_dist <= distance);
             continue;
         }
-
         expanded_chunk_distances.insert(id.to_owned(), distance);
 
         // Skip this chunk if any chunk succeeding it would take longer to reach than the length of
