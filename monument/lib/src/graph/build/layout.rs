@@ -45,11 +45,11 @@ pub(super) fn chunk_lengths<'q>(
     let chunk_factory = ChunkFactory::new(params);
     let mut chunks_expanded = HashSet::<(ChunkId, CallSeqIdx)>::new();
     let mut links_generated = HashSet::<(LinkSide<ChunkId>, LinkSide<ChunkId>, PhRotation)>::new();
-    let mut frontier =
-        BinaryHeap::<Reverse<FrontierItem<(ChunkId, CallSeqIdx), TotalLength>>>::new();
+    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkToExpand, TotalLength>>>::new();
 
     // Populate the frontier with start chunks, and add start links to `links`
     for start_id in boundary_locations(&params.start_row, Boundary::Start, params) {
+        let lead_head_in_first_part: RowBuf = start_id.lead_head.deref().to_owned();
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
             call: None,
@@ -59,7 +59,11 @@ pub(super) fn chunk_lengths<'q>(
             call_sequence_idx: None,
         });
         frontier.push(Reverse(FrontierItem::new(
-            (start_id, CallSeqIdx::new(0)),
+            ChunkToExpand {
+                chunk_id: start_id,
+                lead_head_in_first_part,
+                call_sequence_idx: CallSeqIdx::new(0),
+            },
             TotalLength::ZERO,
         )));
     }
@@ -68,9 +72,14 @@ pub(super) fn chunk_lengths<'q>(
     // using Dijkstra's algorithm).
     while let Some(Reverse(frontier_item)) = frontier.pop() {
         let FrontierItem {
-            item: (chunk_id, call_sequence_idx),
+            item,
             distance: min_distance_from_start,
         } = frontier_item;
+        let ChunkToExpand {
+            chunk_id,
+            lead_head_in_first_part,
+            call_sequence_idx,
+        } = item;
 
         if chunks_expanded.contains(&(chunk_id.clone(), call_sequence_idx)) {
             continue; // Don't expand the same chunk multiple times
@@ -97,9 +106,12 @@ pub(super) fn chunk_lengths<'q>(
 
         // Create the successor links and add the corresponding `ChunkId`s to the frontier
         let mut links_from_this_chunk = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
-        for (unnormalised_id_to, call, is_end) in successors {
+        for (id_to, call, is_end) in successors {
+            let lead_head_transposition =
+                Row::solve_ax_equals_b(&chunk_id.lead_head, &id_to.lead_head);
+            let new_lead_head_in_first_part = &lead_head_in_first_part * lead_head_transposition;
             // Determine where this link leads
-            let (id_to, ph_rotation) = chunk_equiv_map.normalise(&unnormalised_id_to);
+            let (id_to, ph_rotation) = chunk_equiv_map.normalise(&id_to);
             let link_side_to = match is_end {
                 true => LinkSide::StartOrEnd,
                 false => LinkSide::Chunk(id_to.clone()),
@@ -135,7 +147,7 @@ pub(super) fn chunk_lengths<'q>(
 
                     // Skip use of the correct call but at the wrong calling position
                     let calling_bell_place =
-                        unnormalised_id_to.lead_head.place_of(params.calling_bell);
+                        new_lead_head_in_first_part.place_of(params.calling_bell);
                     if calling_bell_place != expected_place {
                         continue;
                     }
@@ -163,7 +175,11 @@ pub(super) fn chunk_lengths<'q>(
             // graph
             if !is_end {
                 frontier.push(Reverse(FrontierItem::new(
-                    (id_to, next_call_sequence_idx),
+                    ChunkToExpand {
+                        chunk_id: id_to,
+                        lead_head_in_first_part: new_lead_head_in_first_part,
+                        call_sequence_idx: next_call_sequence_idx,
+                    },
                     min_distance_after_chunk,
                 )));
             }
@@ -171,6 +187,13 @@ pub(super) fn chunk_lengths<'q>(
     }
 
     Ok((chunk_equiv_map, chunk_lengths, links))
+}
+
+#[derive(Debug, Clone)]
+struct ChunkToExpand {
+    chunk_id: ChunkId,
+    lead_head_in_first_part: RowBuf,
+    call_sequence_idx: CallSeqIdx,
 }
 
 /// Persistent state for building [`Chunk`]s

@@ -1,0 +1,13 @@
+length = "QP"
+methods = [
+  "Deva Surprise Major",
+  { title = "Cornwall Surprise Major", shorthand = "W" },
+  { title = "Lessness Surprise Major", shorthand = "E" },
+  "Superlative Surprise Major",
+  "Yorkshire Surprise Major",
+  "Bristol Surprise Major",
+]
+
+part_head = "17856342"
+calling = "HHH"
+calling_bell = 7
