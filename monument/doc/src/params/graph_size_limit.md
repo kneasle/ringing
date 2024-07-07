@@ -1,7 +1,5 @@
 # `graph_size_limit`
 
-**_(since v0.11.0)_**
-
 **Defaults to 100,000.**
 
 Sets a limit on the number of chunks in the composition graph, to prevent Monument from exhausting

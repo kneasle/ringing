@@ -107,11 +107,11 @@ pub struct TomlFile {
     /// If `true`, then singles are excluded from `base_calls`.  This is mutually exclusive with
     /// `singles_only`
     #[serde(default)]
-    bobs_only: bool,
+    base_bobs_only: bool,
     /// If `true`, then bobs are excluded from `base_calls`.  This is mutually exclusive with
     /// `bobs_only`.
     #[serde(default)]
-    singles_only: bool,
+    base_singles_only: bool,
     /// The weight given to each bob from `base_calls`
     base_bob_weight: Option<f32>,
     /// The weight given to each single from `base_calls`
@@ -307,7 +307,7 @@ impl TomlFile {
             }
         }
         // Check that `{bobs,singles}_only` aren't set at the same time
-        if self.bobs_only && self.singles_only {
+        if self.base_bobs_only && self.base_singles_only {
             return Err(anyhow::Error::msg(
                 "Composition can't be both `bobs_only` and `singles_only`",
             ));
@@ -316,8 +316,9 @@ impl TomlFile {
         Ok(monument::parameters::base_calls(
             id_gen,
             base_call_type,
-            (!self.singles_only).then_some(self.base_bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
-            (!self.bobs_only).then_some(self.base_single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
+            (!self.base_singles_only).then_some(self.base_bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
+            (!self.base_bobs_only)
+                .then_some(self.base_single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
             stage,
         ))
     }
