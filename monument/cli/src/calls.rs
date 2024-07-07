@@ -83,7 +83,7 @@ impl CustomCall {
             CallLabel::Different { from, to } => (from, to),
         };
         let calling_positions = match &self.calling_positions {
-            Some(c) => c.as_vec(),
+            Some(c) => c.chars().collect_vec(),
             None => default_calling_positions(&place_notation),
         };
 
@@ -96,27 +96,6 @@ impl CustomCall {
             place_notation,
             weight: self.weight,
         })
-    }
-}
-
-/// The different ways the user can specify a set of calling positions
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-enum CallingPositions {
-    /// The calling positions should be the `char`s in the given string
-    Str(String),
-    /// Each calling position is explicitly listed
-    List(Vec<char>),
-}
-
-impl CallingPositions {
-    /// Returns the same [`CallingPositions`] as `self`, but always expressed as a [`Vec`] of one
-    /// [`String`] per place.
-    fn as_vec(&self) -> Vec<char> {
-        match self {
-            CallingPositions::Str(s) => s.chars().collect_vec(),
-            CallingPositions::List(positions) => positions.clone(),
-        }
     }
 }
 
