@@ -1,1 +1,3 @@
-# courses
+# `courses`
+
+No doc page yet :/

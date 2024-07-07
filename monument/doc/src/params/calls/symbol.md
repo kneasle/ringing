@@ -1,1 +1,3 @@
-# symbol
+# `symbol`
+
+No doc page yet :/

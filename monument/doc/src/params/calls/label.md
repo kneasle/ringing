@@ -1,1 +1,3 @@
-# label
+# `label`
+
+No doc page yet :/

@@ -1,1 +1,3 @@
-# shorthand
+# `shorthand`
+
+No doc page yet :/
