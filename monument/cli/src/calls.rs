@@ -35,16 +35,15 @@ impl Default for BaseCalls {
 #[serde(deny_unknown_fields)]
 pub struct CustomCall {
     place_notation: String,
+    #[serde(default = "default_misc_call_score")]
+    weight: f32,
     symbol: char,
     debug_symbol: Option<String>, // Deprecated in v0.13.0
+    calling_positions: Option<String>,
     #[serde(default = "lead_end")]
     label: CallLabel,
     /// Deprecated alias for `label`
     lead_location: Option<CallLabel>,
-    // TODO: Make this only allow strings
-    calling_positions: Option<CallingPositions>,
-    #[serde(default = "default_misc_call_score")]
-    weight: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
