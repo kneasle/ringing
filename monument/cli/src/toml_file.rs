@@ -113,9 +113,9 @@ pub struct TomlFile {
     #[serde(default)]
     singles_only: bool,
     /// The weight given to each bob from `base_calls`
-    bob_weight: Option<f32>,
+    base_bob_weight: Option<f32>,
     /// The weight given to each single from `base_calls`
-    single_weight: Option<f32>,
+    base_single_weight: Option<f32>,
     /// Which calls to use in the compositions
     #[serde(default)]
     calls: Vec<CustomCall>,
@@ -296,12 +296,12 @@ impl TomlFile {
 
         // Suggest `{bobs,singles}_only` if the user gives calls an extreme negative weight
         const BIG_NEGATIVE_WEIGHT: f32 = -100.0;
-        if let Some(w) = self.bob_weight {
+        if let Some(w) = self.base_bob_weight {
             if w <= BIG_NEGATIVE_WEIGHT {
                 log::warn!("It looks like you're trying to make a singles only composition; consider using `singles_only = true` explicitly.");
             }
         }
-        if let Some(w) = self.single_weight {
+        if let Some(w) = self.base_single_weight {
             if w <= BIG_NEGATIVE_WEIGHT {
                 log::warn!("It looks like you're trying to make a bobs only composition; consider using `bobs_only = true` explicitly.");
             }
@@ -316,8 +316,8 @@ impl TomlFile {
         Ok(monument::parameters::base_calls(
             id_gen,
             base_call_type,
-            (!self.singles_only).then_some(self.bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
-            (!self.bobs_only).then_some(self.single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
+            (!self.singles_only).then_some(self.base_bob_weight.unwrap_or(DEFAULT_BOB_WEIGHT)),
+            (!self.bobs_only).then_some(self.base_single_weight.unwrap_or(DEFAULT_SINGLE_WEIGHT)),
             stage,
         ))
     }
