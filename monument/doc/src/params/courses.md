@@ -9,6 +9,9 @@ Parameters which specify which courses can be used in the generated compositions
 - [`course_weights`](#course_weights)
 - [`handbell_coursing_weight`](#handbell_coursing_weight)
 - ~~[`leadwise`](#leadwise)~~ (removed in v0.10.0)
+- [`calling_bell`](#calling_bell)
+- [`calling`](#calling)
+- [`omit_round_blocks`](#omit_round_blocks)
 
 ---
 
@@ -89,3 +92,46 @@ default, Monument will set this automatically if the tenor is affected by the pa
 cyclic) but otherwise will stick to course-wise compositions.  The only times you're likely to need
 this is for weird cases like differential methods, which don't have a well-defined concept of a
 'course head'.
+
+
+
+## `calling_bell`
+
+**_(Unreleased)_**
+
+Determines the bell which is used as 'observation' for calling positions, both when displaying
+and reading compositions.  I.e. calling positions will use this bell's place after each call.
+Defaults to the tenor.
+
+
+
+## `calling`
+
+**_(Unreleased)_**
+
+Specifies a call string which all compositions must follow.  This is useful when composing spliced,
+to make Monument fit methods around a known good calling.  This is written as a sequence of calling
+positions from the perspective of the [`calling_bell`](#calling_bell) (which defaults to the tenor).
+Any whitespace characters in the string will be ignored.
+
+For example, the following will make Monument fit Cambridge and Yorkshire Surprise Royal to the
+classic Quarter Peal composition of [`HHsWsHsW`](https://complib.org/composition/12026):
+
+```toml
+length = "QP"
+methods = [
+    "Cambridge Surprise Royal",
+    "Yorkshire Surprise Royal",
+]
+calling = "HHsWsHsW"
+```
+
+
+
+## `omit_round_blocks`
+
+**_(Unreleased)_**
+
+If a [`calling`](#calling) is given, setting this to `true` will allow Monument to skip round
+blocks in the input calling.  For example, if this is set to `true` then a calling of
+"WWWHHH" would generate compositions using "" (i.e. the plain course), "WWW", "HHH" and "WWWHHH".
