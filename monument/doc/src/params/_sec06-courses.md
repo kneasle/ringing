@@ -17,15 +17,6 @@ Parameters which specify which courses can be used in the generated compositions
 
 
 
-## `part_head`
-
-A row which determines which part heads will be generated.  Note that Monument can generate
-compositions with a different part head, provided the same set of parts are generated (so
-`part_head = "23456781"` and `part_head = "81234567"` are equivalent but `part_head = "56781234"` is
-not).  Defaults to rounds (i.e. one part, or `part_head = ""`).
-
-
-
 ## `courses`
 
 List of masks which define the courses that Monument can use.  Defaults to tenors together, or any
