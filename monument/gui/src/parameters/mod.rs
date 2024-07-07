@@ -70,11 +70,11 @@ impl Parameters {
         ];
 
         // Calls
-        let bob = Call::lead_end_call(CallId(0), PlaceNot::parse("14", stage).unwrap(), "-", -1.8);
+        let bob = Call::lead_end_call(CallId(0), PlaceNot::parse("14", stage).unwrap(), '-', -1.8);
         let single = Call::lead_end_call(
             CallId(1),
             PlaceNot::parse("1234", stage).unwrap(),
-            "s",
+            's',
             -2.5,
         );
         let maybe_unused_calls = vec![(true, bob), (true, single)];
@@ -149,7 +149,8 @@ impl Parameters {
             splice_style: SpliceStyle::LeadLabels,
             splice_weight: -1.0,
             calls: index_vec::index_vec![],
-            call_display_style: CallDisplayStyle::CallingPositions(stage.tenor()),
+            call_display_style: CallDisplayStyle::CallingPositions,
+            calling_bell: stage.tenor(),
             atw_weight: None, // Don't calculate atw
             require_atw: false,
 
@@ -157,6 +158,9 @@ impl Parameters {
             end_row: RowBuf::rounds(stage),
             part_head_group: PartHeadGroup::one_part(stage),
             course_weights: vec![],
+            // TODO: GUI for custom callings
+            calling: None,
+            omit_round_blocks: false,
 
             music_types,
             start_stroke: Stroke::Hand,

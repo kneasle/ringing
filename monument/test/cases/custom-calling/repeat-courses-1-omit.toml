@@ -1,0 +1,5 @@
+length = { min = 0, max = 10000 }
+method = "Bristol Surprise Major"
+
+calling = "WHWWHH WHWWHH"
+omit_round_blocks = true

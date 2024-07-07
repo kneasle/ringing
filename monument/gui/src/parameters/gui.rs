@@ -177,7 +177,8 @@ impl super::Parameters {
             .id_source(call.id)
             .show(ui, |ui| {
                 ParamTable::show(ui, 0, |table| {
-                    table.add_param_widget("Symbol", egui::TextEdit::singleline(&mut call.symbol));
+                    // TODO: Allow single-char edit box
+                    // table.add_param_widget("Symbol", egui::TextEdit::singleline(&mut call.symbol));
                     table.add_param_widget("Used", egui::Checkbox::new(used, ""));
                     table.add_param_widget(
                         "Weight",
@@ -186,7 +187,10 @@ impl super::Parameters {
                     table.add_label("Place notation", &call.place_notation);
                     table.add_label("Lead location (from)", &call.label_from);
                     table.add_label("Lead location (to)", &call.label_to);
-                    table.add_label("Calling positions", call.calling_positions.join(""));
+                    table.add_label(
+                        "Calling positions",
+                        call.calling_positions.iter().collect::<String>(),
+                    );
                 });
             });
     }

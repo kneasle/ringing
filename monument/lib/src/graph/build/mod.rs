@@ -4,13 +4,13 @@ mod falseness;
 mod layout;
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     ops::Deref,
     sync::Arc,
     time::Instant,
 };
 
-use bellframe::{music::AtRowPositions, Block, Mask, PlaceNot, Row, RowBuf, Stroke, StrokeSet};
+use bellframe::{music::AtRowPositions, Block, Mask, Row, RowBuf, Stroke, StrokeSet};
 use itertools::Itertools;
 
 use crate::{
@@ -32,8 +32,13 @@ impl Graph {
 
         // Generate chunk layout
         let start = Instant::now();
-        let (mut chunk_equiv_map, chunk_lengths, links) =
-            self::layout::chunk_lengths(params, config)?;
+        let layout::ChunkLengths {
+            chunk_lengths,
+            links,
+            mut chunk_equiv_map,
+
+            call_sequence_length,
+        } = self::layout::chunk_lengths(params, config)?;
         log::debug!("  Chunk layout generated in {:.2?}", start.elapsed());
 
         // TODO: Combine overlapping chunks
@@ -117,6 +122,9 @@ impl Graph {
 
             starts,
             ends,
+
+            call_sequence_length,
+            required_chunk_sets: HashSet::new(),
         };
         Ok(graph)
     }
@@ -165,7 +173,6 @@ fn expand_chunk(id: &ChunkId, per_part_length: PerPartLength, params: &Parameter
         music_counts: index_vec::index_vec![AtRowPositions::ZERO; params.music_types.len()],
 
         // Used by optimisation passes
-        required: false,
         lb_distance_from_rounds: TotalLength::ZERO,
         lb_distance_to_rounds: TotalLength::ZERO,
     }
@@ -318,7 +325,7 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
     for call in &params.calls {
         if call.calling_positions.len() != params.stage.num_bells() {
             return Err(crate::Error::WrongCallingPositionsLength {
-                call_name: call.symbol.clone(),
+                call_symbol: call.symbol,
                 calling_position_len: call.calling_positions.len(),
                 stage: params.stage,
             });
@@ -331,7 +338,7 @@ fn check_params(params: &Parameters) -> crate::Result<()> {
         for lead_label in [&call.label_from, &call.label_to] {
             if !defined_labels.contains(lead_label) {
                 return Err(crate::Error::UndefinedLabel {
-                    call_name: call.symbol.clone(),
+                    call_symbol: call.symbol,
                     label: lead_label.clone(),
                 });
             }
@@ -374,15 +381,12 @@ fn check_for_duplicate_call_names(params: &Parameters) -> crate::Result<()> {
     let sorted_calls = params
         .calls
         .iter()
-        .map(|call: &Call| -> (&str, &str, &PlaceNot) {
-            (&call.symbol, &call.label_from, &call.place_notation)
-        })
-        .sorted_by_key(|&(sym, lead_loc, _pn)| (sym, lead_loc));
-    for ((sym1, label1, pn1), (sym2, label2, pn2)) in sorted_calls.tuple_windows() {
-        if sym1 == sym2 && label1 == label2 {
+        .map(|call: &Call| (call.symbol, &call.place_notation))
+        .sorted_by_key(|&(sym, _pn)| sym);
+    for ((sym1, pn1), (sym2, pn2)) in sorted_calls.tuple_windows() {
+        if sym1 == sym2 {
             return Err(crate::Error::DuplicateCall {
-                symbol: sym1.to_owned(),
-                label: label1.to_owned(),
+                symbol: sym1,
                 pn1: pn1.clone(),
                 pn2: pn2.clone(),
             });
@@ -399,12 +403,12 @@ fn check_for_duplicate_call_names(params: &Parameters) -> crate::Result<()> {
 /// needs to be turned into the [`ChunkId`] referring to the 'equivalence class' containing that
 /// [`Chunk`] (using [`ChunkEquivalenceMap`]).
 #[derive(Debug, Clone)]
-struct ChunkIdInFirstPart {
+struct UnnormalizedChunkId {
     lead_head: RowBuf,
     row_idx: RowIdx,
 }
 
-impl Deref for ChunkIdInFirstPart {
+impl Deref for UnnormalizedChunkId {
     type Target = RowIdx;
 
     fn deref(&self) -> &Self::Target {
@@ -428,7 +432,7 @@ impl<'params> ChunkEquivalenceMap<'params> {
         }
     }
 
-    fn normalise(&mut self, id: &ChunkIdInFirstPart) -> (ChunkId, PhRotation) {
+    fn normalise(&mut self, id: &UnnormalizedChunkId) -> (ChunkId, PhRotation) {
         // If this lead head hasn't been normalised yet, add it and each of its equivalent copies
         // in other parts to the normalisation mapping.
         if !self.normalisation.contains_key(&id.lead_head) {

@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     composition::{Composition, ParamsData, PathElem},
-    graph::LinkSide,
+    graph::{CallSeqIdx, LinkSide},
     group::PartHead,
     utils::{counts::Counts, div_rounding_up, lengths::TotalLength},
 };
@@ -38,9 +38,13 @@ pub(super) struct PrefixInner {
     /// The last node in the path taken so far
     path: PathId,
 
-    /// The next [`LinkSide`] after chunk selection.  All other fields refer to the prefix up to
-    /// **but not including** `next_link_side`.
+    /// The next [`LinkSide`] after chunk selection.  Unless otherwise specified, all other fields
+    /// refer to the prefix up to **but not including** `next_link_side`.
     next_link_side: LinkSide<ChunkIdx>,
+    /// How many calls in the user-specified calling we've consumed so far,
+    /// **including `next_link_side`**.  As in the graph generation, if no calling is specified,
+    /// this is always 0.
+    expected_next_call_seq_idx: CallSeqIdx,
     /// For every [`ChunkIdx`], this contains `1` if that chunk is unringable (i.e. false against
     /// something in the prefix so far) and `0` otherwise
     unringable_chunks: BitVec,
@@ -76,6 +80,7 @@ impl CompPrefix {
                     inner: Box::new(PrefixInner {
                         path: paths.add_start(start_idx),
                         next_link_side: LinkSide::Chunk(chunk_idx),
+                        expected_next_call_seq_idx: CallSeqIdx::new(0),
                         unringable_chunks: all_chunks_ringable.clone(),
                         part_head,
                         method_counts: Counts::zeros(chunk.method_counts.len()),
@@ -142,7 +147,6 @@ impl Deref for CompPrefix {
 
 impl CompPrefix {
     /// Expand this [`CompPrefix`], adding every 1-chunk-longer prefix to the `frontier`
-    #[allow(clippy::let_unit_value)]
     pub(super) fn expand(
         self,
         search: &Search,
@@ -167,6 +171,7 @@ impl CompPrefix {
         let PrefixInner {
             path,
             next_link_side: _,
+            expected_next_call_seq_idx,
             mut unringable_chunks,
             mut method_counts,
             part_head, // Don't make this `mut` because it would get updated in every loop iteration
@@ -185,7 +190,7 @@ impl CompPrefix {
         score += search.atw_table.atw_score(&atw_bitmap);
 
         let succ_iter = chunk.succs.iter_enumerated();
-        #[allow(unused_variables)]
+        #[allow(unused_variables, clippy::let_unit_value)]
         let chunk = (); // Prevent the loop from accessing `chunk` by accident
 
         let max_length = *search.refined_ranges.length.end();
@@ -214,10 +219,25 @@ impl CompPrefix {
                 }
             }
 
+            // Check whether this link follows the call sequence
+            let mut expected_next_call_seq_idx = expected_next_call_seq_idx;
+            if let Some(link_call_seq_idx) = link.call_sequence_idx {
+                assert!(link_call_seq_idx >= expected_next_call_seq_idx);
+
+                if !param_data.omit_round_blocks && link_call_seq_idx != expected_next_call_seq_idx
+                {
+                    continue; // Don't follow a link which skips over a round block
+                }
+                // Otherwise, the next call in the sequence must be the one directly after the call
+                // for this link.
+                expected_next_call_seq_idx = link_call_seq_idx + 1;
+            }
+
             frontier.push(CompPrefix {
                 inner: Box::new(PrefixInner {
                     path: paths.add(path, succ_idx),
                     next_link_side: link.next,
+                    expected_next_call_seq_idx,
                     unringable_chunks: unringable_chunks.clone(),
                     part_head,
                     method_counts: method_counts.clone(),

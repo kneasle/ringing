@@ -154,6 +154,15 @@ pub struct TomlFile {
     /// Which course heads masks are allowed (overrides `split_tenors`)
     courses: Option<Vec<String>>,
     course_heads: Option<Vec<String>>, // Alias of `courses`, deprecated in v0.13.0
+    /// If set, Monument will only output compositions which have this call sequence.  For example,
+    /// "HHsWsHsW" will output only compositions with the classic 1282 Yorkshire/Cambridge Royal
+    /// calling.
+    calling: Option<String>,
+    /// If a `calling` is given, setting this to `true` will allow Monument to skip round
+    /// blocks in the input calling (for example, if this is set to `true` then a calling of
+    /// "WWWHHH" would generate "", "WWW", "HHH" and "WWWHHH").
+    #[serde(default)]
+    omit_round_blocks: bool,
     /// Score applied to every row with a given CH patterns
     #[serde(default)]
     course_weights: Vec<CourseWeightPattern>,
@@ -211,7 +220,7 @@ impl TomlFile {
         // TODO: Make this configurable
         // TODO: Move this into `lib/`
         let call_display_style = if part_head.is_fixed(calling_bell) {
-            CallDisplayStyle::CallingPositions(calling_bell)
+            CallDisplayStyle::CallingPositions
         } else {
             CallDisplayStyle::Positional
         };
@@ -221,17 +230,24 @@ impl TomlFile {
             stage,
             num_comps: self.num_comps,
             require_truth: self.require_truth,
+
             methods: self.build_methods(parsed_methods, &part_head, stage)?,
             splice_style: self.splice_style.into(),
             splice_weight: self.splice_weight,
-            calls: self.calls(stage)?,
-            call_display_style,
             atw_weight: self.atw_weight,
             require_atw: self.require_atw,
+
+            calls: self.calls(stage)?,
+            call_display_style,
+            calling_bell,
+
+            part_head_group: PartHeadGroup::new(&part_head),
             start_row: parse_row("start row", &self.start_row, stage)?,
             end_row: parse_row("end row", &self.end_row, stage)?,
-            part_head_group: PartHeadGroup::new(&part_head),
             course_weights: self.course_weights(stage)?,
+            calling: self.calling.clone(),
+            omit_round_blocks: self.omit_round_blocks,
+
             music_types: self.music(toml_path, stage)?,
             start_stroke: self.start_stroke,
         };

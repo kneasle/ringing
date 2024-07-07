@@ -42,7 +42,7 @@ pub enum Error {
     /// Different start/end rows were specified in a multi-part
     DifferentStartEndRowInMultipart,
     /// Some [`Call`] refers to a label that doesn't exist
-    UndefinedLabel { call_name: String, label: String },
+    UndefinedLabel { call_symbol: char, label: String },
     /// No methods were defined
     NoMethods,
     /// Two [`Method`]s use the same shorthand
@@ -53,16 +53,22 @@ pub enum Error {
     },
     /// Some [`Call`] doesn't have enough calling positions to cover the [`Stage`]
     WrongCallingPositionsLength {
-        call_name: String,
+        call_symbol: char,
         calling_position_len: usize,
         stage: Stage,
     },
     /// Two [`Call`]s have the same lead location and name
     DuplicateCall {
-        symbol: String,
-        label: String,
+        symbol: char,
         pn1: PlaceNot,
         pn2: PlaceNot,
+    },
+    /// An error was found when parsing the custom calling
+    CustomCallingParse {
+        /// Index within the 'calling' string where this error occurred, if any
+        char_idx: Option<usize>,
+        /// What went wrong
+        reason: String,
     },
 
     /* GRAPH BUILD ERRORS */
@@ -127,7 +133,7 @@ impl Display for Error {
             }
             Error::NoMethods => write!(f, "Can't have a composition with no methods"),
             Error::WrongCallingPositionsLength {
-                call_name,
+                call_symbol: call_name,
                 calling_position_len,
                 stage,
             } => write!(
@@ -146,21 +152,22 @@ impl Display for Error {
                 "Methods {:?} and {:?} share a shorthand ({})",
                 title1, title2, shorthand
             ),
-            Error::UndefinedLabel { call_name, label } => write!(
+            Error::UndefinedLabel {
+                call_symbol: call_name,
+                label,
+            } => write!(
                 f,
                 "Call {:?} refers to a label {:?}, which doesn't exist",
                 call_name, label
             ), // TODO: Suggest one that does exist
-            Error::DuplicateCall {
-                symbol,
-                label,
-                pn1,
-                pn2,
-            } => write!(
+            Error::DuplicateCall { symbol, pn1, pn2 } => write!(
                 f,
-                "Call symbol {:?} (at {:?}) is used for both {} and {}",
-                symbol, label, pn1, pn2
+                "Call symbol {:?} is used for both {} and {}",
+                symbol, pn1, pn2
             ),
+            Error::CustomCallingParse { reason, .. } => {
+                write!(f, "Error parsing calling: {reason}")
+            }
 
             /* GRAPH BUILD ERRORS */
             Error::SizeLimit(limit) => write!(

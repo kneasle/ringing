@@ -259,7 +259,7 @@ impl<A> Block<A> {
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `Block`.  Also returns
     /// the place of `bell` in the leftover row.
-    pub fn path_of(&self, bell: Bell) -> (Vec<usize>, usize) {
+    pub fn path_of(&self, bell: Bell) -> (Vec<u8>, u8) {
         let mut full_path = self.full_path_of(bell);
         let place_in_leftover_row = full_path.pop().unwrap();
         (full_path, place_in_leftover_row)
@@ -267,7 +267,7 @@ impl<A> Block<A> {
 
     /// Returns the places of a given [`Bell`] in each [`Row`] of this `Block`, **including**
     /// the leftover row.
-    pub fn full_path_of(&self, bell: Bell) -> Vec<usize> {
+    pub fn full_path_of(&self, bell: Bell) -> Vec<u8> {
         self.rows.path_of(bell) // Delegate to `SameStageVec`
     }
 

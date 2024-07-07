@@ -35,7 +35,7 @@ impl Default for BaseCalls {
 #[serde(deny_unknown_fields)]
 pub struct CustomCall {
     place_notation: String,
-    symbol: String,
+    symbol: char,
     debug_symbol: Option<String>, // Deprecated in v0.13.0
     #[serde(default = "lead_end")]
     label: CallLabel,
@@ -90,7 +90,7 @@ impl CustomCall {
 
         Ok(monument::parameters::Call {
             id,
-            symbol: self.symbol.to_owned(),
+            symbol: self.symbol,
             calling_positions,
             label_from,
             label_to,
@@ -107,15 +107,15 @@ enum CallingPositions {
     /// The calling positions should be the `char`s in the given string
     Str(String),
     /// Each calling position is explicitly listed
-    List(Vec<String>),
+    List(Vec<char>),
 }
 
 impl CallingPositions {
     /// Returns the same [`CallingPositions`] as `self`, but always expressed as a [`Vec`] of one
     /// [`String`] per place.
-    fn as_vec(&self) -> Vec<String> {
+    fn as_vec(&self) -> Vec<char> {
         match self {
-            CallingPositions::Str(s) => s.chars().map(|c| c.to_string()).collect_vec(),
+            CallingPositions::Str(s) => s.chars().collect_vec(),
             CallingPositions::List(positions) => positions.clone(),
         }
     }

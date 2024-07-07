@@ -1,7 +1,7 @@
 //! Instructions for Monument about what compositions should be generated.
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt::Write,
     ops::{Deref, Range, RangeInclusive},
 };
@@ -14,7 +14,7 @@ use bellframe::{
 use itertools::Itertools;
 
 use crate::{
-    graph::ChunkId,
+    graph::{CallSeqVec, ChunkId},
     group::PartHeadGroup,
     utils::{
         lengths::{PerPartLength, TotalLength},
@@ -44,6 +44,7 @@ pub struct Parameters {
     pub splice_weight: f32,
     pub calls: CallVec<Call>,
     pub call_display_style: CallDisplayStyle, // TODO: Make this defined per-method?
+    pub calling_bell: Bell,
     pub atw_weight: Option<f32>,
     pub require_atw: bool, // `true` to make Monument only output atw comps
 
@@ -56,6 +57,13 @@ pub struct Parameters {
     /// Score applied to every row in every course containing a lead head matching the
     /// corresponding [`Mask`].
     pub course_weights: Vec<(Mask, f32)>,
+    /// If set, force Monument to stick to a specific calling.  Useful for fitting methods to a
+    /// known good calling.
+    pub calling: Option<String>,
+    /// If a `calling` is given, setting this to `true` will allow Monument to skip round
+    /// blocks in the input calling (for example, if this is set to `true` then a calling of
+    /// "WWWHHH" would generate "", "WWW", "HHH" and "WWWHHH").
+    pub omit_round_blocks: bool,
 
     // MUSIC
     pub music_types: MusicTypeVec<MusicType>,
@@ -143,6 +151,113 @@ impl Parameters {
     //////////////////////
     // HELPER FUNCTIONS //
     //////////////////////
+
+    /// Returns the first row in the given `ChunkId`
+    pub(crate) fn chunk_head(&self, id: &ChunkId) -> RowBuf {
+        let method = &self.methods[id.method];
+        id.lead_head.deref() * method.row_in_plain_lead(id.sub_lead_idx)
+    }
+
+    pub(crate) fn parsed_call_string(&self) -> crate::Result<Option<CallSeqVec<(CallIdx, u8)>>> {
+        Ok(match &self.calling {
+            Some(s) => Some(self.parse_calling(s)?),
+            None => None,
+        })
+    }
+
+    fn parse_calling(&self, calling: &str) -> crate::Result<CallSeqVec<(CallIdx, u8)>> {
+        #[derive(Debug)]
+        enum CharMeaning {
+            /// Char refers to a call (e.g. "s" in "sH")
+            Call(CallIdx),
+            /// Char refers to a calling position of a bob (e.g. "H" as a shorthand for "-H")
+            BobCallingPosition(CallIdx, u8),
+        }
+
+        // Determine how to read the first char of a calls (see `CharMeaning`).  We add all calls
+        // then all calling positions (rather than combining the loops) so that it's easy to
+        // determine the cause of a name collision (thus improving the error messages).
+        let mut first_char_meanings = HashMap::<char, CharMeaning>::new();
+        for (call_idx, call) in self.calls.iter_enumerated() {
+            if !call.is_bob() {
+                let existing_meaning =
+                    first_char_meanings.insert(call.symbol, CharMeaning::Call(call_idx));
+                assert!(existing_meaning.is_none()); // Non-unique calls should already have errored
+            }
+        }
+        for (call_idx, call) in self.calls.iter_enumerated() {
+            if call.is_bob() {
+                for (position_place, position_char) in call.calling_positions.iter().enumerate() {
+                    let existing_meaning = first_char_meanings.insert(
+                        *position_char,
+                        CharMeaning::BobCallingPosition(call_idx, position_place as u8),
+                    );
+                    if let Some(CharMeaning::Call(_)) = existing_meaning {
+                        return Err(crate::Error::CustomCallingParse {
+                            char_idx: None,
+                            reason: format!(
+                                "A bob calling position {:?} shares its name with a different call.",
+                                position_char
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+
+        // Read the call string.  Each loop consumes one call (or skips over one character)
+        let mut calls = CallSeqVec::<(CallIdx, u8)>::new();
+        let mut char_iter = calling
+            .char_indices()
+            .filter(|(_idx, c)| !c.is_whitespace()); // Prefilter whitespace from the calling
+        while let Some((char_idx, c)) = char_iter.next() {
+            match first_char_meanings.get(&c) {
+                // Just a call name, so parse the next char as a calling position
+                Some(CharMeaning::Call(call_idx)) => {
+                    let Some((_char_idx, position_char)) = char_iter.next() else {
+                        return Err(crate::Error::CustomCallingParse {
+                            char_idx: Some(char_idx),
+                            reason: format!(
+                                "Expected a calling position for {c:?}, but the string ended."
+                            ),
+                        });
+                    };
+                    let maybe_position = self.calls[*call_idx]
+                        .calling_positions
+                        .iter()
+                        .position(|p| *p == position_char);
+                    match maybe_position {
+                        Some(position) => {
+                            calls.push((*call_idx, position as u8));
+                        }
+                        None => {
+                            return Err(crate::Error::CustomCallingParse {
+                                char_idx: Some(char_idx),
+                                reason: format!(
+                                    "{position_char:?} isn't a calling position for {c:?}"
+                                ),
+                            })
+                        }
+                    }
+                }
+                // Call is already fully parsed
+                Some(CharMeaning::BobCallingPosition(call_idx, place)) => {
+                    calls.push((*call_idx, *place));
+                }
+                // Non white-space, non-call, non-bob-calling-position chars are an error
+                None => {
+                    return Err(crate::Error::CustomCallingParse {
+                        char_idx: Some(char_idx),
+                        reason: format!(
+                            "Char {c:?} is not whitespace, nor the start of a valid call."
+                        ),
+                    })
+                }
+            }
+        }
+
+        Ok(calls)
+    }
 
     /// For a given chunk, split that chunk's range into segments where each one falls within a
     /// unique lead.  For example, a chunk with ID `ChunkId { <Little Bob>, 12345678, sub_lead_idx: 2 }`
@@ -520,8 +635,8 @@ pub struct Call {
     // TODO: Allow calls to cover multiple PNs (e.g. singles in Grandsire)
     pub place_notation: PlaceNot,
 
-    pub symbol: String,
-    pub calling_positions: Vec<String>,
+    pub symbol: char,
+    pub calling_positions: Vec<char>,
 
     pub weight: f32,
 }
@@ -546,27 +661,28 @@ impl From<CallId> for u32 {
 pub enum CallDisplayStyle {
     /// Calls should be displayed as a count since the last course head.
     Positional,
-    /// Calls should be displayed based on the position of the provided 'observation' [`Bell`].
-    CallingPositions(Bell),
+    /// Calls should be displayed based on the position of the `calling_bell`
+    CallingPositions,
 }
 
 impl Call {
+    pub fn is_bob(&self) -> bool {
+        self.symbol == '-' || self.symbol == '–'
+    }
+
     /// Return the symbol used for this call in compact call strings.  Bobs use an empty string,
     /// while all other calls are unaffected.  Thus, compositions render like `WsWWsWH` rather than
     /// `-WsW-WsW-H`.
-    pub(crate) fn short_symbol(&self) -> &str {
-        match self.symbol.as_str() {
-            "-" | "–" => "", // Convert `-` to ``
-            s => s,          // All other calls use their explicit symbol
-        }
+    pub fn short_symbol(&self) -> Option<char> {
+        (!self.is_bob()).then_some(self.symbol)
     }
 
     /// Create a `Call` which replaces the lead end with a given [`PlaceNot`]
-    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: &str, weight: f32) -> Self {
+    pub fn lead_end_call(id: CallId, place_not: PlaceNot, symbol: char, weight: f32) -> Self {
         Self {
             id,
 
-            symbol: symbol.to_owned(),
+            symbol,
             calling_positions: default_calling_positions(&place_not),
             label_from: LABEL_LEAD_END.to_owned(),
             label_to: LABEL_LEAD_END.to_owned(),
@@ -611,7 +727,7 @@ pub fn base_calls(
         calls.push(Call::lead_end_call(
             id_generator.next(),
             bob_pn,
-            "-",
+            '-',
             bob_weight,
         ));
     }
@@ -626,7 +742,7 @@ pub fn base_calls(
         calls.push(Call::lead_end_call(
             id_generator.next(),
             single_pn,
-            "s",
+            's',
             single_weight,
         ));
     }
@@ -635,7 +751,7 @@ pub fn base_calls(
 }
 
 #[allow(clippy::branches_sharing_code)]
-pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
+pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<char> {
     let named_positions = "LIBFVXSEN"; // TODO: Does anyone know any more than this?
 
     // TODO: Replace 'B' with 'O' for calls which don't affect the tenor
@@ -645,10 +761,8 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
         // Start off with the single-char position names
         named_positions
         .chars()
-        .map(|c| c.to_string())
-        // Extending forever with numbers (extended with `ths` to avoid collisions with positional
-        // calling positions)
-        .chain((named_positions.len()..).map(|i| format!("{}ths", i + 1)))
+        // Extending forever with '?'s (for calling positions with no standard name)
+        .chain(std::iter::repeat('?'))
         // But we consume one value per place in the Stage
         .take(place_not.stage().num_bells())
         .collect_vec();
@@ -658,8 +772,7 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
     macro_rules! replace_pos {
         ($idx: expr, $new_val: expr) => {
             if let Some(v) = positions.get_mut($idx) {
-                v.clear();
-                v.push($new_val);
+                *v = $new_val;
             }
         };
     }
@@ -678,8 +791,7 @@ pub fn default_calling_positions(place_not: &PlaceNot) -> Vec<String> {
             if let Some(place) = place_not.stage().num_bells().checked_sub(1 + $ind) {
                 if place >= 4 {
                     if let Some(v) = positions.get_mut(place) {
-                        v.clear();
-                        v.push($new_val);
+                        *v = $new_val;
                     }
                 }
             }
@@ -1037,8 +1149,8 @@ mod tests {
     use itertools::Itertools;
 
     /// Converts a string to a list of strings, one of each [`char`] in the input.
-    fn char_vec(string: &str) -> Vec<String> {
-        string.chars().map(|c| c.to_string()).collect_vec()
+    fn char_vec(string: &str) -> Vec<char> {
+        string.chars().collect_vec()
     }
 
     #[test]

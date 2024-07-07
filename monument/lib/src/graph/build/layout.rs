@@ -8,7 +8,7 @@ use bellframe::{Mask, Row, RowBuf};
 use itertools::Itertools;
 
 use crate::{
-    graph::{ChunkId, Link, LinkSet, LinkSide, RowIdx},
+    graph::{CallSeqIdx, ChunkId, Link, LinkSet, LinkSide, RowIdx},
     group::PhRotation,
     parameters::{CallIdx, MethodIdx, MethodVec, Parameters, SpliceStyle},
     utils::{
@@ -18,49 +18,74 @@ use crate::{
     Config,
 };
 
-use super::{ChunkEquivalenceMap, ChunkIdInFirstPart};
+use super::{ChunkEquivalenceMap, UnnormalizedChunkId};
+
+pub(super) struct ChunkLengths<'params> {
+    pub chunk_lengths: HashMap<ChunkId, PerPartLength>,
+    pub links: LinkSet,
+    pub chunk_equiv_map: ChunkEquivalenceMap<'params>,
+
+    pub call_sequence_length: usize,
+}
 
 /// Compute the layout (ids, lengths and connections) of the graph representing a [`Parameters`].
 ///
 /// This is the only item exported by this module; all the other code should be considered
-/// implementation detail of this function
-pub(super) fn chunk_lengths<'q>(
-    params: &'q Parameters,
+/// implementation detail of this function.
+pub(super) fn chunk_lengths<'p>(
+    params: &'p Parameters,
     config: &Config,
-) -> crate::Result<(
-    ChunkEquivalenceMap<'q>,
-    HashMap<ChunkId, PerPartLength>,
-    LinkSet,
-)> {
-    let mut chunk_lengths = HashMap::new();
-    let mut links = LinkSet::new();
+) -> crate::Result<ChunkLengths<'p>> {
+    // NOTE: Here we're always tracking the `CallSeqIdx`, even if the user hasn't provided a custom
+    // calling.  If the user hasn't given a calling, the `CallSeqIdx` will always be 0.
 
-    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkId, TotalLength>>>::new();
+    // Values to output
+    let mut chunk_lengths: HashMap<ChunkId, PerPartLength> = HashMap::new();
+    let mut links = LinkSet::new();
     let mut chunk_equiv_map = ChunkEquivalenceMap::new(&params.part_head_group);
+
+    // Working variables
+    let call_sequence = params.parsed_call_string()?;
     let chunk_factory = ChunkFactory::new(params);
+    let mut chunks_expanded = HashSet::<(ChunkId, CallSeqIdx)>::new();
+    let mut links_generated = HashSet::<(LinkSide<ChunkId>, LinkSide<ChunkId>, PhRotation)>::new();
+    let mut frontier = BinaryHeap::<Reverse<FrontierItem<ChunkToExpand, TotalLength>>>::new();
 
     // Populate the frontier with start chunks, and add start links to `links`
     for start_id in boundary_locations(&params.start_row, Boundary::Start, params) {
+        let lead_head_in_first_part: RowBuf = start_id.lead_head.deref().to_owned();
         let (start_id, ph_rotation) = chunk_equiv_map.normalise(&start_id);
         links.add(Link {
+            call: None,
             from: LinkSide::StartOrEnd,
             to: LinkSide::Chunk(start_id.clone()),
-            call: None,
             ph_rotation,
-            ph_rotation_back: !ph_rotation,
+            call_sequence_idx: None,
         });
-        frontier.push(Reverse(FrontierItem::new(start_id, TotalLength::ZERO)));
+        frontier.push(Reverse(FrontierItem::new(
+            ChunkToExpand {
+                chunk_id: start_id,
+                lead_head_in_first_part,
+                call_sequence_idx: CallSeqIdx::new(0),
+            },
+            TotalLength::ZERO,
+        )));
     }
 
     // Repeatedly expand `ChunkId`s in increasing order of distance (i.e. we're exploring the graph
     // using Dijkstra's algorithm).
     while let Some(Reverse(frontier_item)) = frontier.pop() {
         let FrontierItem {
-            item: chunk_id,
+            item,
             distance: min_distance_from_start,
         } = frontier_item;
+        let ChunkToExpand {
+            chunk_id,
+            lead_head_in_first_part,
+            call_sequence_idx,
+        } = item;
 
-        if chunk_lengths.contains_key(&chunk_id) {
+        if chunks_expanded.contains(&(chunk_id.clone(), call_sequence_idx)) {
             continue; // Don't expand the same chunk multiple times
         }
 
@@ -79,11 +104,17 @@ pub(super) fn chunk_lengths<'q>(
             continue;
         }
 
+        // Actually add the chunk to the graph
         chunk_lengths.insert(chunk_id.clone(), per_part_length);
+        chunks_expanded.insert((chunk_id.clone(), call_sequence_idx));
+
         // Create the successor links and add the corresponding `ChunkId`s to the frontier
-        let mut links_so_far = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
+        let mut links_from_this_chunk = HashSet::<(LinkSide<ChunkId>, PhRotation)>::new();
         for (id_to, call, is_end) in successors {
-            // Add link to the graph
+            let lead_head_transposition =
+                Row::solve_ax_equals_b(&chunk_id.lead_head, &id_to.lead_head);
+            let new_lead_head_in_first_part = &lead_head_in_first_part * lead_head_transposition;
+            // Determine where this link leads
             let (id_to, ph_rotation) = chunk_equiv_map.normalise(&id_to);
             let link_side_to = match is_end {
                 true => LinkSide::StartOrEnd,
@@ -91,27 +122,88 @@ pub(super) fn chunk_lengths<'q>(
             };
             // Only store one link between every pair of `LinkSide`s
             // TODO: Always preserve the links with the *highest* score
-            if !links_so_far.insert((link_side_to.clone(), ph_rotation)) {
-                continue; // Skip any link which already exists
+            if !links_from_this_chunk.insert((link_side_to.clone(), ph_rotation)) {
+                continue; // An equivalent link has already been added
             }
 
-            // Add the link
-            links.add(Link {
-                from: LinkSide::Chunk(chunk_id.clone()),
-                to: link_side_to,
-                call,
-                ph_rotation,
-                ph_rotation_back: !ph_rotation,
-            });
+            // If user forces a given call sequence, remove any links which don't correspond to the
+            // correct next call.
+            let mut link_sequence_idx = None;
+            let mut next_call_sequence_idx = call_sequence_idx;
+            if let Some(sequence) = &call_sequence {
+                if is_end {
+                    // Any non-call ends appear 'after' all the calls in the composition.  Note how
+                    // this value will get overwritten if this is an end link which has a call.
+                    link_sequence_idx = Some(sequence.len_idx());
+                }
+
+                if let Some(call) = call {
+                    let Some(&(expected_next_call, expected_place)) =
+                        sequence.get(call_sequence_idx)
+                    else {
+                        continue; // Skip a call which is past the end of the composition
+                    };
+
+                    // Skip use of the wrong call
+                    if expected_next_call != call {
+                        continue;
+                    }
+
+                    // Skip use of the correct call but at the wrong calling position
+                    let calling_bell_place =
+                        new_lead_head_in_first_part.place_of(params.calling_bell);
+                    if calling_bell_place != expected_place {
+                        continue;
+                    }
+
+                    // If we haven't rejected it, allow the call
+                    link_sequence_idx = Some(call_sequence_idx);
+                    next_call_sequence_idx += 1;
+                }
+            }
+
+            // Add the link, if it hasn't been added already
+            let link_side_from = LinkSide::Chunk(chunk_id.clone());
+            let is_link_new =
+                links_generated.insert((link_side_from.clone(), link_side_to.clone(), ph_rotation));
+            if is_link_new {
+                links.add(Link {
+                    call,
+                    from: link_side_from,
+                    to: link_side_to,
+                    ph_rotation,
+                    call_sequence_idx: link_sequence_idx,
+                });
+            }
             // If this isn't an end, add the new chunk to the frontier so it becomes part of the
             // graph
             if !is_end {
-                frontier.push(Reverse(FrontierItem::new(id_to, min_distance_after_chunk)));
+                frontier.push(Reverse(FrontierItem::new(
+                    ChunkToExpand {
+                        chunk_id: id_to,
+                        lead_head_in_first_part: new_lead_head_in_first_part,
+                        call_sequence_idx: next_call_sequence_idx,
+                    },
+                    min_distance_after_chunk,
+                )));
             }
         }
     }
 
-    Ok((chunk_equiv_map, chunk_lengths, links))
+    Ok(ChunkLengths {
+        chunk_equiv_map,
+        chunk_lengths,
+        links,
+
+        call_sequence_length: call_sequence.map_or(0, |seq| seq.len()) + 1, // +1 for the end of the comp
+    })
+}
+
+#[derive(Debug, Clone)]
+struct ChunkToExpand {
+    chunk_id: ChunkId,
+    lead_head_in_first_part: RowBuf,
+    call_sequence_idx: CallSeqIdx,
 }
 
 /// Persistent state for building [`Chunk`]s
@@ -137,7 +229,7 @@ impl ChunkFactory {
         params: &Parameters,
     ) -> (
         PerPartLength,
-        Vec<(ChunkIdInFirstPart, Option<CallIdx>, bool)>,
+        Vec<(UnnormalizedChunkId, Option<CallIdx>, bool)>,
     ) {
         let course_len = params.methods[chunk_id.method].course_len();
         // Determine the length of the `Chunk` by continually attempting to shorten it with calls
@@ -146,20 +238,19 @@ impl ChunkFactory {
         let mut links_at_shortest_len = Vec::new();
         // Closure to add a new link, shortening the chunk if needed
         let mut add_link =
-            |len: PerPartLength, id: ChunkIdInFirstPart, call: Option<CallIdx>, is_end: bool| {
+            |len: PerPartLength, id: UnnormalizedChunkId, call: Option<CallIdx>, is_end: bool| {
                 // If this link is strictly further away than some other link, then it'll never be
                 // reached
                 if len > shortest_len {
                     return;
                 }
-                // If this new link makes the chunk strictly shorter, then all previous links
-                // become irrelevant
+                // If this new link makes the chunk strictly shorter, then all previously set links
+                // can't be reached
                 if len < shortest_len {
                     shortest_len = len;
                     links_at_shortest_len.clear();
                 }
-                // Now that the chunk is exactly the same length as this link, we can add it as an
-                // end
+                // If the chunk is exactly the same length as this link, we can add it as an link
                 links_at_shortest_len.push((id, call, is_end));
             };
 
@@ -191,7 +282,7 @@ impl ChunkFactory {
 struct EndLookupTable {
     /// For each lead head in each [`Method`], how many rows away is the nearest instance of
     /// `params.end_row` (and the [`ChunkId`] referring to that end's location).
-    end_lookup: HashMap<(RowBuf, MethodIdx), Vec<(PerPartLength, ChunkIdInFirstPart)>>,
+    end_lookup: HashMap<(RowBuf, MethodIdx), Vec<(PerPartLength, UnnormalizedChunkId)>>,
 }
 
 impl EndLookupTable {
@@ -222,7 +313,7 @@ impl EndLookupTable {
         Self { end_lookup }
     }
 
-    fn is_end(&self, chunk_id: &ChunkIdInFirstPart) -> bool {
+    fn is_end(&self, chunk_id: &UnnormalizedChunkId) -> bool {
         match self
             .end_lookup
             .get(&(chunk_id.lead_head.clone(), chunk_id.row_idx.method))
@@ -238,7 +329,7 @@ impl EndLookupTable {
         &self,
         chunk_id: &ChunkId,
         params: &Parameters,
-        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, UnnormalizedChunkId, Option<CallIdx>, bool),
     ) {
         let method_idx = chunk_id.method;
         let method = &params.methods[method_idx];
@@ -445,7 +536,7 @@ impl LinkLookupTable {
         &self,
         chunk_id: &ChunkId,
         params: &Parameters,
-        add_link: &mut impl FnMut(PerPartLength, ChunkIdInFirstPart, Option<CallIdx>, bool),
+        add_link: &mut impl FnMut(PerPartLength, UnnormalizedChunkId, Option<CallIdx>, bool),
     ) {
         for (mask, link_positions) in &self.link_lookup[chunk_id.method] {
             if mask.matches(&chunk_id.lead_head) {
@@ -466,7 +557,7 @@ impl LinkLookupTable {
                         len = params.methods[chunk_id.method].course_len();
                     }
                     for link_entry in link_entries {
-                        let next_chunk_id = ChunkIdInFirstPart {
+                        let next_chunk_id = UnnormalizedChunkId {
                             lead_head: chunk_id.lead_head.as_ref()
                                 * &link_entry.lead_head_transposition,
                             row_idx: link_entry.row_idx_to,
@@ -543,12 +634,12 @@ fn boundary_locations(
     row: &Row,
     boundary: Boundary,
     params: &Parameters,
-) -> Vec<ChunkIdInFirstPart> {
+) -> Vec<UnnormalizedChunkId> {
     // Generate the method starts
     let mut locations = Vec::new();
     for (method_idx, method) in params.methods.iter_enumerated() {
         for (lead_head, sub_lead_idx) in method.boundary_locations(row, boundary, params) {
-            locations.push(ChunkIdInFirstPart {
+            locations.push(UnnormalizedChunkId {
                 lead_head,
                 row_idx: RowIdx::new(method_idx, sub_lead_idx),
             });

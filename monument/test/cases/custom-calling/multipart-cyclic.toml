@@ -1,0 +1,11 @@
+length = "QP"
+methods = [
+  "Deva Surprise Major",
+  "Cornwall Surprise Major",
+  "Lessness Surprise Major",
+  "Superlative Surprise Major",
+  "Yorkshire Surprise Major",
+]
+
+part_head = "15678234"
+calling = "BVM"
