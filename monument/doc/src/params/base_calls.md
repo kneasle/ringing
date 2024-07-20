@@ -17,7 +17,7 @@ base_calls = "none" # no base calls, only what you've added
 
 These can be customised with these other parameters:
 
-- [`base_bobs_only`](base_bobs_only.md)
-- [`base_singles_only`](base_singles_only.md)
-- [`base_bob_weight`](base_bob_weight.md)
-- [`base_single_weight`](base_single_weight.md)
+- [`bobs_only`](bobs_only.md)
+- [`singles_only`](singles_only.md)
+- [`bob_weight`](bob_weight.md)
+- [`single_weight`](single_weight.md)
