@@ -3425,6 +3425,87 @@ len |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s 
 ----|----------|----------------------------------------------------------------|-----------|-----------
 len |    PH    |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
 """
+"test/cases/regression/start-row-no-method-count.toml" = """
+len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+----|----------------------------------------------------------------|-----------|-----------
+288 |   11.00 :    6 (  3f   3b)    0f  2b    2f  0b    0f  1b     0 | -0.013542 | sWBMWBBBH
+272 |   11.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  1b     0 | -0.011397 | WBBBsHsWsM
+240 |   11.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  1b     0 |  0.013750 | WBMsM
+240 |   11.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  1b     0 |  0.013750 | WHBsM
+240 |   11.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  1b     0 |  0.013750 | sWBHM
+240 |   11.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  1b     0 |  0.013750 | sWWBM
+288 |   12.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  2b     0 | -0.010069 | BBBMHsWBM
+288 |   12.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  2b     0 | -0.010069 | BBBMsHWBM
+288 |   12.00 :    6 (  3f   3b)    0f  2b    2f  0b    0f  2b     0 | -0.003819 | BMsWBBBH
+288 |   13.00 :    8 (  4f   4b)    0f  2b    2f  0b    0f  1b     0 | -0.006597 | WBMWBBBsH
+272 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 | -0.004044 | sWBBBsWsMH
+272 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 | -0.004044 | sWsMBBBsMH
+272 |   13.00 :    6 (  3f   3b)    0f  1b    1f  0b    0f  1b     0 | -0.000368 | WBBBHWsM
+272 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 | -0.000368 | WBBBsWMH
+272 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 | -0.000368 | WsMBBBMH
+288 |   13.00 :    6 (  3f   3b)    0f  2b    2f  0b    0f  3b     0 | -0.000347 | MsHBBBBH
+288 |   13.00 :    6 (  3f   3b)    0f  2b    2f  0b    0f  3b     0 | -0.000347 | sMHBBBBH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.002917 | sWBMsHsMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.002917 | sWBsMHsMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.002917 | sWHsWBsMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.002917 | sWsHWBsMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.007083 | WBMsHMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.007083 | WBsMHMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.007083 | WHsWBMH
+240 |   13.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.007083 | WsHWBMH
+224 |   13.00 :    4 (  2f   2b)    0f  1b    1f  0b    0f  3b     0 |  0.027232 | sMsWsM
+288 |   14.00 :    6 (  3f   3b)    0f  1b    1f  0b    0f  2b     0 | -0.006597 | BBBsMsHsWBM
+288 |   14.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  2b     0 | -0.003125 | BBBMWBsMH
+288 |   14.00 :    6 (  3f   3b)    0f  1b    1f  0b    0f  2b     0 | -0.003125 | BBBsMHWBM
+288 |   14.00 :    8 (  4f   4b)    0f  2b    2f  0b    0f  2b     0 |  0.003125 | BBBsMWBH
+272 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.003309 | WBBBsWsMsH
+272 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.003309 | WsMBBBsMsH
+272 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.003309 | sWBBBsWMsH
+272 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.003309 | sWsMBBBMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | WBMsHsMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | WBsMHsMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | WHsWBsMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | WsHWBsMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | sWBMsHMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | sWBsMHMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | sWHsWBMsH
+240 |   15.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  1b     0 |  0.011250 | sWsHWBMsH
+224 |   15.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  1b     0 |  0.020089 | WsMsHsWH
+224 |   15.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  3b     0 |  0.020089 | sMsHsWMH
+224 |   15.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  3b     0 |  0.024554 | MHsWMH
+224 |   15.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  3b     0 |  0.024554 | MsHWMH
+224 |   15.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  1b     0 |  0.024554 | WMHsWH
+224 |   15.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  1b     0 |  0.024554 | WMsHWH
+224 |   15.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  1b     0 |  0.024554 | WsMHWH
+224 |   15.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  3b     0 |  0.024554 | sMHWMH
+----|----------------------------------------------------------------|-----------|-----------
+len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+----|----------------------------------------------------------------|-----------|-----------
+288 |   16.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  2b     0 |  0.003819 | BBBMWBMsH
+288 |   16.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  2b     0 |  0.010069 | BBBBHsWH
+288 |   16.00 :    8 (  4f   4b)    0f  3b    3f  0b    0f  2b     0 |  0.010069 | BBBBsHWH
+288 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 | -0.002431 | WBBsMsHsWBBM
+288 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.001042 | WBBMHsWBBM
+288 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.001042 | WBBMsHWBBM
+288 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.001042 | WBBsMHWBBM
+272 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.010662 | sWsMsHBBBM
+272 |   17.00 :   10 (  5f   5b)    0f  1b    1f  0b    0f  1b     0 |  0.014338 | sWMHBBBM
+224 |   17.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  3b     0 |  0.024554 | sMsHsWsMsH
+224 |   17.00 :   10 (  5f   5b)    0f  3b    3f  0b    0f  1b     0 |  0.024554 | sWsMsHsWsH
+224 |   17.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  3b     0 |  0.029018 | MHsWsMsH
+224 |   17.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  3b     0 |  0.029018 | MsHWsMsH
+224 |   17.00 :   12 (  6f   6b)    0f  1b    1f  0b    0f  3b     0 |  0.029018 | sMHWsMsH
+224 |   17.00 :   10 (  5f   5b)    0f  3b    3f  0b    0f  1b     0 |  0.029018 | sWMHsWsH
+224 |   17.00 :   10 (  5f   5b)    0f  3b    3f  0b    0f  1b     0 |  0.029018 | sWMsHWsH
+224 |   17.00 :   10 (  5f   5b)    0f  3b    3f  0b    0f  1b     0 |  0.029018 | sWsMHWsH
+288 |   39.00 :   18 (  9f   9b)    0f  2b    2f  0b    0f  1b     0 |  0.080208 | WBsMsHsWBBB
+288 |   39.00 :   18 (  9f   9b)    0f  2b    2f  0b    0f  1b     0 |  0.083681 | WBMHsWBBB
+288 |   39.00 :   18 (  9f   9b)    0f  2b    2f  0b    0f  1b     0 |  0.083681 | WBMsHWBBB
+288 |   39.00 :   18 (  9f   9b)    0f  2b    2f  0b    0f  1b     0 |  0.083681 | WBsMHWBBB
+224 |   41.00 :   16 (  8f   8b)    0f  3b    3f  0b    0f  1b     0 |  0.152232 | sWsMsW
+----|----------------------------------------------------------------|-----------|-----------
+len |  music       4-bell runs      5678s     8765s     6578s    87s | avg score | calling
+"""
 "test/cases/self-false-1.toml" = """
 len    B  U |  music       4-bell runs      5-bell runs    6-bell runs   7-bell runs   8-bell runs    6578s     5678s     8765s  | avg score | calling
 ------------|--------------------------------------------------------------------------------------------------------------------|-----------|-----------
