@@ -190,32 +190,32 @@ type SimpleChunk = (RowIdx, Mask);
 ///   ╭──────────>────────────╮  │
 ///   │                       V  V
 ///   │                   ┍━━━━━━━━━━┑
-///   │                   │ 1xxxxx78 |
+///   │                   │ 1xxxxx78 │
 ///   │                   ┕━━━━━━━━━━┙
 ///   │                       │  │
 ///   │                ╭──────╯  │ 2 leads
 ///   │                │         V
 ///   │                │  ┍━━━━━━━━━━┑
-///   │                │  │ 18x7xxxx |
+///   │                │  │ 18x7xxxx │
 ///   ^                │  ┕━━━━━━━━━━┙
 ///   │                V         │
 ///   │                │         │ 2 leads
 ///   │                │         V
 ///   │                │  ┍━━━━━━━━━━┑
-///   │        2 leads │  │ 1xxxx8x7 |
+///   │        2 leads │  │ 1xxxx8x7 │
 ///   │     (a Before) │  ┕━━━━━━━━━━┙
 ///   │                │      │  ╰────────>─────╮
 ///   │                │      │                 │
 ///   │                │      │ 1 lead          │
 ///   │                V      V                 │
 ///   │                │  ┍━━━━━━━━━━┑          │
-///   │ 2 leads        │  │ 1xxx7x8x |          │
+///   │ 2 leads        │  │ 1xxx7x8x │          │
 ///   │                │  ┕━━━━━━━━━━┙          │ 2 *ROWS*
 ///   │                │         │              │
 ///   ^                ╰──────╮  │ 2 leads      V
 ///   │                       V  V              │
 ///   │                   ┍━━━━━━━━━━┑          │
-///   │                   │ 178xxxxx |          │
+///   │                   │ 178xxxxx │          │
 ///   │                   ┕━━━━━━━━━━┙          │
 ///   │                       │  │   2 leads    │
 ///   ╰──────────<────────────╯  ╰────────────╮ │
@@ -294,7 +294,7 @@ fn possible_method_counts(
     // following shape:
     //
     //                         ┍━━━━━━━━━━━━━┑
-    //                         │  start row  |
+    //                         │  start row  │
     //                         ┕━━━━━━━━━━━━━┙
     //                            │  │││
     //                            │  │││ (start_counts)
@@ -303,15 +303,15 @@ fn possible_method_counts(
     //                     │         │││  │ ╭──╮ │
     //                     │         VVV  V V  │ │
     //                     │   ┍━━━━━━━━━━━━━┑ │ │
-    //  (start_end_counts) │   │  all chunks | | │ (internal_counts)
-    //                     │   ┕━━━━━━━━━━━━━┙ │ |
+    //  (start_end_counts) │   │  all chunks │ │ │ (internal_counts)
+    //                     │   ┕━━━━━━━━━━━━━┙ │ │
     //                     │         │││  │ ╰──╯ │
     //                     │         │││  ╰──────╯
     //                     ╰──────╮  │││
     //                            │  │││ (end_counts)
     //                            V  VVV
     //                         ┍━━━━━━━━━━━━━┑
-    //                         │   end row   |
+    //                         │   end row   │
     //                         ┕━━━━━━━━━━━━━┙
     //
     // I.e. a composition must include:
@@ -334,6 +334,11 @@ fn possible_method_counts(
         let only_ends = chunk.succ_links(graph).all(|(_id, link)| link.is_end());
         let any_ends = chunk.succ_links(graph).any(|(_id, link)| link.is_end());
 
+        // If any chunk of any method is otherwise internal but has *some* starts, then we can exit
+        // the graph without ringing any start/ends
+        if !only_starts && any_starts {
+            start_counts.insert(TotalLength::ZERO);
+        }
         // If any chunk of any method is otherwise internal but has *some* ends, then we can exit
         // the graph without ringing any start/ends
         if !only_ends && any_ends {

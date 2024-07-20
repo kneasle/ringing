@@ -1,0 +1,6 @@
+length = "practice"
+method = "Plain Bob Major"
+start_row = "12346578"
+
+# In versions up to (and including) v0.14.5, this would trigger a bug in the length proving code
+# and cause an (incorrect) error that no method counts were possible.
