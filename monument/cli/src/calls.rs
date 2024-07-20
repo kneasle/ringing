@@ -35,16 +35,15 @@ impl Default for BaseCalls {
 #[serde(deny_unknown_fields)]
 pub struct CustomCall {
     place_notation: String,
+    #[serde(default = "default_misc_call_score")]
+    weight: f32,
     symbol: char,
     debug_symbol: Option<String>, // Deprecated in v0.13.0
+    calling_positions: Option<String>,
     #[serde(default = "lead_end")]
     label: CallLabel,
     /// Deprecated alias for `label`
     lead_location: Option<CallLabel>,
-    // TODO: Make this only allow strings
-    calling_positions: Option<CallingPositions>,
-    #[serde(default = "default_misc_call_score")]
-    weight: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -84,7 +83,7 @@ impl CustomCall {
             CallLabel::Different { from, to } => (from, to),
         };
         let calling_positions = match &self.calling_positions {
-            Some(c) => c.as_vec(),
+            Some(c) => c.chars().collect_vec(),
             None => default_calling_positions(&place_notation),
         };
 
@@ -97,27 +96,6 @@ impl CustomCall {
             place_notation,
             weight: self.weight,
         })
-    }
-}
-
-/// The different ways the user can specify a set of calling positions
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
-enum CallingPositions {
-    /// The calling positions should be the `char`s in the given string
-    Str(String),
-    /// Each calling position is explicitly listed
-    List(Vec<char>),
-}
-
-impl CallingPositions {
-    /// Returns the same [`CallingPositions`] as `self`, but always expressed as a [`Vec`] of one
-    /// [`String`] per place.
-    fn as_vec(&self) -> Vec<char> {
-        match self {
-            CallingPositions::Str(s) => s.chars().collect_vec(),
-            CallingPositions::List(positions) => positions.clone(),
-        }
     }
 }
 

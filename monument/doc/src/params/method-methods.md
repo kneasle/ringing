@@ -1,11 +1,6 @@
-# Specifying Methods
+# `method` and `methods`
 
 Methods can be added by using either the `method` or `methods` parameters.
-
-You can add methods to Monument by either loading an existing method by title, or loading a custom
-method directly from place notation.
-
-## Using `method` Versus `methods`
 
 _**Using `method` is exactly equivalent to setting `methods` to a one-element array.**_
 
@@ -19,6 +14,9 @@ is completely equivalent to this:
 length = "QP"
 methods = ["Bristol Surprise Major"]
 ```
+
+You can add methods to Monument by either loading an existing method by title, or loading a custom
+method directly from place notation.
 
 
 

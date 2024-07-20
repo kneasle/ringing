@@ -54,6 +54,9 @@ pub struct TomlFile {
     /// Allow Monument to ignore falseness and generate false compositions.  Compositions still
     /// won't have internal rounds.
     allow_false: Option<bool>, // Anti-alias of `require_truth`, deprecated in v0.13.0
+    /// A [`Row`] which generates the part heads of this composition
+    #[serde(default)]
+    part_head: String,
 
     /* CONFIG OPTIONS */
     /// If set, overrides `--graph-size-limit` CLI argument
@@ -98,9 +101,6 @@ pub struct TomlFile {
     require_atw: bool,
 
     /* CALLS */
-    /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
-    /// heaviest bell
-    calling_bell: Option<u8>,
     /// Which calls should be used by default
     #[serde(default)] // Default to near calls
     base_calls: BaseCalls,
@@ -119,6 +119,9 @@ pub struct TomlFile {
     /// Which calls to use in the compositions
     #[serde(default)]
     calls: Vec<CustomCall>,
+    /// Sets the bell who's position will be used to determine calling positions.  Defaults to the
+    /// heaviest bell
+    calling_bell: Option<u8>,
 
     /* MUSIC */
     /// Adds preset music patterns to the scoring.  If you truly want no music (e.g. to search for
@@ -135,18 +138,6 @@ pub struct TomlFile {
     start_stroke: Stroke,
 
     /* COURSES */
-    /// The [`Row`] which starts the composition.  When computing falseness and music, this **is**
-    /// considered included in the composition.
-    #[serde(default)] // The default/empty string parses to rounds on any stage
-    start_row: String,
-    /// The [`Row`] which ends the composition.  When computing falseness and music, this is
-    /// **not** considered part of the composition; the composition stops just before this is
-    /// reached.
-    #[serde(default)] // The default/empty string parses to rounds on any stage
-    end_row: String,
-    /// A [`Row`] which generates the part heads of this composition
-    #[serde(default)]
-    part_head: String,
     /// If set, allows arbitrary splitting of the tenors (warning: this blows up the search size on
     /// large stages)
     #[serde(default)]
@@ -154,6 +145,13 @@ pub struct TomlFile {
     /// Which course heads masks are allowed (overrides `split_tenors`)
     courses: Option<Vec<String>>,
     course_heads: Option<Vec<String>>, // Alias of `courses`, deprecated in v0.13.0
+    /// Score applied to every row with a given CH patterns
+    #[serde(default)]
+    course_weights: Vec<CourseWeightPattern>,
+    ch_weights: Option<Vec<CourseWeightPattern>>, // Alias of `course_weights`, deprecated in v0.13.0
+    /// Weight given to every row in a course, for every handbell pair that's coursing
+    #[serde(default)]
+    handbell_coursing_weight: f32,
     /// If set, Monument will only output compositions which have this call sequence.  For example,
     /// "HHsWsHsW" will output only compositions with the classic 1282 Yorkshire/Cambridge Royal
     /// calling.
@@ -163,13 +161,15 @@ pub struct TomlFile {
     /// "WWWHHH" would generate "", "WWW", "HHH" and "WWWHHH").
     #[serde(default)]
     omit_round_blocks: bool,
-    /// Score applied to every row with a given CH patterns
-    #[serde(default)]
-    course_weights: Vec<CourseWeightPattern>,
-    ch_weights: Option<Vec<CourseWeightPattern>>, // Alias of `course_weights`, deprecated in v0.13.0
-    /// Weight given to every row in a course, for every handbell pair that's coursing
-    #[serde(default)]
-    handbell_coursing_weight: f32,
+    /// The [`Row`] which starts the composition.  When computing falseness and music, this **is**
+    /// considered included in the composition.
+    #[serde(default)] // The default/empty string parses to rounds on any stage
+    start_row: String,
+    /// The [`Row`] which ends the composition.  When computing falseness and music, this is
+    /// **not** considered part of the composition; the composition stops just before this is
+    /// reached.
+    #[serde(default)] // The default/empty string parses to rounds on any stage
+    end_row: String,
 }
 
 impl TomlFile {
