@@ -241,12 +241,10 @@ length = "peal"      # equivalent to `{ min = 5000, max = 5200 }`
 
 The number of compositions you want.  Defaults to `100`
 
-#### `allow_false`
+#### `require_truth`
 
-**_(replaced by `require_truth` in v0.13.0)_**
-
-If `true`, Monument will ignore falseness and generate potentially false compositions.  Defaults to
-`false`.
+If `true`, Monument will not allow rows to be repeated (i.e. will only generate true compositions).  If `false`,
+rows will be allowed to repeat any number of times.  Defaults to `true`.
 
 #### `queue_limit`
 
